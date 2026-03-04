@@ -1,0 +1,325 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id          String   @id @default(uuid())
+  name        String
+  logo        String?
+  domain      String?  @unique
+  status      String   @default("active")
+  plan        String   @default("basic")
+  maxUsers    Int      @default(100)
+  maxApps     Int      @default(10)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  admins      Admin[]
+  users       User[]
+  applications Application[]
+  roles       Role[]
+  groups      UserGroup[]
+  positions   Position[]
+  webhooks    Webhook[]
+  auditLogs   AuditLog[]
+  
+  @@map("tenants")
+}
+
+model Admin {
+  id          String   @id @default(uuid())
+  tenantId    String
+  username    String   @unique
+  email       String   @unique
+  phone       String?
+  password    String
+  status      String   @default("active")
+  lastLoginAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  roles       AdminRole[]
+  
+  @@index([tenantId])
+  @@map("admins")
+}
+
+model AdminRole {
+  id          String   @id @default(uuid())
+  tenantId    String
+  name        String
+  description String?
+  permissions String[]
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  admins      Admin[]
+  
+  @@index([tenantId])
+  @@map("admin_roles")
+}
+
+model User {
+  id               String   @id @default(uuid())
+  tenantId         String
+  username         String
+  email            String
+  phone            String?
+  password         String?
+  name             String
+  avatar           String?
+  status           String   @default("active")
+  emailVerified    Boolean  @default(false)
+  phoneVerified    Boolean  @default(false)
+  department       String?
+  position         String?
+  customAttributes Json?
+  lastLoginAt      DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  groups           UserGroup[] @relation("UserToGroup")
+  roles            Role[]   @relation("UserToRole")
+  devices          Device[]
+  socialAccounts   SocialAccount[]
+  
+  @@unique([tenantId, username])
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@map("users")
+}
+
+model UserGroup {
+  id          String   @id @default(uuid())
+  tenantId    String
+  name        String
+  description String?
+  type        String   @default("team")
+  parentId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parent      UserGroup?  @relation("GroupHierarchy", fields: [parentId], references: [id])
+  children    UserGroup[]  @relation("GroupHierarchy")
+  members     User[]    @relation("UserToGroup")
+  admins      User[]    @relation("GroupAdmin")
+  
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@map("user_groups")
+}
+
+model Position {
+  id          String   @id @default(uuid())
+  tenantId    String
+  name        String
+  code        String
+  description String?
+  departmentId String?
+  level       Int      @default(1)
+  sequence    String?
+  userCount   Int      @default(0)
+  maxCount    Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@map("positions")
+}
+
+model Application {
+  id                   String   @id @default(uuid())
+  tenantId             String
+  name                 String
+  logo                 String?
+  description          String?
+  type                 String   @default("web")
+  clientId             String   @unique
+  clientSecret         String
+  redirectUris         String[]
+  allowedGrantTypes    String[]
+  accessTokenLifetime  Int      @default(3600)
+  refreshTokenLifetime Int      @default(2592000)
+  status               String   @default("active")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  
+  tenant               Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@index([tenantId])
+  @@map("applications")
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  tenantId    String
+  name        String
+  code        String
+  description String?
+  type        String   @default("custom")
+  permissions String[]
+  dataScope   String   @default("self")
+  parentId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parent      Role?    @relation("RoleHierarchy", fields: [parentId], references: [id])
+  children    Role[]   @relation("RoleHierarchy")
+  users       User[]   @relation("UserToRole")
+  
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(uuid())
+  tenantId    String
+  code        String
+  name        String
+  description String?
+  type        String   @default("operation")
+  parentId    String?
+  resource    String
+  action      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  parent      Permission?  @relation("PermissionHierarchy", fields: [parentId], references: [id])
+  children    Permission[] @relation("PermissionHierarchy")
+  
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@map("permissions")
+}
+
+model SocialAccount {
+  id           String   @id @default(uuid())
+  userId       String
+  provider     String
+  providerId   String
+  accessToken  String?
+  refreshToken String?
+  profile      Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([provider, providerId])
+  @@index([userId])
+  @@map("social_accounts")
+}
+
+model Device {
+  id           String   @id @default(uuid())
+  userId       String
+  deviceType   String
+  os           String
+  browser      String
+  fingerprint  String
+  ipAddress    String
+  location     String?
+  isTrusted    Boolean  @default(false)
+  lastActiveAt DateTime @default(now())
+  createdAt    DateTime @default(now())
+  
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@map("devices")
+}
+
+model Webhook {
+  id            String   @id @default(uuid())
+  tenantId      String
+  name          String
+  url           String
+  events        String[]
+  headers       Json?
+  secret        String
+  status        String   @default("active")
+  maxRetries    Int      @default(3)
+  retryInterval Int      @default(5000)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@index([tenantId])
+  @@map("webhooks")
+}
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  tenantId     String
+  userId       String?
+  username     String?
+  type         String
+  action       String
+  resource     String
+  resourceId   String?
+  method       String?
+  ip           String
+  userAgent    String?
+  location     String?
+  status       String
+  errorMessage String?
+  changes      Json?
+  createdAt    DateTime @default(now())
+  
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@index([tenantId, createdAt])
+  @@index([userId])
+  @@index([type])
+  @@map("audit_logs")
+}
+
+model SocialIdentityProvider {
+  id                    String   @id @default(uuid())
+  tenantId              String
+  name                  String
+  type                  String
+  clientId              String
+  clientSecret          String
+  authorizationEndpoint String
+  tokenEndpoint         String
+  userInfoEndpoint      String
+  scope                 String[]
+  attributeMapping      Json?
+  status                String   @default("active")
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  @@index([tenantId])
+  @@map("social_identity_providers")
+}
+
+model SystemConfig {
+  id                    String   @id @default(uuid())
+  tenantId              String
+  category              String
+  key                   String
+  value                 Json
+  description           String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  @@unique([tenantId, category, key])
+  @@index([tenantId])
+  @@map("system_configs")
+}
