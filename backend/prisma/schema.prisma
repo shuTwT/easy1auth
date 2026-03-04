@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model Tenant {
@@ -87,6 +86,7 @@ model User {
   
   tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   groups           UserGroup[] @relation("UserToGroup")
+  groupAdmins      UserGroup[] @relation("GroupAdmin")
   roles            Role[]   @relation("UserToRole")
   devices          Device[]
   socialAccounts   SocialAccount[]
