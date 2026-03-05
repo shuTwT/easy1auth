@@ -2,8 +2,17 @@ import { Router, Request, Response } from 'express'
 import { authMiddleware, AuthRequest } from '../middleware/auth'
 import userService from '../services/user.service'
 import { AppError } from '../middleware/errorHandler'
+import multer from 'multer'
+import * as XLSX from 'xlsx'
 
 const router = Router()
+
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB
+  }
+})
 
 router.use(authMiddleware)
 
@@ -123,6 +132,92 @@ router.get('/stats', async (req: Request, res: Response) => {
       res.status(500).json({
         status: 'error',
         message: '获取用户统计失败'
+      })
+    }
+  }
+})
+
+router.get('/import/template', async (req: Request, res: Response) => {
+  try {
+    const buffer = await userService.generateImportTemplate()
+    
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    res.setHeader('Content-Disposition', 'attachment; filename=user_import_template.xlsx')
+    res.send(buffer)
+  } catch (error) {
+    if (error instanceof AppError) {
+      res.status(error.statusCode).json({
+        status: 'error',
+        message: error.message
+      })
+    } else {
+      console.error('生成导入模板错误:', error)
+      res.status(500).json({
+        status: 'error',
+        message: '生成导入模板失败'
+      })
+    }
+  }
+})
+
+router.post('/import', upload.single('file'), async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthRequest
+    const tenantId = authReq.tenantId
+
+    if (!tenantId) {
+      throw new AppError('缺少租户信息', 400)
+    }
+
+    if (!req.file) {
+      throw new AppError('请上传文件', 400)
+    }
+
+    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' })
+    const sheetName = workbook.SheetNames[0]
+    const worksheet = workbook.Sheets[sheetName]
+    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 })
+
+    if (jsonData.length < 2) {
+      throw new AppError('文件内容为空或格式不正确', 400)
+    }
+
+    const headers = jsonData[0] as string[]
+    const users = []
+
+    for (let i = 1; i < jsonData.length; i++) {
+      const row = jsonData[i] as any[]
+      if (!row || row.length === 0) continue
+
+      users.push({
+        username: row[0]?.toString().trim() || '',
+        email: row[1]?.toString().trim() || '',
+        password: row[2]?.toString().trim() || undefined,
+        phone: row[3]?.toString().trim() || undefined,
+        name: row[4]?.toString().trim() || '',
+        department: row[5]?.toString().trim() || undefined,
+        position: row[6]?.toString().trim() || undefined
+      })
+    }
+
+    const result = await userService.importUsers(tenantId, users)
+
+    res.json({
+      status: 'success',
+      message: `导入完成：成功 ${result.success} 条，失败 ${result.failed} 条`,
+      data: result
+    })
+  } catch (error) {
+    if (error instanceof AppError) {
+      res.status(error.statusCode).json({
+        status: 'error',
+        message: error.message
+      })
+    } else {
+      console.error('导入用户错误:', error)
+      res.status(500).json({
+        status: 'error',
+        message: '导入用户失败'
       })
     }
   }

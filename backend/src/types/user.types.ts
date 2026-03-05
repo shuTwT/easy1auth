@@ -67,3 +67,29 @@ export interface AssignRolesDto {
 export interface AssignGroupsDto {
   groupIds: string[]
 }
+
+export interface UserImportDto {
+  username: string
+  email: string
+  password?: string
+  phone?: string
+  name: string
+  department?: string
+  position?: string
+}
+
+export interface UserImportResult {
+  success: number
+  failed: number
+  total: number
+  errors: Array<{
+    row: number
+    username?: string
+    error: string
+  }>
+  importedUsers: Array<{
+    username: string
+    email: string
+    name: string
+  }>
+}

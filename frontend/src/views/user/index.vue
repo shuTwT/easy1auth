@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Plus, Upload, Download, UploadFilled } from '@element-plus/icons-vue'
 import { userApi } from '@/api/user'
+import { roleApi } from '@/api/role'
 import type { User, CreateUserDto, UpdateUserDto, UserQueryDto } from '@/types/user'
+import type { Role } from '@/types/role'
 
 const loading = ref(false)
 const users = ref<User[]>([])
@@ -12,6 +15,15 @@ const dialogTitle = ref('新增用户')
 const currentUser = ref<Partial<User>>({})
 const resetPasswordDialogVisible = ref(false)
 const resetPasswordUserId = ref('')
+const assignRoleDialogVisible = ref(false)
+const assignRoleUserId = ref('')
+const userRoles = ref<Role[]>([])
+const allRoles = ref<Role[]>([])
+const selectedRoleIds = ref<string[]>([])
+const assignRoleLoading = ref(false)
+const importDialogVisible = ref(false)
+const importLoading = ref(false)
+const importResult = ref<any>(null)
 
 const queryForm = reactive<UserQueryDto>({
   page: 1,
@@ -215,6 +227,41 @@ const handleResetPasswordSubmit = async () => {
   }
 }
 
+const handleAssignRole = async (row: User) => {
+  assignRoleUserId.value = row.id
+  assignRoleLoading.value = true
+  try {
+    const [userRolesData, allRolesData] = await Promise.all([
+      roleApi.getUserRoles(row.id),
+      roleApi.getList(),
+    ])
+    userRoles.value = userRolesData
+    allRoles.value = allRolesData
+    selectedRoleIds.value = userRolesData.map((role: Role) => role.id)
+    assignRoleDialogVisible.value = true
+  } catch (error) {
+    console.error('加载角色数据失败:', error)
+    ElMessage.error('加载角色数据失败')
+  } finally {
+    assignRoleLoading.value = false
+  }
+}
+
+const handleAssignRoleSubmit = async () => {
+  assignRoleLoading.value = true
+  try {
+    await roleApi.assignRolesToUser(assignRoleUserId.value, selectedRoleIds.value)
+    ElMessage.success('分配角色成功')
+    assignRoleDialogVisible.value = false
+    loadUsers()
+  } catch (error: any) {
+    console.error('分配角色失败:', error)
+    ElMessage.error(error.response?.data?.error || '分配角色失败')
+  } finally {
+    assignRoleLoading.value = false
+  }
+}
+
 const handlePageChange = (page: number) => {
   queryForm.page = page
   loadUsers()
@@ -255,6 +302,54 @@ const getStatusText = (status: string) => {
 onMounted(() => {
   loadUsers()
 })
+
+const handleDownloadTemplate = () => {
+  const link = document.createElement('a')
+  link.href = '/api/users/import/template'
+  link.download = 'user_import_template.xlsx'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+}
+
+const handleImport = () => {
+  importDialogVisible.value = true
+  importResult.value = null
+}
+
+const handleFileChange = async (options: any) => {
+  const { file } = options
+  importLoading.value = true
+  
+  try {
+    const formData = new FormData()
+    formData.append('file', file.raw)
+    
+    const response = await fetch('/api/users/import', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: formData
+    })
+    
+    const result = await response.json()
+    
+    if (result.status === 'success') {
+      importResult.value = result.data
+      ElMessage.success(result.message)
+      loadUsers()
+    } else {
+      ElMessage.error(result.message || '导入失败')
+    }
+  } catch (error) {
+    console.error('导入用户失败:', error)
+    ElMessage.error('导入用户失败')
+  } finally {
+    importLoading.value = false
+  }
+}
+
 </script>
 
 <template>
@@ -263,10 +358,16 @@ onMounted(() => {
       <template #header>
         <div class="card-header">
           <span>用户管理</span>
-          <el-button type="primary" @click="handleAdd">
-            <el-icon><Plus /></el-icon>
-            新增用户
-          </el-button>
+          <div>
+            <el-button @click="handleImport">
+              <el-icon><Upload /></el-icon>
+              导入用户
+            </el-button>
+            <el-button type="primary" @click="handleAdd">
+              <el-icon><Plus /></el-icon>
+              新增用户
+            </el-button>
+          </div>
         </div>
       </template>
 
@@ -319,9 +420,10 @@ onMounted(() => {
             {{ new Date(row.createdAt).toLocaleString() }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="280" fixed="right">
+        <el-table-column label="操作" width="350" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="handleEdit(row)">编辑</el-button>
+            <el-button link type="primary" @click="handleAssignRole(row)">分配角色</el-button>
             <el-button link type="primary" @click="handleResetPassword(row)">重置密码</el-button>
             <el-button 
               link 
@@ -394,6 +496,128 @@ onMounted(() => {
         <el-button type="primary" @click="handleResetPasswordSubmit">确定</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="assignRoleDialogVisible" title="分配角色" width="600px">
+      <el-form label-width="100px">
+        <el-form-item label="当前角色">
+          <div v-if="userRoles.length > 0">
+            <el-tag
+              v-for="role in userRoles"
+              :key="role.id"
+              :type="role.type === 'system' ? 'danger' : 'success'"
+              style="margin-right: 8px; margin-bottom: 8px"
+            >
+              {{ role.name }}
+            </el-tag>
+          </div>
+          <div v-else style="color: #909399">暂未分配角色</div>
+        </el-form-item>
+        <el-form-item label="选择角色">
+          <el-checkbox-group v-model="selectedRoleIds">
+            <el-checkbox
+              v-for="role in allRoles"
+              :key="role.id"
+              :label="role.id"
+              style="display: block; margin-bottom: 10px"
+            >
+              <el-tag
+                :type="role.type === 'system' ? 'danger' : 'success'"
+                size="small"
+                style="margin-right: 8px"
+              >
+                {{ role.type === 'system' ? '系统' : '自定义' }}
+              </el-tag>
+              {{ role.name }}
+              <span style="color: #909399; font-size: 12px; margin-left: 8px">({{ role.code }})</span>
+            </el-checkbox>
+          </el-checkbox-group>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="assignRoleDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleAssignRoleSubmit" :loading="assignRoleLoading">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="importDialogVisible" title="导入用户" width="700px">
+      <div class="import-content">
+        <el-alert type="info" :closable="false" style="margin-bottom: 20px">
+          <template #title>
+            <strong>导入说明</strong>
+          </template>
+          <div style="margin-top: 10px">
+            <p>1. 请先下载导入模板，按照模板格式填写用户信息</p>
+            <p>2. 必填字段：用户名、邮箱、姓名</p>
+            <p>3. 如果不填写密码，系统将使用默认密码：Password123</p>
+            <p>4. 文件格式：.xlsx 或 .xls</p>
+          </div>
+        </el-alert>
+
+        <div class="import-actions">
+          <el-button type="primary" @click="handleDownloadTemplate">
+            <el-icon><Download /></el-icon>
+            下载导入模板
+          </el-button>
+        </div>
+
+        <el-divider />
+
+        <el-upload
+          class="upload-area"
+          drag
+          action="#"
+          :auto-upload="false"
+          :show-file-list="false"
+          accept=".xlsx,.xls"
+          :on-change="handleFileChange"
+        >
+          <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
+          <div class="el-upload__text">
+            将文件拖到此处，或<em>点击上传</em>
+          </div>
+          <template #tip>
+            <div class="el-upload__tip">
+              只能上传 xlsx/xls 文件，且文件大小不超过 5MB
+            </div>
+          </template>
+        </el-upload>
+
+        <div v-if="importResult" class="import-result">
+          <el-divider />
+          <h4>导入结果</h4>
+          <el-descriptions :column="3" border>
+            <el-descriptions-item label="总数">{{ importResult.total }}</el-descriptions-item>
+            <el-descriptions-item label="成功">
+              <el-tag type="success">{{ importResult.success }}</el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="失败">
+              <el-tag type="danger">{{ importResult.failed }}</el-tag>
+            </el-descriptions-item>
+          </el-descriptions>
+
+          <div v-if="importResult.errors && importResult.errors.length > 0" style="margin-top: 20px">
+            <h4>错误详情</h4>
+            <el-table :data="importResult.errors" style="width: 100%" max-height="300">
+              <el-table-column prop="row" label="行号" width="80" />
+              <el-table-column prop="username" label="用户名" width="150" />
+              <el-table-column prop="error" label="错误信息" />
+            </el-table>
+          </div>
+
+          <div v-if="importResult.importedUsers && importResult.importedUsers.length > 0" style="margin-top: 20px">
+            <h4>成功导入的用户</h4>
+            <el-table :data="importResult.importedUsers" style="width: 100%" max-height="300">
+              <el-table-column prop="username" label="用户名" width="150" />
+              <el-table-column prop="email" label="邮箱" width="200" />
+              <el-table-column prop="name" label="姓名" />
+            </el-table>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="importDialogVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -410,5 +634,27 @@ onMounted(() => {
 
 .search-form {
   margin-bottom: 20px;
+}
+
+.import-content {
+  padding: 10px 0;
+}
+
+.import-actions {
+  text-align: center;
+  margin: 20px 0;
+}
+
+.upload-area {
+  width: 100%;
+}
+
+.import-result {
+  margin-top: 20px;
+}
+
+.import-result h4 {
+  margin-bottom: 15px;
+  color: #303133;
 }
 </style>

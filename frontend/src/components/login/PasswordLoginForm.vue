@@ -41,7 +41,7 @@ function togglePassword() {
 </script>
 
 <template>
-  <el-form :model="form" :rules="rules" @submit.prevent="handleSubmit">
+  <el-form :model="form" :rules="rules">
     <el-form-item prop="username">
       <label class="form-label">用户名或邮箱</label>
       <el-input

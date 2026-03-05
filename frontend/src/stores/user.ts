@@ -6,10 +6,9 @@ export const useUserStore = defineStore('user', () => {
   const token = ref<string>(localStorage.getItem('token') || '')
   const userInfo = ref<any>(null)
   const tenants = ref<TenantInfo[]>([])
-  const currentTenant = ref<TenantInfo | null>(() => {
-    const saved = localStorage.getItem('currentTenant')
-    return saved ? JSON.parse(saved) : null
-  })
+  
+  const savedTenant = localStorage.getItem('currentTenant')
+  const currentTenant = ref<TenantInfo | null>(savedTenant ? JSON.parse(savedTenant) : null)
 
   const setToken = (newToken: string) => {
     token.value = newToken

@@ -25,9 +25,15 @@ export function useAuth() {
       const response = await authApi.login(data)
       userStore.setToken(response.token)
       userStore.setUserInfo(response.user)
-      if (response.tenants) {
+      if (response.tenants && response.tenants.length > 0) {
         userStore.setTenants(response.tenants)
-        const currentTenant = response.tenants.find(t => t.id === response.user.currentTenantId)
+        
+        let currentTenant = response.tenants.find(t => t.id === response.user.currentTenantId)
+        
+        if (!currentTenant) {
+          currentTenant = response.tenants[0]
+        }
+        
         if (currentTenant) {
           userStore.setCurrentTenant(currentTenant)
         }
@@ -76,9 +82,15 @@ export function useAuth() {
       const response = await authApi.register(data)
       userStore.setToken(response.token)
       userStore.setUserInfo(response.user)
-      if (response.tenants) {
+      if (response.tenants && response.tenants.length > 0) {
         userStore.setTenants(response.tenants)
-        const currentTenant = response.tenants.find(t => t.id === response.user.currentTenantId)
+        
+        let currentTenant = response.tenants.find(t => t.id === response.user.currentTenantId)
+        
+        if (!currentTenant) {
+          currentTenant = response.tenants[0]
+        }
+        
         if (currentTenant) {
           userStore.setCurrentTenant(currentTenant)
         }

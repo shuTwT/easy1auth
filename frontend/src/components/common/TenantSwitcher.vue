@@ -44,25 +44,7 @@ async function handleCreateTenant() {
 }
 
 onMounted(async () => {
-  if (userStore.token && tenants.value.length === 0) {
-    try {
-      const response = await tenantApi.getTenants()
-      userStore.setTenants(response.tenants)
-      
-      if (!currentTenant.value && response.tenants.length > 0) {
-        const savedTenantId = localStorage.getItem('currentTenantId')
-        const tenant = savedTenantId 
-          ? response.tenants.find(t => t.id === savedTenantId)
-          : response.tenants[0]
-        
-        if (tenant) {
-          userStore.setCurrentTenant(tenant)
-        }
-      }
-    } catch (error) {
-      console.error('获取租户列表失败:', error)
-    }
-  }
+  // 租户初始化逻辑已移至 App.vue
 })
 </script>
 

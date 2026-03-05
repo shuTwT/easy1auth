@@ -37,6 +37,42 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '应用管理', requiresAuth: true }
   },
   {
+    path: '/audit',
+    name: 'Audit',
+    component: () => import('@/views/audit/index.vue'),
+    meta: { title: '审计日志', requiresAuth: true }
+  },
+  {
+    path: '/group',
+    name: 'Group',
+    component: () => import('@/views/group/index.vue'),
+    meta: { title: '用户组管理', requiresAuth: true }
+  },
+  {
+    path: '/position',
+    name: 'Position',
+    component: () => import('@/views/position/index.vue'),
+    meta: { title: '岗位管理', requiresAuth: true }
+  },
+  {
+    path: '/role',
+    name: 'Role',
+    component: () => import('@/views/role/index.vue'),
+    meta: { title: '角色管理', requiresAuth: true }
+  },
+  {
+    path: '/social-identity-provider',
+    name: 'SocialIdentityProvider',
+    component: () => import('@/views/socialIdentityProvider/index.vue'),
+    meta: { title: '社会化身份源', requiresAuth: true }
+  },
+  {
+    path: '/sso',
+    name: 'SSO',
+    component: () => import('@/views/sso/index.vue'),
+    meta: { title: '单点登录', requiresAuth: true }
+  },
+  {
     path: '/oauth2/authorize',
     name: 'OAuth2Authorize',
     component: () => import('@/views/oauth2/authorize.vue'),

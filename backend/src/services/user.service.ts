@@ -10,11 +10,14 @@ import {
   ChangePasswordDto,
   ResetPasswordDto,
   AssignRolesDto,
-  AssignGroupsDto
+  AssignGroupsDto,
+  UserImportDto,
+  UserImportResult
 } from '../types/user.types'
 import { AppError } from '../middleware/errorHandler'
 import { v4 as uuidv4 } from 'uuid'
 import bcrypt from 'bcryptjs'
+import * as XLSX from 'xlsx'
 
 export class UserService {
   async create(tenantId: string, data: CreateUserDto): Promise<User> {
@@ -380,6 +383,127 @@ export class UserService {
     })
 
     return user?.groups || []
+  }
+
+  async generateImportTemplate(): Promise<Buffer> {
+    const workbook = XLSX.utils.book_new()
+    const worksheet = XLSX.utils.aoa_to_sheet([
+      ['用户名*', '邮箱*', '密码', '手机号', '姓名*', '部门', '岗位'],
+      ['zhangsan', 'zhangsan@example.com', 'Password123', '13800138000', '张三', '技术部', '工程师'],
+      ['lisi', 'lisi@example.com', 'Password123', '13900139000', '李四', '产品部', '产品经理']
+    ])
+
+    XLSX.utils.book_append_sheet(workbook, worksheet, '用户导入模板')
+
+    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' })
+
+    return buffer
+  }
+
+  async importUsers(tenantId: string, users: any[]): Promise<UserImportResult> {
+    const result: UserImportResult = {
+      success: 0,
+      failed: 0,
+      total: users.length,
+      errors: [],
+      importedUsers: []
+    }
+
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId }
+    })
+
+    if (!tenant) {
+      throw new AppError('租户不存在', 404)
+    }
+
+    const currentUserCount = await prisma.user.count({
+      where: { tenantId }
+    })
+
+    if (currentUserCount + users.length > tenant.maxUsers) {
+      throw new AppError(`导入后将超过租户用户上限（当前：${currentUserCount}，上限：${tenant.maxUsers}）`, 400)
+    }
+
+    for (let i = 0; i < users.length; i++) {
+      const user = users[i]
+      const row = i + 2
+
+      try {
+        if (!user.username || !user.email || !user.name) {
+          result.errors.push({
+            row,
+            username: user.username,
+            error: '用户名、邮箱和姓名为必填项'
+          })
+          result.failed++
+          continue
+        }
+
+        const existingUser = await prisma.user.findFirst({
+          where: {
+            tenantId,
+            OR: [
+              { username: user.username },
+              { email: user.email }
+            ]
+          }
+        })
+
+        if (existingUser) {
+          if (existingUser.username === user.username) {
+            result.errors.push({
+              row,
+              username: user.username,
+              error: '用户名已存在'
+            })
+          } else {
+            result.errors.push({
+              row,
+              username: user.username,
+              error: '邮箱已存在'
+            })
+          }
+          result.failed++
+          continue
+        }
+
+        const hashedPassword = user.password 
+          ? await bcrypt.hash(user.password, 10)
+          : await bcrypt.hash('Password123', 10)
+
+        const createdUser = await prisma.user.create({
+          data: {
+            id: uuidv4(),
+            tenantId,
+            username: user.username,
+            email: user.email,
+            password: hashedPassword,
+            phone: user.phone ?? null,
+            name: user.name,
+            department: user.department || null,
+            position: user.position || null,
+            status: 'active'
+          }
+        })
+
+        result.success++
+        result.importedUsers.push({
+          username: createdUser.username,
+          email: createdUser.email,
+          name: createdUser.name
+        })
+      } catch (error) {
+        result.errors.push({
+          row,
+          username: user.username,
+          error: error instanceof Error ? error.message : '导入失败'
+        })
+        result.failed++
+      }
+    }
+
+    return result
   }
 }
 
