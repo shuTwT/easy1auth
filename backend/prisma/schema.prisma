@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
 }
 
 model Tenant {
@@ -54,7 +54,7 @@ model AdminRole {
   tenantId    String
   name        String
   description String?
-  permissions String[]
+  permissions Json
   isSystem    Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -148,8 +148,8 @@ model Application {
   type                 String   @default("web")
   clientId             String   @unique
   clientSecret         String
-  redirectUris         String[]
-  allowedGrantTypes    String[]
+  redirectUris         Json
+  allowedGrantTypes    Json
   accessTokenLifetime  Int      @default(3600)
   refreshTokenLifetime Int      @default(2592000)
   status               String   @default("active")
@@ -169,7 +169,7 @@ model Role {
   code        String
   description String?
   type        String   @default("custom")
-  permissions String[]
+  permissions Json
   dataScope   String   @default("self")
   parentId    String?
   createdAt   DateTime @default(now())
@@ -248,7 +248,7 @@ model Webhook {
   tenantId      String
   name          String
   url           String
-  events        String[]
+  events        Json
   headers       Json?
   secret        String
   status        String   @default("active")
@@ -299,7 +299,7 @@ model SocialIdentityProvider {
   authorizationEndpoint String
   tokenEndpoint         String
   userInfoEndpoint      String
-  scope                 String[]
+  scope                 Json
   attributeMapping      Json?
   status                String   @default("active")
   createdAt             DateTime @default(now())

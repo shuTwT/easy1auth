@@ -1,15 +1,4 @@
-export interface Tenant {
-  id: string
-  name: string
-  logo?: string
-  domain?: string
-  status: TenantStatus
-  plan: TenantPlan
-  maxUsers: number
-  maxApps: number
-  createdAt: Date
-  updatedAt: Date
-}
+import { Tenant, Prisma } from '@prisma/client'
 
 export type TenantStatus = 'active' | 'suspended' | 'deleted'
 export type TenantPlan = 'basic' | 'professional' | 'enterprise'

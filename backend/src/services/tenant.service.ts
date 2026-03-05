@@ -1,6 +1,6 @@
+import { Tenant, Prisma } from '@prisma/client'
 import prisma from '../lib/prisma'
 import { 
-  Tenant, 
   CreateTenantDto, 
   UpdateTenantDto, 
   TenantQueryDto, 
@@ -26,8 +26,8 @@ export class TenantService {
       data: {
         id: uuidv4(),
         name: data.name,
-        logo: data.logo,
-        domain: data.domain,
+        logo: data.logo ?? null,
+        domain: data.domain ?? null,
         plan: data.plan || 'basic',
         maxUsers: data.maxUsers || 100,
         maxApps: data.maxApps || 10,
@@ -61,12 +61,11 @@ export class TenantService {
     const pageSize = query.pageSize || 10
     const skip = (page - 1) * pageSize
 
-    const where: any = {}
+    const where: Prisma.TenantWhereInput = {}
 
     if (query.name) {
       where.name = {
-        contains: query.name,
-        mode: 'insensitive'
+        contains: query.name
       }
     }
 
@@ -80,8 +79,7 @@ export class TenantService {
 
     if (query.domain) {
       where.domain = {
-        contains: query.domain,
-        mode: 'insensitive'
+        contains: query.domain
       }
     }
 
@@ -118,12 +116,22 @@ export class TenantService {
       }
     }
 
+    const updateData: Prisma.TenantUpdateInput = {
+      ...data,
+      updatedAt: new Date()
+    }
+
+    if (data.logo !== undefined) {
+      updateData.logo = data.logo ?? null
+    }
+
+    if (data.domain !== undefined) {
+      updateData.domain = data.domain ?? null
+    }
+
     const tenant = await prisma.tenant.update({
       where: { id },
-      data: {
-        ...data,
-        updatedAt: new Date()
-      }
+      data: updateData
     })
 
     return tenant
@@ -192,10 +200,6 @@ export class TenantService {
     currentApps: number
   }> {
     const tenant = await this.findById(id)
-    
-    if (!tenant) {
-      throw new AppError('租户不存在', 404)
-    }
 
     const [currentUsers, currentApps] = await Promise.all([
       prisma.user.count({ where: { tenantId: id } }),
