@@ -35,6 +35,12 @@ const routes: RouteRecordRaw[] = [
     name: 'Application',
     component: () => import('@/views/application/index.vue'),
     meta: { title: '应用管理', requiresAuth: true }
+  },
+  {
+    path: '/oauth2/authorize',
+    name: 'OAuth2Authorize',
+    component: () => import('@/views/oauth2/authorize.vue'),
+    meta: { title: 'OAuth2授权', requiresAuth: true }
   }
 ]
 

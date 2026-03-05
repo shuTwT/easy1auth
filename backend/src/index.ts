@@ -8,6 +8,7 @@ import authRoutes from './routes/auth.routes'
 import tenantRoutes from './routes/tenant.routes'
 import userRoutes from './routes/user.routes'
 import applicationRoutes from './routes/application.routes'
+import oauth2Routes from './routes/oauth2.routes'
 
 dotenv.config()
 
@@ -28,6 +29,7 @@ app.use('/api/auth', authRoutes)
 app.use('/api/tenants', tenantRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/applications', applicationRoutes)
+app.use('/oauth2', oauth2Routes)
 
 app.use(errorHandler)
 
