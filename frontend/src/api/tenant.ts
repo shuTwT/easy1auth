@@ -1,52 +1,37 @@
 import request from '@/utils/request'
-import type { 
-  Tenant, 
-  CreateTenantDto, 
-  UpdateTenantDto, 
-  TenantQueryDto, 
-  TenantListResponse,
-  TenantStats 
-} from '@/types/tenant'
+import type { TenantInfo } from '@/types/auth'
+
+export interface CreateTenantRequest {
+  name: string
+  plan?: string
+}
+
+export interface CreateTenantResponse {
+  status: string
+  message: string
+  tenant: TenantInfo
+}
+
+export interface GetTenantsResponse {
+  status: string
+  tenants: TenantInfo[]
+}
+
+export interface GetCurrentTenantResponse {
+  status: string
+  tenant: TenantInfo
+}
 
 export const tenantApi = {
-  getList(params?: TenantQueryDto): Promise<TenantListResponse> {
-    return request.get('/tenants', { params })
+  getTenants(): Promise<GetTenantsResponse> {
+    return request.get('/tenants/list')
   },
 
-  getById(id: string): Promise<Tenant> {
-    return request.get(`/tenants/${id}`)
+  createTenant(data: CreateTenantRequest): Promise<CreateTenantResponse> {
+    return request.post('/tenants/create', data)
   },
 
-  create(data: CreateTenantDto): Promise<Tenant> {
-    return request.post('/tenants', data)
-  },
-
-  update(id: string, data: UpdateTenantDto): Promise<Tenant> {
-    return request.put(`/tenants/${id}`, data)
-  },
-
-  delete(id: string): Promise<void> {
-    return request.delete(`/tenants/${id}`)
-  },
-
-  updateStatus(id: string, status: string): Promise<Tenant> {
-    return request.patch(`/tenants/${id}/status`, { status })
-  },
-
-  getStats(id: string): Promise<TenantStats> {
-    return request.get(`/tenants/${id}/stats`)
-  },
-
-  checkDomain(domain: string): Promise<{ available: boolean }> {
-    return request.get('/tenants/check-domain', { params: { domain } })
-  },
-
-  validateLimits(id: string): Promise<{
-    canAddUser: boolean
-    canAddApp: boolean
-    currentUsers: number
-    currentApps: number
-  }> {
-    return request.get(`/tenants/${id}/validate-limits`)
+  getCurrentTenant(): Promise<GetCurrentTenantResponse> {
+    return request.get('/tenants/current')
   }
 }

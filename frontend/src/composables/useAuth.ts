@@ -25,6 +25,13 @@ export function useAuth() {
       const response = await authApi.login(data)
       userStore.setToken(response.token)
       userStore.setUserInfo(response.user)
+      if (response.tenants) {
+        userStore.setTenants(response.tenants)
+        const currentTenant = response.tenants.find(t => t.id === response.user.currentTenantId)
+        if (currentTenant) {
+          userStore.setCurrentTenant(currentTenant)
+        }
+      }
       ElMessage.success('登录成功')
       await router.push('/dashboard')
       return response
@@ -69,6 +76,13 @@ export function useAuth() {
       const response = await authApi.register(data)
       userStore.setToken(response.token)
       userStore.setUserInfo(response.user)
+      if (response.tenants) {
+        userStore.setTenants(response.tenants)
+        const currentTenant = response.tenants.find(t => t.id === response.user.currentTenantId)
+        if (currentTenant) {
+          userStore.setCurrentTenant(currentTenant)
+        }
+      }
       ElMessage.success('注册成功')
       await router.push('/dashboard')
       return response

@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import TenantSwitcher from '@/components/common/TenantSwitcher.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -63,6 +64,7 @@ const handleLogout = () => {
           </el-icon>
         </div>
         <div class="header-right">
+          <TenantSwitcher style="margin-right: 20px" />
           <el-dropdown>
             <span class="user-info">
               <el-avatar :size="32" icon="User" />

@@ -14,7 +14,9 @@ export interface LoginResponse {
     username: string
     email: string
     avatar?: string
+    currentTenantId?: string
   }
+  tenants?: TenantInfo[]
 }
 
 export interface SendCodeRequest {
@@ -43,7 +45,18 @@ export interface RegisterResponse {
     username: string
     email: string
     avatar?: string
+    currentTenantId?: string
   }
+  tenants?: TenantInfo[]
+}
+
+export interface TenantInfo {
+  id: string
+  name: string
+  role: string
+  logo?: string
+  status?: string
+  plan?: string
 }
 
 export interface PasskeyLoginStartResponse {

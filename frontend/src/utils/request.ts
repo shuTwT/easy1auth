@@ -1,6 +1,7 @@
 import axios from 'axios'
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
 import { ElMessage } from 'element-plus'
+import { useUserStore } from '@/stores/user'
 
 const request: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api',
@@ -16,6 +17,12 @@ request.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
+
+    const userStore = useUserStore()
+    if (userStore.currentTenant?.id) {
+      config.headers['tenant-id'] = userStore.currentTenant.id
+    }
+
     return config
   },
   (error) => {

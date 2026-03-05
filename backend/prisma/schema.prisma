@@ -18,35 +18,53 @@ model Tenant {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
-  admins      Admin[]
-  users       User[]
-  applications Application[]
-  roles       Role[]
-  groups      UserGroup[]
-  positions   Position[]
-  webhooks    Webhook[]
-  auditLogs   AuditLog[]
+  adminTenants    AdminTenant[]
+  currentAdmins   Admin[]
+  users           User[]
+  applications    Application[]
+  roles           Role[]
+  groups          UserGroup[]
+  positions       Position[]
+  webhooks        Webhook[]
+  auditLogs       AuditLog[]
   
   @@map("tenants")
 }
 
 model Admin {
-  id          String   @id @default(uuid())
-  tenantId    String
-  username    String   @unique
-  email       String   @unique
-  phone       String?
-  password    String
-  status      String   @default("active")
-  lastLoginAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String   @id @default(uuid())
+  currentTenantId String?
+  username        String   @unique
+  email           String   @unique
+  phone           String?
+  password        String
+  status          String   @default("active")
+  lastLoginAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
   
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  roles       AdminRole[]
+  currentTenant   Tenant?  @relation(fields: [currentTenantId], references: [id], onDelete: SetNull)
+  tenants         AdminTenant[]
+  roles           AdminRole[]
   
-  @@index([tenantId])
+  @@index([currentTenantId])
   @@map("admins")
+}
+
+model AdminTenant {
+  id        String   @id @default(uuid())
+  adminId   String
+  tenantId  String
+  role      String   @default("owner")
+  createdAt DateTime @default(now())
+  
+  admin     Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@unique([adminId, tenantId])
+  @@index([adminId])
+  @@index([tenantId])
+  @@map("admin_tenants")
 }
 
 model AdminRole {

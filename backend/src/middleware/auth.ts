@@ -21,11 +21,16 @@ export const authMiddleware = (
     const token = authHeader.substring(7)
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as {
       userId: string
-      tenantId: string
+      type: string
     }
 
     req.userId = decoded.userId
-    req.tenantId = decoded.tenantId
+
+    const tenantId = req.headers['tenant-id'] as string
+    if (tenantId) {
+      req.tenantId = tenantId
+    }
+
     next()
   } catch (error) {
     next(new AppError('无效的认证令牌', 401))

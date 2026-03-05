@@ -19,6 +19,13 @@ router.post('/login', async (req: Request, res: Response) => {
             { username: username || '' },
             { email: username || '' }
           ]
+        },
+        include: {
+          tenants: {
+            include: {
+              tenant: true
+            }
+          }
         }
       })
 
@@ -44,10 +51,18 @@ router.post('/login', async (req: Request, res: Response) => {
         })
       }
 
+      const currentTenantId = user.currentTenantId || user.tenants[0]?.tenantId
+
+      if (!currentTenantId) {
+        return res.status(403).json({
+          status: 'error',
+          message: '该账号没有关联的租户'
+        })
+      }
+
       const token = jwt.sign(
         { 
-          userId: user.id, 
-          tenantId: user.tenantId,
+          userId: user.id,
           type: 'admin'
         },
         JWT_SECRET,
@@ -70,8 +85,14 @@ router.post('/login', async (req: Request, res: Response) => {
           id: user.id,
           username: user.username,
           email: user.email,
-          avatar: null
-        }
+          avatar: null,
+          currentTenantId
+        },
+        tenants: user.tenants.map(t => ({
+          id: t.tenant.id,
+          name: t.tenant.name,
+          role: t.role
+        }))
       })
     } else if (loginType === 'email') {
       return res.status(501).json({
@@ -190,35 +211,43 @@ router.post('/register', async (req: Request, res: Response) => {
       })
     }
 
-    const defaultTenant = await prisma.tenant.findFirst({
-      where: { id: 'default-tenant' }
-    })
-
-    if (!defaultTenant) {
-      return res.status(500).json({
-        status: 'error',
-        message: '系统配置错误：默认租户不存在'
-      })
-    }
-
     const hashedPassword = await bcrypt.hash(password, 10)
     const newUsername = username || email.split('@')[0]
 
-    const user = await prisma.admin.create({
-      data: {
-        id: `admin-${Date.now()}`,
-        tenantId: defaultTenant.id,
-        username: newUsername,
-        email,
-        password: hashedPassword,
-        status: 'active'
-      }
+    const result = await prisma.$transaction(async (tx) => {
+      const tenant = await tx.tenant.create({
+        data: {
+          name: `${newUsername}的租户`,
+          status: 'active',
+          plan: 'basic'
+        }
+      })
+
+      const user = await tx.admin.create({
+        data: {
+          id: `admin-${Date.now()}`,
+          currentTenantId: tenant.id,
+          username: newUsername,
+          email,
+          password: hashedPassword,
+          status: 'active'
+        }
+      })
+
+      await tx.adminTenant.create({
+        data: {
+          adminId: user.id,
+          tenantId: tenant.id,
+          role: 'owner'
+        }
+      })
+
+      return { user, tenant }
     })
 
     const token = jwt.sign(
       { 
-        userId: user.id, 
-        tenantId: user.tenantId,
+        userId: result.user.id,
         type: 'admin'
       },
       JWT_SECRET,
@@ -227,7 +256,7 @@ router.post('/register', async (req: Request, res: Response) => {
 
     const refreshToken = jwt.sign(
       { 
-        userId: user.id, 
+        userId: result.user.id, 
         type: 'refresh'
       },
       JWT_SECRET,
@@ -238,11 +267,17 @@ router.post('/register', async (req: Request, res: Response) => {
       token,
       refreshToken,
       user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        avatar: null
-      }
+        id: result.user.id,
+        username: result.user.username,
+        email: result.user.email,
+        avatar: null,
+        currentTenantId: result.tenant.id
+      },
+      tenants: [{
+        id: result.tenant.id,
+        name: result.tenant.name,
+        role: 'owner'
+      }]
     })
   } catch (error) {
     console.error('注册错误:', error)
