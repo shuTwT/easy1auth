@@ -261,7 +261,10 @@ const getTypeText = (type: string) => {
   }
 }
 
-const formatLifetime = (seconds: number) => {
+const formatLifetime = (seconds?: number) => {
+  if (!seconds) {
+    return 'N/A'
+  }
   if (seconds < 3600) {
     return `${Math.floor(seconds / 60)} 分钟`
   } else if (seconds < 86400) {

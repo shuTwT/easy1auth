@@ -485,7 +485,7 @@ onMounted(() => {
         node-key="id"
         default-expand-all
       >
-        <template #default="{ node, data }">
+        <template #default="{ data }">
           <div class="tree-node">
             <span class="node-label">{{ data.name }}</span>
             <el-tag :type="getTypeColor(data.type)" size="small" style="margin-left: 10px;">

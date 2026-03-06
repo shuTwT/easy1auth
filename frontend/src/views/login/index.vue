@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { shallowRef, computed } from 'vue'
+import { shallowRef } from 'vue'
 import PasswordLoginForm from '@/components/login/PasswordLoginForm.vue'
 import EmailCodeLoginForm from '@/components/login/EmailCodeLoginForm.vue'
 import PasskeyLogin from '@/components/login/PasskeyLogin.vue'
@@ -9,16 +9,6 @@ import RegisterForm from '@/components/login/RegisterForm.vue'
 type LoginMode = 'password' | 'email' | 'passkey' | 'register'
 
 const currentMode = shallowRef<LoginMode>('password')
-
-const modeTitle = computed(() => {
-  const titles = {
-    password: '账号密码登录',
-    email: '邮箱验证码登录',
-    passkey: 'Passkey 登录',
-    register: '注册账号'
-  }
-  return titles[currentMode.value]
-})
 
 function switchToPassword() {
   currentMode.value = 'password'

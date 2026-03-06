@@ -85,9 +85,9 @@ const applyBrandStyles = () => {
   }
 }
 
-const logoText = computed(() => {
-  return isCollapse.value ? 'EA' : (brandSettings.value?.adminPanel?.logo ? '' : 'Easy1Auth')
-})
+// const logoText = computed(() => {
+//   return isCollapse.value ? 'EA' : (brandSettings.value?.adminPanel?.logo ? '' : 'Easy1Auth')
+// })
 
 const currentMenuTitle = computed(() => {
   for (const item of menuItems) {

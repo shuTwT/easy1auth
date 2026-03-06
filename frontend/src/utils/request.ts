@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
+import type { AxiosInstance, AxiosResponse } from 'axios'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 
@@ -40,9 +40,14 @@ request.interceptors.response.use(
     if (response) {
       switch (response.status) {
         case 401:
-          ElMessage.error('登录已过期，请重新登录')
-          localStorage.removeItem('token')
-          window.location.href = '/login'
+          if (window.location.pathname !== '/login') {
+            ElMessage.error('登录已过期，请重新登录')
+            localStorage.removeItem('token')
+            localStorage.removeItem('currentTenantId')
+            const userStore = useUserStore()
+            userStore.logout()
+            window.location.href = '/login'
+          }
           break
         case 403:
           ElMessage.error('没有权限访问')

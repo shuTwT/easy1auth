@@ -11,6 +11,7 @@ router.get('/list', authMiddleware, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthRequest
     const userId = authReq.userId
+    const { page = 1, pageSize = 10, name, status, plan } = req.query
 
     if (!userId) {
       return res.status(401).json({
@@ -19,26 +20,33 @@ router.get('/list', authMiddleware, async (req: Request, res: Response) => {
       })
     }
 
-    const adminTenants = await prisma.adminTenant.findMany({
-      where: { adminId: userId },
-      include: {
-        tenant: true
-      }
-    })
+    const where: any = {}
+    if (name) {
+      where.name = { contains: String(name) }
+    }
+    if (status) {
+      where.status = String(status)
+    }
+    if (plan) {
+      where.plan = String(plan)
+    }
 
-    const tenants = adminTenants.map(at => ({
-      id: at.tenant.id,
-      name: at.tenant.name,
-      logo: at.tenant.logo,
-      status: at.tenant.status,
-      plan: at.tenant.plan,
-      role: at.role,
-      createdAt: at.tenant.createdAt
-    }))
+    const [tenants, total] = await Promise.all([
+      prisma.tenant.findMany({
+        where,
+        skip: (Number(page) - 1) * Number(pageSize),
+        take: Number(pageSize),
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.tenant.count({ where })
+    ])
 
     return res.json({
       status: 'success',
-      tenants
+      tenants,
+      total,
+      page: Number(page),
+      pageSize: Number(pageSize)
     })
   } catch (error) {
     console.error('获取租户列表错误:', error)
@@ -155,6 +163,82 @@ router.get('/current', authMiddleware, async (req: Request, res: Response) => {
     return res.status(500).json({
       status: 'error',
       message: '获取当前租户失败'
+    })
+  }
+})
+
+router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params
+    const { name, logo, domain, plan, maxUsers, maxApps } = req.body
+
+    const tenant = await prisma.tenant.update({
+      where: { id: String(id) },
+      data: {
+        name,
+        logo,
+        domain,
+        plan,
+        maxUsers,
+        maxApps
+      }
+    })
+
+    return res.json({
+      status: 'success',
+      message: '租户更新成功',
+      tenant
+    })
+  } catch (error) {
+    console.error('更新租户错误:', error)
+    return res.status(500).json({
+      status: 'error',
+      message: '更新租户失败'
+    })
+  }
+})
+
+router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params
+
+    await prisma.tenant.delete({
+      where: { id: String(id) }
+    })
+
+    return res.json({
+      status: 'success',
+      message: '租户删除成功'
+    })
+  } catch (error) {
+    console.error('删除租户错误:', error)
+    return res.status(500).json({
+      status: 'error',
+      message: '删除租户失败'
+    })
+  }
+})
+
+router.put('/:id/status', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params
+    const { status } = req.body
+
+    const tenant = await prisma.tenant.update({
+      where: { id: String(id) },
+      data: { status }
+    })
+
+    return res.json({
+      status: 'success',
+      message: '状态更新成功',
+      tenant
+    })
+  } catch (error) {
+    console.error('更新租户状态错误:', error)
+    return res.status(500).json({
+      status: 'error',
+      message: '更新租户状态失败'
     })
   }
 })

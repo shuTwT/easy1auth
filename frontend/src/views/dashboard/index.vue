@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { 
+  OfficeBuilding,
   TrendCharts, 
   User, 
   Monitor, 
@@ -18,7 +19,7 @@ const stats = ref([
   { 
     title: '租户总数', 
     value: 128, 
-    icon: 'OfficeBuilding', 
+    icon: OfficeBuilding, 
     trend: '+12%',
     trendUp: true,
     color: 'primary'
@@ -26,7 +27,7 @@ const stats = ref([
   { 
     title: '用户总数', 
     value: 12580, 
-    icon: 'User', 
+    icon: User, 
     trend: '+8.5%',
     trendUp: true,
     color: 'success'
@@ -34,7 +35,7 @@ const stats = ref([
   { 
     title: '应用总数', 
     value: 356, 
-    icon: 'Monitor', 
+    icon: Monitor, 
     trend: '+3.2%',
     trendUp: true,
     color: 'warning'
@@ -42,7 +43,7 @@ const stats = ref([
   { 
     title: '今日登录', 
     value: 8920, 
-    icon: 'Connection', 
+    icon: Connection, 
     trend: '-2.1%',
     trendUp: false,
     color: 'info'
@@ -115,7 +116,7 @@ const formatNumber = (num: number) => {
           </div>
           <div class="stat-trend" :class="{ 'trend-up': stat.trendUp, 'trend-down': !stat.trendUp }">
             <el-icon :size="14">
-              <component :is="stat.trendUp ? 'ArrowUp' : 'ArrowDown'" />
+              <component :is="stat.trendUp ? ArrowUp : ArrowDown" />
             </el-icon>
             <span>{{ stat.trend }}</span>
           </div>

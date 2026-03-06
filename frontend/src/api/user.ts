@@ -7,13 +7,12 @@ import type {
   UserListResponse,
   UserStats,
   ChangePasswordDto,
-  ResetPasswordDto,
   AssignRolesDto,
   AssignGroupsDto
 } from '@/types/user'
 
 export const userApi = {
-  getList(query: UserQueryDto): Promise<{ status: string; data: UserListResponse }> {
+  getList(query?: UserQueryDto): Promise<{ status: string; data: UserListResponse }> {
     return request.get('/users', { params: query })
   },
 

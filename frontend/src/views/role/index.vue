@@ -14,7 +14,7 @@
     </div>
 
     <div class="stats-cards">
-      <el-card v-for="(stat, index) in statsData" :key="stat.label" class="stat-card" shadow="hover">
+      <el-card v-for="(stat, index) in statsData" :key="index" class="stat-card" shadow="hover">
         <div class="stat-content">
           <div class="stat-icon" :class="stat.class">
             <el-icon :size="24"><component :is="stat.icon" /></el-icon>
@@ -134,7 +134,7 @@
           default-expand-all
           :expand-on-click-node="false"
         >
-          <template #default="{ node, data }">
+          <template #default="{ data }">
             <div class="tree-node">
               <span class="node-label">
                 <el-tag :type="data.type === 'system' ? 'danger' : 'success'" size="small" style="margin-right: 8px">
@@ -272,10 +272,6 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  Collection,
-  Lock,
-  UserFilled,
-  User,
   Search,
   Plus,
   List,
@@ -283,7 +279,7 @@ import {
 } from '@element-plus/icons-vue'
 import { roleApi } from '../../api/role'
 import { userApi } from '../../api/user'
-import type { Role, RoleTree, RoleStats, CreateRoleDto, UpdateRoleDto, RoleUser } from '../../types/role'
+import type { Role, RoleTree, RoleStats, CreateRoleDto, RoleUser } from '../../types/role'
 
 const loading = ref(false)
 const roles = ref<Role[]>([])
