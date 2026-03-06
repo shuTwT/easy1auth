@@ -4,13 +4,11 @@
   "description": "Easy1Auth Backend API",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "nodemon --exec ts-node src/index.ts",
-    "build": "tsc",
-    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "prisma:studio": "prisma studio"
   },
   "keywords": [
     "authentication",
@@ -52,9 +50,8 @@
     "@types/node": "^25.3.3",
     "@types/pg": "^8.18.0",
     "@types/uuid": "^10.0.0",
-    "nodemon": "^3.1.14",
     "prisma": "^7.4.2",
-    "ts-node": "^10.9.2",
+    "tsx": "^4.19.0",
     "typescript": "^5.9.3"
   }
 }
