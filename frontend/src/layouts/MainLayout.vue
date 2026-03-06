@@ -15,8 +15,15 @@ const brandSettings = ref<any>(null)
 const menuItems = [
   { index: '/dashboard', title: '控制台', icon: 'Odometer' },
   { index: '/tenant', title: '租户管理', icon: 'OfficeBuilding' },
-  { index: '/user', title: '用户管理', icon: 'User' },
-  { index: '/group', title: '用户组管理', icon: 'UserFilled' },
+  {
+    index: '/user-management',
+    title: '用户管理',
+    icon: 'User',
+    children: [
+      { index: '/user', title: '用户列表', icon: 'User' },
+      { index: '/group', title: '用户组', icon: 'UserFilled' }
+    ]
+  },
   { index: '/position', title: '岗位管理', icon: 'Briefcase' },
   { index: '/role', title: '角色管理', icon: 'Collection' },
   { index: '/social-identity-provider', title: '社会化身份源', icon: 'Connection' },
@@ -82,6 +89,21 @@ const logoText = computed(() => {
   return isCollapse.value ? 'EA' : (brandSettings.value?.adminPanel?.logo ? '' : 'Easy1Auth')
 })
 
+const currentMenuTitle = computed(() => {
+  for (const item of menuItems) {
+    if (item.index === route.path) {
+      return item.title
+    }
+    if (item.children) {
+      const child = item.children.find(c => c.index === route.path)
+      if (child) {
+        return `${item.title} / ${child.title}`
+      }
+    }
+  }
+  return '首页'
+})
+
 onMounted(() => {
   loadBrandSettings()
 })
@@ -126,12 +148,31 @@ onMounted(() => {
           class="sidebar-menu"
           @select="handleSelect"
         >
-          <el-menu-item v-for="item in menuItems" :key="item.index" :index="item.index" class="menu-item">
-            <el-icon class="menu-icon"><component :is="item.icon" /></el-icon>
-            <template #title>
-              <span class="menu-title">{{ item.title }}</span>
-            </template>
-          </el-menu-item>
+          <template v-for="item in menuItems" :key="item.index">
+            <el-sub-menu v-if="item.children" :index="item.index" class="menu-item">
+              <template #title>
+                <el-icon class="menu-icon"><component :is="item.icon" /></el-icon>
+                <span class="menu-title">{{ item.title }}</span>
+              </template>
+              <el-menu-item
+                v-for="child in item.children"
+                :key="child.index"
+                :index="child.index"
+                class="sub-menu-item"
+              >
+                <el-icon class="menu-icon"><component :is="child.icon" /></el-icon>
+                <template #title>
+                  <span class="menu-title">{{ child.title }}</span>
+                </template>
+              </el-menu-item>
+            </el-sub-menu>
+            <el-menu-item v-else :index="item.index" class="menu-item">
+              <el-icon class="menu-icon"><component :is="item.icon" /></el-icon>
+              <template #title>
+                <span class="menu-title">{{ item.title }}</span>
+              </template>
+            </el-menu-item>
+          </template>
         </el-menu>
       </el-scrollbar>
       
@@ -149,7 +190,7 @@ onMounted(() => {
         <div class="header-left">
           <div class="breadcrumb">
             <el-icon :size="16"><HomeFilled /></el-icon>
-            <span class="breadcrumb-text">{{ menuItems.find(m => m.index === route.path)?.title || '首页' }}</span>
+            <span class="breadcrumb-text">{{ currentMenuTitle }}</span>
           </div>
         </div>
         <div class="header-right">
@@ -301,6 +342,68 @@ onMounted(() => {
 :deep(.el-menu-item .el-icon) {
   font-size: 18px;
   margin-right: 12px;
+}
+
+:deep(.el-sub-menu__title) {
+  height: 48px;
+  line-height: 48px;
+  margin: 4px 0;
+  border-radius: var(--border-radius);
+  color: var(--sidebar-text);
+  background: transparent;
+  transition: all var(--transition-fast);
+}
+
+:deep(.el-sub-menu__title:hover) {
+  background: var(--sidebar-hover-bg);
+  color: var(--sidebar-active-text);
+}
+
+:deep(.el-sub-menu.is-active .el-sub-menu__title) {
+  color: var(--sidebar-active-text);
+}
+
+:deep(.el-sub-menu .el-icon) {
+  font-size: 18px;
+  margin-right: 12px;
+}
+
+:deep(.el-sub-menu .el-sub-menu__icon-arrow) {
+  font-size: 12px;
+  color: var(--sidebar-text);
+}
+
+:deep(.el-sub-menu .el-menu--inline) {
+  background: transparent !important;
+}
+
+:deep(.el-sub-menu .el-menu) {
+  background: transparent !important;
+}
+
+.sub-menu-item {
+  padding-left: 56px !important;
+  background: rgba(0, 0, 0, 0.1) !important;
+}
+
+:deep(.sub-menu-item) {
+  height: 44px;
+  line-height: 44px;
+  margin: 2px 0;
+  border-radius: var(--border-radius);
+  color: var(--sidebar-text);
+  background: transparent;
+  transition: all var(--transition-fast);
+}
+
+:deep(.sub-menu-item:hover) {
+  background: var(--sidebar-hover-bg) !important;
+  color: var(--sidebar-active-text);
+}
+
+:deep(.sub-menu-item.is-active) {
+  background: var(--sidebar-hover-bg) !important;
+  color: var(--sidebar-active-text);
 }
 
 .sidebar-menu.el-menu--collapse :deep(.el-menu-item) {

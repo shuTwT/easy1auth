@@ -28,7 +28,7 @@ const routes: RouteRecordRaw[] = [
     path: '/user',
     name: 'User',
     component: () => import('@/views/user/index.vue'),
-    meta: { title: '用户管理', requiresAuth: true }
+    meta: { title: '用户列表', requiresAuth: true }
   },
   {
     path: '/application',
@@ -46,7 +46,7 @@ const routes: RouteRecordRaw[] = [
     path: '/group',
     name: 'Group',
     component: () => import('@/views/group/index.vue'),
-    meta: { title: '用户组管理', requiresAuth: true }
+    meta: { title: '用户组', requiresAuth: true }
   },
   {
     path: '/position',
@@ -93,6 +93,9 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
+  
+  const title = to.meta.title as string | undefined
+  document.title = title ? `${title} | Easy1Auth` : 'Easy1Auth'
   
   if (to.meta.requiresAuth && !token) {
     next('/login')
