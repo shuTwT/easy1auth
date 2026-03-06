@@ -278,7 +278,7 @@ onMounted(() => {
           <el-input v-model="queryForm.username" placeholder="请输入用户名" clearable />
         </el-form-item>
         <el-form-item label="日志类型">
-          <el-select v-model="queryForm.type" placeholder="请选择类型" clearable>
+          <el-select v-model="queryForm.type" placeholder="请选择类型" clearable style="width: 150px">
             <el-option label="认证" value="auth" />
             <el-option label="用户" value="user" />
             <el-option label="应用" value="application" />
@@ -292,7 +292,7 @@ onMounted(() => {
           <el-input v-model="queryForm.action" placeholder="请输入操作" clearable />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="queryForm.status" placeholder="请选择状态" clearable>
+          <el-select v-model="queryForm.status" placeholder="请选择状态" clearable style="width: 120px">
             <el-option label="成功" value="success" />
             <el-option label="失败" value="failed" />
           </el-select>

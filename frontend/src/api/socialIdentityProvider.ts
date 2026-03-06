@@ -10,37 +10,37 @@ import type {
 } from '../types/socialIdentityProvider'
 
 export const socialIdentityProviderApi = {
-  getStats() {
-    return request.get<SocialIdentityProviderStats>('/social-identity-providers/stats')
+  getStats(): Promise<SocialIdentityProviderStats> {
+    return request.get('/social-identity-providers/stats')
   },
 
-  getList(params?: { type?: string; status?: string }) {
-    return request.get<SocialIdentityProvider[]>('/social-identity-providers', { params })
+  getList(params?: { type?: string; status?: string }): Promise<SocialIdentityProvider[]> {
+    return request.get('/social-identity-providers', { params })
   },
 
-  getById(id: string) {
-    return request.get<SocialIdentityProvider>(`/social-identity-providers/${id}`)
+  getById(id: string): Promise<SocialIdentityProvider> {
+    return request.get(`/social-identity-providers/${id}`)
   },
 
-  create(data: CreateSocialIdentityProviderDto) {
-    return request.post<SocialIdentityProvider>('/social-identity-providers', data)
+  create(data: CreateSocialIdentityProviderDto): Promise<SocialIdentityProvider> {
+    return request.post('/social-identity-providers', data)
   },
 
-  update(id: string, data: UpdateSocialIdentityProviderDto) {
-    return request.put<SocialIdentityProvider>(`/social-identity-providers/${id}`, data)
+  update(id: string, data: UpdateSocialIdentityProviderDto): Promise<SocialIdentityProvider> {
+    return request.put(`/social-identity-providers/${id}`, data)
   },
 
-  delete(id: string) {
+  delete(id: string): Promise<void> {
     return request.delete(`/social-identity-providers/${id}`)
   },
 
-  getAuthorizeUrl(type: string, redirectUri: string) {
-    return request.post<OAuthAuthorizeUrlResponse>(`/social-identity-providers/${type}/authorize`, {
+  getAuthorizeUrl(type: string, redirectUri: string): Promise<OAuthAuthorizeUrlResponse> {
+    return request.post(`/social-identity-providers/${type}/authorize`, {
       redirectUri,
     })
   },
 
-  handleCallback(type: string, data: OAuthCallbackDto) {
-    return request.post<SocialLoginResponse>(`/social-identity-providers/${type}/callback`, data)
+  handleCallback(type: string, data: OAuthCallbackDto): Promise<SocialLoginResponse> {
+    return request.post(`/social-identity-providers/${type}/callback`, data)
   },
 }

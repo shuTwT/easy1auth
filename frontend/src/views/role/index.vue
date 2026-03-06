@@ -1,60 +1,30 @@
 <template>
   <div class="role-management">
+    <div class="page-header">
+      <div class="header-content">
+        <h1 class="page-title">角色管理</h1>
+        <p class="page-subtitle">管理系统角色，包括创建、编辑、删除和分配用户</p>
+      </div>
+      <div class="header-actions">
+        <el-button type="primary" @click="handleCreate">
+          <el-icon><Plus /></el-icon>
+          创建角色
+        </el-button>
+      </div>
+    </div>
+
     <div class="stats-cards">
-      <el-row :gutter="20">
-        <el-col :span="6">
-          <el-card shadow="hover">
-            <div class="stat-card">
-              <div class="stat-icon total">
-                <el-icon><Collection /></el-icon>
-              </div>
-              <div class="stat-content">
-                <div class="stat-value">{{ stats.totalRoles }}</div>
-                <div class="stat-label">总角色数</div>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card shadow="hover">
-            <div class="stat-card">
-              <div class="stat-icon system">
-                <el-icon><Lock /></el-icon>
-              </div>
-              <div class="stat-content">
-                <div class="stat-value">{{ stats.systemRoles }}</div>
-                <div class="stat-label">系统角色</div>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card shadow="hover">
-            <div class="stat-card">
-              <div class="stat-icon custom">
-                <el-icon><UserFilled /></el-icon>
-              </div>
-              <div class="stat-content">
-                <div class="stat-value">{{ stats.customRoles }}</div>
-                <div class="stat-label">自定义角色</div>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card shadow="hover">
-            <div class="stat-card">
-              <div class="stat-icon users">
-                <el-icon><User /></el-icon>
-              </div>
-              <div class="stat-content">
-                <div class="stat-value">{{ stats.totalUsers }}</div>
-                <div class="stat-label">已分配用户</div>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
+      <el-card v-for="(stat, index) in statsData" :key="stat.label" class="stat-card" shadow="hover">
+        <div class="stat-content">
+          <div class="stat-icon" :class="stat.class">
+            <el-icon :size="24"><component :is="stat.icon" /></el-icon>
+          </div>
+          <div class="stat-info">
+            <div class="stat-value">{{ stat.value }}</div>
+            <div class="stat-label">{{ stat.label }}</div>
+          </div>
+        </div>
+      </el-card>
     </div>
 
     <el-card class="main-card">
@@ -73,13 +43,13 @@
                 <el-icon><Search /></el-icon>
               </template>
             </el-input>
-            <el-select v-model="filterType" placeholder="角色类型" clearable style="width: 150px; margin-left: 10px" @change="loadRoles">
+            <el-select v-model="filterType" placeholder="角色类型" clearable style="width: 150px; margin-left: 12px" @change="loadRoles">
               <el-option label="系统角色" value="system" />
               <el-option label="自定义角色" value="custom" />
             </el-select>
           </div>
           <div class="header-right">
-            <el-button-group style="margin-right: 10px">
+            <el-button-group style="margin-right: 12px">
               <el-button :type="viewMode === 'list' ? 'primary' : ''" @click="viewMode = 'list'">
                 <el-icon><List /></el-icon>
                 列表
@@ -89,34 +59,36 @@
                 树形
               </el-button>
             </el-button-group>
-            <el-button type="primary" @click="handleCreate">
-              <el-icon><Plus /></el-icon>
-              创建角色
-            </el-button>
           </div>
         </div>
       </template>
 
       <div v-if="viewMode === 'list'" class="role-list">
         <el-table :data="roles" style="width: 100%" v-loading="loading">
-          <el-table-column prop="name" label="角色名称" width="200" />
-          <el-table-column prop="code" label="角色编码" width="180" />
-          <el-table-column label="角色类型" width="120">
+          <el-table-column prop="name" label="角色名称" width="200">
             <template #default="{ row }">
-              <el-tag :type="row.type === 'system' ? 'danger' : 'success'" size="small">
-                {{ row.type === 'system' ? '系统' : '自定义' }}
-              </el-tag>
+              <div class="role-name-cell">
+                <el-tag :type="row.type === 'system' ? 'danger' : 'success'" size="small">
+                  {{ row.type === 'system' ? '系统' : '自定义' }}
+                </el-tag>
+                <span class="role-name">{{ row.name }}</span>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column prop="code" label="角色编码" width="180">
+            <template #default="{ row }">
+              <code class="role-code">{{ row.code }}</code>
             </template>
           </el-table-column>
           <el-table-column prop="description" label="描述" min-width="200" show-overflow-tooltip />
-          <el-table-column label="数据范围" width="120">
+          <el-table-column label="数据范围" width="140">
             <template #default="{ row }">
-              <el-tag size="small">{{ getDataScopeLabel(row.dataScope) }}</el-tag>
+              <el-tag size="small" type="info">{{ getDataScopeLabel(row.dataScope) }}</el-tag>
             </template>
           </el-table-column>
           <el-table-column label="用户数" width="100" align="center">
             <template #default="{ row }">
-              <el-button link type="primary" @click="handleViewUsers(row)">
+              <el-button link type="primary" @click="handleViewUsers(row)" class="user-count-btn">
                 {{ row.userCount || 0 }}
               </el-button>
             </template>
@@ -126,7 +98,7 @@
               {{ formatDate(row.createdAt) }}
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="200" fixed="right">
+          <el-table-column label="操作" width="180" fixed="right">
             <template #default="{ row }">
               <el-button link type="primary" size="small" @click="handleViewUsers(row)">
                 查看用户
@@ -182,7 +154,7 @@
       </div>
     </el-card>
 
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px">
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px" class="custom-dialog">
       <el-form :model="roleForm" :rules="rules" ref="formRef" label-width="100px">
         <el-form-item label="角色名称" prop="name">
           <el-input v-model="roleForm.name" placeholder="请输入角色名称" />
@@ -191,13 +163,13 @@
           <el-input v-model="roleForm.code" placeholder="请输入角色编码" :disabled="isEdit" />
         </el-form-item>
         <el-form-item label="角色类型" prop="type">
-          <el-select v-model="roleForm.type" placeholder="请选择角色类型" :disabled="isEdit">
+          <el-select v-model="roleForm.type" placeholder="请选择角色类型" :disabled="isEdit" style="width: 100%">
             <el-option label="自定义角色" value="custom" />
             <el-option label="系统角色" value="system" />
           </el-select>
         </el-form-item>
         <el-form-item label="数据范围" prop="dataScope">
-          <el-select v-model="roleForm.dataScope" placeholder="请选择数据范围">
+          <el-select v-model="roleForm.dataScope" placeholder="请选择数据范围" style="width: 100%">
             <el-option label="仅本人数据" value="self" />
             <el-option label="本部门数据" value="department" />
             <el-option label="本部门及下级部门数据" value="department_and_sub" />
@@ -205,7 +177,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="父级角色" prop="parentId">
-          <el-select v-model="roleForm.parentId" placeholder="请选择父级角色" clearable>
+          <el-select v-model="roleForm.parentId" placeholder="请选择父级角色" clearable style="width: 100%">
             <el-option
               v-for="role in availableParentRoles"
               :key="role.id"
@@ -224,7 +196,7 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="usersDialogVisible" title="角色用户" width="800px">
+    <el-dialog v-model="usersDialogVisible" title="角色用户" width="800px" class="custom-dialog">
       <div class="users-dialog-content">
         <div class="users-toolbar">
           <el-input
@@ -245,7 +217,16 @@
           </el-button>
         </div>
         <el-table :data="roleUsers" style="width: 100%" v-loading="usersLoading">
-          <el-table-column prop="username" label="用户名" width="150" />
+          <el-table-column prop="username" label="用户名" width="150">
+            <template #default="{ row }">
+              <div class="user-cell">
+                <el-avatar :size="28" class="user-avatar">
+                  {{ row.name?.charAt(0) || row.username.charAt(0).toUpperCase() }}
+                </el-avatar>
+                <span>{{ row.username }}</span>
+              </div>
+            </template>
+          </el-table-column>
           <el-table-column prop="name" label="姓名" width="120" />
           <el-table-column prop="email" label="邮箱" width="200" />
           <el-table-column prop="department" label="部门" width="150" />
@@ -268,7 +249,7 @@
       </div>
     </el-dialog>
 
-    <el-dialog v-model="assignUsersDialogVisible" title="分配用户" width="800px">
+    <el-dialog v-model="assignUsersDialogVisible" title="分配用户" width="800px" class="custom-dialog">
       <div class="assign-users-content">
         <el-transfer
           v-model="selectedUserIds"
@@ -340,6 +321,13 @@ const rules = {
   type: [{ required: true, message: '请选择角色类型', trigger: 'change' }],
   dataScope: [{ required: true, message: '请选择数据范围', trigger: 'change' }],
 }
+
+const statsData = computed(() => [
+  { label: '总角色数', value: stats.value.totalRoles, icon: 'Collection', class: 'primary' },
+  { label: '系统角色', value: stats.value.systemRoles, icon: 'Lock', class: 'danger' },
+  { label: '自定义角色', value: stats.value.customRoles, icon: 'UserFilled', class: 'success' },
+  { label: '已分配用户', value: stats.value.totalUsers, icon: 'User', class: 'info' },
+])
 
 const availableParentRoles = computed(() => {
   return roles.value.filter((role) => role.id !== roleForm.id)
@@ -498,7 +486,7 @@ const loadRoleUsers = async () => {
 const handleAssignUsers = async () => {
   try {
     const response = await userApi.getList()
-    allUsers.value = response.users.map((user: any) => ({
+    allUsers.value = response.data.users.map((user: any) => ({
       id: user.id,
       name: `${user.name} (${user.username})`,
       disabled: roleUsers.value.some((ru) => ru.id === user.id),
@@ -580,64 +568,103 @@ onMounted(() => {
 
 <style scoped>
 .role-management {
-  padding: 20px;
+  padding: 24px;
+  min-height: calc(100vh - 64px);
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.header-content {
+  flex: 1;
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 8px 0;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: 0;
 }
 
 .stats-cards {
-  margin-bottom: 20px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-bottom: 24px;
 }
 
 .stat-card {
-  display: flex;
-  align-items: center;
+  cursor: pointer;
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
 }
 
-.stat-icon {
-  width: 60px;
-  height: 60px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 28px;
-  color: white;
-  margin-right: 15px;
-}
-
-.stat-icon.total {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.stat-icon.system {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-}
-
-.stat-icon.custom {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-}
-
-.stat-icon.users {
-  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--card-hover-shadow);
 }
 
 .stat-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.stat-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--border-radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+
+.stat-icon.primary {
+  background: var(--primary-gradient);
+}
+
+.stat-icon.danger {
+  background: linear-gradient(135deg, #EF4444 0%, #F87171 100%);
+}
+
+.stat-icon.success {
+  background: linear-gradient(135deg, #10B981 0%, #34D399 100%);
+}
+
+.stat-icon.info {
+  background: linear-gradient(135deg, #0EA5E9 0%, #38BDF8 100%);
+}
+
+.stat-info {
   flex: 1;
 }
 
 .stat-value {
-  font-size: 24px;
-  font-weight: bold;
-  color: #303133;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
 }
 
 .stat-label {
   font-size: 14px;
-  color: #909399;
-  margin-top: 5px;
+  color: var(--text-muted);
+  margin-top: 4px;
 }
 
 .main-card {
-  margin-top: 20px;
+  border-radius: var(--border-radius-lg);
 }
 
 .card-header {
@@ -656,6 +683,31 @@ onMounted(() => {
   align-items: center;
 }
 
+.role-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.role-name {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.role-code {
+  background: #F1F5F9;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-family: 'Fira Code', monospace;
+}
+
+.user-count-btn {
+  font-weight: 600;
+  font-size: 14px;
+}
+
 .tree-node {
   flex: 1;
   display: flex;
@@ -670,13 +722,28 @@ onMounted(() => {
 }
 
 .node-code {
-  color: #909399;
+  color: var(--text-muted);
   font-size: 12px;
   margin-left: 8px;
 }
 
 .node-users {
   margin-left: 20px;
+}
+
+.custom-dialog :deep(.el-dialog__header) {
+  border-bottom: 1px solid var(--border-color);
+  padding: 16px 20px;
+  margin-right: 0;
+}
+
+.custom-dialog :deep(.el-dialog__body) {
+  padding: 20px;
+}
+
+.custom-dialog :deep(.el-dialog__footer) {
+  border-top: 1px solid var(--border-color);
+  padding: 16px 20px;
 }
 
 .users-dialog-content {
@@ -691,5 +758,31 @@ onMounted(() => {
 
 .assign-users-content {
   min-height: 400px;
+}
+
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-avatar {
+  background: var(--primary-gradient);
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1200px) {
+  .stats-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-cards {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

@@ -405,7 +405,7 @@ onMounted(() => {
           <el-input v-model="queryForm.name" placeholder="请输入用户组名称" clearable />
         </el-form-item>
         <el-form-item label="类型">
-          <el-select v-model="queryForm.type" placeholder="请选择类型" clearable>
+          <el-select v-model="queryForm.type" placeholder="请选择类型" clearable style="width: 150px">
             <el-option label="团队" value="team" />
             <el-option label="部门" value="department" />
             <el-option label="项目" value="project" />
@@ -540,7 +540,7 @@ onMounted(() => {
           />
         </el-form-item>
         <el-form-item label="类型" prop="type">
-          <el-select v-model="groupForm.type" placeholder="请选择类型">
+          <el-select v-model="groupForm.type" placeholder="请选择类型" style="width: 100%">
             <el-option label="团队" value="team" />
             <el-option label="部门" value="department" />
             <el-option label="项目" value="project" />
@@ -553,6 +553,7 @@ onMounted(() => {
             placeholder="请选择父级用户组"
             clearable
             filterable
+            style="width: 100%"
           >
             <el-option
               v-for="option in parentOptions"

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Upload, Download, UploadFilled } from '@element-plus/icons-vue'
+import { Plus, Upload, Download, UploadFilled, Search, Refresh } from '@element-plus/icons-vue'
 import { userApi } from '@/api/user'
 import { roleApi } from '@/api/role'
 import type { User, CreateUserDto, UpdateUserDto, UserQueryDto } from '@/types/user'
@@ -354,23 +354,24 @@ const handleFileChange = async (options: any) => {
 
 <template>
   <div class="user-management">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>用户管理</span>
-          <div>
-            <el-button @click="handleImport">
-              <el-icon><Upload /></el-icon>
-              导入用户
-            </el-button>
-            <el-button type="primary" @click="handleAdd">
-              <el-icon><Plus /></el-icon>
-              新增用户
-            </el-button>
-          </div>
-        </div>
-      </template>
+    <div class="page-header">
+      <div class="header-content">
+        <h1 class="page-title">用户管理</h1>
+        <p class="page-subtitle">管理系统用户，包括添加、编辑、删除和分配角色</p>
+      </div>
+      <div class="header-actions">
+        <el-button @click="handleImport">
+          <el-icon><Upload /></el-icon>
+          导入用户
+        </el-button>
+        <el-button type="primary" @click="handleAdd">
+          <el-icon><Plus /></el-icon>
+          新增用户
+        </el-button>
+      </div>
+    </div>
 
+    <el-card class="search-card">
       <el-form :inline="true" :model="queryForm" class="search-form">
         <el-form-item label="用户名">
           <el-input v-model="queryForm.username" placeholder="请输入用户名" clearable />
@@ -382,7 +383,7 @@ const handleFileChange = async (options: any) => {
           <el-input v-model="queryForm.name" placeholder="请输入姓名" clearable />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="queryForm.status" placeholder="请选择状态" clearable>
+          <el-select v-model="queryForm.status" placeholder="请选择状态" clearable style="width: 150px">
             <el-option label="正常" value="active" />
             <el-option label="禁用" value="disabled" />
             <el-option label="锁定" value="locked" />
@@ -393,19 +394,35 @@ const handleFileChange = async (options: any) => {
             <el-icon><Search /></el-icon>
             搜索
           </el-button>
-          <el-button @click="handleReset">重置</el-button>
+          <el-button @click="handleReset">
+            <el-icon><Refresh /></el-icon>
+            重置
+          </el-button>
         </el-form-item>
       </el-form>
+    </el-card>
 
+    <el-card class="table-card">
       <el-table :data="users" v-loading="loading" style="width: 100%">
-        <el-table-column prop="username" label="用户名" width="150" />
-        <el-table-column prop="name" label="姓名" width="120" />
+        <el-table-column prop="username" label="用户名" width="150">
+          <template #default="{ row }">
+            <div class="user-cell">
+              <el-avatar :size="32" class="user-avatar">
+                {{ row.name?.charAt(0) || row.username.charAt(0).toUpperCase() }}
+              </el-avatar>
+              <div class="user-info">
+                <span class="user-name">{{ row.username }}</span>
+                <span class="user-real-name">{{ row.name }}</span>
+              </div>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column prop="email" label="邮箱" width="200" />
         <el-table-column prop="phone" label="手机号" width="130" />
         <el-table-column prop="department" label="部门" width="120" />
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status)">
+            <el-tag :type="getStatusType(row.status)" size="small">
               {{ getStatusText(row.status) }}
             </el-tag>
           </template>
@@ -420,7 +437,7 @@ const handleFileChange = async (options: any) => {
             {{ new Date(row.createdAt).toLocaleString() }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="350" fixed="right">
+        <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="handleEdit(row)">编辑</el-button>
             <el-button link type="primary" @click="handleAssignRole(row)">分配角色</el-button>
@@ -437,19 +454,20 @@ const handleFileChange = async (options: any) => {
         </el-table-column>
       </el-table>
 
-      <el-pagination
-        v-model:current-page="queryForm.page"
-        v-model:page-size="queryForm.pageSize"
-        :page-sizes="[10, 20, 50, 100]"
-        :total="total"
-        layout="total, sizes, prev, pager, next, jumper"
-        style="margin-top: 20px; justify-content: flex-end"
-        @size-change="handleSizeChange"
-        @current-change="handlePageChange"
-      />
+      <div class="pagination-container">
+        <el-pagination
+          v-model:current-page="queryForm.page"
+          v-model:page-size="queryForm.pageSize"
+          :page-sizes="[10, 20, 50, 100]"
+          :total="total"
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="handleSizeChange"
+          @current-change="handlePageChange"
+        />
+      </div>
     </el-card>
 
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px">
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px" class="custom-dialog">
       <el-form :model="userForm" :rules="rules" label-width="100px">
         <el-form-item label="用户名" prop="username">
           <el-input v-model="userForm.username" placeholder="请输入用户名" :disabled="!!currentUser.id" />
@@ -482,7 +500,7 @@ const handleFileChange = async (options: any) => {
       </template>
     </el-dialog>
 
-    <el-dialog v-model="resetPasswordDialogVisible" title="重置密码" width="400px">
+    <el-dialog v-model="resetPasswordDialogVisible" title="重置密码" width="400px" class="custom-dialog">
       <el-form :model="resetPasswordForm" :rules="resetPasswordRules" label-width="100px">
         <el-form-item label="新密码" prop="newPassword">
           <el-input v-model="resetPasswordForm.newPassword" type="password" placeholder="请输入新密码" show-password />
@@ -497,38 +515,37 @@ const handleFileChange = async (options: any) => {
       </template>
     </el-dialog>
 
-    <el-dialog v-model="assignRoleDialogVisible" title="分配角色" width="600px">
+    <el-dialog v-model="assignRoleDialogVisible" title="分配角色" width="600px" class="custom-dialog">
       <el-form label-width="100px">
         <el-form-item label="当前角色">
-          <div v-if="userRoles.length > 0">
+          <div v-if="userRoles.length > 0" class="role-tags">
             <el-tag
               v-for="role in userRoles"
               :key="role.id"
               :type="role.type === 'system' ? 'danger' : 'success'"
-              style="margin-right: 8px; margin-bottom: 8px"
+              size="small"
             >
               {{ role.name }}
             </el-tag>
           </div>
-          <div v-else style="color: #909399">暂未分配角色</div>
+          <div v-else class="empty-text">暂未分配角色</div>
         </el-form-item>
         <el-form-item label="选择角色">
-          <el-checkbox-group v-model="selectedRoleIds">
+          <el-checkbox-group v-model="selectedRoleIds" class="role-checkbox-group">
             <el-checkbox
               v-for="role in allRoles"
               :key="role.id"
               :label="role.id"
-              style="display: block; margin-bottom: 10px"
+              class="role-checkbox"
             >
               <el-tag
                 :type="role.type === 'system' ? 'danger' : 'success'"
                 size="small"
-                style="margin-right: 8px"
               >
                 {{ role.type === 'system' ? '系统' : '自定义' }}
               </el-tag>
-              {{ role.name }}
-              <span style="color: #909399; font-size: 12px; margin-left: 8px">({{ role.code }})</span>
+              <span class="role-name">{{ role.name }}</span>
+              <span class="role-code">({{ role.code }})</span>
             </el-checkbox>
           </el-checkbox-group>
         </el-form-item>
@@ -539,13 +556,13 @@ const handleFileChange = async (options: any) => {
       </template>
     </el-dialog>
 
-    <el-dialog v-model="importDialogVisible" title="导入用户" width="700px">
+    <el-dialog v-model="importDialogVisible" title="导入用户" width="700px" class="custom-dialog">
       <div class="import-content">
-        <el-alert type="info" :closable="false" style="margin-bottom: 20px">
+        <el-alert type="info" :closable="false" class="import-alert">
           <template #title>
             <strong>导入说明</strong>
           </template>
-          <div style="margin-top: 10px">
+          <div class="import-tips">
             <p>1. 请先下载导入模板，按照模板格式填写用户信息</p>
             <p>2. 必填字段：用户名、邮箱、姓名</p>
             <p>3. 如果不填写密码，系统将使用默认密码：Password123</p>
@@ -595,7 +612,7 @@ const handleFileChange = async (options: any) => {
             </el-descriptions-item>
           </el-descriptions>
 
-          <div v-if="importResult.errors && importResult.errors.length > 0" style="margin-top: 20px">
+          <div v-if="importResult.errors && importResult.errors.length > 0" class="error-section">
             <h4>错误详情</h4>
             <el-table :data="importResult.errors" style="width: 100%" max-height="300">
               <el-table-column prop="row" label="行号" width="80" />
@@ -604,7 +621,7 @@ const handleFileChange = async (options: any) => {
             </el-table>
           </div>
 
-          <div v-if="importResult.importedUsers && importResult.importedUsers.length > 0" style="margin-top: 20px">
+          <div v-if="importResult.importedUsers && importResult.importedUsers.length > 0" class="success-section">
             <h4>成功导入的用户</h4>
             <el-table :data="importResult.importedUsers" style="width: 100%" max-height="300">
               <el-table-column prop="username" label="用户名" width="150" />
@@ -623,21 +640,165 @@ const handleFileChange = async (options: any) => {
 
 <style scoped>
 .user-management {
-  padding: 20px;
+  padding: 24px;
+  min-height: calc(100vh - 64px);
 }
 
-.card-header {
+.page-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.header-content {
+  flex: 1;
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 8px 0;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.search-card {
+  margin-bottom: 16px;
+  border-radius: var(--border-radius-lg);
 }
 
 .search-form {
-  margin-bottom: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.search-form :deep(.el-form-item) {
+  margin-bottom: 0;
+  margin-right: 16px;
+}
+
+.search-form :deep(.el-form-item:last-child) {
+  margin-right: 0;
+}
+
+.table-card {
+  border-radius: var(--border-radius-lg);
+}
+
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-avatar {
+  background: var(--primary-gradient);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.user-real-name {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.pagination-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+.custom-dialog :deep(.el-dialog__header) {
+  border-bottom: 1px solid var(--border-color);
+  padding: 16px 20px;
+  margin-right: 0;
+}
+
+.custom-dialog :deep(.el-dialog__body) {
+  padding: 20px;
+}
+
+.custom-dialog :deep(.el-dialog__footer) {
+  border-top: 1px solid var(--border-color);
+  padding: 16px 20px;
+}
+
+.role-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.empty-text {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.role-checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.role-checkbox {
+  display: flex;
+  align-items: center;
+  margin-right: 0 !important;
+}
+
+.role-name {
+  margin-left: 8px;
+  font-weight: 500;
+}
+
+.role-code {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-left: 4px;
 }
 
 .import-content {
   padding: 10px 0;
+}
+
+.import-alert {
+  margin-bottom: 20px;
+  border-radius: var(--border-radius);
+}
+
+.import-tips {
+  margin-top: 10px;
+}
+
+.import-tips p {
+  margin: 6px 0;
+  line-height: 1.6;
 }
 
 .import-actions {
@@ -649,12 +810,35 @@ const handleFileChange = async (options: any) => {
   width: 100%;
 }
 
+.upload-area :deep(.el-upload-dragger) {
+  border-radius: var(--border-radius-lg);
+  border: 2px dashed var(--border-color);
+  transition: all var(--transition-fast);
+}
+
+.upload-area :deep(.el-upload-dragger:hover) {
+  border-color: var(--primary-color);
+}
+
 .import-result {
   margin-top: 20px;
 }
 
 .import-result h4 {
-  margin-bottom: 15px;
-  color: #303133;
+  margin-bottom: 16px;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.error-section,
+.success-section {
+  margin-top: 20px;
+}
+
+.error-section h4,
+.success-section h4 {
+  margin-bottom: 12px;
+  color: var(--text-primary);
+  font-weight: 600;
 }
 </style>

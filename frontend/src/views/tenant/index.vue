@@ -171,14 +171,14 @@ onMounted(() => {
           <el-input v-model="queryForm.name" placeholder="请输入租户名称" clearable />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="queryForm.status" placeholder="请选择状态" clearable>
+          <el-select v-model="queryForm.status" placeholder="请选择状态" clearable style="width: 120px">
             <el-option label="正常" value="active" />
             <el-option label="停用" value="suspended" />
             <el-option label="已删除" value="deleted" />
           </el-select>
         </el-form-item>
         <el-form-item label="套餐">
-          <el-select v-model="queryForm.plan" placeholder="请选择套餐" clearable>
+          <el-select v-model="queryForm.plan" placeholder="请选择套餐" clearable style="width: 150px">
             <el-option label="基础版" value="basic" />
             <el-option label="专业版" value="professional" />
             <el-option label="企业版" value="enterprise" />
@@ -257,7 +257,7 @@ onMounted(() => {
           <el-input v-model="tenantForm.domain" placeholder="请输入域名" />
         </el-form-item>
         <el-form-item label="套餐" prop="plan">
-          <el-select v-model="tenantForm.plan" placeholder="请选择套餐">
+          <el-select v-model="tenantForm.plan" placeholder="请选择套餐" style="width: 100%">
             <el-option label="基础版" value="basic" />
             <el-option label="专业版" value="professional" />
             <el-option label="企业版" value="enterprise" />

@@ -6,16 +6,16 @@ import type {
 } from '../types/brandSettings'
 
 export const brandSettingsApi = {
-  get() {
-    return request.get<BrandSettingsResponse>('/brand-settings')
+  get(): Promise<BrandSettingsResponse> {
+    return request.get('/brand-settings')
   },
 
-  update(data: UpdateBrandSettingsDto) {
-    return request.put<BrandSettingsResponse>('/brand-settings', data)
+  update(data: UpdateBrandSettingsDto): Promise<BrandSettingsResponse> {
+    return request.put('/brand-settings', data)
   },
 
-  getPublic(domain?: string) {
-    return request.get<BrandSettings>('/brand-settings/public', {
+  getPublic(domain?: string): Promise<BrandSettings> {
+    return request.get('/brand-settings/public', {
       params: { domain },
     })
   },

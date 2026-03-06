@@ -294,7 +294,7 @@ onMounted(() => {
           <el-input v-model="queryForm.name" placeholder="请输入应用名称" clearable />
         </el-form-item>
         <el-form-item label="应用类型">
-          <el-select v-model="queryForm.type" placeholder="请选择应用类型" clearable>
+          <el-select v-model="queryForm.type" placeholder="请选择应用类型" clearable style="width: 150px">
             <el-option label="Web应用" value="web" />
             <el-option label="原生应用" value="native" />
             <el-option label="单页应用" value="spa" />
@@ -302,7 +302,7 @@ onMounted(() => {
           </el-select>
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="queryForm.status" placeholder="请选择状态" clearable>
+          <el-select v-model="queryForm.status" placeholder="请选择状态" clearable style="width: 120px">
             <el-option label="正常" value="active" />
             <el-option label="禁用" value="disabled" />
           </el-select>
@@ -390,7 +390,7 @@ onMounted(() => {
           <el-input v-model="appForm.name" placeholder="请输入应用名称" />
         </el-form-item>
         <el-form-item label="应用类型" prop="type">
-          <el-select v-model="appForm.type" placeholder="请选择应用类型">
+          <el-select v-model="appForm.type" placeholder="请选择应用类型" style="width: 100%">
             <el-option label="Web应用" value="web" />
             <el-option label="原生应用" value="native" />
             <el-option label="单页应用" value="spa" />

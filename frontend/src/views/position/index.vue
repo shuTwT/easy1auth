@@ -161,7 +161,8 @@ const handleSizeChange = (size: number) => {
   loadPositions()
 }
 
-const getLevelColor = (level: number) => {
+const getLevelColor = (level?: number) => {
+  if (!level) return 'info'
   if (level >= 9) return 'danger'
   if (level >= 7) return 'warning'
   if (level >= 5) return 'primary'
@@ -169,7 +170,8 @@ const getLevelColor = (level: number) => {
   return 'info'
 }
 
-const getLevelText = (level: number) => {
+const getLevelText = (level?: number) => {
+  if (!level) return '未指定'
   if (level >= 9) return '高管'
   if (level >= 7) return '总监'
   if (level >= 5) return '经理'
@@ -239,7 +241,7 @@ onMounted(() => {
           <el-input v-model="queryForm.code" placeholder="请输入岗位编码" clearable />
         </el-form-item>
         <el-form-item label="岗位级别">
-          <el-select v-model="queryForm.level" placeholder="请选择级别" clearable>
+          <el-select v-model="queryForm.level" placeholder="请选择级别" clearable style="width: 150px">
             <el-option label="员工 (1-2级)" :value="1" />
             <el-option label="主管 (3-4级)" :value="3" />
             <el-option label="经理 (5-6级)" :value="5" />
@@ -252,7 +254,10 @@ onMounted(() => {
             <el-icon><Search /></el-icon>
             搜索
           </el-button>
-          <el-button @click="handleReset">重置</el-button>
+          <el-button @click="handleReset">
+            <el-icon><Refresh /></el-icon>
+            重置
+          </el-button>
         </el-form-item>
       </el-form>
 

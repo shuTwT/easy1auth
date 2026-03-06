@@ -83,10 +83,10 @@
         <el-table-column label="类型" width="150">
           <template #default="{ row }">
             <div class="provider-type">
-              <el-icon :style="{ color: PROVIDER_CONFIGS[row.type]?.color }">
-                <component :is="PROVIDER_CONFIGS[row.type]?.icon || 'Connection'" />
+              <el-icon :style="{ color: PROVIDER_CONFIGS[row.type as SocialProviderType]?.color }">
+                <component :is="PROVIDER_CONFIGS[row.type as SocialProviderType]?.icon || 'Connection'" />
               </el-icon>
-              <span>{{ PROVIDER_CONFIGS[row.type]?.name || row.type }}</span>
+              <span>{{ PROVIDER_CONFIGS[row.type as SocialProviderType]?.name || row.type }}</span>
             </div>
           </template>
         </el-table-column>
@@ -135,7 +135,7 @@
           <el-input v-model="providerForm.name" placeholder="请输入身份源名称" />
         </el-form-item>
         <el-form-item label="身份源类型" prop="type">
-          <el-select v-model="providerForm.type" placeholder="请选择身份源类型" :disabled="isEdit" @change="handleTypeChange">
+          <el-select v-model="providerForm.type" placeholder="请选择身份源类型" :disabled="isEdit" style="width: 100%" @change="handleTypeChange">
             <el-option v-for="(config, key) in PROVIDER_CONFIGS" :key="key" :label="config.name" :value="key">
               <div class="provider-option">
                 <el-icon :style="{ color: config.color }">
@@ -265,7 +265,6 @@ import type {
   UpdateSocialIdentityProviderDto,
   SocialIdentityProviderStats,
   SocialProviderType,
-  PROVIDER_CONFIGS,
 } from '../../types/socialIdentityProvider'
 import { PROVIDER_CONFIGS as PROVIDER_CONFIGS_CONST } from '../../types/socialIdentityProvider'
 
