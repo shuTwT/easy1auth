@@ -67,6 +67,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '社会化身份源', requiresAuth: true }
   },
   {
+    path: '/brand-settings',
+    name: 'BrandSettings',
+    component: () => import('@/views/brandSettings/index.vue'),
+    meta: { title: '品牌设置', requiresAuth: true }
+  },
+  {
     path: '/sso',
     name: 'SSO',
     component: () => import('@/views/sso/index.vue'),

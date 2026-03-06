@@ -15,6 +15,10 @@ model Tenant {
   plan        String   @default("basic")
   maxUsers    Int      @default(100)
   maxApps     Int      @default(10)
+  
+  // 品牌设置
+  brandSettings Json?
+  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
@@ -27,7 +31,8 @@ model Tenant {
   positions       Position[]
   webhooks        Webhook[]
   auditLogs       AuditLog[]
-  
+  socialIdentityProviders SocialIdentityProvider[]
+
   @@map("tenants")
 }
 
@@ -322,6 +327,8 @@ model SocialIdentityProvider {
   status                String   @default("active")
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
+  
+  tenant                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   
   @@index([tenantId])
   @@map("social_identity_providers")

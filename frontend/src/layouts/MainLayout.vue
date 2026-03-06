@@ -17,6 +17,7 @@ const menuItems = [
   { index: '/position', title: '岗位管理', icon: 'Briefcase' },
   { index: '/role', title: '角色管理', icon: 'Collection' },
   { index: '/social-identity-provider', title: '社会化身份源', icon: 'Connection' },
+  { index: '/brand-settings', title: '品牌设置', icon: 'Brush' },
   { index: '/application', title: '应用管理', icon: 'Monitor' },
   { index: '/audit', title: '审计日志', icon: 'Document' },
   { index: '/sso', title: '单点登录', icon: 'Connection' },

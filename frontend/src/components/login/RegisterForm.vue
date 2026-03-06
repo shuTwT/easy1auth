@@ -81,7 +81,8 @@ async function handleSubmit() {
           :disabled="isCountingDown || !form.email"
           @click="handleSendCode"
         >
-          {{ isCountingDown ? `${countdown}s后重试` : '获取验证码' }}
+          <span v-if="sendingCode" class="loading-spinner"></span>
+          <span>{{ isCountingDown ? `${countdown}s后重试` : '获取验证码' }}</span>
         </button>
       </div>
     </el-form-item>
@@ -124,6 +125,7 @@ async function handleSubmit() {
             type="button"
             class="password-toggle"
             @click="showPassword = !showPassword"
+            aria-label="切换密码可见性"
           >
             <svg v-if="!showPassword" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
@@ -163,35 +165,25 @@ async function handleSubmit() {
   margin-bottom: 8px;
   font-size: 14px;
   font-weight: 500;
-  color: #1f2937;
+  color: #0C4A6E;
 }
 
 .custom-input :deep(.el-input__wrapper) {
   background: rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  border: 1px solid #E2E8F0;
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
+  box-shadow: none;
+  transition: all 0.2s ease;
 }
 
 .custom-input :deep(.el-input__wrapper:hover) {
-  background: rgba(255, 255, 255, 0.8);
-  border-color: rgba(59, 130, 246, 0.3);
+  border-color: #0369A1;
 }
 
 .custom-input :deep(.el-input__wrapper.is-focus) {
-  background: rgba(255, 255, 255, 0.9);
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.custom-input :deep(.el-input__inner) {
-  color: #1f2937;
-  font-size: 14px;
-}
-
-.custom-input :deep(.el-input__inner::placeholder) {
-  color: #9ca3af;
+  background: white;
+  border-color: #0369A1;
+  box-shadow: 0 0 0 3px rgba(3, 105, 161, 0.1);
 }
 
 .code-input-wrapper {
@@ -206,52 +198,56 @@ async function handleSubmit() {
 
 .code-button {
   padding: 0 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0369A1 0%, #0EA5E9 100%);
   color: white;
   border: none;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   white-space: nowrap;
   height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .code-button:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px rgba(3, 105, 161, 0.3);
 }
 
 .code-button:disabled {
-  opacity: 0.5;
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
 .password-toggle {
   background: none;
   border: none;
+  padding: 4px;
   cursor: pointer;
-  padding: 0;
-  color: #9ca3af;
-  transition: color 0.3s ease;
+  color: #64748B;
+  transition: color 0.2s ease;
 }
 
 .password-toggle:hover {
-  color: #3b82f6;
+  color: #0369A1;
 }
 
 .submit-button {
   width: 100%;
   padding: 12px 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0369A1 0%, #0EA5E9 100%);
   color: white;
   border: none;
   border-radius: 8px;
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   margin-top: 8px;
   display: flex;
   align-items: center;
@@ -261,13 +257,12 @@ async function handleSubmit() {
 
 .submit-button:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 16px rgba(3, 105, 161, 0.3);
 }
 
 .submit-button:disabled {
-  opacity: 0.7;
+  opacity: 0.6;
   cursor: not-allowed;
-  transform: none;
 }
 
 .loading-spinner {
@@ -291,23 +286,35 @@ async function handleSubmit() {
   align-items: center;
   margin-top: 24px;
   font-size: 14px;
-  color: #6b7280;
+  color: #64748B;
 }
 
 .link-button {
   background: none;
   border: none;
-  color: #3b82f6;
+  color: #0369A1;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   padding: 0;
   margin-left: 4px;
-  transition: color 0.3s ease;
+  transition: color 0.2s ease;
 }
 
 .link-button:hover {
-  color: #2563eb;
-  text-decoration: underline;
+  color: #0EA5E9;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .code-button,
+  .submit-button,
+  .password-toggle,
+  .link-button {
+    transition: none;
+  }
+  
+  .loading-spinner {
+    animation: none;
+  }
 }
 </style>

@@ -15,6 +15,7 @@ import groupRoutes from './routes/group.routes'
 import positionRoutes from './routes/position.routes'
 import roleRoutes from './routes/role.routes'
 import socialIdentityProviderRoutes from './routes/socialIdentityProvider.routes'
+import brandSettingsRoutes from './routes/brandSettings.routes'
 
 dotenv.config()
 
@@ -41,6 +42,7 @@ app.use('/api/groups', groupRoutes)
 app.use('/api/positions', positionRoutes)
 app.use('/api/roles', roleRoutes)
 app.use('/api/social-identity-providers', socialIdentityProviderRoutes)
+app.use('/api/brand-settings', brandSettingsRoutes)
 
 app.use(auditMiddleware())
 
