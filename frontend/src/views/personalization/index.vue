@@ -396,8 +396,8 @@ import { ref, onMounted, computed, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Check, InfoFilled } from '@element-plus/icons-vue'
 import { customDomainApi, type CustomDomain, type CreateDomainDto, type UpdateSSLDto } from '@/api/customDomain'
-import { messageTemplateApi, type MessageTemplate, type CreateTemplateDto, type UpdateTemplateDto } from '@/api/messageTemplate'
-import { loginStyleApi, type LoginStyle, type UpdateLoginStyleDto } from '@/api/loginStyle'
+import { messageTemplateApi, type MessageTemplate, type CreateTemplateDto } from '@/api/messageTemplate'
+import { loginStyleApi, type UpdateLoginStyleDto } from '@/api/loginStyle'
 
 const activeTab = ref('domains')
 const templateType = ref('email')
