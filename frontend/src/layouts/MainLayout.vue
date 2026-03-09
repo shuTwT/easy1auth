@@ -33,6 +33,7 @@ const menuItems = [
   { index: '/sso', title: '单点登录', icon: 'Connection' },
   { index: '/permission', title: '权限管理', icon: 'Lock' },
   { index: '/security', title: '安全设置', icon: 'Shield' },
+  { index: '/personalization', title: '个性化设置', icon: 'MagicStick' },
   { index: '/settings', title: '系统设置', icon: 'Setting' }
 ]
 

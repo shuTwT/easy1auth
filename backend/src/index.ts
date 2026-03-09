@@ -16,6 +16,10 @@ import positionRoutes from './routes/position.routes'
 import roleRoutes from './routes/role.routes'
 import socialIdentityProviderRoutes from './routes/socialIdentityProvider.routes'
 import brandSettingsRoutes from './routes/brandSettings.routes'
+import securityRoutes from './routes/security.routes'
+import customDomainRoutes from './routes/customDomain.routes'
+import messageTemplateRoutes from './routes/messageTemplate.routes'
+import loginStyleRoutes from './routes/loginStyle.routes'
 
 dotenv.config()
 
@@ -43,6 +47,10 @@ app.use('/api/positions', positionRoutes)
 app.use('/api/roles', roleRoutes)
 app.use('/api/social-identity-providers', socialIdentityProviderRoutes)
 app.use('/api/brand-settings', brandSettingsRoutes)
+app.use('/api/security', securityRoutes)
+app.use('/api/custom-domains', customDomainRoutes)
+app.use('/api/message-templates', messageTemplateRoutes)
+app.use('/api/login-style', loginStyleRoutes)
 
 app.use(auditMiddleware())
 

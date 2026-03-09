@@ -1,14 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
-import MainLayout from '@/layouts/MainLayout.vue'
+import { onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { tenantApi } from '@/api/tenant'
 
-const route = useRoute()
 const userStore = useUserStore()
-
-const isLoginPage = computed(() => route.path === '/login')
 
 onMounted(async () => {
   if (userStore.token) {
@@ -43,6 +38,5 @@ onMounted(async () => {
 </script>
 
 <template>
-  <MainLayout v-if="!isLoginPage" />
-  <router-view v-else />
+  <router-view />
 </template>

@@ -32,25 +32,34 @@ model Tenant {
   webhooks        Webhook[]
   auditLogs       AuditLog[]
   socialIdentityProviders SocialIdentityProvider[]
+  customDomains   CustomDomain[]
+  messageTemplates MessageTemplate[]
+  loginStyle      LoginStyle?
 
   @@map("tenants")
 }
 
 model Admin {
-  id              String   @id @default(uuid())
-  currentTenantId String?
-  username        String   @unique
-  email           String   @unique
-  phone           String?
-  password        String
-  status          String   @default("active")
-  lastLoginAt     DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id               String   @id @default(uuid())
+  currentTenantId  String?
+  username         String   @unique
+  email            String   @unique
+  phone            String?
+  password         String
+  status           String   @default("active")
+  lastLoginAt      DateTime?
+  passwordChangedAt DateTime @default(now())
+  mfaEnabled       Boolean  @default(false)
+  mfaSecret        String?
+  mfaType          String?  // 'totp', 'sms', 'email'
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
   
-  currentTenant   Tenant?  @relation(fields: [currentTenantId], references: [id], onDelete: SetNull)
-  tenants         AdminTenant[]
-  roles           AdminRole[]
+  currentTenant    Tenant?  @relation(fields: [currentTenantId], references: [id], onDelete: SetNull)
+  tenants          AdminTenant[]
+  roles            AdminRole[]
+  passwordHistory  PasswordHistory[]
+  mfaTokens        MfaToken[]
   
   @@index([currentTenantId])
   @@map("admins")
@@ -347,4 +356,119 @@ model SystemConfig {
   @@unique([tenantId, category, key])
   @@index([tenantId])
   @@map("system_configs")
+}
+
+model PasswordHistory {
+  id        String   @id @default(uuid())
+  userId    String
+  password  String
+  createdAt DateTime @default(now())
+  
+  admin     Admin    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@map("password_histories")
+}
+
+model MfaToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String
+  type      String   // 'totp', 'sms', 'email'
+  used      Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  
+  admin     Admin    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([token])
+  @@map("mfa_tokens")
+}
+
+model SecurityPolicy {
+  id                      String   @id @default(uuid())
+  tenantId                String   @unique
+  passwordMinLength       Int      @default(8)
+  passwordRequireUpper    Boolean  @default(true)
+  passwordRequireLower    Boolean  @default(true)
+  passwordRequireNumber   Boolean  @default(true)
+  passwordRequireSpecial  Boolean  @default(true)
+  passwordMaxAge          Int      @default(90)
+  passwordHistoryCount    Int      @default(5)
+  mfaRequired             Boolean  @default(false)
+  mfaType                 String   @default("totp")
+  sessionTimeout          Int      @default(7200)
+  loginAttemptsLimit      Int      @default(5)
+  lockoutDuration         Int      @default(1800)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  
+  @@index([tenantId])
+  @@map("security_policies")
+}
+
+model CustomDomain {
+  id              String   @id @default(uuid())
+  tenantId        String
+  domain          String   @unique
+  status          String   @default("pending") // pending, verifying, verified, failed
+  verificationMethod String @default("dns") // dns, file
+  verificationToken String?
+  verifiedAt      DateTime?
+  sslStatus       String   @default("none") // none, pending, active, expired
+  sslCertificate  String?
+  sslPrivateKey   String?
+  sslExpiresAt    DateTime?
+  errorMessage    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@index([tenantId])
+  @@index([domain])
+  @@map("custom_domains")
+}
+
+model MessageTemplate {
+  id          String   @id @default(uuid())
+  tenantId    String
+  type        String   // email, sms
+  code        String   // verification_code, password_reset, welcome, etc.
+  name        String
+  subject     String?  // for email
+  content     String
+  variables   Json?    // available variables
+  isDefault   Boolean  @default(false)
+  status      String   @default("active")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@unique([tenantId, type, code])
+  @@index([tenantId])
+  @@map("message_templates")
+}
+
+model LoginStyle {
+  id              String   @id @default(uuid())
+  tenantId        String   @unique
+  logo            String?
+  logoDark        String?
+  backgroundImage String?
+  backgroundColor String   @default("#f5f7fa")
+  primaryColor    String   @default("#0369A1")
+  title           String   @default("Easy1Auth")
+  subtitle        String   @default("企业级身份管理平台")
+  customCSS       String?
+  loginMethods    Json?    // enabled login methods
+  socialProviders Json?    // enabled social providers
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@map("login_styles")
 }

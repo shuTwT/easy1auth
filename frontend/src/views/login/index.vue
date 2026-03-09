@@ -1,14 +1,25 @@
 <script setup lang="ts">
-import { shallowRef } from 'vue'
+import { shallowRef, onMounted, computed, ref } from 'vue'
 import PasswordLoginForm from '@/components/login/PasswordLoginForm.vue'
 import EmailCodeLoginForm from '@/components/login/EmailCodeLoginForm.vue'
 import PasskeyLogin from '@/components/login/PasskeyLogin.vue'
 import SocialLogin from '@/components/login/SocialLogin.vue'
 import RegisterForm from '@/components/login/RegisterForm.vue'
+import { loginStyleApi, type LoginStyle } from '@/api/loginStyle'
 
 type LoginMode = 'password' | 'email' | 'passkey' | 'register'
 
 const currentMode = shallowRef<LoginMode>('password')
+const loginStyle = ref<LoginStyle | null>(null)
+const loading = ref(true)
+
+const availableMethods = computed(() => {
+  return loginStyle.value?.loginMethods || ['password', 'email', 'passkey']
+})
+
+const firstAvailableMethod = computed(() => {
+  return availableMethods.value[0] || 'password'
+})
 
 function switchToPassword() {
   currentMode.value = 'password'
@@ -25,11 +36,55 @@ function switchToPasskey() {
 function switchToRegister() {
   currentMode.value = 'register'
 }
+
+const loadLoginStyle = async () => {
+  try {
+    const hostname = window.location.hostname
+    const response = await loginStyleApi.getPublic(hostname !== 'localhost' ? hostname : undefined)
+    loginStyle.value = response.data.data
+    currentMode.value = firstAvailableMethod.value as LoginMode
+    applyCustomStyles()
+  } catch (error) {
+    console.error('加载登录样式失败:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+const applyCustomStyles = () => {
+  if (!loginStyle.value) return
+
+  const root = document.documentElement
+
+  if (loginStyle.value.primaryColor) {
+    root.style.setProperty('--login-primary-color', loginStyle.value.primaryColor)
+  }
+
+  if (loginStyle.value.customCSS) {
+    let styleElement = document.getElementById('custom-login-styles')
+    if (!styleElement) {
+      styleElement = document.createElement('style')
+      styleElement.id = 'custom-login-styles'
+      document.head.appendChild(styleElement)
+    }
+    styleElement.textContent = loginStyle.value.customCSS
+  }
+}
+
+onMounted(() => {
+  loadLoginStyle()
+})
 </script>
 
 <template>
-  <div class="login-container">
-    <div class="background-shapes">
+  <div 
+    class="login-container" 
+    :style="{
+      backgroundColor: loginStyle?.backgroundColor || undefined,
+      backgroundImage: loginStyle?.backgroundImage ? `url(${loginStyle.backgroundImage})` : undefined
+    }"
+  >
+    <div v-if="!loginStyle?.backgroundImage" class="background-shapes">
       <div class="shape shape-1"></div>
       <div class="shape shape-2"></div>
       <div class="shape shape-3"></div>
@@ -38,36 +93,49 @@ function switchToRegister() {
     <div class="login-card">
       <div class="login-header">
         <div class="logo">
-          <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect width="48" height="48" rx="12" fill="url(#gradient)"/>
+          <img 
+            v-if="loginStyle?.logo" 
+            :src="loginStyle.logo" 
+            alt="Logo" 
+            class="logo-image"
+          />
+          <svg v-else width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="48" height="48" rx="12" :fill="`url(#gradient-${loginStyle?.primaryColor ? 'custom' : 'default'})`"/>
             <path d="M24 12L32 18V30L24 36L16 30V18L24 12Z" stroke="white" stroke-width="2" fill="none"/>
             <circle cx="24" cy="24" r="4" fill="white"/>
             <defs>
-              <linearGradient id="gradient" x1="0" y1="0" x2="48" y2="48">
+              <linearGradient v-if="loginStyle?.primaryColor" :id="`gradient-custom`" x1="0" y1="0" x2="48" y2="48">
+                <stop offset="0%" :stop-color="loginStyle.primaryColor"/>
+                <stop offset="100%" :stop-color="loginStyle.primaryColor"/>
+              </linearGradient>
+              <linearGradient v-else id="gradient-default" x1="0" y1="0" x2="48" y2="48">
                 <stop offset="0%" stop-color="#0369A1"/>
                 <stop offset="100%" stop-color="#0EA5E9"/>
               </linearGradient>
             </defs>
           </svg>
         </div>
-        <h1 class="title">Easy1Auth</h1>
-        <p class="subtitle">企业级统一身份管理平台</p>
+        <h1 class="title">{{ loginStyle?.title || 'Easy1Auth' }}</h1>
+        <p class="subtitle">{{ loginStyle?.subtitle || '企业级统一身份管理平台' }}</p>
       </div>
 
-      <div class="login-tabs">
+      <div v-if="availableMethods.length > 1" class="login-tabs">
         <button
+          v-if="availableMethods.includes('password')"
           :class="['tab-button', { active: currentMode === 'password' }]"
           @click="switchToPassword"
         >
           账号密码
         </button>
         <button
+          v-if="availableMethods.includes('email')"
           :class="['tab-button', { active: currentMode === 'email' }]"
           @click="switchToEmail"
         >
           邮箱验证码
         </button>
         <button
+          v-if="availableMethods.includes('passkey')"
           :class="['tab-button', { active: currentMode === 'passkey' }]"
           @click="switchToPasskey"
         >
@@ -101,7 +169,7 @@ function switchToRegister() {
       <SocialLogin v-if="currentMode !== 'register'" />
 
       <div class="login-footer">
-        <p>© 2024 Easy1Auth. All rights reserved.</p>
+        <p>© 2024 {{ loginStyle?.title || 'Easy1Auth' }}. All rights reserved.</p>
       </div>
     </div>
   </div>
@@ -117,6 +185,8 @@ function switchToRegister() {
   align-items: center;
   min-height: 100vh;
   background: linear-gradient(135deg, #0369A1 0%, #0EA5E9 50%, #22C55E 100%);
+  background-size: cover;
+  background-position: center;
   font-family: 'Open Sans', sans-serif;
   overflow: hidden;
 }
@@ -196,6 +266,12 @@ function switchToRegister() {
   margin-bottom: 16px;
 }
 
+.logo-image {
+  max-width: 120px;
+  max-height: 48px;
+  object-fit: contain;
+}
+
 .title {
   margin: 0;
   font-family: 'Poppins', sans-serif;
@@ -236,12 +312,12 @@ function switchToRegister() {
 }
 
 .tab-button:hover {
-  color: #0369A1;
+  color: var(--login-primary-color, #0369A1);
 }
 
 .tab-button.active {
   background: white;
-  color: #0369A1;
+  color: var(--login-primary-color, #0369A1);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
