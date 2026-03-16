@@ -1,19 +1,76 @@
 import { Router, Request, Response } from 'express'
-import { authMiddleware, AuthRequest } from '../middleware/auth'
 import oauth2Service from '../services/oauth2.service'
 import tokenService from '../services/token.service'
 import { AppError } from '../middleware/errorHandler'
 import prisma from '../lib/prisma'
+import jwt from 'jsonwebtoken'
+import bcrypt from 'bcryptjs'
 
 const router = Router()
 
+const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production'
+
+// OAuth2 获取应用信息 - 参数只有 clientId，返回 client 和 scopes
 router.get('/authorize', async (req: Request, res: Response) => {
   try {
-    const authReq = req as AuthRequest
-    const tenantId = authReq.tenantId
+    const { client_id } = req.query
 
-    if (!tenantId) {
-      throw new AppError('缺少租户信息', 400)
+    if (!client_id) {
+      throw new AppError('invalid_request: 缺少 client_id 参数', 400)
+    }
+
+    const application = await prisma.application.findUnique({
+      where: { clientId: client_id as string }
+    })
+
+    if (!application) {
+      throw new AppError('invalid_client', 401)
+    }
+
+    if (application.status !== 'active') {
+      throw new AppError('unauthorized_client', 403)
+    }
+
+    const client = {
+      clientId: application.clientId,
+      name: application.name,
+      logo: application.logo,
+      description: application.description,
+      redirectUris: application.redirectUris
+    }
+
+    const scopes = ['openid', 'profile', 'email', 'phone']
+
+    res.json({ client, scopes })
+  } catch (error) {
+    if (error instanceof AppError) {
+      res.status(error.statusCode).json({
+        error: error.message
+      })
+    } else {
+      console.error('获取应用信息错误:', error)
+      res.status(500).json({
+        error: 'server_error'
+      })
+    }
+  }
+})
+
+// OAuth2 授权提交 - 需要用户登录
+router.post('/authorize', async (req: Request, res: Response) => {
+  try {
+    const { token } = req.body
+    
+    if (!token) {
+      throw new AppError('unauthorized', 401)
+    }
+
+    // 验证用户 token
+    let decoded: any
+    try {
+      decoded = jwt.verify(token, JWT_SECRET)
+    } catch {
+      throw new AppError('invalid_token', 401)
     }
 
     const {
@@ -24,34 +81,33 @@ router.get('/authorize', async (req: Request, res: Response) => {
       state,
       code_challenge,
       code_challenge_method
-    } = req.query
+    } = req.body
 
     if (!client_id || !redirect_uri || !response_type) {
       throw new AppError('invalid_request: 缺少必要参数', 400)
     }
 
-    const application = await oauth2Service.validateAuthorizationRequest(
-      {
-        client_id: client_id as string,
-        redirect_uri: redirect_uri as string,
-        response_type: response_type as string,
-        scope: scope as string,
-        state: state as string,
-        code_challenge: code_challenge as string,
-        code_challenge_method: code_challenge_method as string
-      },
-      tenantId
-    )
+    const application = await prisma.application.findUnique({
+      where: { clientId: client_id as string }
+    })
 
+    if (!application) {
+      throw new AppError('invalid_client', 401)
+    }
+
+    const tenantId = application.tenantId
+
+    // 获取用户
     const user = await prisma.user.findFirst({
       where: {
+        id: decoded.userId,
         tenantId,
         status: 'active'
       }
     })
 
     if (!user) {
-      throw new AppError('用户未登录', 401)
+      throw new AppError('unauthorized', 401)
     }
 
     const code = await oauth2Service.generateAuthorizationCode(
@@ -69,22 +125,14 @@ router.get('/authorize', async (req: Request, res: Response) => {
       redirectUrl.searchParams.set('state', state as string)
     }
 
-    res.redirect(redirectUrl.toString())
+    res.json({
+      redirectUrl: redirectUrl.toString()
+    })
   } catch (error) {
     if (error instanceof AppError) {
-      const redirectUri = req.query.redirect_uri as string
-      if (redirectUri) {
-        const redirectUrl = new URL(redirectUri)
-        redirectUrl.searchParams.set('error', error.message)
-        if (req.query.state) {
-          redirectUrl.searchParams.set('state', req.query.state as string)
-        }
-        res.redirect(redirectUrl.toString())
-      } else {
-        res.status(error.statusCode).json({
-          error: error.message
-        })
-      }
+      res.status(error.statusCode).json({
+        error: error.message
+      })
     } else {
       console.error('授权错误:', error)
       res.status(500).json({
@@ -96,12 +144,6 @@ router.get('/authorize', async (req: Request, res: Response) => {
 
 router.post('/token', async (req: Request, res: Response) => {
   try {
-    const tenantId = req.headers['x-tenant-id'] as string
-
-    if (!tenantId) {
-      throw new AppError('缺少租户信息', 400)
-    }
-
     const {
       grant_type,
       code,
@@ -114,12 +156,21 @@ router.post('/token', async (req: Request, res: Response) => {
     } = req.body
 
     if (!grant_type) {
-      throw new AppError('invalid_request: 缺少grant_type', 400)
+      throw new AppError('invalid_request: 缺少 grant_type', 400)
     }
 
     let tokenResponse
 
     if (grant_type === 'authorization_code') {
+      if (!code) {
+        throw new AppError('invalid_request: 缺少 code 参数', 400)
+      }
+      
+      const authCode = await tokenService.validateAuthorizationCode(code)
+      if (!authCode) {
+        throw new AppError('invalid_grant: 授权码无效或已过期', 400)
+      }
+      
       tokenResponse = await oauth2Service.exchangeCodeForToken(
         {
           grant_type,
@@ -129,7 +180,7 @@ router.post('/token', async (req: Request, res: Response) => {
           client_secret,
           code_verifier
         },
-        tenantId
+        authCode.tenantId
       )
     } else if (grant_type === 'refresh_token') {
       tokenResponse = await oauth2Service.refreshToken(
@@ -139,7 +190,7 @@ router.post('/token', async (req: Request, res: Response) => {
           client_id,
           client_secret
         },
-        tenantId
+        req.headers['x-tenant-id'] as string
       )
     } else if (grant_type === 'client_credentials') {
       tokenResponse = await oauth2Service.clientCredentialsGrant(
@@ -149,7 +200,7 @@ router.post('/token', async (req: Request, res: Response) => {
           client_secret,
           scope
         },
-        tenantId
+        req.headers['x-tenant-id'] as string
       )
     } else {
       throw new AppError('unsupported_grant_type', 400)
@@ -162,7 +213,7 @@ router.post('/token', async (req: Request, res: Response) => {
         error: error.message
       })
     } else {
-      console.error('Token错误:', error)
+      console.error('Token 错误:', error)
       res.status(500).json({
         error: 'server_error'
       })

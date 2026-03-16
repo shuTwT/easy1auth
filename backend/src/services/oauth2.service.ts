@@ -88,10 +88,6 @@ export class OAuth2Service {
       throw new AppError('invalid_client', 401)
     }
 
-    if (application.tenantId !== tenantId) {
-      throw new AppError('invalid_client', 401)
-    }
-
     if (application.clientSecret !== dto.client_secret) {
       throw new AppError('invalid_client', 401)
     }

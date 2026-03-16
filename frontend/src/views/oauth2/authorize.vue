@@ -2,7 +2,6 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { applicationApi } from '@/api/application'
 
 const route = useRoute()
 
@@ -11,6 +10,16 @@ const authorizing = ref(false)
 const application = ref<any>(null)
 const scopes = ref<string[]>([])
 const error = ref('')
+
+// 登录状态
+const loginForm = ref({
+  username: '',
+  password: '',
+  loginType: 'password'
+})
+const userToken = ref('')
+const isLoggedIn = ref(false)
+const userInfo = ref<any>(null)
 
 const client_id = route.query.client_id as string
 const redirect_uri = route.query.redirect_uri as string
@@ -22,58 +31,81 @@ const code_challenge_method = route.query.code_challenge_method as string
 
 const loadApplicationInfo = async () => {
   try {
-    if (!client_id || !redirect_uri || !response_type) {
-      error.value = '缺少必要的授权参数'
+    if (!client_id) {
+      error.value = '缺少 client_id 参数'
       loading.value = false
       return
     }
 
-    const res = await applicationApi.getList({
-      page: 1,
-      pageSize: 100
-    })
+    const res = await fetch(`/api/oauth2/authorize?client_id=${client_id}`)
+    const data = await res.json()
 
-    const apps = res.data.applications || []
-    const app = apps.find((a: any) => a.clientId === client_id)
-    
-    if (!app) {
-      error.value = '应用不存在或未授权'
+    if (!res.ok) {
+      error.value = data.error || '应用不存在或未授权'
       loading.value = false
       return
     }
 
-    application.value = app
-    
-    if (scope) {
-      scopes.value = scope.split(' ')
-    }
+    application.value = data.client
+    scopes.value = data.scopes || []
 
     loading.value = false
   } catch (err: any) {
     console.error('加载应用信息失败:', err)
-    error.value = err.response?.data?.message || '加载应用信息失败'
+    error.value = err.message || '加载应用信息失败'
     loading.value = false
   }
 }
 
-const handleAuthorize = async () => {
+const handleLoginAndAuthorize = async () => {
   try {
     authorizing.value = true
 
-    const params = new URLSearchParams({
-      client_id,
-      redirect_uri,
-      response_type,
-      ...(scope && { scope }),
-      ...(state && { state }),
-      ...(code_challenge && { code_challenge }),
-      ...(code_challenge_method && { code_challenge_method })
+    const loginResponse = await fetch('/api/auth/user-login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(loginForm.value)
     })
 
-    window.location.href = `/oauth2/authorize?${params.toString()}`
+    const loginData = await loginResponse.json()
+
+    if (!loginResponse.ok) {
+      throw new Error(loginData.message || '登录失败')
+    }
+
+    userToken.value = loginData.token
+    userInfo.value = loginData.user
+    isLoggedIn.value = true
+
+    const authResponse = await fetch('/api/oauth2/authorize', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        token: userToken.value,
+        client_id,
+        redirect_uri,
+        response_type,
+        scope,
+        state,
+        code_challenge,
+        code_challenge_method
+      })
+    })
+
+    const authData = await authResponse.json()
+
+    if (!authResponse.ok) {
+      throw new Error(authData.error || '授权失败')
+    }
+
+    window.location.href = authData.redirectUrl
   } catch (err: any) {
     console.error('授权失败:', err)
-    ElMessage.error(err.response?.data?.error || '授权失败')
+    ElMessage.error(err.message || '授权失败')
     authorizing.value = false
   }
 }
@@ -140,62 +172,81 @@ onMounted(() => {
         </template>
 
         <template v-else-if="application">
-          <div class="application-info">
-            <div class="app-avatar">
-              <img v-if="application.logo" :src="application.logo" :alt="application.name" />
-              <span v-else class="app-avatar-text">{{ application.name.charAt(0).toUpperCase() }}</span>
+          <!-- 左右两栏布局 -->
+          <div class="auth-layout">
+            <!-- 左侧：登录表单 -->
+            <div class="auth-left">
+              <h2 class="section-title">登录您的账号</h2>
+              <p class="section-subtitle">登录后自动完成授权</p>
+              
+              <el-form :model="loginForm" class="login-form-compact">
+                <el-form-item>
+                  <el-input 
+                    v-model="loginForm.username" 
+                    placeholder="用户名" 
+                    prefix-icon="User"
+                  />
+                </el-form-item>
+                <el-form-item>
+                  <el-input 
+                    v-model="loginForm.password" 
+                    type="password" 
+                    placeholder="密码" 
+                    prefix-icon="Lock"
+                    @keyup.enter="handleLoginAndAuthorize"
+                  />
+                </el-form-item>
+              </el-form>
             </div>
-            <h2 class="app-name">{{ application.name }}</h2>
-            <p v-if="application.description" class="app-description">
-              {{ application.description }}
-            </p>
+
+            <!-- 右侧：应用信息和权限 -->
+            <div class="auth-right">
+              <div class="app-info-compact">
+                <div class="app-avatar-small">
+                  <img v-if="application.logo" :src="application.logo" :alt="application.name" />
+                  <span v-else>{{ application.name.charAt(0).toUpperCase() }}</span>
+                </div>
+                <div class="app-details">
+                  <h3 class="app-name-compact">{{ application.name }}</h3>
+                  <p v-if="application.description" class="app-desc-compact">{{ application.description }}</p>
+                </div>
+              </div>
+
+              <div class="permissions-compact">
+                <h4>将获得以下权限：</h4>
+                <ul class="scope-list-compact">
+                  <li v-if="scopes.includes('openid') || scopes.includes('profile')">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                      <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    <span>基本信息</span>
+                  </li>
+                  <li v-if="scopes.includes('email')">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                      <polyline points="22,6 12,13 2,6"/>
+                    </svg>
+                    <span>邮箱地址</span>
+                  </li>
+                  <li v-if="scopes.includes('phone')">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                    </svg>
+                    <span>手机号码</span>
+                  </li>
+                  <li v-if="!scopes.length || scopes.every(s => !['openid', 'profile', 'email', 'phone'].includes(s))">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10"/>
+                    </svg>
+                    <span>基本访问权限</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
 
-          <div class="divider"></div>
-
-          <div class="permissions">
-            <h3 class="permissions-title">该应用请求以下权限</h3>
-            <ul class="scope-list">
-              <li v-if="scopes.includes('openid')">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                  <circle cx="12" cy="7" r="4"/>
-                </svg>
-                <span>获取您的基本信息</span>
-              </li>
-              <li v-if="scopes.includes('profile')">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                  <circle cx="12" cy="7" r="4"/>
-                </svg>
-                <span>访问您的个人资料</span>
-              </li>
-              <li v-if="scopes.includes('email')">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                  <polyline points="22,6 12,13 2,6"/>
-                </svg>
-                <span>访问您的邮箱地址</span>
-              </li>
-              <li v-if="scopes.includes('phone')">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-                </svg>
-                <span>访问您的手机号码</span>
-              </li>
-              <li v-if="!scopes.length || scopes.every(s => !['openid', 'profile', 'email', 'phone'].includes(s))">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="12" y1="16" x2="12" y2="12"/>
-                  <line x1="12" y1="8" x2="12.01" y2="8"/>
-                </svg>
-                <span>基本访问权限</span>
-              </li>
-            </ul>
-          </div>
-
-          <div class="divider"></div>
-
+          <!-- 操作按钮 -->
           <div class="authorize-actions">
             <button 
               class="btn btn-secondary" 
@@ -206,10 +257,10 @@ onMounted(() => {
             </button>
             <button 
               class="btn btn-primary" 
-              @click="handleAuthorize" 
-              :disabled="authorizing"
+              @click="handleLoginAndAuthorize" 
+              :disabled="authorizing || !loginForm.username || !loginForm.password"
             >
-              {{ authorizing ? '授权中...' : '授权' }}
+              {{ authorizing ? '处理中...' : '登录并授权' }}
             </button>
           </div>
 
@@ -376,6 +427,178 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   gap: 12px;
+}
+
+.login-section {
+  padding: 16px 0;
+}
+
+.login-title {
+  margin: 0 0 8px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: #0C4A6E;
+  text-align: center;
+}
+
+.login-subtitle {
+  margin: 0 0 20px;
+  font-size: 13px;
+  color: #64748B;
+  text-align: center;
+}
+
+.login-form {
+  max-width: 320px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.login-form :deep(.el-form-item) {
+  margin-bottom: 16px;
+}
+
+.login-form :deep(.el-form-item__label) {
+  font-weight: 500;
+  color: #334155;
+}
+
+.login-form :deep(.el-input__wrapper) {
+  border-radius: 8px;
+}
+
+/* 左右两栏布局 */
+.auth-layout {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+.auth-left {
+  flex: 1;
+  padding: 16px;
+  background: rgba(241, 245, 249, 0.5);
+  border-radius: 12px;
+}
+
+.auth-right {
+  flex: 1;
+}
+
+.section-title {
+  margin: 0 0 4px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: #0C4A6E;
+}
+
+.section-subtitle {
+  margin: 0 0 16px;
+  font-size: 12px;
+  color: #64748B;
+}
+
+.login-form-compact :deep(.el-form-item) {
+  margin-bottom: 12px;
+}
+
+.login-form-compact :deep(.el-input__wrapper) {
+  border-radius: 8px;
+  box-shadow: none;
+  border: 1px solid #E2E8F0;
+}
+
+.login-form-compact :deep(.el-input__wrapper:hover) {
+  border-color: #CBD5E1;
+}
+
+.login-form-compact :deep(.el-input__wrapper.is-focus) {
+  border-color: #0369A1;
+}
+
+.app-info-compact {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.app-avatar-small {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #0369A1 0%, #0EA5E9 100%);
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.app-avatar-small img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.app-avatar-small span {
+  font-family: 'Poppins', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
+}
+
+.app-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.app-name-compact {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0C4A6E;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-desc-compact {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: #64748B;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.permissions-compact h4 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0C4A6E;
+}
+
+.scope-list-compact {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.scope-list-compact li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 12px;
+  color: #475569;
+}
+
+.scope-list-compact li svg {
+  flex-shrink: 0;
+  color: #0369A1;
 }
 
 .application-info {

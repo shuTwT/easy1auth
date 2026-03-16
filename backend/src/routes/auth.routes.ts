@@ -119,6 +119,106 @@ router.post('/login', async (req: Request, res: Response) => {
   }
 })
 
+router.post('/user-login', async (req: Request, res: Response) => {
+  try {
+    const { username, password, tenantId } = req.body
+
+    if (!username || !password) {
+      return res.status(400).json({
+        status: 'error',
+        message: '用户名和密码不能为空'
+      })
+    }
+
+    let userWhere: any = {
+      OR: [
+        { username: username },
+        { email: username }
+      ],
+      status: 'active'
+    }
+
+    if (tenantId) {
+      userWhere.tenantId = tenantId
+    }
+
+    const user = await prisma.user.findFirst({
+      where: userWhere,
+      include: {
+        tenant: true
+      }
+    })
+
+    if (!user) {
+      return res.status(401).json({
+        status: 'error',
+        message: '用户名或密码错误'
+      })
+    }
+
+    if (!user.password) {
+      return res.status(401).json({
+        status: 'error',
+        message: '该账号未设置密码，请使用其他登录方式'
+      })
+    }
+
+    const isValidPassword = await bcrypt.compare(password, user.password)
+    if (!isValidPassword) {
+      return res.status(401).json({
+        status: 'error',
+        message: '用户名或密码错误'
+      })
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date() }
+    })
+
+    const token = jwt.sign(
+      {
+        userId: user.id,
+        tenantId: user.tenantId,
+        type: 'user'
+      },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    )
+
+    const refreshToken = jwt.sign(
+      {
+        userId: user.id,
+        tenantId: user.tenantId,
+        type: 'refresh'
+      },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    )
+
+    return res.json({
+      token,
+      refreshToken,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        name: user.name,
+        phone: user.phone,
+        avatar: user.avatar,
+        tenantId: user.tenantId,
+        tenantName: user.tenant.name
+      }
+    })
+  } catch (error) {
+    console.error('用户登录错误:', error)
+    return res.status(500).json({
+      status: 'error',
+      message: '登录失败'
+    })
+  }
+})
+
 router.post('/send-code', async (req: Request, res: Response) => {
   try {
     const { email, type } = req.body
