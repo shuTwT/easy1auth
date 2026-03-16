@@ -98,7 +98,7 @@ const routes: RouteRecordRaw[] = [
     path: '/oauth2/authorize',
     name: 'OAuth2Authorize',
     component: () => import('@/views/oauth2/authorize.vue'),
-    meta: { title: 'OAuth2授权', requiresAuth: true }
+    meta: { title: 'OAuth2 授权', requiresAuth: false }
   }
 ]
 
