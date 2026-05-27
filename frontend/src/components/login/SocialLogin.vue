@@ -1,30 +1,33 @@
 <script setup lang="ts">
 import { useAuth } from '@/composables/useAuth'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Button } from '@/components/ui/button'
+import { MessageCircle, MessageSquare, GitFork } from '@lucide/vue'
 
 const { loading, socialLogin } = useAuth()
 
 const socialProviders = [
   {
     name: '微信',
-    icon: 'ChatDotRound',
+    icon: MessageCircle,
     provider: 'wechat',
     color: '#07c160'
   },
   {
     name: '钉钉',
-    icon: 'ChatLineSquare',
+    icon: MessageSquare,
     provider: 'dingtalk',
     color: '#0089ff'
   },
   {
     name: '飞书',
-    icon: 'ChatRound',
+    icon: MessageCircle,
     provider: 'feishu',
     color: '#3370ff'
   },
   {
     name: 'GitHub',
-    icon: 'Eleme',
+    icon: GitFork,
     provider: 'github',
     color: '#24292e'
   }
@@ -42,40 +45,28 @@ function handleSocialLogin(provider: string) {
     </div>
 
     <div class="social-buttons">
-      <el-tooltip
-        v-for="item in socialProviders"
-        :key="item.provider"
-        :content="item.name"
-        placement="top"
-      >
-        <el-button
-          circle
-          size="large"
-          :loading="loading"
-          :style="{ backgroundColor: item.color, borderColor: item.color }"
-          @click="handleSocialLogin(item.provider)"
-        >
-          <el-icon color="white">
-            <component :is="item.icon" />
-          </el-icon>
-        </el-button>
-      </el-tooltip>
+      <TooltipProvider>
+        <Tooltip v-for="item in socialProviders" :key="item.provider">
+          <TooltipTrigger as-child>
+            <Button
+              variant="outline"
+              size="icon-lg"
+              :disabled="loading"
+              :style="{ backgroundColor: item.color, borderColor: item.color, color: 'white' }"
+              class="social-button"
+              @click="handleSocialLogin(item.provider)"
+            >
+              <component :is="item.icon" class="size-5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{{ item.name }}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     </div>
   </div>
 </template>
-
-<script lang="ts">
-import { ChatDotRound, ChatLineSquare, ChatRound, Eleme } from '@element-plus/icons-vue'
-
-export default {
-  components: {
-    ChatDotRound,
-    ChatLineSquare,
-    ChatRound,
-    Eleme
-  }
-}
-</script>
 
 <style scoped>
 .social-login {
@@ -108,8 +99,9 @@ export default {
   gap: 16px;
 }
 
-.social-buttons .el-button {
-  width: 48px;
-  height: 48px;
+.social-button {
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 50% !important;
 }
 </style>

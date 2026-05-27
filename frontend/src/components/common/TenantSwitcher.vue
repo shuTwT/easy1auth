@@ -1,9 +1,27 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { ElMessage } from 'element-plus'
+import { toast } from 'vue-sonner'
 import { useUserStore } from '@/stores/user'
 import { tenantApi } from '@/api/tenant'
 import type { TenantInfo } from '@/types/auth'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Building2, ChevronDown, Check, Plus } from '@lucide/vue'
 
 const userStore = useUserStore()
 const loading = ref(false)
@@ -19,12 +37,12 @@ async function handleSwitchTenant(tenant: TenantInfo) {
   }
 
   userStore.setCurrentTenant(tenant)
-  ElMessage.success(`已切换到租户: ${tenant.name}`)
+  toast.success(`已切换到租户: ${tenant.name}`)
 }
 
 async function handleCreateTenant() {
   if (!newTenantName.value.trim()) {
-    ElMessage.warning('请输入租户名称')
+    toast.warning('请输入租户名称')
     return
   }
 
@@ -33,11 +51,11 @@ async function handleCreateTenant() {
     const response = await tenantApi.createTenant({ name: newTenantName.value })
     userStore.setTenants([...tenants.value, response.tenant])
     userStore.setCurrentTenant(response.tenant)
-    ElMessage.success('租户创建成功')
+    toast.success('租户创建成功')
     showCreateDialog.value = false
     newTenantName.value = ''
   } catch (error: any) {
-    ElMessage.error(error.response?.data?.message || '创建租户失败')
+    toast.error(error.response?.data?.message || '创建租户失败')
   } finally {
     loading.value = false
   }
@@ -50,58 +68,60 @@ onMounted(async () => {
 
 <template>
   <div class="tenant-switcher">
-    <el-dropdown trigger="click" @command="handleSwitchTenant">
-      <div class="tenant-selector">
-        <el-icon><OfficeBuilding /></el-icon>
-        <span class="tenant-name">{{ currentTenant?.name || '选择租户' }}</span>
-        <el-icon class="arrow"><ArrowDown /></el-icon>
-      </div>
-      <template #dropdown>
-        <el-dropdown-menu>
-          <el-dropdown-item
-            v-for="tenant in tenants"
-            :key="tenant.id"
-            :command="tenant"
-            :class="{ 'is-active': tenant.id === currentTenant?.id }"
-          >
-            <div class="tenant-item">
-              <span>{{ tenant.name }}</span>
-              <el-tag v-if="tenant.role === 'owner'" size="small" type="warning">所有者</el-tag>
-              <el-icon v-if="tenant.id === currentTenant?.id" class="check-icon"><Check /></el-icon>
+    <DropdownMenu>
+      <DropdownMenuTrigger as-child>
+        <button class="tenant-selector">
+          <Building2 class="size-4" />
+          <span class="tenant-name">{{ currentTenant?.name || '选择租户' }}</span>
+          <ChevronDown class="size-3 text-muted-foreground" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" class="w-56">
+        <DropdownMenuItem
+          v-for="tenant in tenants"
+          :key="tenant.id"
+          @click="handleSwitchTenant(tenant)"
+        >
+          <div class="tenant-item">
+            <span>{{ tenant.name }}</span>
+            <div class="flex items-center gap-1">
+              <Badge v-if="tenant.role === 'owner'" variant="outline" class="text-xs">所有者</Badge>
+              <Check v-if="tenant.id === currentTenant?.id" class="size-3.5 text-primary" />
             </div>
-          </el-dropdown-item>
-          <el-dropdown-item divided @click="showCreateDialog = true">
-            <div class="create-tenant-item">
-              <el-icon><Plus /></el-icon>
-              <span>创建新租户</span>
-            </div>
-          </el-dropdown-item>
-        </el-dropdown-menu>
-      </template>
-    </el-dropdown>
+          </div>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem @click="showCreateDialog = true">
+          <div class="create-tenant-item">
+            <Plus class="size-4" />
+            <span>创建新租户</span>
+          </div>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
 
-    <el-dialog
-      v-model="showCreateDialog"
-      title="创建新租户"
-      width="400px"
-      :close-on-click-modal="false"
-    >
-      <el-form @submit.prevent="handleCreateTenant">
-        <el-form-item label="租户名称">
-          <el-input
-            v-model="newTenantName"
-            placeholder="请输入租户名称"
-            clearable
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showCreateDialog = false">取消</el-button>
-        <el-button type="primary" :loading="loading" @click="handleCreateTenant">
-          创建
-        </el-button>
-      </template>
-    </el-dialog>
+    <Dialog v-model:open="showCreateDialog">
+      <DialogContent class="sm:max-w-[400px]">
+        <DialogHeader>
+          <DialogTitle>创建新租户</DialogTitle>
+        </DialogHeader>
+        <form @submit.prevent="handleCreateTenant">
+          <div class="grid gap-4 py-4">
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">租户名称</label>
+              <Input
+                v-model="newTenantName"
+                placeholder="请输入租户名称"
+              />
+            </div>
+          </div>
+        </form>
+        <DialogFooter>
+          <Button variant="outline" @click="showCreateDialog = false">取消</Button>
+          <Button :disabled="loading" @click="handleCreateTenant">{{ loading ? '创建中...' : '创建' }}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>
 
@@ -120,6 +140,9 @@ onMounted(async () => {
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
 }
 
 .tenant-selector:hover {
@@ -137,11 +160,6 @@ onMounted(async () => {
   white-space: nowrap;
 }
 
-.arrow {
-  font-size: 12px;
-  color: #64748B;
-}
-
 .tenant-item {
   display: flex;
   align-items: center;
@@ -150,19 +168,10 @@ onMounted(async () => {
   justify-content: space-between;
 }
 
-.check-icon {
-  color: #0369A1;
-  font-weight: bold;
-}
-
 .create-tenant-item {
   display: flex;
   align-items: center;
   gap: 8px;
   color: #0369A1;
-}
-
-.is-active {
-  background-color: #F0F9FF;
 }
 </style>

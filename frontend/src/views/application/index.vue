@@ -1,7 +1,20 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { toast } from 'vue-sonner'
+import { Plus, Search, Copy, Trash2 } from '@lucide/vue'
 import { applicationApi } from '@/api/application'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Checkbox } from '@/components/ui/checkbox'
+import { NumberField, NumberFieldContent, NumberFieldDecrement, NumberFieldIncrement, NumberFieldInput } from '@/components/ui/number-field'
+import { Minus, Plus as PlusIcon } from '@lucide/vue'
 import type { Application, CreateApplicationDto, UpdateApplicationDto, ApplicationQueryDto } from '@/types/application'
 
 const loading = ref(false)
@@ -36,24 +49,6 @@ const appForm = reactive<CreateApplicationDto & UpdateApplicationDto>({
 
 const redirectUriInput = ref('')
 
-const rules = {
-  name: [
-    { required: true, message: '请输入应用名称', trigger: 'blur' },
-    { min: 2, max: 100, message: '长度在 2 到 100 个字符', trigger: 'blur' }
-  ],
-  type: [
-    { required: true, message: '请选择应用类型', trigger: 'change' }
-  ],
-  accessTokenLifetime: [
-    { required: true, message: '请输入访问令牌有效期', trigger: 'blur' },
-    { type: 'number', min: 60, max: 86400, message: '有效期范围为 60 到 86400 秒', trigger: 'blur' }
-  ],
-  refreshTokenLifetime: [
-    { required: true, message: '请输入刷新令牌有效期', trigger: 'blur' },
-    { type: 'number', min: 3600, max: 31536000, message: '有效期范围为 3600 到 31536000 秒', trigger: 'blur' }
-  ]
-}
-
 const loadApplications = async () => {
   loading.value = true
   try {
@@ -62,7 +57,7 @@ const loadApplications = async () => {
     total.value = res.data.total
   } catch (error) {
     console.error('加载应用列表失败:', error)
-    ElMessage.error('加载应用列表失败')
+    toast.error('加载应用列表失败')
   } finally {
     loading.value = false
   }
@@ -116,52 +111,42 @@ const handleEdit = (row: Application) => {
 }
 
 const handleDelete = async (row: Application) => {
+  const confirmed = window.confirm('确定要删除该应用吗？删除后无法恢复！')
+  if (!confirmed) return
+  
   try {
-    await ElMessageBox.confirm('确定要删除该应用吗？删除后无法恢复！', '警告', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
-    
     await applicationApi.delete(row.id)
-    ElMessage.success('删除成功')
+    toast.success('删除成功')
     loadApplications()
   } catch (error) {
-    if (error !== 'cancel') {
-      console.error('删除应用失败:', error)
-      ElMessage.error('删除应用失败')
-    }
+    console.error('删除应用失败:', error)
+    toast.error('删除应用失败')
   }
 }
 
 const handleStatusChange = async (row: Application, status: string) => {
   try {
     await applicationApi.updateStatus(row.id, status)
-    ElMessage.success('状态更新成功')
+    toast.success('状态更新成功')
     loadApplications()
   } catch (error) {
     console.error('更新状态失败:', error)
-    ElMessage.error('更新状态失败')
+    toast.error('更新状态失败')
   }
 }
 
 const handleRegenerateSecret = async (row: Application) => {
+  const confirmed = window.confirm('重新生成密钥后，旧密钥将立即失效。确定要重新生成吗？')
+  if (!confirmed) return
+  
   try {
-    await ElMessageBox.confirm('重新生成密钥后，旧密钥将立即失效。确定要重新生成吗？', '警告', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
-    
     const res = await applicationApi.regenerateSecret(row.id)
     newClientSecret.value = res.data.clientSecret
     secretDialogVisible.value = true
-    ElMessage.success('密钥重新生成成功')
+    toast.success('密钥重新生成成功')
   } catch (error) {
-    if (error !== 'cancel') {
-      console.error('重新生成密钥失败:', error)
-      ElMessage.error('重新生成密钥失败')
-    }
+    console.error('重新生成密钥失败:', error)
+    toast.error('重新生成密钥失败')
   }
 }
 
@@ -188,18 +173,18 @@ const handleSubmit = async () => {
   try {
     if (currentApp.value.id) {
       await applicationApi.update(currentApp.value.id, appForm)
-      ElMessage.success('更新成功')
+      toast.success('更新成功')
     } else {
       const res = await applicationApi.create(appForm as CreateApplicationDto)
       newClientSecret.value = res.data.clientSecret
       secretDialogVisible.value = true
-      ElMessage.success('创建成功')
+      toast.success('创建成功')
     }
     dialogVisible.value = false
     loadApplications()
   } catch (error: any) {
     console.error('保存应用失败:', error)
-    ElMessage.error(error.response?.data?.message || '保存应用失败')
+    toast.error(error.response?.data?.message || '保存应用失败')
   }
 }
 
@@ -217,21 +202,21 @@ const handleSizeChange = (size: number) => {
 const copyToClipboard = async (text: string) => {
   try {
     await navigator.clipboard.writeText(text)
-    ElMessage.success('已复制到剪贴板')
+    toast.success('已复制到剪贴板')
   } catch (error) {
     console.error('复制失败:', error)
-    ElMessage.error('复制失败')
+    toast.error('复制失败')
   }
 }
 
-const getStatusType = (status: string) => {
+const getStatusVariant = (status: string) => {
   switch (status) {
     case 'active':
-      return 'success'
+      return 'default'
     case 'disabled':
-      return 'warning'
+      return 'secondary'
     default:
-      return 'info'
+      return 'outline'
   }
 }
 
@@ -274,228 +259,320 @@ const formatLifetime = (seconds?: number) => {
   }
 }
 
+const toggleGrantType = (type: string) => {
+  const index = appForm.allowedGrantTypes?.indexOf(type) ?? -1
+  if (index > -1) {
+    appForm.allowedGrantTypes?.splice(index, 1)
+  } else {
+    if (!appForm.allowedGrantTypes) {
+      appForm.allowedGrantTypes = []
+    }
+    appForm.allowedGrantTypes.push(type)
+  }
+}
+
+const totalPages = () => Math.ceil(total.value / queryForm.pageSize!)
+
 onMounted(() => {
   loadApplications()
 })
 </script>
 
 <template>
-  <div class="application-management">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>应用管理</span>
-          <el-button type="primary" @click="handleAdd">
-            <el-icon><Plus /></el-icon>
+  <div class="p-5">
+    <Card>
+      <CardHeader>
+        <div class="flex justify-between items-center">
+          <CardTitle>应用管理</CardTitle>
+          <Button @click="handleAdd">
+            <Plus class="w-4 h-4 mr-2" />
             新增应用
-          </el-button>
+          </Button>
         </div>
-      </template>
+      </CardHeader>
+      <CardContent>
+        <div class="flex flex-wrap gap-4 items-end mb-5">
+          <div class="grid gap-2">
+            <label class="text-sm font-medium">应用名称</label>
+            <Input v-model="queryForm.name" placeholder="请输入应用名称" class="w-48" />
+          </div>
+          <div class="grid gap-2">
+            <label class="text-sm font-medium">应用类型</label>
+            <Select v-model="queryForm.type">
+              <SelectTrigger class="w-36">
+                <SelectValue placeholder="请选择应用类型" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="web">Web应用</SelectItem>
+                <SelectItem value="native">原生应用</SelectItem>
+                <SelectItem value="spa">单页应用</SelectItem>
+                <SelectItem value="machine">机器对机器</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div class="grid gap-2">
+            <label class="text-sm font-medium">状态</label>
+            <Select v-model="queryForm.status">
+              <SelectTrigger class="w-28">
+                <SelectValue placeholder="请选择状态" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">正常</SelectItem>
+                <SelectItem value="disabled">禁用</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div class="flex gap-2">
+            <Button @click="handleSearch">
+              <Search class="w-4 h-4 mr-2" />
+              搜索
+            </Button>
+            <Button variant="outline" @click="handleReset">重置</Button>
+          </div>
+        </div>
 
-      <el-form :inline="true" :model="queryForm" class="search-form">
-        <el-form-item label="应用名称">
-          <el-input v-model="queryForm.name" placeholder="请输入应用名称" clearable />
-        </el-form-item>
-        <el-form-item label="应用类型">
-          <el-select v-model="queryForm.type" placeholder="请选择应用类型" clearable style="width: 150px">
-            <el-option label="Web应用" value="web" />
-            <el-option label="原生应用" value="native" />
-            <el-option label="单页应用" value="spa" />
-            <el-option label="机器对机器" value="machine" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="queryForm.status" placeholder="请选择状态" clearable style="width: 120px">
-            <el-option label="正常" value="active" />
-            <el-option label="禁用" value="disabled" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">
-            <el-icon><Search /></el-icon>
-            搜索
-          </el-button>
-          <el-button @click="handleReset">重置</el-button>
-        </el-form-item>
-      </el-form>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead class="w-44">应用名称</TableHead>
+              <TableHead class="w-28">应用类型</TableHead>
+              <TableHead class="w-72">Client ID</TableHead>
+              <TableHead class="w-24">状态</TableHead>
+              <TableHead class="w-32">访问令牌有效期</TableHead>
+              <TableHead class="w-32">刷新令牌有效期</TableHead>
+              <TableHead class="w-40">创建时间</TableHead>
+              <TableHead class="w-80">操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow v-for="row in applications" :key="row.id">
+              <TableCell>{{ row.name }}</TableCell>
+              <TableCell>{{ getTypeText(row.type) }}</TableCell>
+              <TableCell>
+                <div class="flex items-center gap-2">
+                  <span class="font-mono text-xs">{{ row.clientId }}</span>
+                  <Button variant="link" size="sm" class="h-auto p-0" @click="copyToClipboard(row.clientId)">
+                    <Copy class="w-4 h-4" />
+                  </Button>
+                </div>
+              </TableCell>
+              <TableCell>
+                <Badge :variant="getStatusVariant(row.status)">
+                  {{ getStatusText(row.status) }}
+                </Badge>
+              </TableCell>
+              <TableCell>{{ formatLifetime(row.accessTokenLifetime) }}</TableCell>
+              <TableCell>{{ formatLifetime(row.refreshTokenLifetime) }}</TableCell>
+              <TableCell>{{ new Date(row.createdAt).toLocaleString() }}</TableCell>
+              <TableCell>
+                <div class="flex gap-1 flex-wrap">
+                  <Button variant="link" size="sm" class="h-auto p-0" @click="handleEdit(row)">编辑</Button>
+                  <Button variant="link" size="sm" class="h-auto p-0" @click="handleShowSecret(row)">查看密钥</Button>
+                  <Button variant="link" size="sm" class="h-auto p-0 text-yellow-600" @click="handleRegenerateSecret(row)">重新生成密钥</Button>
+                  <Button 
+                    variant="link" 
+                    size="sm" 
+                    class="h-auto p-0"
+                    @click="handleStatusChange(row, row.status === 'active' ? 'disabled' : 'active')"
+                  >
+                    {{ row.status === 'active' ? '禁用' : '启用' }}
+                  </Button>
+                  <Button variant="link" size="sm" class="h-auto p-0 text-destructive" @click="handleDelete(row)">删除</Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
 
-      <el-table :data="applications" v-loading="loading" style="width: 100%">
-        <el-table-column prop="name" label="应用名称" width="180" />
-        <el-table-column prop="type" label="应用类型" width="120">
-          <template #default="{ row }">
-            {{ getTypeText(row.type) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="clientId" label="Client ID" width="280">
-          <template #default="{ row }">
-            <div style="display: flex; align-items: center;">
-              <span style="font-family: monospace; font-size: 12px;">{{ row.clientId }}</span>
-              <el-button link type="primary" @click="copyToClipboard(row.clientId)" style="margin-left: 8px;">
-                <el-icon><CopyDocument /></el-icon>
-              </el-button>
+        <div class="flex items-center justify-between mt-5">
+          <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
+          <div class="flex items-center gap-1">
+            <Select v-model="queryForm.pageSize!" @update:model-value="handleSizeChange(Number($event))">
+              <SelectTrigger class="w-20">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem :value="10">10</SelectItem>
+                <SelectItem :value="20">20</SelectItem>
+                <SelectItem :value="50">50</SelectItem>
+                <SelectItem :value="100">100</SelectItem>
+              </SelectContent>
+            </Select>
+            <span class="text-sm px-2">条/页</span>
+            <Button variant="outline" size="sm" :disabled="queryForm.page! <= 1" @click="handlePageChange(queryForm.page! - 1)">上一页</Button>
+            <span class="text-sm px-2">{{ queryForm.page! }} / {{ totalPages() }}</span>
+            <Button variant="outline" size="sm" :disabled="queryForm.page! >= totalPages()" @click="handlePageChange(queryForm.page! + 1)">下一页</Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+
+    <Dialog v-model:open="dialogVisible">
+      <DialogContent class="max-w-xl">
+        <DialogHeader>
+          <DialogTitle>{{ dialogTitle }}</DialogTitle>
+        </DialogHeader>
+        <form>
+          <div class="grid gap-4 py-4">
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">应用名称</label>
+              <Input v-model="appForm.name" placeholder="请输入应用名称" />
             </div>
-          </template>
-        </el-table-column>
-        <el-table-column prop="status" label="状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status)">
-              {{ getStatusText(row.status) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="accessTokenLifetime" label="访问令牌有效期" width="140">
-          <template #default="{ row }">
-            {{ formatLifetime(row.accessTokenLifetime) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="refreshTokenLifetime" label="刷新令牌有效期" width="140">
-          <template #default="{ row }">
-            {{ formatLifetime(row.refreshTokenLifetime) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="createdAt" label="创建时间" width="180">
-          <template #default="{ row }">
-            {{ new Date(row.createdAt).toLocaleString() }}
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="320" fixed="right">
-          <template #default="{ row }">
-            <el-button link type="primary" @click="handleEdit(row)">编辑</el-button>
-            <el-button link type="primary" @click="handleShowSecret(row)">查看密钥</el-button>
-            <el-button link type="warning" @click="handleRegenerateSecret(row)">重新生成密钥</el-button>
-            <el-button 
-              link 
-              :type="row.status === 'active' ? 'warning' : 'success'" 
-              @click="handleStatusChange(row, row.status === 'active' ? 'disabled' : 'active')"
-            >
-              {{ row.status === 'active' ? '禁用' : '启用' }}
-            </el-button>
-            <el-button link type="danger" @click="handleDelete(row)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <el-pagination
-        v-model:current-page="queryForm.page"
-        v-model:page-size="queryForm.pageSize"
-        :page-sizes="[10, 20, 50, 100]"
-        :total="total"
-        layout="total, sizes, prev, pager, next, jumper"
-        style="margin-top: 20px; justify-content: flex-end"
-        @size-change="handleSizeChange"
-        @current-change="handlePageChange"
-      />
-    </el-card>
-
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="700px">
-      <el-form :model="appForm" :rules="rules" label-width="140px">
-        <el-form-item label="应用名称" prop="name">
-          <el-input v-model="appForm.name" placeholder="请输入应用名称" />
-        </el-form-item>
-        <el-form-item label="应用类型" prop="type">
-          <el-select v-model="appForm.type" placeholder="请选择应用类型" style="width: 100%">
-            <el-option label="Web应用" value="web" />
-            <el-option label="原生应用" value="native" />
-            <el-option label="单页应用" value="spa" />
-            <el-option label="机器对机器" value="machine" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="应用描述" prop="description">
-          <el-input v-model="appForm.description" type="textarea" :rows="3" placeholder="请输入应用描述" />
-        </el-form-item>
-        <el-form-item label="应用Logo" prop="logo">
-          <el-input v-model="appForm.logo" placeholder="请输入Logo URL" />
-        </el-form-item>
-        <el-form-item label="重定向URI" prop="redirectUris">
-          <div style="width: 100%;">
-            <div style="display: flex; margin-bottom: 8px;">
-              <el-input v-model="redirectUriInput" placeholder="请输入重定向URI" style="flex: 1; margin-right: 8px;" />
-              <el-button type="primary" @click="handleAddRedirectUri">添加</el-button>
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">应用类型</label>
+              <Select v-model="appForm.type">
+                <SelectTrigger>
+                  <SelectValue placeholder="请选择应用类型" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="web">Web应用</SelectItem>
+                  <SelectItem value="native">原生应用</SelectItem>
+                  <SelectItem value="spa">单页应用</SelectItem>
+                  <SelectItem value="machine">机器对机器</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <div v-if="appForm.redirectUris && appForm.redirectUris.length > 0">
-              <el-tag
-                v-for="(uri, index) in appForm.redirectUris"
-                :key="index"
-                closable
-                @close="handleRemoveRedirectUri(index)"
-                style="margin: 4px;"
-              >
-                {{ uri }}
-              </el-tag>
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">应用描述</label>
+              <Textarea v-model="appForm.description" :rows="3" placeholder="请输入应用描述" />
+            </div>
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">应用Logo</label>
+              <Input v-model="appForm.logo" placeholder="请输入Logo URL" />
+            </div>
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">重定向URI</label>
+              <div class="flex gap-2 mb-2">
+                <Input v-model="redirectUriInput" placeholder="请输入重定向URI" class="flex-1" />
+                <Button type="button" @click="handleAddRedirectUri">添加</Button>
+              </div>
+              <div v-if="appForm.redirectUris && appForm.redirectUris.length > 0" class="flex flex-wrap gap-2">
+                <Badge
+                  v-for="(uri, index) in appForm.redirectUris"
+                  :key="index"
+                  variant="secondary"
+                  class="cursor-pointer"
+                  @click="handleRemoveRedirectUri(index)"
+                >
+                  {{ uri }}
+                  <Trash2 class="w-3 h-3 ml-1" />
+                </Badge>
+              </div>
+            </div>
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">授权类型</label>
+              <div class="flex flex-col gap-2">
+                <div class="flex items-center gap-2">
+                  <Checkbox
+                    :checked="appForm.allowedGrantTypes?.includes('authorization_code')"
+                    @update:checked="toggleGrantType('authorization_code')"
+                  />
+                  <span class="text-sm">授权码模式</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <Checkbox
+                    :checked="appForm.allowedGrantTypes?.includes('client_credentials')"
+                    @update:checked="toggleGrantType('client_credentials')"
+                  />
+                  <span class="text-sm">客户端凭证模式</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <Checkbox
+                    :checked="appForm.allowedGrantTypes?.includes('refresh_token')"
+                    @update:checked="toggleGrantType('refresh_token')"
+                  />
+                  <span class="text-sm">刷新令牌</span>
+                </div>
+              </div>
+            </div>
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">访问令牌有效期</label>
+              <div class="flex items-center gap-2">
+                <NumberField
+                  v-model="appForm.accessTokenLifetime"
+                  :min="60"
+                  :max="86400"
+                >
+                  <NumberFieldContent>
+                    <NumberFieldDecrement>
+                      <Minus class="w-4 h-4" />
+                    </NumberFieldDecrement>
+                    <NumberFieldInput />
+                    <NumberFieldIncrement>
+                      <PlusIcon class="w-4 h-4" />
+                    </NumberFieldIncrement>
+                  </NumberFieldContent>
+                </NumberField>
+                <span class="text-sm text-muted-foreground">秒 ({{ formatLifetime(appForm.accessTokenLifetime) }})</span>
+              </div>
+            </div>
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">刷新令牌有效期</label>
+              <div class="flex items-center gap-2">
+                <NumberField
+                  v-model="appForm.refreshTokenLifetime"
+                  :min="3600"
+                  :max="31536000"
+                >
+                  <NumberFieldContent>
+                    <NumberFieldDecrement>
+                      <Minus class="w-4 h-4" />
+                    </NumberFieldDecrement>
+                    <NumberFieldInput />
+                    <NumberFieldIncrement>
+                      <PlusIcon class="w-4 h-4" />
+                    </NumberFieldIncrement>
+                  </NumberFieldContent>
+                </NumberField>
+                <span class="text-sm text-muted-foreground">秒 ({{ formatLifetime(appForm.refreshTokenLifetime) }})</span>
+              </div>
             </div>
           </div>
-        </el-form-item>
-        <el-form-item label="授权类型" prop="allowedGrantTypes">
-          <el-checkbox-group v-model="appForm.allowedGrantTypes">
-            <el-checkbox label="authorization_code">授权码模式</el-checkbox>
-            <el-checkbox label="client_credentials">客户端凭证模式</el-checkbox>
-            <el-checkbox label="refresh_token">刷新令牌</el-checkbox>
-          </el-checkbox-group>
-        </el-form-item>
-        <el-form-item label="访问令牌有效期" prop="accessTokenLifetime">
-          <el-input-number v-model="appForm.accessTokenLifetime" :min="60" :max="86400" :step="60" />
-          <span style="margin-left: 8px; color: #999;">秒 ({{ formatLifetime(appForm.accessTokenLifetime) }})</span>
-        </el-form-item>
-        <el-form-item label="刷新令牌有效期" prop="refreshTokenLifetime">
-          <el-input-number v-model="appForm.refreshTokenLifetime" :min="3600" :max="31536000" :step="3600" />
-          <span style="margin-left: 8px; color: #999;">秒 ({{ formatLifetime(appForm.refreshTokenLifetime) }})</span>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit">确定</el-button>
-      </template>
-    </el-dialog>
+        </form>
+        <DialogFooter>
+          <Button variant="outline" @click="dialogVisible = false">取消</Button>
+          <Button @click="handleSubmit">确定</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
-    <el-dialog v-model="secretDialogVisible" title="Client Secret" width="500px">
-      <el-alert
-        title="请妥善保管您的客户端密钥"
-        type="warning"
-        description="密钥只会在创建应用或重新生成时显示一次，请立即复制并妥善保管。"
-        :closable="false"
-        show-icon
-        style="margin-bottom: 20px;"
-      />
-      <div style="background: #f5f5f5; padding: 12px; border-radius: 4px; font-family: monospace; word-break: break-all;">
-        {{ newClientSecret }}
-      </div>
-      <template #footer>
-        <el-button type="primary" @click="copyToClipboard(newClientSecret)">复制密钥</el-button>
-        <el-button @click="secretDialogVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
+    <Dialog v-model:open="secretDialogVisible">
+      <DialogContent class="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Client Secret</DialogTitle>
+        </DialogHeader>
+        <Alert class="mb-5">
+          <AlertTitle class="font-semibold">请妥善保管您的客户端密钥</AlertTitle>
+          <AlertDescription>
+            密钥只会在创建应用或重新生成时显示一次，请立即复制并妥善保管。
+          </AlertDescription>
+        </Alert>
+        <div class="bg-muted p-3 rounded-md font-mono text-sm break-all">
+          {{ newClientSecret }}
+        </div>
+        <DialogFooter>
+          <Button @click="copyToClipboard(newClientSecret)">复制密钥</Button>
+          <Button variant="outline" @click="secretDialogVisible = false">关闭</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
-    <el-dialog v-model="showSecretDialogVisible" title="Client Secret" width="500px">
-      <el-alert
-        title="客户端密钥"
-        type="info"
-        :closable="false"
-        show-icon
-        style="margin-bottom: 20px;"
-      />
-      <div style="background: #f5f5f5; padding: 12px; border-radius: 4px; font-family: monospace; word-break: break-all;">
-        {{ currentAppSecret }}
-      </div>
-      <template #footer>
-        <el-button type="primary" @click="copyToClipboard(currentAppSecret)">复制密钥</el-button>
-        <el-button @click="showSecretDialogVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
+    <Dialog v-model:open="showSecretDialogVisible">
+      <DialogContent class="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Client Secret</DialogTitle>
+        </DialogHeader>
+        <Alert class="mb-5">
+          <AlertTitle class="font-semibold">客户端密钥</AlertTitle>
+        </Alert>
+        <div class="bg-muted p-3 rounded-md font-mono text-sm break-all">
+          {{ currentAppSecret }}
+        </div>
+        <DialogFooter>
+          <Button @click="copyToClipboard(currentAppSecret)">复制密钥</Button>
+          <Button variant="outline" @click="showSecretDialogVisible = false">关闭</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>
-
-<style scoped>
-.application-management {
-  padding: 20px;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.search-form {
-  margin-bottom: 20px;
-}
-</style>

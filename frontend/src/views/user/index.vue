@@ -1,9 +1,21 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Upload, Download, UploadFilled, Search, Refresh } from '@element-plus/icons-vue'
+import { toast } from 'vue-sonner'
+import { Plus, Upload, Download, Search, RefreshCw } from '@lucide/vue'
 import { userApi } from '@/api/user'
 import { roleApi } from '@/api/role'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Card, CardContent } from '@/components/ui/card'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Separator } from '@/components/ui/separator'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Upload as UploadComponent } from '@/components/ui/upload'
 import type { User, CreateUserDto, UpdateUserDto, UserQueryDto } from '@/types/user'
 import type { Role } from '@/types/role'
 
@@ -52,46 +64,6 @@ const resetPasswordForm = reactive({
   confirmPassword: ''
 })
 
-const rules = {
-  username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 3, max: 50, message: '长度在 3 到 50 个字符', trigger: 'blur' }
-  ],
-  email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
-    { type: 'email', message: '请输入有效的邮箱地址', trigger: 'blur' }
-  ],
-  password: [
-    { min: 6, message: '密码长度至少为 6 个字符', trigger: 'blur' }
-  ],
-  name: [
-    { required: true, message: '请输入姓名', trigger: 'blur' }
-  ],
-  phone: [
-    { pattern: /^1[3-9]\d{9}$/, message: '请输入有效的手机号', trigger: 'blur' }
-  ]
-}
-
-const resetPasswordRules = {
-  newPassword: [
-    { required: true, message: '请输入新密码', trigger: 'blur' },
-    { min: 6, message: '密码长度至少为 6 个字符', trigger: 'blur' }
-  ],
-  confirmPassword: [
-    { required: true, message: '请确认新密码', trigger: 'blur' },
-    {
-      validator: (_rule: any, value: string, callback: any) => {
-        if (value !== resetPasswordForm.newPassword) {
-          callback(new Error('两次输入的密码不一致'))
-        } else {
-          callback()
-        }
-      },
-      trigger: 'blur'
-    }
-  ]
-}
-
 const loadUsers = async () => {
   loading.value = true
   try {
@@ -100,7 +72,7 @@ const loadUsers = async () => {
     total.value = res.data.total
   } catch (error) {
     console.error('加载用户列表失败:', error)
-    ElMessage.error('加载用户列表失败')
+    toast.error('加载用户列表失败')
   } finally {
     loading.value = false
   }
@@ -154,32 +126,27 @@ const handleEdit = (row: User) => {
 }
 
 const handleDelete = async (row: User) => {
+  const confirmed = window.confirm('确定要删除该用户吗？删除后无法恢复！')
+  if (!confirmed) return
+  
   try {
-    await ElMessageBox.confirm('确定要删除该用户吗？删除后无法恢复！', '警告', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
-    
     await userApi.delete(row.id)
-    ElMessage.success('删除成功')
+    toast.success('删除成功')
     loadUsers()
   } catch (error) {
-    if (error !== 'cancel') {
-      console.error('删除用户失败:', error)
-      ElMessage.error('删除用户失败')
-    }
+    console.error('删除用户失败:', error)
+    toast.error('删除用户失败')
   }
 }
 
 const handleStatusChange = async (row: User, status: string) => {
   try {
     await userApi.updateStatus(row.id, status)
-    ElMessage.success('状态更新成功')
+    toast.success('状态更新成功')
     loadUsers()
   } catch (error) {
     console.error('更新状态失败:', error)
-    ElMessage.error('更新状态失败')
+    toast.error('更新状态失败')
   }
 }
 
@@ -194,36 +161,36 @@ const handleSubmit = async () => {
   try {
     if (currentUser.value.id) {
       await userApi.update(currentUser.value.id, userForm)
-      ElMessage.success('更新成功')
+      toast.success('更新成功')
     } else {
       if (!userForm.password) {
-        ElMessage.warning('创建用户时必须设置密码')
+        toast.warning('创建用户时必须设置密码')
         return
       }
       await userApi.create(userForm as CreateUserDto)
-      ElMessage.success('创建成功')
+      toast.success('创建成功')
     }
     dialogVisible.value = false
     loadUsers()
   } catch (error: any) {
     console.error('保存用户失败:', error)
-    ElMessage.error(error.response?.data?.message || '保存用户失败')
+    toast.error(error.response?.data?.message || '保存用户失败')
   }
 }
 
 const handleResetPasswordSubmit = async () => {
   try {
     if (resetPasswordForm.newPassword !== resetPasswordForm.confirmPassword) {
-      ElMessage.error('两次输入的密码不一致')
+      toast.error('两次输入的密码不一致')
       return
     }
     
     await userApi.resetPassword(resetPasswordUserId.value, resetPasswordForm.newPassword)
-    ElMessage.success('密码重置成功')
+    toast.success('密码重置成功')
     resetPasswordDialogVisible.value = false
   } catch (error: any) {
     console.error('重置密码失败:', error)
-    ElMessage.error(error.response?.data?.message || '重置密码失败')
+    toast.error(error.response?.data?.message || '重置密码失败')
   }
 }
 
@@ -241,7 +208,7 @@ const handleAssignRole = async (row: User) => {
     assignRoleDialogVisible.value = true
   } catch (error) {
     console.error('加载角色数据失败:', error)
-    ElMessage.error('加载角色数据失败')
+    toast.error('加载角色数据失败')
   } finally {
     assignRoleLoading.value = false
   }
@@ -251,12 +218,12 @@ const handleAssignRoleSubmit = async () => {
   assignRoleLoading.value = true
   try {
     await roleApi.assignRolesToUser(assignRoleUserId.value, selectedRoleIds.value)
-    ElMessage.success('分配角色成功')
+    toast.success('分配角色成功')
     assignRoleDialogVisible.value = false
     loadUsers()
   } catch (error: any) {
     console.error('分配角色失败:', error)
-    ElMessage.error(error.response?.data?.error || '分配角色失败')
+    toast.error(error.response?.data?.error || '分配角色失败')
   } finally {
     assignRoleLoading.value = false
   }
@@ -273,16 +240,16 @@ const handleSizeChange = (size: number) => {
   loadUsers()
 }
 
-const getStatusType = (status: string) => {
+const getStatusVariant = (status: string) => {
   switch (status) {
     case 'active':
-      return 'success'
+      return 'default'
     case 'disabled':
-      return 'warning'
+      return 'secondary'
     case 'locked':
-      return 'danger'
+      return 'destructive'
     default:
-      return 'info'
+      return 'outline'
   }
 }
 
@@ -317,8 +284,7 @@ const handleImport = () => {
   importResult.value = null
 }
 
-const handleFileChange = async (options: any) => {
-  const { file } = options
+const handleFileChange = async (file: any) => {
   importLoading.value = true
   
   try {
@@ -337,508 +303,400 @@ const handleFileChange = async (options: any) => {
     
     if (result.status === 'success') {
       importResult.value = result.data
-      ElMessage.success(result.message)
+      toast.success(result.message)
       loadUsers()
     } else {
-      ElMessage.error(result.message || '导入失败')
+      toast.error(result.message || '导入失败')
     }
   } catch (error) {
     console.error('导入用户失败:', error)
-    ElMessage.error('导入用户失败')
+    toast.error('导入用户失败')
   } finally {
     importLoading.value = false
   }
 }
 
+const totalPages = () => Math.ceil(total.value / queryForm.pageSize!)
+
+const toggleRole = (roleId: string) => {
+  const index = selectedRoleIds.value.indexOf(roleId)
+  if (index > -1) {
+    selectedRoleIds.value.splice(index, 1)
+  } else {
+    selectedRoleIds.value.push(roleId)
+  }
+}
 </script>
 
 <template>
-  <div class="user-management">
-    <div class="page-header">
-      <div class="header-content">
-        <h1 class="page-title">用户管理</h1>
-        <p class="page-subtitle">管理系统用户，包括添加、编辑、删除和分配角色</p>
+  <div class="p-6 min-h-[calc(100vh-64px)]">
+    <div class="flex justify-between items-start mb-6">
+      <div class="flex-1">
+        <h1 class="text-2xl font-bold text-foreground mb-2">用户管理</h1>
+        <p class="text-sm text-muted-foreground">管理系统用户，包括添加、编辑、删除和分配角色</p>
       </div>
-      <div class="header-actions">
-        <el-button @click="handleImport">
-          <el-icon><Upload /></el-icon>
+      <div class="flex gap-3">
+        <Button variant="outline" @click="handleImport">
+          <Upload class="w-4 h-4 mr-2" />
           导入用户
-        </el-button>
-        <el-button type="primary" @click="handleAdd">
-          <el-icon><Plus /></el-icon>
+        </Button>
+        <Button @click="handleAdd">
+          <Plus class="w-4 h-4 mr-2" />
           新增用户
-        </el-button>
+        </Button>
       </div>
     </div>
 
-    <el-card class="search-card">
-      <el-form :inline="true" :model="queryForm" class="search-form">
-        <el-form-item label="用户名">
-          <el-input v-model="queryForm.username" placeholder="请输入用户名" clearable />
-        </el-form-item>
-        <el-form-item label="邮箱">
-          <el-input v-model="queryForm.email" placeholder="请输入邮箱" clearable />
-        </el-form-item>
-        <el-form-item label="姓名">
-          <el-input v-model="queryForm.name" placeholder="请输入姓名" clearable />
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="queryForm.status" placeholder="请选择状态" clearable style="width: 150px">
-            <el-option label="正常" value="active" />
-            <el-option label="禁用" value="disabled" />
-            <el-option label="锁定" value="locked" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">
-            <el-icon><Search /></el-icon>
-            搜索
-          </el-button>
-          <el-button @click="handleReset">
-            <el-icon><Refresh /></el-icon>
-            重置
-          </el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
+    <Card class="mb-4">
+      <CardContent class="pt-6">
+        <div class="flex flex-wrap gap-4 items-end">
+          <div class="grid gap-2">
+            <label class="text-sm font-medium">用户名</label>
+            <Input v-model="queryForm.username" placeholder="请输入用户名" class="w-40" />
+          </div>
+          <div class="grid gap-2">
+            <label class="text-sm font-medium">邮箱</label>
+            <Input v-model="queryForm.email" placeholder="请输入邮箱" class="w-40" />
+          </div>
+          <div class="grid gap-2">
+            <label class="text-sm font-medium">姓名</label>
+            <Input v-model="queryForm.name" placeholder="请输入姓名" class="w-40" />
+          </div>
+          <div class="grid gap-2">
+            <label class="text-sm font-medium">状态</label>
+            <Select v-model="queryForm.status">
+              <SelectTrigger class="w-32">
+                <SelectValue placeholder="请选择状态" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">正常</SelectItem>
+                <SelectItem value="disabled">禁用</SelectItem>
+                <SelectItem value="locked">锁定</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div class="flex gap-2">
+            <Button @click="handleSearch">
+              <Search class="w-4 h-4 mr-2" />
+              搜索
+            </Button>
+            <Button variant="outline" @click="handleReset">
+              <RefreshCw class="w-4 h-4 mr-2" />
+              重置
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
 
-    <el-card class="table-card">
-      <el-table :data="users" v-loading="loading" style="width: 100%">
-        <el-table-column prop="username" label="用户名" width="150">
-          <template #default="{ row }">
-            <div class="user-cell">
-              <el-avatar :size="32" class="user-avatar">
-                {{ row.name?.charAt(0) || row.username.charAt(0).toUpperCase() }}
-              </el-avatar>
-              <div class="user-info">
-                <span class="user-name">{{ row.username }}</span>
-                <span class="user-real-name">{{ row.name }}</span>
+    <Card>
+      <CardContent class="pt-6">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead class="w-40">用户名</TableHead>
+              <TableHead class="w-48">邮箱</TableHead>
+              <TableHead class="w-32">手机号</TableHead>
+              <TableHead class="w-28">部门</TableHead>
+              <TableHead class="w-24">状态</TableHead>
+              <TableHead class="w-40">最后登录</TableHead>
+              <TableHead class="w-40">创建时间</TableHead>
+              <TableHead class="w-64">操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow v-for="row in users" :key="row.id">
+              <TableCell>
+                <div class="flex items-center gap-3">
+                  <Avatar class="size-8 bg-gradient-to-br from-blue-500 to-purple-600">
+                    <AvatarFallback class="bg-transparent text-white text-sm font-semibold">
+                      {{ row.name?.charAt(0) || row.username.charAt(0).toUpperCase() }}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div class="flex flex-col">
+                    <span class="font-medium">{{ row.username }}</span>
+                    <span class="text-xs text-muted-foreground">{{ row.name }}</span>
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell>{{ row.email }}</TableCell>
+              <TableCell>{{ row.phone || '-' }}</TableCell>
+              <TableCell>{{ row.department || '-' }}</TableCell>
+              <TableCell>
+                <Badge :variant="getStatusVariant(row.status)">
+                  {{ getStatusText(row.status) }}
+                </Badge>
+              </TableCell>
+              <TableCell>{{ row.lastLoginAt ? new Date(row.lastLoginAt).toLocaleString() : '-' }}</TableCell>
+              <TableCell>{{ new Date(row.createdAt).toLocaleString() }}</TableCell>
+              <TableCell>
+                <div class="flex gap-1 flex-wrap">
+                  <Button variant="link" size="sm" class="h-auto p-0" @click="handleEdit(row)">编辑</Button>
+                  <Button variant="link" size="sm" class="h-auto p-0" @click="handleAssignRole(row)">分配角色</Button>
+                  <Button variant="link" size="sm" class="h-auto p-0" @click="handleResetPassword(row)">重置密码</Button>
+                  <Button 
+                    variant="link" 
+                    size="sm" 
+                    class="h-auto p-0"
+                    @click="handleStatusChange(row, row.status === 'active' ? 'disabled' : 'active')"
+                  >
+                    {{ row.status === 'active' ? '禁用' : '启用' }}
+                  </Button>
+                  <Button variant="link" size="sm" class="h-auto p-0 text-destructive" @click="handleDelete(row)">删除</Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+
+        <div class="flex items-center justify-between mt-4 pt-4 border-t">
+          <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
+          <div class="flex items-center gap-1">
+            <Select v-model="queryForm.pageSize!" @update:model-value="handleSizeChange(Number($event))">
+              <SelectTrigger class="w-20">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem :value="10">10</SelectItem>
+                <SelectItem :value="20">20</SelectItem>
+                <SelectItem :value="50">50</SelectItem>
+                <SelectItem :value="100">100</SelectItem>
+              </SelectContent>
+            </Select>
+            <span class="text-sm px-2">条/页</span>
+            <Button variant="outline" size="sm" :disabled="queryForm.page! <= 1" @click="handlePageChange(queryForm.page! - 1)">上一页</Button>
+            <span class="text-sm px-2">{{ queryForm.page! }} / {{ totalPages() }}</span>
+            <Button variant="outline" size="sm" :disabled="queryForm.page! >= totalPages()" @click="handlePageChange(queryForm.page! + 1)">下一页</Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+
+    <Dialog v-model:open="dialogVisible">
+      <DialogContent class="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{{ dialogTitle }}</DialogTitle>
+        </DialogHeader>
+        <form>
+          <div class="grid gap-4 py-4">
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">用户名</label>
+              <Input v-model="userForm.username" placeholder="请输入用户名" :disabled="!!currentUser.id" />
+            </div>
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">邮箱</label>
+              <Input v-model="userForm.email" placeholder="请输入邮箱" />
+            </div>
+            <div v-if="!currentUser.id" class="grid gap-2">
+              <label class="text-sm font-medium">密码</label>
+              <Input v-model="userForm.password" type="password" placeholder="请输入密码" />
+            </div>
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">姓名</label>
+              <Input v-model="userForm.name" placeholder="请输入姓名" />
+            </div>
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">手机号</label>
+              <Input v-model="userForm.phone" placeholder="请输入手机号" />
+            </div>
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">部门</label>
+              <Input v-model="userForm.department" placeholder="请输入部门" />
+            </div>
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">岗位</label>
+              <Input v-model="userForm.position" placeholder="请输入岗位" />
+            </div>
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">头像</label>
+              <Input v-model="userForm.avatar" placeholder="请输入头像URL" />
+            </div>
+          </div>
+        </form>
+        <DialogFooter>
+          <Button variant="outline" @click="dialogVisible = false">取消</Button>
+          <Button @click="handleSubmit">确定</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog v-model:open="resetPasswordDialogVisible">
+      <DialogContent class="max-w-md">
+        <DialogHeader>
+          <DialogTitle>重置密码</DialogTitle>
+        </DialogHeader>
+        <form>
+          <div class="grid gap-4 py-4">
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">新密码</label>
+              <Input v-model="resetPasswordForm.newPassword" type="password" placeholder="请输入新密码" />
+            </div>
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">确认密码</label>
+              <Input v-model="resetPasswordForm.confirmPassword" type="password" placeholder="请确认新密码" />
+            </div>
+          </div>
+        </form>
+        <DialogFooter>
+          <Button variant="outline" @click="resetPasswordDialogVisible = false">取消</Button>
+          <Button @click="handleResetPasswordSubmit">确定</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog v-model:open="assignRoleDialogVisible">
+      <DialogContent class="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>分配角色</DialogTitle>
+        </DialogHeader>
+        <form>
+          <div class="grid gap-4 py-4">
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">当前角色</label>
+              <div v-if="userRoles.length > 0" class="flex flex-wrap gap-2">
+                <Badge
+                  v-for="role in userRoles"
+                  :key="role.id"
+                  :variant="role.type === 'system' ? 'destructive' : 'default'"
+                >
+                  {{ role.name }}
+                </Badge>
+              </div>
+              <div v-else class="text-muted-foreground text-sm">暂未分配角色</div>
+            </div>
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">选择角色</label>
+              <div class="flex flex-col gap-3">
+                <div
+                  v-for="role in allRoles"
+                  :key="role.id"
+                  class="flex items-center gap-2"
+                >
+                  <Checkbox
+                    :checked="selectedRoleIds.includes(role.id)"
+                    @update:checked="toggleRole(role.id)"
+                  />
+                  <Badge
+                    :variant="role.type === 'system' ? 'destructive' : 'default'"
+                    class="text-xs"
+                  >
+                    {{ role.type === 'system' ? '系统' : '自定义' }}
+                  </Badge>
+                  <span class="font-medium">{{ role.name }}</span>
+                  <span class="text-xs text-muted-foreground">({{ role.code }})</span>
+                </div>
               </div>
             </div>
-          </template>
-        </el-table-column>
-        <el-table-column prop="email" label="邮箱" width="200" />
-        <el-table-column prop="phone" label="手机号" width="130" />
-        <el-table-column prop="department" label="部门" width="120" />
-        <el-table-column prop="status" label="状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status)" size="small">
-              {{ getStatusText(row.status) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="lastLoginAt" label="最后登录" width="180">
-          <template #default="{ row }">
-            {{ row.lastLoginAt ? new Date(row.lastLoginAt).toLocaleString() : '-' }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="createdAt" label="创建时间" width="180">
-          <template #default="{ row }">
-            {{ new Date(row.createdAt).toLocaleString() }}
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="280" fixed="right">
-          <template #default="{ row }">
-            <el-button link type="primary" @click="handleEdit(row)">编辑</el-button>
-            <el-button link type="primary" @click="handleAssignRole(row)">分配角色</el-button>
-            <el-button link type="primary" @click="handleResetPassword(row)">重置密码</el-button>
-            <el-button 
-              link 
-              :type="row.status === 'active' ? 'warning' : 'success'" 
-              @click="handleStatusChange(row, row.status === 'active' ? 'disabled' : 'active')"
-            >
-              {{ row.status === 'active' ? '禁用' : '启用' }}
-            </el-button>
-            <el-button link type="danger" @click="handleDelete(row)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <div class="pagination-container">
-        <el-pagination
-          v-model:current-page="queryForm.page"
-          v-model:page-size="queryForm.pageSize"
-          :page-sizes="[10, 20, 50, 100]"
-          :total="total"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange"
-          @current-change="handlePageChange"
-        />
-      </div>
-    </el-card>
-
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px" class="custom-dialog">
-      <el-form :model="userForm" :rules="rules" label-width="100px">
-        <el-form-item label="用户名" prop="username">
-          <el-input v-model="userForm.username" placeholder="请输入用户名" :disabled="!!currentUser.id" />
-        </el-form-item>
-        <el-form-item label="邮箱" prop="email">
-          <el-input v-model="userForm.email" placeholder="请输入邮箱" />
-        </el-form-item>
-        <el-form-item label="密码" prop="password" v-if="!currentUser.id">
-          <el-input v-model="userForm.password" type="password" placeholder="请输入密码" show-password />
-        </el-form-item>
-        <el-form-item label="姓名" prop="name">
-          <el-input v-model="userForm.name" placeholder="请输入姓名" />
-        </el-form-item>
-        <el-form-item label="手机号" prop="phone">
-          <el-input v-model="userForm.phone" placeholder="请输入手机号" />
-        </el-form-item>
-        <el-form-item label="部门" prop="department">
-          <el-input v-model="userForm.department" placeholder="请输入部门" />
-        </el-form-item>
-        <el-form-item label="岗位" prop="position">
-          <el-input v-model="userForm.position" placeholder="请输入岗位" />
-        </el-form-item>
-        <el-form-item label="头像" prop="avatar">
-          <el-input v-model="userForm.avatar" placeholder="请输入头像URL" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit">确定</el-button>
-      </template>
-    </el-dialog>
-
-    <el-dialog v-model="resetPasswordDialogVisible" title="重置密码" width="400px" class="custom-dialog">
-      <el-form :model="resetPasswordForm" :rules="resetPasswordRules" label-width="100px">
-        <el-form-item label="新密码" prop="newPassword">
-          <el-input v-model="resetPasswordForm.newPassword" type="password" placeholder="请输入新密码" show-password />
-        </el-form-item>
-        <el-form-item label="确认密码" prop="confirmPassword">
-          <el-input v-model="resetPasswordForm.confirmPassword" type="password" placeholder="请确认新密码" show-password />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="resetPasswordDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleResetPasswordSubmit">确定</el-button>
-      </template>
-    </el-dialog>
-
-    <el-dialog v-model="assignRoleDialogVisible" title="分配角色" width="600px" class="custom-dialog">
-      <el-form label-width="100px">
-        <el-form-item label="当前角色">
-          <div v-if="userRoles.length > 0" class="role-tags">
-            <el-tag
-              v-for="role in userRoles"
-              :key="role.id"
-              :type="role.type === 'system' ? 'danger' : 'success'"
-              size="small"
-            >
-              {{ role.name }}
-            </el-tag>
           </div>
-          <div v-else class="empty-text">暂未分配角色</div>
-        </el-form-item>
-        <el-form-item label="选择角色">
-          <el-checkbox-group v-model="selectedRoleIds" class="role-checkbox-group">
-            <el-checkbox
-              v-for="role in allRoles"
-              :key="role.id"
-              :label="role.id"
-              class="role-checkbox"
-            >
-              <el-tag
-                :type="role.type === 'system' ? 'danger' : 'success'"
-                size="small"
-              >
-                {{ role.type === 'system' ? '系统' : '自定义' }}
-              </el-tag>
-              <span class="role-name">{{ role.name }}</span>
-              <span class="role-code">({{ role.code }})</span>
-            </el-checkbox>
-          </el-checkbox-group>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="assignRoleDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleAssignRoleSubmit" :loading="assignRoleLoading">确定</el-button>
-      </template>
-    </el-dialog>
+        </form>
+        <DialogFooter>
+          <Button variant="outline" @click="assignRoleDialogVisible = false">取消</Button>
+          <Button @click="handleAssignRoleSubmit" :disabled="assignRoleLoading">确定</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
-    <el-dialog v-model="importDialogVisible" title="导入用户" width="700px" class="custom-dialog">
-      <div class="import-content">
-        <el-alert type="info" :closable="false" class="import-alert">
-          <template #title>
-            <strong>导入说明</strong>
-          </template>
-          <div class="import-tips">
-            <p>1. 请先下载导入模板，按照模板格式填写用户信息</p>
-            <p>2. 必填字段：用户名、邮箱、姓名</p>
-            <p>3. 如果不填写密码，系统将使用默认密码：Password123</p>
-            <p>4. 文件格式：.xlsx 或 .xls</p>
+    <Dialog v-model:open="importDialogVisible">
+      <DialogContent class="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>导入用户</DialogTitle>
+        </DialogHeader>
+        <div class="py-4">
+          <Alert class="mb-6">
+            <AlertTitle class="font-semibold">导入说明</AlertTitle>
+            <AlertDescription class="mt-2">
+              <p>1. 请先下载导入模板，按照模板格式填写用户信息</p>
+              <p>2. 必填字段：用户名、邮箱、姓名</p>
+              <p>3. 如果不填写密码，系统将使用默认密码：Password123</p>
+              <p>4. 文件格式：.xlsx 或 .xls</p>
+            </AlertDescription>
+          </Alert>
+
+          <div class="text-center mb-6">
+            <Button @click="handleDownloadTemplate">
+              <Download class="w-4 h-4 mr-2" />
+              下载导入模板
+            </Button>
           </div>
-        </el-alert>
 
-        <div class="import-actions">
-          <el-button type="primary" @click="handleDownloadTemplate">
-            <el-icon><Download /></el-icon>
-            下载导入模板
-          </el-button>
-        </div>
+          <Separator class="my-4" />
 
-        <el-divider />
+          <UploadComponent
+            drag
+            accept=".xlsx,.xls"
+            :auto-upload="false"
+            :show-file-list="false"
+            @change="handleFileChange"
+          >
+            <template #default>
+              <p class="text-sm font-medium">将文件拖到此处，或<em class="text-primary not-italic">点击上传</em></p>
+              <p class="text-xs text-muted-foreground mt-1">仅支持 xlsx/xls 文件</p>
+            </template>
+          </UploadComponent>
 
-        <el-upload
-          class="upload-area"
-          drag
-          action="#"
-          :auto-upload="false"
-          :show-file-list="false"
-          accept=".xlsx,.xls"
-          :on-change="handleFileChange"
-        >
-          <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
-          <div class="el-upload__text">
-            将文件拖到此处，或<em>点击上传</em>
-          </div>
-          <template #tip>
-            <div class="el-upload__tip">
-              只能上传 xlsx/xls 文件，且文件大小不超过 5MB
+          <div v-if="importResult" class="mt-6">
+            <Separator class="my-4" />
+            <h4 class="font-semibold mb-4">导入结果</h4>
+            <div class="grid grid-cols-3 gap-4 mb-4">
+              <div class="border rounded-lg p-3">
+                <div class="text-sm text-muted-foreground">总数</div>
+                <div class="text-xl font-bold">{{ importResult.total }}</div>
+              </div>
+              <div class="border rounded-lg p-3">
+                <div class="text-sm text-muted-foreground">成功</div>
+                <div class="text-xl font-bold text-emerald-600">{{ importResult.success }}</div>
+              </div>
+              <div class="border rounded-lg p-3">
+                <div class="text-sm text-muted-foreground">失败</div>
+                <div class="text-xl font-bold text-destructive">{{ importResult.failed }}</div>
+              </div>
             </div>
-          </template>
-        </el-upload>
 
-        <div v-if="importResult" class="import-result">
-          <el-divider />
-          <h4>导入结果</h4>
-          <el-descriptions :column="3" border>
-            <el-descriptions-item label="总数">{{ importResult.total }}</el-descriptions-item>
-            <el-descriptions-item label="成功">
-              <el-tag type="success">{{ importResult.success }}</el-tag>
-            </el-descriptions-item>
-            <el-descriptions-item label="失败">
-              <el-tag type="danger">{{ importResult.failed }}</el-tag>
-            </el-descriptions-item>
-          </el-descriptions>
+            <div v-if="importResult.errors && importResult.errors.length > 0" class="mt-4">
+              <h4 class="font-semibold mb-2">错误详情</h4>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead class="w-20">行号</TableHead>
+                    <TableHead class="w-36">用户名</TableHead>
+                    <TableHead>错误信息</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow v-for="(err, idx) in importResult.errors" :key="idx">
+                    <TableCell>{{ err.row }}</TableCell>
+                    <TableCell>{{ err.username }}</TableCell>
+                    <TableCell>{{ err.error }}</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
 
-          <div v-if="importResult.errors && importResult.errors.length > 0" class="error-section">
-            <h4>错误详情</h4>
-            <el-table :data="importResult.errors" style="width: 100%" max-height="300">
-              <el-table-column prop="row" label="行号" width="80" />
-              <el-table-column prop="username" label="用户名" width="150" />
-              <el-table-column prop="error" label="错误信息" />
-            </el-table>
-          </div>
-
-          <div v-if="importResult.importedUsers && importResult.importedUsers.length > 0" class="success-section">
-            <h4>成功导入的用户</h4>
-            <el-table :data="importResult.importedUsers" style="width: 100%" max-height="300">
-              <el-table-column prop="username" label="用户名" width="150" />
-              <el-table-column prop="email" label="邮箱" width="200" />
-              <el-table-column prop="name" label="姓名" />
-            </el-table>
+            <div v-if="importResult.importedUsers && importResult.importedUsers.length > 0" class="mt-4">
+              <h4 class="font-semibold mb-2">成功导入的用户</h4>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead class="w-36">用户名</TableHead>
+                    <TableHead class="w-48">邮箱</TableHead>
+                    <TableHead>姓名</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow v-for="(user, idx) in importResult.importedUsers" :key="idx">
+                    <TableCell>{{ user.username }}</TableCell>
+                    <TableCell>{{ user.email }}</TableCell>
+                    <TableCell>{{ user.name }}</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </div>
-      </div>
-      <template #footer>
-        <el-button @click="importDialogVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
+        <DialogFooter>
+          <Button variant="outline" @click="importDialogVisible = false">关闭</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>
-
-<style scoped>
-.user-management {
-  padding: 24px;
-  min-height: calc(100vh - 64px);
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 24px;
-}
-
-.header-content {
-  flex: 1;
-}
-
-.page-title {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0 0 8px 0;
-}
-
-.page-subtitle {
-  font-size: 14px;
-  color: var(--text-muted);
-  margin: 0;
-}
-
-.header-actions {
-  display: flex;
-  gap: 12px;
-}
-
-.search-card {
-  margin-bottom: 16px;
-  border-radius: var(--border-radius-lg);
-}
-
-.search-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.search-form :deep(.el-form-item) {
-  margin-bottom: 0;
-  margin-right: 16px;
-}
-
-.search-form :deep(.el-form-item:last-child) {
-  margin-right: 0;
-}
-
-.table-card {
-  border-radius: var(--border-radius-lg);
-}
-
-.user-cell {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.user-avatar {
-  background: var(--primary-gradient);
-  color: white;
-  font-size: 14px;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
-.user-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.user-name {
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.user-real-name {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.pagination-container {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid var(--border-color);
-}
-
-.custom-dialog :deep(.el-dialog__header) {
-  border-bottom: 1px solid var(--border-color);
-  padding: 16px 20px;
-  margin-right: 0;
-}
-
-.custom-dialog :deep(.el-dialog__body) {
-  padding: 20px;
-}
-
-.custom-dialog :deep(.el-dialog__footer) {
-  border-top: 1px solid var(--border-color);
-  padding: 16px 20px;
-}
-
-.role-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.empty-text {
-  color: var(--text-muted);
-  font-size: 14px;
-}
-
-.role-checkbox-group {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.role-checkbox {
-  display: flex;
-  align-items: center;
-  margin-right: 0 !important;
-}
-
-.role-name {
-  margin-left: 8px;
-  font-weight: 500;
-}
-
-.role-code {
-  color: var(--text-muted);
-  font-size: 12px;
-  margin-left: 4px;
-}
-
-.import-content {
-  padding: 10px 0;
-}
-
-.import-alert {
-  margin-bottom: 20px;
-  border-radius: var(--border-radius);
-}
-
-.import-tips {
-  margin-top: 10px;
-}
-
-.import-tips p {
-  margin: 6px 0;
-  line-height: 1.6;
-}
-
-.import-actions {
-  text-align: center;
-  margin: 20px 0;
-}
-
-.upload-area {
-  width: 100%;
-}
-
-.upload-area :deep(.el-upload-dragger) {
-  border-radius: var(--border-radius-lg);
-  border: 2px dashed var(--border-color);
-  transition: all var(--transition-fast);
-}
-
-.upload-area :deep(.el-upload-dragger:hover) {
-  border-color: var(--primary-color);
-}
-
-.import-result {
-  margin-top: 20px;
-}
-
-.import-result h4 {
-  margin-bottom: 16px;
-  color: var(--text-primary);
-  font-weight: 600;
-}
-
-.error-section,
-.success-section {
-  margin-top: 20px;
-}
-
-.error-section h4,
-.success-section h4 {
-  margin-bottom: 12px;
-  color: var(--text-primary);
-  font-weight: 600;
-}
-</style>

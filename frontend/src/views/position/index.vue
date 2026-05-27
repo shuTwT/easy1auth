@@ -1,8 +1,19 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { toast } from 'vue-sonner'
+import { Plus, Search, RefreshCw } from '@lucide/vue'
 import { positionApi } from '@/api/position'
 import type { Position, CreatePositionDto, UpdatePositionDto, PositionQueryDto, PositionStats } from '@/types/position'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Slider } from '@/components/ui/slider'
+import { NumberField, NumberFieldContent, NumberFieldDecrement, NumberFieldIncrement, NumberFieldInput } from '@/components/ui/number-field'
+import { Textarea } from '@/components/ui/textarea'
 
 const loading = ref(false)
 const positions = ref<Position[]>([])
@@ -31,19 +42,7 @@ const positionForm = reactive<CreatePositionDto & UpdatePositionDto>({
   maxCount: undefined
 })
 
-const rules = {
-  name: [
-    { required: true, message: '请输入岗位名称', trigger: 'blur' },
-    { min: 2, max: 50, message: '长度在 2 到 50 个字符', trigger: 'blur' }
-  ],
-  code: [
-    { required: true, message: '请输入岗位编码', trigger: 'blur' },
-    { pattern: /^[A-Z_]+$/, message: '编码只能包含大写字母和下划线', trigger: 'blur' }
-  ],
-  level: [
-    { required: true, message: '请选择岗位级别', trigger: 'change' }
-  ]
-}
+const levelSliderValue = ref([1])
 
 const loadPositions = async () => {
   loading.value = true
@@ -53,7 +52,7 @@ const loadPositions = async () => {
     total.value = res.data.total
   } catch (error) {
     console.error('加载岗位列表失败:', error)
-    ElMessage.error('加载岗位列表失败')
+    toast.error('加载岗位列表失败')
   } finally {
     loading.value = false
   }
@@ -93,6 +92,7 @@ const handleAdd = () => {
     sequence: '',
     maxCount: undefined
   })
+  levelSliderValue.value = [1]
   currentPosition.value = {}
   dialogVisible.value = true
 }
@@ -108,27 +108,23 @@ const handleEdit = (row: Position) => {
     sequence: row.sequence || '',
     maxCount: row.maxCount || undefined
   })
+  levelSliderValue.value = [row.level]
   currentPosition.value = row
   dialogVisible.value = true
 }
 
 const handleDelete = async (row: Position) => {
+  const confirmed = window.confirm('确定要删除该岗位吗？删除后无法恢复！')
+  if (!confirmed) return
+
   try {
-    await ElMessageBox.confirm('确定要删除该岗位吗？删除后无法恢复！', '警告', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
-    
     await positionApi.delete(row.id)
-    ElMessage.success('删除成功')
+    toast.success('删除成功')
     loadPositions()
     loadStats()
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('删除岗位失败:', error)
-      ElMessage.error('删除岗位失败')
-    }
+  } catch (error: any) {
+    console.error('删除岗位失败:', error)
+    toast.error(error.response?.data?.message || '删除岗位失败')
   }
 }
 
@@ -136,17 +132,17 @@ const handleSubmit = async () => {
   try {
     if (currentPosition.value.id) {
       await positionApi.update(currentPosition.value.id, positionForm)
-      ElMessage.success('更新成功')
+      toast.success('更新成功')
     } else {
       await positionApi.create(positionForm as CreatePositionDto)
-      ElMessage.success('创建成功')
+      toast.success('创建成功')
     }
     dialogVisible.value = false
     loadPositions()
     loadStats()
   } catch (error: any) {
     console.error('保存岗位失败:', error)
-    ElMessage.error(error.response?.data?.message || '保存岗位失败')
+    toast.error(error.response?.data?.message || '保存岗位失败')
   }
 }
 
@@ -155,19 +151,14 @@ const handlePageChange = (page: number) => {
   loadPositions()
 }
 
-const handleSizeChange = (size: number) => {
-  queryForm.pageSize = size
-  queryForm.page = 1
-  loadPositions()
-}
 
 const getLevelColor = (level?: number) => {
-  if (!level) return 'info'
-  if (level >= 9) return 'danger'
-  if (level >= 7) return 'warning'
-  if (level >= 5) return 'primary'
-  if (level >= 3) return 'success'
-  return 'info'
+  if (!level) return 'secondary'
+  if (level >= 9) return 'destructive'
+  if (level >= 7) return 'default'
+  if (level >= 5) return 'default'
+  if (level >= 3) return 'secondary'
+  return 'outline'
 }
 
 const getLevelText = (level?: number) => {
@@ -179,6 +170,8 @@ const getLevelText = (level?: number) => {
   return '员工'
 }
 
+const totalPages = Math.ceil(total.value / queryForm.pageSize!)
+
 onMounted(() => {
   loadPositions()
   loadStats()
@@ -187,179 +180,214 @@ onMounted(() => {
 
 <template>
   <div class="position-management">
-    <el-row :gutter="20" class="stats-row">
-      <el-col :span="6">
-        <el-card shadow="hover">
+    <div class="grid grid-cols-4 gap-5 mb-5">
+      <Card>
+        <CardContent class="pt-6">
           <div class="stat-card">
             <div class="stat-value">{{ stats?.totalPositions || 0 }}</div>
             <div class="stat-label">岗位总数</div>
           </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="hover">
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent class="pt-6">
           <div class="stat-card">
             <div class="stat-value">{{ stats?.filledPositions || 0 }}</div>
             <div class="stat-label">已分配岗位</div>
           </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="hover">
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent class="pt-6">
           <div class="stat-card">
             <div class="stat-value">{{ stats?.vacantPositions || 0 }}</div>
             <div class="stat-label">空缺岗位</div>
           </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="hover">
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent class="pt-6">
           <div class="stat-card">
             <div class="stat-value">{{ stats?.averageLevel || 0 }}</div>
             <div class="stat-label">平均级别</div>
           </div>
-        </el-card>
-      </el-col>
-    </el-row>
+        </CardContent>
+      </Card>
+    </div>
 
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>岗位管理</span>
-          <el-button type="primary" @click="handleAdd">
-            <el-icon><Plus /></el-icon>
+    <Card>
+      <CardHeader>
+        <div class="flex justify-between items-center">
+          <CardTitle>岗位管理</CardTitle>
+          <Button @click="handleAdd">
+            <Plus class="w-4 h-4 mr-2" />
             新增岗位
-          </el-button>
+          </Button>
         </div>
-      </template>
-
-      <el-form :inline="true" :model="queryForm" class="search-form">
-        <el-form-item label="岗位名称">
-          <el-input v-model="queryForm.name" placeholder="请输入岗位名称" clearable />
-        </el-form-item>
-        <el-form-item label="岗位编码">
-          <el-input v-model="queryForm.code" placeholder="请输入岗位编码" clearable />
-        </el-form-item>
-        <el-form-item label="岗位级别">
-          <el-select v-model="queryForm.level" placeholder="请选择级别" clearable style="width: 150px">
-            <el-option label="员工 (1-2级)" :value="1" />
-            <el-option label="主管 (3-4级)" :value="3" />
-            <el-option label="经理 (5-6级)" :value="5" />
-            <el-option label="总监 (7-8级)" :value="7" />
-            <el-option label="高管 (9-10级)" :value="9" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">
-            <el-icon><Search /></el-icon>
-            搜索
-          </el-button>
-          <el-button @click="handleReset">
-            <el-icon><Refresh /></el-icon>
-            重置
-          </el-button>
-        </el-form-item>
-      </el-form>
-
-      <el-table :data="positions" v-loading="loading" style="width: 100%">
-        <el-table-column prop="name" label="岗位名称" width="180" />
-        <el-table-column prop="code" label="岗位编码" width="150">
-          <template #default="{ row }">
-            <span style="font-family: monospace;">{{ row.code }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="description" label="描述" show-overflow-tooltip />
-        <el-table-column prop="level" label="岗位级别" width="120" align="center">
-          <template #default="{ row }">
-            <el-tag :type="getLevelColor(row.level)">
-              {{ row.level }} - {{ getLevelText(row.level) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="userCount" label="在职人数" width="100" align="center">
-          <template #default="{ row }">
-            {{ row.userCount }}{{ row.maxCount ? ` / ${row.maxCount}` : '' }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="createdAt" label="创建时间" width="180">
-          <template #default="{ row }">
-            {{ new Date(row.createdAt).toLocaleString() }}
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="150" fixed="right">
-          <template #default="{ row }">
-            <el-button size="small" @click="handleEdit(row)">编辑</el-button>
-            <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <el-pagination
-        v-model:current-page="queryForm.page"
-        v-model:page-size="queryForm.pageSize"
-        :total="total"
-        :page-sizes="[10, 20, 50, 100]"
-        layout="total, sizes, prev, pager, next, jumper"
-        @current-change="handlePageChange"
-        @size-change="handleSizeChange"
-        style="margin-top: 20px; justify-content: flex-end;"
-      />
-    </el-card>
-
-    <el-dialog
-      v-model="dialogVisible"
-      :title="dialogTitle"
-      width="500px"
-    >
-      <el-form :model="positionForm" :rules="rules" label-width="100px">
-        <el-form-item label="岗位名称" prop="name">
-          <el-input v-model="positionForm.name" placeholder="请输入岗位名称" />
-        </el-form-item>
-        <el-form-item label="岗位编码" prop="code">
-          <el-input 
-            v-model="positionForm.code" 
-            placeholder="请输入岗位编码（大写字母和下划线）"
-            :disabled="!!currentPosition.id"
-          />
-        </el-form-item>
-        <el-form-item label="描述">
-          <el-input
-            v-model="positionForm.description"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入岗位描述"
-          />
-        </el-form-item>
-        <el-form-item label="岗位级别" prop="level">
-          <el-slider v-model="positionForm.level" :min="1" :max="10" :step="1" show-stops />
-          <div style="margin-top: 10px; text-align: center;">
-            <el-tag :type="getLevelColor(positionForm.level)">
-              {{ positionForm.level }} - {{ getLevelText(positionForm.level) }}
-            </el-tag>
+      </CardHeader>
+      <CardContent>
+        <div class="flex flex-wrap gap-4 mb-5">
+          <div class="grid gap-2">
+            <Input v-model="queryForm.name" placeholder="请输入岗位名称" class="w-48" />
           </div>
-        </el-form-item>
-        <el-form-item label="最大人数">
-          <el-input-number v-model="positionForm.maxCount" :min="1" :max="999" />
-        </el-form-item>
-        <el-form-item label="排序">
-          <el-input v-model="positionForm.sequence" placeholder="请输入排序标识" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit">确定</el-button>
-      </template>
-    </el-dialog>
+          <div class="grid gap-2">
+            <Input v-model="queryForm.code" placeholder="请输入岗位编码" class="w-48" />
+          </div>
+          <div class="grid gap-2">
+            <Select v-model="queryForm.level" placeholder="请选择级别">
+              <SelectTrigger class="w-40">
+                <SelectValue placeholder="请选择级别" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem :value="1">员工 (1-2级)</SelectItem>
+                <SelectItem :value="3">主管 (3-4级)</SelectItem>
+                <SelectItem :value="5">经理 (5-6级)</SelectItem>
+                <SelectItem :value="7">总监 (7-8级)</SelectItem>
+                <SelectItem :value="9">高管 (9-10级)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Button @click="handleSearch">
+            <Search class="w-4 h-4 mr-2" />
+            搜索
+          </Button>
+          <Button variant="outline" @click="handleReset">
+            <RefreshCw class="w-4 h-4 mr-2" />
+            重置
+          </Button>
+        </div>
+
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead class="w-44">岗位名称</TableHead>
+              <TableHead class="w-36">岗位编码</TableHead>
+              <TableHead>描述</TableHead>
+              <TableHead class="w-28 text-center">岗位级别</TableHead>
+              <TableHead class="w-24 text-center">在职人数</TableHead>
+              <TableHead class="w-44">创建时间</TableHead>
+              <TableHead class="w-36 text-right">操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow v-if="loading">
+              <TableCell colspan="7" class="text-center py-8 text-muted-foreground">
+                加载中...
+              </TableCell>
+            </TableRow>
+            <TableRow v-else-if="positions.length === 0">
+              <TableCell colspan="7" class="text-center py-8 text-muted-foreground">
+                暂无数据
+              </TableCell>
+            </TableRow>
+            <TableRow v-for="position in positions" :key="position.id">
+              <TableCell>{{ position.name }}</TableCell>
+              <TableCell>
+                <span style="font-family: monospace;">{{ position.code }}</span>
+              </TableCell>
+              <TableCell>{{ position.description || '-' }}</TableCell>
+              <TableCell class="text-center">
+                <Badge :variant="getLevelColor(position.level)">
+                  {{ position.level }} - {{ getLevelText(position.level) }}
+                </Badge>
+              </TableCell>
+              <TableCell class="text-center">
+                {{ position.userCount }}{{ position.maxCount ? ` / ${position.maxCount}` : '' }}
+              </TableCell>
+              <TableCell>{{ new Date(position.createdAt).toLocaleString() }}</TableCell>
+              <TableCell class="text-right">
+                <div class="flex justify-end gap-2">
+                  <Button size="sm" variant="outline" @click="handleEdit(position)">编辑</Button>
+                  <Button size="sm" variant="destructive" @click="handleDelete(position)">删除</Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+
+        <div class="flex items-center justify-between mt-5">
+          <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
+          <div class="flex items-center gap-1">
+            <Button variant="outline" size="sm" :disabled="queryForm.page! <= 1" @click="handlePageChange(queryForm.page! - 1)">
+              上一页
+            </Button>
+            <span class="text-sm px-2">{{ queryForm.page! }} / {{ totalPages || 1 }}</span>
+            <Button variant="outline" size="sm" :disabled="queryForm.page! >= totalPages" @click="handlePageChange(queryForm.page! + 1)">
+              下一页
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+
+    <Dialog v-model:open="dialogVisible">
+      <DialogContent class="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{{ dialogTitle }}</DialogTitle>
+        </DialogHeader>
+        <form class="grid gap-4">
+          <div class="grid gap-2">
+            <label class="text-sm font-medium">岗位名称 <span class="text-destructive">*</span></label>
+            <Input v-model="positionForm.name" placeholder="请输入岗位名称" />
+          </div>
+          <div class="grid gap-2">
+            <label class="text-sm font-medium">岗位编码 <span class="text-destructive">*</span></label>
+            <Input 
+              v-model="positionForm.code" 
+              placeholder="请输入岗位编码（大写字母和下划线）"
+              :disabled="!!currentPosition.id"
+            />
+          </div>
+          <div class="grid gap-2">
+            <label class="text-sm font-medium">描述</label>
+            <Textarea
+              v-model="positionForm.description"
+              placeholder="请输入岗位描述"
+              :rows="3"
+            />
+          </div>
+          <div class="grid gap-2">
+            <label class="text-sm font-medium">岗位级别 <span class="text-destructive">*</span></label>
+            <Slider 
+              v-model="levelSliderValue"
+              :min="1" 
+              :max="10" 
+              :step="1"
+              @update:model-value="positionForm.level = levelSliderValue[0]"
+            />
+            <div class="text-center mt-2">
+              <Badge :variant="getLevelColor(positionForm.level)">
+                {{ positionForm.level }} - {{ getLevelText(positionForm.level) }}
+              </Badge>
+            </div>
+          </div>
+          <div class="grid gap-2">
+            <label class="text-sm font-medium">最大人数</label>
+            <NumberField v-model="positionForm.maxCount" :min="1" :max="999">
+              <NumberFieldContent>
+                <NumberFieldDecrement />
+                <NumberFieldInput />
+                <NumberFieldIncrement />
+              </NumberFieldContent>
+            </NumberField>
+          </div>
+          <div class="grid gap-2">
+            <label class="text-sm font-medium">排序</label>
+            <Input v-model="positionForm.sequence" placeholder="请输入排序标识" />
+          </div>
+        </form>
+        <DialogFooter>
+          <Button variant="outline" @click="dialogVisible = false">取消</Button>
+          <Button @click="handleSubmit">确定</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>
 
 <style scoped>
 .position-management {
   padding: 20px;
-}
-
-.stats-row {
-  margin-bottom: 20px;
 }
 
 .stat-card {
@@ -370,22 +398,12 @@ onMounted(() => {
 .stat-value {
   font-size: 28px;
   font-weight: bold;
-  color: #409eff;
+  color: hsl(var(--primary));
   margin-bottom: 5px;
 }
 
 .stat-label {
   font-size: 14px;
-  color: #909399;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.search-form {
-  margin-bottom: 20px;
+  color: hsl(var(--muted-foreground));
 }
 </style>

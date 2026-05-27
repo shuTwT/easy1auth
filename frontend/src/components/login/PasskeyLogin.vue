@@ -1,16 +1,16 @@
 <script setup lang="ts">
-// import { Key } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
 import { useAuth } from '@/composables/useAuth'
+import { toast } from 'vue-sonner'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Info } from '@lucide/vue'
 
 const { loading, passkeyLogin } = useAuth()
 
 async function handlePasskeyLogin() {
   if (!window.PublicKeyCredential) {
-    ElMessage.error('您的浏览器不支持 Passkey，请使用现代浏览器')
+    toast.error('您的浏览器不支持 Passkey，请使用现代浏览器')
     return
   }
-  
   await passkeyLogin()
 }
 </script>
@@ -41,16 +41,11 @@ async function handlePasskeyLogin() {
     </button>
 
     <div class="passkey-tips">
-      <el-alert
-        type="info"
-        :closable="false"
-        show-icon
-      >
-        <template #title>
-          Passkey 是一种更安全、更便捷的登录方式
-        </template>
-        <p>支持指纹、面部识别或安全密钥</p>
-      </el-alert>
+      <Alert>
+        <Info class="size-4" />
+        <AlertTitle>Passkey 是一种更安全、更便捷的登录方式</AlertTitle>
+        <AlertDescription>支持指纹、面部识别或安全密钥</AlertDescription>
+      </Alert>
     </div>
   </div>
 </template>
@@ -138,11 +133,6 @@ async function handlePasskeyLogin() {
 .passkey-tips {
   margin-top: 24px;
   text-align: left;
-}
-
-.passkey-tips :deep(.el-alert__title) {
-  font-size: 14px;
-  font-weight: 500;
 }
 
 .passkey-tips p {

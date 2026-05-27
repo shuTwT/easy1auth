@@ -2,8 +2,9 @@ import { PrismaClient } from '@prisma/client'
 import { PrismaLibSql } from '@prisma/adapter-libsql'
 import bcrypt from 'bcryptjs'
 
+// Use the same database path as .env: DATABASE_URL="file:./data/dev.db"
 const adapter = new PrismaLibSql({
-  url: 'file:./dev.db'
+  url: 'file:./data/dev.db'
 })
 
 const prisma = new PrismaClient({ adapter })
@@ -34,7 +35,7 @@ async function main() {
     update: {},
     create: {
       id: 'admin-001',
-      tenantId: tenant.id,
+      currentTenantId: tenant.id,
       username: 'admin',
       email: 'admin@easy1auth.com',
       password: hashedPassword,
@@ -61,6 +62,33 @@ async function main() {
   })
 
   console.log('✓ 管理员角色创建成功:', adminRole.name)
+
+  // Associate admin with tenant via AdminTenant join table
+  await prisma.adminTenant.upsert({
+    where: {
+      adminId_tenantId: { adminId: admin.id, tenantId: tenant.id }
+    },
+    update: {},
+    create: {
+      adminId: admin.id,
+      tenantId: tenant.id,
+      role: 'owner'
+    }
+  })
+
+  console.log('✓ 管理员-租户关联创建成功')
+
+  // Connect admin to the admin role (implicit many-to-many)
+  await prisma.admin.update({
+    where: { id: admin.id },
+    data: {
+      roles: {
+        connect: { id: adminRole.id }
+      }
+    }
+  })
+
+  console.log('✓ 管理员角色分配成功')
 
   console.log('\n种子数据创建完成！')
   console.log('==========================================')

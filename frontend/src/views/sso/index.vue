@@ -1,8 +1,15 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { toast } from 'vue-sonner'
+import { Copy } from '@lucide/vue'
 import { applicationApi } from '@/api/application'
 import type { Application } from '@/types/application'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 const loading = ref(false)
 const applications = ref<Application[]>([])
@@ -32,7 +39,7 @@ const loadApplications = async () => {
     }
   } catch (error) {
     console.error('加载应用列表失败:', error)
-    ElMessage.error('加载应用列表失败')
+    toast.error('加载应用列表失败')
   } finally {
     loading.value = false
   }
@@ -53,18 +60,18 @@ const getTypeText = (type: string) => {
   }
 }
 
-const getTypeColor = (type: string) => {
+const getTypeVariant = (type: string) => {
   switch (type) {
     case 'web':
-      return 'primary'
+      return 'default'
     case 'spa':
-      return 'success'
+      return 'secondary'
     case 'native':
-      return 'warning'
+      return 'outline'
     case 'machine':
-      return 'info'
+      return 'secondary'
     default:
-      return ''
+      return 'secondary'
   }
 }
 
@@ -72,15 +79,15 @@ const getStatusText = (status: string) => {
   return status === 'active' ? '启用' : '禁用'
 }
 
-const getStatusColor = (status: string) => {
-  return status === 'active' ? 'success' : 'danger'
+const getStatusVariant = (status: string) => {
+  return status === 'active' ? 'default' : 'destructive'
 }
 
 const copyToClipboard = (text: string) => {
   navigator.clipboard.writeText(text).then(() => {
-    ElMessage.success('已复制到剪贴板')
+    toast.success('已复制到剪贴板')
   }).catch(() => {
-    ElMessage.error('复制失败')
+    toast.error('复制失败')
   })
 }
 
@@ -90,257 +97,199 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="sso-management">
-    <el-row :gutter="20" class="stats-row">
-      <el-col :span="4">
-        <el-card shadow="hover">
-          <div class="stat-card">
-            <div class="stat-value">{{ stats.totalApps }}</div>
-            <div class="stat-label">应用总数</div>
+  <div class="sso-management p-5">
+    <div class="grid grid-cols-6 gap-5 mb-5">
+      <Card>
+        <CardContent class="pt-6">
+          <div class="text-center">
+            <div class="text-2xl font-bold text-primary mb-1">{{ stats.totalApps }}</div>
+            <div class="text-sm text-muted-foreground">应用总数</div>
           </div>
-        </el-card>
-      </el-col>
-      <el-col :span="4">
-        <el-card shadow="hover">
-          <div class="stat-card">
-            <div class="stat-value">{{ stats.activeApps }}</div>
-            <div class="stat-label">启用应用</div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent class="pt-6">
+          <div class="text-center">
+            <div class="text-2xl font-bold text-primary mb-1">{{ stats.activeApps }}</div>
+            <div class="text-sm text-muted-foreground">启用应用</div>
           </div>
-        </el-card>
-      </el-col>
-      <el-col :span="4">
-        <el-card shadow="hover">
-          <div class="stat-card">
-            <div class="stat-value">{{ stats.webApps }}</div>
-            <div class="stat-label">Web应用</div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent class="pt-6">
+          <div class="text-center">
+            <div class="text-2xl font-bold text-primary mb-1">{{ stats.webApps }}</div>
+            <div class="text-sm text-muted-foreground">Web应用</div>
           </div>
-        </el-card>
-      </el-col>
-      <el-col :span="4">
-        <el-card shadow="hover">
-          <div class="stat-card">
-            <div class="stat-value">{{ stats.spaApps }}</div>
-            <div class="stat-label">单页应用</div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent class="pt-6">
+          <div class="text-center">
+            <div class="text-2xl font-bold text-primary mb-1">{{ stats.spaApps }}</div>
+            <div class="text-sm text-muted-foreground">单页应用</div>
           </div>
-        </el-card>
-      </el-col>
-      <el-col :span="4">
-        <el-card shadow="hover">
-          <div class="stat-card">
-            <div class="stat-value">{{ stats.nativeApps }}</div>
-            <div class="stat-label">原生应用</div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent class="pt-6">
+          <div class="text-center">
+            <div class="text-2xl font-bold text-primary mb-1">{{ stats.nativeApps }}</div>
+            <div class="text-sm text-muted-foreground">原生应用</div>
           </div>
-        </el-card>
-      </el-col>
-      <el-col :span="4">
-        <el-card shadow="hover">
-          <div class="stat-card">
-            <div class="stat-value">{{ stats.machineApps }}</div>
-            <div class="stat-label">机器应用</div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent class="pt-6">
+          <div class="text-center">
+            <div class="text-2xl font-bold text-primary mb-1">{{ stats.machineApps }}</div>
+            <div class="text-sm text-muted-foreground">机器应用</div>
           </div>
-        </el-card>
-      </el-col>
-    </el-row>
+        </CardContent>
+      </Card>
+    </div>
 
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>单点登录配置</span>
-        </div>
-      </template>
+    <Card>
+      <CardHeader>
+        <CardTitle>单点登录配置</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Alert class="mb-5">
+          <AlertTitle>单点登录说明</AlertTitle>
+          <AlertDescription>
+            <p>单点登录（SSO）允许用户使用一个账号登录多个应用。系统支持 OAuth 2.0 和 OpenID Connect 协议。</p>
+            <p class="mt-3">
+              <strong>OAuth 2.0 授权端点：</strong>
+              <Button variant="link" size="sm" class="p-0 h-auto" @click="copyToClipboard(`${baseUrl}/oauth2/authorize`)">
+                {{ baseUrl }}/oauth2/authorize
+              </Button>
+            </p>
+            <p class="mt-1">
+              <strong>Token 端点：</strong>
+              <Button variant="link" size="sm" class="p-0 h-auto" @click="copyToClipboard(`${baseUrl}/oauth2/token`)">
+                {{ baseUrl }}/oauth2/token
+              </Button>
+            </p>
+            <p class="mt-1">
+              <strong>用户信息端点：</strong>
+              <Button variant="link" size="sm" class="p-0 h-auto" @click="copyToClipboard(`${baseUrl}/oauth2/userinfo`)">
+                {{ baseUrl }}/oauth2/userinfo
+              </Button>
+            </p>
+          </AlertDescription>
+        </Alert>
 
-      <el-alert
-        title="单点登录说明"
-        type="info"
-        :closable="false"
-        style="margin-bottom: 20px;"
-      >
-        <p>单点登录（SSO）允许用户使用一个账号登录多个应用。系统支持 OAuth 2.0 和 OpenID Connect 协议。</p>
-        <p style="margin-top: 10px;">
-          <strong>OAuth 2.0 授权端点：</strong>
-          <el-link type="primary" @click="copyToClipboard(`${baseUrl}/oauth2/authorize`)">
-            {{ baseUrl }}/oauth2/authorize
-          </el-link>
-        </p>
-        <p style="margin-top: 5px;">
-          <strong>Token 端点：</strong>
-          <el-link type="primary" @click="copyToClipboard(`${baseUrl}/oauth2/token`)">
-            {{ baseUrl }}/oauth2/token
-          </el-link>
-        </p>
-        <p style="margin-top: 5px;">
-          <strong>用户信息端点：</strong>
-          <el-link type="primary" @click="copyToClipboard(`${baseUrl}/oauth2/userinfo`)">
-            {{ baseUrl }}/oauth2/userinfo
-          </el-link>
-        </p>
-      </el-alert>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead class="w-[200px]">应用名称</TableHead>
+              <TableHead class="w-[120px]">应用类型</TableHead>
+              <TableHead class="w-[300px]">Client ID</TableHead>
+              <TableHead class="min-w-[200px]">回调地址</TableHead>
+              <TableHead class="w-[150px] text-center">Access Token 有效期</TableHead>
+              <TableHead class="w-[150px] text-center">Refresh Token 有效期</TableHead>
+              <TableHead class="w-[100px] text-center">状态</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow v-if="loading">
+              <TableCell colspan="7" class="text-center text-muted-foreground">加载中...</TableCell>
+            </TableRow>
+            <TableRow v-for="item in applications" :key="item.id">
+              <TableCell>{{ item.name }}</TableCell>
+              <TableCell>
+                <Badge :variant="getTypeVariant(item.type)">
+                  {{ getTypeText(item.type) }}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                <div class="flex items-center gap-2">
+                  <span class="font-mono text-xs">{{ item.clientId }}</span>
+                  <Button variant="ghost" size="icon" class="h-6 w-6" @click="copyToClipboard(item.clientId)">
+                    <Copy class="w-3 h-3" />
+                  </Button>
+                </div>
+              </TableCell>
+              <TableCell>
+                <div v-if="Array.isArray(item.redirectUris)">
+                  <div v-for="(uri, index) in item.redirectUris" :key="index" class="text-xs mb-1">
+                    {{ uri }}
+                  </div>
+                </div>
+                <span v-else class="text-muted-foreground">-</span>
+              </TableCell>
+              <TableCell class="text-center">{{ item.accessTokenLifetime }} 秒</TableCell>
+              <TableCell class="text-center">{{ item.refreshTokenLifetime }} 秒</TableCell>
+              <TableCell class="text-center">
+                <Badge :variant="getStatusVariant(item.status)">
+                  {{ getStatusText(item.status) }}
+                </Badge>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
 
-      <el-table :data="applications" v-loading="loading" style="width: 100%">
-        <el-table-column prop="name" label="应用名称" width="200" />
-        <el-table-column prop="type" label="应用类型" width="120">
-          <template #default="{ row }">
-            <el-tag :type="getTypeColor(row.type)">
-              {{ getTypeText(row.type) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="clientId" label="Client ID" width="300">
-          <template #default="{ row }">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span style="font-family: monospace; font-size: 12px;">{{ row.clientId }}</span>
-              <el-button size="small" text @click="copyToClipboard(row.clientId)">
-                <el-icon><DocumentCopy /></el-icon>
-              </el-button>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column prop="redirectUris" label="回调地址" min-width="200">
-          <template #default="{ row }">
-            <div v-if="Array.isArray(row.redirectUris)">
-              <div v-for="(uri, index) in row.redirectUris" :key="index" style="font-size: 12px; margin-bottom: 4px;">
-                {{ uri }}
-              </div>
-            </div>
-            <span v-else>-</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="accessTokenLifetime" label="Access Token 有效期" width="150" align="center">
-          <template #default="{ row }">
-            {{ row.accessTokenLifetime }} 秒
-          </template>
-        </el-table-column>
-        <el-table-column prop="refreshTokenLifetime" label="Refresh Token 有效期" width="150" align="center">
-          <template #default="{ row }">
-            {{ row.refreshTokenLifetime }} 秒
-          </template>
-        </el-table-column>
-        <el-table-column prop="status" label="状态" width="100" align="center">
-          <template #default="{ row }">
-            <el-tag :type="getStatusColor(row.status)">
-              {{ getStatusText(row.status) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
-
-    <el-card style="margin-top: 20px;">
-      <template #header>
-        <span>集成指南</span>
-      </template>
-      
-      <el-tabs>
-        <el-tab-pane label="OAuth 2.0 授权码流程">
-          <div class="integration-guide">
-            <h4>1. 获取授权码</h4>
-            <p>将用户重定向到授权端点：</p>
-            <pre>{{ baseUrl }}/oauth2/authorize?client_id=YOUR_CLIENT_ID&redirect_uri=YOUR_REDIRECT_URI&response_type=code&scope=openid profile email&state=RANDOM_STATE</pre>
-            
-            <h4>2. 使用授权码换取 Token</h4>
-            <p>向 Token 端点发送 POST 请求：</p>
-            <pre>POST {{ baseUrl }}/oauth2/token
+    <Card class="mt-5">
+      <CardHeader>
+        <CardTitle>集成指南</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Tabs default-value="oauth2">
+          <TabsList>
+            <TabsTrigger value="oauth2">OAuth 2.0 授权码流程</TabsTrigger>
+            <TabsTrigger value="pkce">PKCE 安全增强</TabsTrigger>
+            <TabsTrigger value="client">客户端凭证流程</TabsTrigger>
+          </TabsList>
+          <TabsContent value="oauth2">
+            <div class="p-5">
+              <h4 class="text-base font-semibold mb-2">1. 获取授权码</h4>
+              <p class="text-sm text-muted-foreground mb-2">将用户重定向到授权端点：</p>
+              <pre class="bg-muted p-3 rounded-md text-sm overflow-x-auto font-mono">{{ baseUrl }}/oauth2/authorize?client_id=YOUR_CLIENT_ID&redirect_uri=YOUR_REDIRECT_URI&response_type=code&scope=openid profile email&state=RANDOM_STATE</pre>
+              
+              <h4 class="text-base font-semibold mt-5 mb-2">2. 使用授权码换取 Token</h4>
+              <p class="text-sm text-muted-foreground mb-2">向 Token 端点发送 POST 请求：</p>
+              <pre class="bg-muted p-3 rounded-md text-sm overflow-x-auto font-mono">POST {{ baseUrl }}/oauth2/token
 Content-Type: application/x-www-form-urlencoded
 
 grant_type=authorization_code&code=AUTHORIZATION_CODE&redirect_uri=YOUR_REDIRECT_URI&client_id=YOUR_CLIENT_ID&client_secret=YOUR_CLIENT_SECRET</pre>
-            
-            <h4>3. 获取用户信息</h4>
-            <p>使用 Access Token 获取用户信息：</p>
-            <pre>GET {{ baseUrl }}/oauth2/userinfo
+              
+              <h4 class="text-base font-semibold mt-5 mb-2">3. 获取用户信息</h4>
+              <p class="text-sm text-muted-foreground mb-2">使用 Access Token 获取用户信息：</p>
+              <pre class="bg-muted p-3 rounded-md text-sm overflow-x-auto font-mono">GET {{ baseUrl }}/oauth2/userinfo
 Authorization: Bearer ACCESS_TOKEN</pre>
-          </div>
-        </el-tab-pane>
-        
-        <el-tab-pane label="PKCE 安全增强">
-          <div class="integration-guide">
-            <h4>1. 生成 Code Verifier 和 Code Challenge</h4>
-            <p>Code Verifier: 随机字符串（43-128字符）</p>
-            <p>Code Challenge: BASE64URL(SHA256(code_verifier))</p>
-            
-            <h4>2. 授权请求</h4>
-            <pre>{{ baseUrl }}/oauth2/authorize?client_id=YOUR_CLIENT_ID&redirect_uri=YOUR_REDIRECT_URI&response_type=code&scope=openid profile email&state=RANDOM_STATE&code_challenge=CODE_CHALLENGE&code_challenge_method=S256</pre>
-            
-            <h4>3. Token 请求</h4>
-            <pre>POST {{ baseUrl }}/oauth2/token
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="pkce">
+            <div class="p-5">
+              <h4 class="text-base font-semibold mb-2">1. 生成 Code Verifier 和 Code Challenge</h4>
+              <p class="text-sm text-muted-foreground">Code Verifier: 随机字符串（43-128字符）</p>
+              <p class="text-sm text-muted-foreground mb-2">Code Challenge: BASE64URL(SHA256(code_verifier))</p>
+              
+              <h4 class="text-base font-semibold mt-5 mb-2">2. 授权请求</h4>
+              <pre class="bg-muted p-3 rounded-md text-sm overflow-x-auto font-mono">{{ baseUrl }}/oauth2/authorize?client_id=YOUR_CLIENT_ID&redirect_uri=YOUR_REDIRECT_URI&response_type=code&scope=openid profile email&state=RANDOM_STATE&code_challenge=CODE_CHALLENGE&code_challenge_method=S256</pre>
+              
+              <h4 class="text-base font-semibold mt-5 mb-2">3. Token 请求</h4>
+              <pre class="bg-muted p-3 rounded-md text-sm overflow-x-auto font-mono">POST {{ baseUrl }}/oauth2/token
 Content-Type: application/x-www-form-urlencoded
 
 grant_type=authorization_code&code=AUTHORIZATION_CODE&redirect_uri=YOUR_REDIRECT_URI&client_id=YOUR_CLIENT_ID&code_verifier=CODE_VERIFIER</pre>
-          </div>
-        </el-tab-pane>
-        
-        <el-tab-pane label="客户端凭证流程">
-          <div class="integration-guide">
-            <h4>适用于机器对机器通信</h4>
-            <pre>POST {{ baseUrl }}/oauth2/token
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="client">
+            <div class="p-5">
+              <h4 class="text-base font-semibold mb-2">适用于机器对机器通信</h4>
+              <pre class="bg-muted p-3 rounded-md text-sm overflow-x-auto font-mono">POST {{ baseUrl }}/oauth2/token
 Content-Type: application/x-www-form-urlencoded
 
 grant_type=client_credentials&client_id=YOUR_CLIENT_ID&client_secret=YOUR_CLIENT_SECRET&scope=read write</pre>
-          </div>
-        </el-tab-pane>
-      </el-tabs>
-    </el-card>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
   </div>
 </template>
-
-<style scoped>
-.sso-management {
-  padding: 20px;
-}
-
-.stats-row {
-  margin-bottom: 20px;
-}
-
-.stat-card {
-  text-align: center;
-  padding: 10px 0;
-}
-
-.stat-value {
-  font-size: 28px;
-  font-weight: bold;
-  color: #409eff;
-  margin-bottom: 5px;
-}
-
-.stat-label {
-  font-size: 14px;
-  color: #909399;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.integration-guide {
-  padding: 20px;
-}
-
-.integration-guide h4 {
-  margin-top: 20px;
-  margin-bottom: 10px;
-  color: #303133;
-}
-
-.integration-guide h4:first-child {
-  margin-top: 0;
-}
-
-.integration-guide p {
-  margin: 8px 0;
-  color: #606266;
-}
-
-.integration-guide pre {
-  background-color: #f5f7fa;
-  padding: 12px;
-  border-radius: 4px;
-  overflow-x: auto;
-  font-family: 'Courier New', monospace;
-  font-size: 13px;
-  line-height: 1.6;
-  color: #303133;
-}
-</style>

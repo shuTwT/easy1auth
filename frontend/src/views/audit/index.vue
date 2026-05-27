@@ -1,8 +1,17 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { toast } from 'vue-sonner'
+import { FileText, CheckCircle, XCircle, Clock, Search, RefreshCw, Download, Trash2 } from '@lucide/vue'
 import { auditApi } from '@/api/audit'
 import type { AuditLog, AuditLogQueryDto, AuditLogStats } from '@/types/audit'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
 
 const loading = ref(false)
 const logs = ref<AuditLog[]>([])
@@ -38,7 +47,7 @@ const loadLogs = async () => {
     total.value = res.data.total
   } catch (error) {
     console.error('加载审计日志失败:', error)
-    ElMessage.error('加载审计日志失败')
+    toast.error('加载审计日志失败')
   } finally {
     loading.value = false
   }
@@ -76,11 +85,6 @@ const handlePageChange = (page: number) => {
   loadLogs()
 }
 
-const handleSizeChange = (size: number) => {
-  queryForm.pageSize = size
-  queryForm.page = 1
-  loadLogs()
-}
 
 const handleViewDetail = (row: AuditLog) => {
   currentLog.value = row
@@ -96,34 +100,25 @@ const handleExport = async (format: 'csv' | 'json') => {
     link.download = `audit-logs-${new Date().toISOString().split('T')[0]}.${format}`
     link.click()
     window.URL.revokeObjectURL(url)
-    ElMessage.success('导出成功')
+    toast.success('导出成功')
   } catch (error) {
     console.error('导出失败:', error)
-    ElMessage.error('导出失败')
+    toast.error('导出失败')
   }
 }
 
 const handleCleanup = async () => {
+  const confirmed = window.confirm('确定要清理90天前的审计日志吗？此操作不可恢复！')
+  if (!confirmed) return
+  
   try {
-    await ElMessageBox.confirm(
-      '确定要清理90天前的审计日志吗？此操作不可恢复！',
-      '警告',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
-    )
-    
     await auditApi.cleanup(90)
-    ElMessage.success('清理成功')
+    toast.success('清理成功')
     loadLogs()
     loadStats()
   } catch (error) {
-    if (error !== 'cancel') {
-      console.error('清理失败:', error)
-      ElMessage.error('清理失败')
-    }
+    console.error('清理失败:', error)
+    toast.error('清理失败')
   }
 }
 
@@ -140,17 +135,17 @@ const getTypeText = (type: string) => {
   return typeMap[type] || type
 }
 
-const getTypeTagType = (type: string) => {
-  const typeColorMap: Record<string, string> = {
-    auth: 'primary',
-    user: 'success',
-    application: 'warning',
-    tenant: 'danger',
-    role: 'info',
-    group: '',
-    system: ''
+const getTypeVariant = (type: string) => {
+  const typeVariantMap: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+    auth: 'default',
+    user: 'secondary',
+    application: 'outline',
+    tenant: 'destructive',
+    role: 'secondary',
+    group: 'outline',
+    system: 'outline'
   }
-  return typeColorMap[type] || ''
+  return typeVariantMap[type] || 'secondary'
 }
 
 const getActionText = (action: string) => {
@@ -181,13 +176,15 @@ const getStatusText = (status: string) => {
   return status === 'success' ? '成功' : '失败'
 }
 
-const getStatusTagType = (status: string) => {
-  return status === 'success' ? 'success' : 'danger'
+const getStatusVariant = (status: string) => {
+  return status === 'success' ? 'default' : 'destructive'
 }
 
 const formatDate = (date: string) => {
   return new Date(date).toLocaleString()
 }
+
+const totalPages = () => Math.ceil(total.value / queryForm.pageSize!)
 
 onMounted(() => {
   loadLogs()
@@ -196,270 +193,279 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="audit-log-management">
-    <el-row :gutter="20" style="margin-bottom: 20px;">
-      <el-col :span="6">
-        <el-card shadow="hover">
-          <div class="stat-card">
-            <div class="stat-icon" style="background: #409eff;">
-              <el-icon><Document /></el-icon>
+  <div class="audit-log-management p-5">
+    <div class="grid grid-cols-4 gap-5 mb-5">
+      <Card>
+        <CardContent class="pt-6">
+          <div class="flex items-center">
+            <div class="w-15 h-15 rounded-lg flex items-center justify-center mr-4 bg-blue-500">
+              <FileText class="w-7 h-7 text-white" />
             </div>
-            <div class="stat-content">
-              <div class="stat-value">{{ stats?.totalLogs || 0 }}</div>
-              <div class="stat-label">总日志数</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="hover">
-          <div class="stat-card">
-            <div class="stat-icon" style="background: #67c23a;">
-              <el-icon><CircleCheck /></el-icon>
-            </div>
-            <div class="stat-content">
-              <div class="stat-value">{{ stats?.successLogs || 0 }}</div>
-              <div class="stat-label">成功日志</div>
+            <div>
+              <div class="text-2xl font-bold text-slate-800">{{ stats?.totalLogs || 0 }}</div>
+              <div class="text-sm text-slate-400">总日志数</div>
             </div>
           </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="hover">
-          <div class="stat-card">
-            <div class="stat-icon" style="background: #f56c6c;">
-              <el-icon><CircleClose /></el-icon>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent class="pt-6">
+          <div class="flex items-center">
+            <div class="w-15 h-15 rounded-lg flex items-center justify-center mr-4 bg-green-500">
+              <CheckCircle class="w-7 h-7 text-white" />
             </div>
-            <div class="stat-content">
-              <div class="stat-value">{{ stats?.failedLogs || 0 }}</div>
-              <div class="stat-label">失败日志</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="hover">
-          <div class="stat-card">
-            <div class="stat-icon" style="background: #e6a23c;">
-              <el-icon><Clock /></el-icon>
-            </div>
-            <div class="stat-content">
-              <div class="stat-value">{{ stats?.todayLogs || 0 }}</div>
-              <div class="stat-label">今日日志</div>
+            <div>
+              <div class="text-2xl font-bold text-slate-800">{{ stats?.successLogs || 0 }}</div>
+              <div class="text-sm text-slate-400">成功日志</div>
             </div>
           </div>
-        </el-card>
-      </el-col>
-    </el-row>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent class="pt-6">
+          <div class="flex items-center">
+            <div class="w-15 h-15 rounded-lg flex items-center justify-center mr-4 bg-red-500">
+              <XCircle class="w-7 h-7 text-white" />
+            </div>
+            <div>
+              <div class="text-2xl font-bold text-slate-800">{{ stats?.failedLogs || 0 }}</div>
+              <div class="text-sm text-slate-400">失败日志</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent class="pt-6">
+          <div class="flex items-center">
+            <div class="w-15 h-15 rounded-lg flex items-center justify-center mr-4 bg-amber-500">
+              <Clock class="w-7 h-7 text-white" />
+            </div>
+            <div>
+              <div class="text-2xl font-bold text-slate-800">{{ stats?.todayLogs || 0 }}</div>
+              <div class="text-sm text-slate-400">今日日志</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
 
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>审计日志</span>
-          <div>
-            <el-button type="primary" @click="handleExport('json')">
-              <el-icon><Download /></el-icon>
-              导出JSON
-            </el-button>
-            <el-button type="success" @click="handleExport('csv')">
-              <el-icon><Download /></el-icon>
-              导出CSV
-            </el-button>
-            <el-button type="danger" @click="handleCleanup">
-              <el-icon><Delete /></el-icon>
-              清理日志
-            </el-button>
+    <Card>
+      <CardHeader class="flex flex-row items-center justify-between">
+        <CardTitle>审计日志</CardTitle>
+        <div class="flex gap-2">
+          <Button size="sm" @click="handleExport('json')">
+            <Download class="w-4 h-4 mr-2" />
+            导出JSON
+          </Button>
+          <Button size="sm" variant="outline" @click="handleExport('csv')">
+            <Download class="w-4 h-4 mr-2" />
+            导出CSV
+          </Button>
+          <Button size="sm" variant="destructive" @click="handleCleanup">
+            <Trash2 class="w-4 h-4 mr-2" />
+            清理日志
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div class="flex flex-wrap items-end gap-4 mb-5">
+          <div class="grid gap-1.5">
+            <Label>用户名</Label>
+            <Input v-model="queryForm.username" placeholder="请输入用户名" class="w-[150px]" />
+          </div>
+          <div class="grid gap-1.5">
+            <Label>日志类型</Label>
+            <Select v-model="queryForm.type" class="w-[150px]">
+              <SelectTrigger>
+                <SelectValue placeholder="请选择类型" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="auth">认证</SelectItem>
+                  <SelectItem value="user">用户</SelectItem>
+                  <SelectItem value="application">应用</SelectItem>
+                  <SelectItem value="tenant">租户</SelectItem>
+                  <SelectItem value="role">角色</SelectItem>
+                  <SelectItem value="group">用户组</SelectItem>
+                  <SelectItem value="system">系统</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+          <div class="grid gap-1.5">
+            <Label>操作</Label>
+            <Input v-model="queryForm.action" placeholder="请输入操作" class="w-[150px]" />
+          </div>
+          <div class="grid gap-1.5">
+            <Label>状态</Label>
+            <Select v-model="queryForm.status" class="w-[120px]">
+              <SelectTrigger>
+                <SelectValue placeholder="请选择状态" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="success">成功</SelectItem>
+                  <SelectItem value="failed">失败</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+          <div class="grid gap-1.5">
+            <Label>IP地址</Label>
+            <Input v-model="queryForm.ip" placeholder="请输入IP地址" class="w-[150px]" />
+          </div>
+          <div class="grid gap-1.5">
+            <Label>时间范围</Label>
+            <div class="flex items-center gap-2">
+              <Input v-model="queryForm.startDate" type="date" class="w-[140px]" />
+              <span class="text-muted-foreground">至</span>
+              <Input v-model="queryForm.endDate" type="date" class="w-[140px]" />
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <Button size="sm" @click="handleSearch">
+              <Search class="w-4 h-4 mr-2" />
+              搜索
+            </Button>
+            <Button size="sm" variant="outline" @click="handleReset">
+              <RefreshCw class="w-4 h-4 mr-2" />
+              重置
+            </Button>
           </div>
         </div>
-      </template>
 
-      <el-form :inline="true" :model="queryForm" class="search-form">
-        <el-form-item label="用户名">
-          <el-input v-model="queryForm.username" placeholder="请输入用户名" clearable />
-        </el-form-item>
-        <el-form-item label="日志类型">
-          <el-select v-model="queryForm.type" placeholder="请选择类型" clearable style="width: 150px">
-            <el-option label="认证" value="auth" />
-            <el-option label="用户" value="user" />
-            <el-option label="应用" value="application" />
-            <el-option label="租户" value="tenant" />
-            <el-option label="角色" value="role" />
-            <el-option label="用户组" value="group" />
-            <el-option label="系统" value="system" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="操作">
-          <el-input v-model="queryForm.action" placeholder="请输入操作" clearable />
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="queryForm.status" placeholder="请选择状态" clearable style="width: 120px">
-            <el-option label="成功" value="success" />
-            <el-option label="失败" value="failed" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="IP地址">
-          <el-input v-model="queryForm.ip" placeholder="请输入IP地址" clearable />
-        </el-form-item>
-        <el-form-item label="时间范围">
-          <el-date-picker
-            v-model="dateRange"
-            type="daterange"
-            range-separator="至"
-            start-placeholder="开始日期"
-            end-placeholder="结束日期"
-            value-format="YYYY-MM-DD"
-          />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">
-            <el-icon><Search /></el-icon>
-            搜索
-          </el-button>
-          <el-button @click="handleReset">重置</el-button>
-        </el-form-item>
-      </el-form>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead class="w-[180px]">时间</TableHead>
+              <TableHead class="w-[120px]">用户</TableHead>
+              <TableHead class="w-[100px]">类型</TableHead>
+              <TableHead class="w-[120px]">操作</TableHead>
+              <TableHead class="w-[120px]">资源</TableHead>
+              <TableHead class="w-[140px]">IP地址</TableHead>
+              <TableHead class="w-[80px]">状态</TableHead>
+              <TableHead class="min-w-[200px]">错误信息</TableHead>
+              <TableHead class="w-[100px]">操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow v-if="loading">
+              <TableCell colspan="9" class="text-center text-muted-foreground">加载中...</TableCell>
+            </TableRow>
+            <TableRow v-for="item in logs" :key="item.id">
+              <TableCell>{{ formatDate(item.createdAt) }}</TableCell>
+              <TableCell>{{ item.username || '-' }}</TableCell>
+              <TableCell>
+                <Badge :variant="getTypeVariant(item.type)" size="sm">
+                  {{ getTypeText(item.type) }}
+                </Badge>
+              </TableCell>
+              <TableCell>{{ getActionText(item.action) }}</TableCell>
+              <TableCell>{{ item.resource }}</TableCell>
+              <TableCell>{{ item.ip }}</TableCell>
+              <TableCell>
+                <Badge :variant="getStatusVariant(item.status)" size="sm">
+                  {{ getStatusText(item.status) }}
+                </Badge>
+              </TableCell>
+              <TableCell class="text-muted-foreground">{{ item.errorMessage || '-' }}</TableCell>
+              <TableCell>
+                <Button variant="link" size="sm" @click="handleViewDetail(item)">详情</Button>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
 
-      <el-table :data="logs" v-loading="loading" style="width: 100%">
-        <el-table-column prop="createdAt" label="时间" width="180">
-          <template #default="{ row }">
-            {{ formatDate(row.createdAt) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="username" label="用户" width="120">
-          <template #default="{ row }">
-            {{ row.username || '-' }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="type" label="类型" width="100">
-          <template #default="{ row }">
-            <el-tag :type="getTypeTagType(row.type)" size="small">
-              {{ getTypeText(row.type) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="action" label="操作" width="120">
-          <template #default="{ row }">
-            {{ getActionText(row.action) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="resource" label="资源" width="120" />
-        <el-table-column prop="ip" label="IP地址" width="140" />
-        <el-table-column prop="status" label="状态" width="80">
-          <template #default="{ row }">
-            <el-tag :type="getStatusTagType(row.status)" size="small">
-              {{ getStatusText(row.status) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="errorMessage" label="错误信息" min-width="200">
-          <template #default="{ row }">
-            {{ row.errorMessage || '-' }}
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="100" fixed="right">
-          <template #default="{ row }">
-            <el-button link type="primary" @click="handleViewDetail(row)">详情</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+        <div class="flex items-center justify-between mt-5">
+          <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
+          <div class="flex items-center gap-2">
+            <Button variant="outline" size="sm" :disabled="queryForm.page! <= 1" @click="handlePageChange(queryForm.page! - 1)">上一页</Button>
+            <span class="text-sm px-2">{{ queryForm.page! }} / {{ totalPages() }}</span>
+            <Button variant="outline" size="sm" :disabled="queryForm.page! >= totalPages()" @click="handlePageChange(queryForm.page! + 1)">下一页</Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
 
-      <el-pagination
-        v-model:current-page="queryForm.page"
-        v-model:page-size="queryForm.pageSize"
-        :page-sizes="[20, 50, 100, 200]"
-        :total="total"
-        layout="total, sizes, prev, pager, next, jumper"
-        style="margin-top: 20px; justify-content: flex-end"
-        @size-change="handleSizeChange"
-        @current-change="handlePageChange"
-      />
-    </el-card>
-
-    <el-dialog v-model="detailDialogVisible" title="审计日志详情" width="700px">
-      <el-descriptions v-if="currentLog" :column="2" border>
-        <el-descriptions-item label="日志ID">{{ currentLog.id }}</el-descriptions-item>
-        <el-descriptions-item label="时间">{{ formatDate(currentLog.createdAt) }}</el-descriptions-item>
-        <el-descriptions-item label="用户ID">{{ currentLog.userId || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="用户名">{{ currentLog.username || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="类型">
-          <el-tag :type="getTypeTagType(currentLog.type)" size="small">
-            {{ getTypeText(currentLog.type) }}
-          </el-tag>
-        </el-descriptions-item>
-        <el-descriptions-item label="操作">{{ getActionText(currentLog.action) }}</el-descriptions-item>
-        <el-descriptions-item label="资源">{{ currentLog.resource }}</el-descriptions-item>
-        <el-descriptions-item label="资源ID">{{ currentLog.resourceId || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="请求方法">{{ currentLog.method || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="IP地址">{{ currentLog.ip }}</el-descriptions-item>
-        <el-descriptions-item label="User Agent" :span="2">{{ currentLog.userAgent || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="位置">{{ currentLog.location || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="状态">
-          <el-tag :type="getStatusTagType(currentLog.status)" size="small">
-            {{ getStatusText(currentLog.status) }}
-          </el-tag>
-        </el-descriptions-item>
-        <el-descriptions-item label="错误信息" :span="2" v-if="currentLog.errorMessage">
-          {{ currentLog.errorMessage }}
-        </el-descriptions-item>
-        <el-descriptions-item label="变更内容" :span="2" v-if="currentLog.changes">
-          <pre style="max-height: 300px; overflow: auto;">{{ JSON.stringify(currentLog.changes, null, 2) }}</pre>
-        </el-descriptions-item>
-      </el-descriptions>
-      <template #footer>
-        <el-button @click="detailDialogVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
+    <Dialog v-model:open="detailDialogVisible">
+      <DialogContent class="sm:max-w-[700px]">
+        <DialogHeader>
+          <DialogTitle>审计日志详情</DialogTitle>
+        </DialogHeader>
+        <div v-if="currentLog" class="grid grid-cols-2 gap-4 py-4">
+          <div class="space-y-1">
+            <Label class="text-muted-foreground">日志ID</Label>
+            <div class="text-sm font-mono">{{ currentLog.id }}</div>
+          </div>
+          <div class="space-y-1">
+            <Label class="text-muted-foreground">时间</Label>
+            <div class="text-sm">{{ formatDate(currentLog.createdAt) }}</div>
+          </div>
+          <div class="space-y-1">
+            <Label class="text-muted-foreground">用户ID</Label>
+            <div class="text-sm">{{ currentLog.userId || '-' }}</div>
+          </div>
+          <div class="space-y-1">
+            <Label class="text-muted-foreground">用户名</Label>
+            <div class="text-sm">{{ currentLog.username || '-' }}</div>
+          </div>
+          <div class="space-y-1">
+            <Label class="text-muted-foreground">类型</Label>
+            <div class="text-sm">
+              <Badge :variant="getTypeVariant(currentLog.type)" size="sm">
+                {{ getTypeText(currentLog.type) }}
+              </Badge>
+            </div>
+          </div>
+          <div class="space-y-1">
+            <Label class="text-muted-foreground">操作</Label>
+            <div class="text-sm">{{ getActionText(currentLog.action) }}</div>
+          </div>
+          <div class="space-y-1">
+            <Label class="text-muted-foreground">资源</Label>
+            <div class="text-sm">{{ currentLog.resource }}</div>
+          </div>
+          <div class="space-y-1">
+            <Label class="text-muted-foreground">资源ID</Label>
+            <div class="text-sm">{{ currentLog.resourceId || '-' }}</div>
+          </div>
+          <div class="space-y-1">
+            <Label class="text-muted-foreground">请求方法</Label>
+            <div class="text-sm">{{ currentLog.method || '-' }}</div>
+          </div>
+          <div class="space-y-1">
+            <Label class="text-muted-foreground">IP地址</Label>
+            <div class="text-sm">{{ currentLog.ip }}</div>
+          </div>
+          <div class="col-span-2 space-y-1">
+            <Label class="text-muted-foreground">User Agent</Label>
+            <div class="text-sm text-muted-foreground">{{ currentLog.userAgent || '-' }}</div>
+          </div>
+          <div class="space-y-1">
+            <Label class="text-muted-foreground">位置</Label>
+            <div class="text-sm">{{ currentLog.location || '-' }}</div>
+          </div>
+          <div class="space-y-1">
+            <Label class="text-muted-foreground">状态</Label>
+            <div class="text-sm">
+              <Badge :variant="getStatusVariant(currentLog.status)" size="sm">
+                {{ getStatusText(currentLog.status) }}
+              </Badge>
+            </div>
+          </div>
+          <div v-if="currentLog.errorMessage" class="col-span-2 space-y-1">
+            <Label class="text-muted-foreground">错误信息</Label>
+            <div class="text-sm text-destructive">{{ currentLog.errorMessage }}</div>
+          </div>
+          <div v-if="currentLog.changes" class="col-span-2 space-y-1">
+            <Label class="text-muted-foreground">变更内容</Label>
+            <pre class="text-sm bg-muted p-3 rounded-md overflow-auto max-h-75">{{ JSON.stringify(currentLog.changes, null, 2) }}</pre>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" @click="detailDialogVisible = false">关闭</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>
-
-<style scoped>
-.audit-log-management {
-  padding: 20px;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.search-form {
-  margin-bottom: 20px;
-}
-
-.stat-card {
-  display: flex;
-  align-items: center;
-}
-
-.stat-icon {
-  width: 60px;
-  height: 60px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 16px;
-}
-
-.stat-icon .el-icon {
-  font-size: 28px;
-  color: white;
-}
-
-.stat-content {
-  flex: 1;
-}
-
-.stat-value {
-  font-size: 24px;
-  font-weight: bold;
-  color: #303133;
-  margin-bottom: 4px;
-}
-
-.stat-label {
-  font-size: 14px;
-  color: #909399;
-}
-</style>

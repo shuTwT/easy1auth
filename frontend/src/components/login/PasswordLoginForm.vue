@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { reactive, shallowRef } from 'vue'
 import { useAuth } from '@/composables/useAuth'
+import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
 
 const emit = defineEmits<{
   switchToEmail: []
@@ -17,17 +20,33 @@ const form = reactive({
 
 const showPassword = shallowRef(false)
 
-const rules = {
-  username: [
-    { required: true, message: '请输入用户名或邮箱', trigger: 'blur' }
-  ],
-  password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码长度不能少于6位', trigger: 'blur' }
-  ]
+const errors = reactive({
+  username: '',
+  password: '',
+})
+
+function validate(): boolean {
+  let valid = true
+  if (!form.username) {
+    errors.username = '请输入用户名或邮箱'
+    valid = false
+  } else {
+    errors.username = ''
+  }
+  if (!form.password) {
+    errors.password = '请输入密码'
+    valid = false
+  } else if (form.password.length < 6) {
+    errors.password = '密码长度不能少于6位'
+    valid = false
+  } else {
+    errors.password = ''
+  }
+  return valid
 }
 
 async function handleSubmit() {
+  if (!validate()) return
   await login({
     username: form.username,
     password: form.password,
@@ -41,81 +60,84 @@ function togglePassword() {
 </script>
 
 <template>
-  <el-form :model="form" :rules="rules">
-    <el-form-item prop="username">
+  <form @submit.prevent="handleSubmit">
+    <div class="grid gap-2">
       <label class="form-label">用户名或邮箱</label>
-      <el-input
-        v-model="form.username"
-        placeholder="请输入用户名或邮箱"
-        size="large"
-        clearable
-        class="custom-input"
-      >
-        <template #prefix>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-            <circle cx="12" cy="7" r="4"/>
-          </svg>
-        </template>
-      </el-input>
-    </el-form-item>
+      <div class="relative">
+        <svg
+          class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+          width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        >
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+        <Input
+          v-model="form.username"
+          placeholder="请输入用户名或邮箱"
+          class="login-input h-11 pl-10"
+          :class="{ 'border-destructive': errors.username }"
+          @input="errors.username = ''"
+        />
+      </div>
+      <p v-if="errors.username" class="text-destructive text-xs px-1">{{ errors.username }}</p>
+    </div>
 
-    <el-form-item prop="password">
+    <div class="grid gap-2 mt-4">
       <label class="form-label">密码</label>
-      <el-input
-        v-model="form.password"
-        :type="showPassword ? 'text' : 'password'"
-        placeholder="请输入密码"
-        size="large"
-        class="custom-input"
-        @keyup.enter="handleSubmit"
-      >
-        <template #prefix>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      <div class="relative">
+        <svg
+          class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+          width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        >
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+        <Input
+          v-model="form.password"
+          :type="showPassword ? 'text' : 'password'"
+          placeholder="请输入密码"
+          class="login-input h-11 pl-10 pr-10"
+          :class="{ 'border-destructive': errors.password }"
+          @input="errors.password = ''"
+          @keyup.enter="handleSubmit"
+        />
+        <button
+          type="button"
+          class="password-toggle"
+          @click="togglePassword"
+          aria-label="切换密码可见性"
+        >
+          <svg v-if="!showPassword" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
           </svg>
-        </template>
-        <template #suffix>
-          <button
-            type="button"
-            class="password-toggle"
-            @click="togglePassword"
-            aria-label="切换密码可见性"
-          >
-            <svg v-if="!showPassword" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-              <circle cx="12" cy="12" r="3"/>
-            </svg>
-            <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-              <line x1="1" y1="1" x2="23" y2="23"/>
-            </svg>
-          </button>
-        </template>
-      </el-input>
-    </el-form-item>
+          <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+            <line x1="1" y1="1" x2="23" y2="23"/>
+          </svg>
+        </button>
+      </div>
+      <p v-if="errors.password" class="text-destructive text-xs px-1">{{ errors.password }}</p>
+    </div>
 
     <div class="form-options">
-      <el-checkbox v-model="form.rememberMe" class="remember-checkbox">
-        记住我
-      </el-checkbox>
+      <div class="flex items-center gap-2">
+        <Checkbox id="remember-me" v-model:checked="form.rememberMe" />
+        <Label for="remember-me" class="remember-label">记住我</Label>
+      </div>
       <button type="button" class="forgot-password">
         忘记密码？
       </button>
     </div>
 
-    <el-form-item>
-      <button
-        type="submit"
-        class="submit-button"
-        :disabled="loading"
-        @click="handleSubmit"
-      >
-        <span v-if="loading" class="loading-spinner"></span>
-        <span>{{ loading ? '登录中...' : '登录' }}</span>
-      </button>
-    </el-form-item>
+    <button
+      type="submit"
+      class="submit-button"
+      :disabled="loading"
+    >
+      <span v-if="loading" class="loading-spinner"></span>
+      <span>{{ loading ? '登录中...' : '登录' }}</span>
+    </button>
 
     <div class="form-footer">
       <button
@@ -134,7 +156,7 @@ function togglePassword() {
         立即注册
       </button>
     </div>
-  </el-form>
+  </form>
 </template>
 
 <style scoped>
@@ -146,25 +168,24 @@ function togglePassword() {
   color: #0C4A6E;
 }
 
-.custom-input :deep(.el-input__wrapper) {
-  background: rgba(255, 255, 255, 0.6);
+.login-input {
+  background: rgba(255, 255, 255, 0.6) !important;
   border: 1px solid #E2E8F0;
   border-radius: 8px;
-  box-shadow: none;
   transition: all 0.2s ease;
 }
 
-.custom-input :deep(.el-input__wrapper:hover) {
-  border-color: #0369A1;
-}
-
-.custom-input :deep(.el-input__wrapper.is-focus) {
+.login-input:focus {
   background: white;
   border-color: #0369A1;
   box-shadow: 0 0 0 3px rgba(3, 105, 161, 0.1);
 }
 
 .password-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
   background: none;
   border: none;
   padding: 4px;
@@ -181,12 +202,13 @@ function togglePassword() {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin: 24px 0;
 }
 
-.remember-checkbox :deep(.el-checkbox__label) {
+.remember-label {
   font-size: 14px;
   color: #64748B;
+  cursor: pointer;
 }
 
 .forgot-password {

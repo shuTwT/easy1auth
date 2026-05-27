@@ -2,6 +2,7 @@
 import { onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { tenantApi } from '@/api/tenant'
+import { Toaster } from '@/components/ui/sonner'
 
 const userStore = useUserStore()
 
@@ -39,4 +40,5 @@ onMounted(async () => {
 
 <template>
   <router-view />
+  <Toaster rich-color />
 </template>

@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { toast } from 'vue-sonner'
+import { User, Lock } from '@lucide/vue'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 const route = useRoute()
 
@@ -105,7 +108,7 @@ const handleLoginAndAuthorize = async () => {
     window.location.href = authData.redirectUrl
   } catch (err: any) {
     console.error('授权失败:', err)
-    ElMessage.error(err.message || '授权失败')
+    toast.error(err.message || '授权失败')
     authorizing.value = false
   }
 }
@@ -151,8 +154,15 @@ onMounted(() => {
         <p class="subtitle">授权请求</p>
       </div>
 
-      <div v-loading="loading" class="oauth-content">
-        <template v-if="error">
+      <div class="oauth-content">
+        <template v-if="loading">
+          <div class="loading-state">
+            <div class="loading-spinner"></div>
+            <p>加载中...</p>
+          </div>
+        </template>
+
+        <template v-else-if="error">
           <div class="error-state">
             <div class="error-icon">
               <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -179,24 +189,30 @@ onMounted(() => {
               <h2 class="section-title">登录您的账号</h2>
               <p class="section-subtitle">登录后自动完成授权</p>
               
-              <el-form :model="loginForm" class="login-form-compact">
-                <el-form-item>
-                  <el-input 
-                    v-model="loginForm.username" 
-                    placeholder="用户名" 
-                    prefix-icon="User"
-                  />
-                </el-form-item>
-                <el-form-item>
-                  <el-input 
-                    v-model="loginForm.password" 
-                    type="password" 
-                    placeholder="密码" 
-                    prefix-icon="Lock"
-                    @keyup.enter="handleLoginAndAuthorize"
-                  />
-                </el-form-item>
-              </el-form>
+              <div class="login-form-compact">
+                <div class="form-item">
+                  <div class="relative">
+                    <User class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input 
+                      v-model="loginForm.username" 
+                      placeholder="用户名"
+                      class="pl-9"
+                    />
+                  </div>
+                </div>
+                <div class="form-item">
+                  <div class="relative">
+                    <Lock class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input 
+                      v-model="loginForm.password" 
+                      type="password" 
+                      placeholder="密码"
+                      class="pl-9"
+                      @keyup.enter="handleLoginAndAuthorize"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- 右侧：应用信息和权限 -->
@@ -248,20 +264,21 @@ onMounted(() => {
 
           <!-- 操作按钮 -->
           <div class="authorize-actions">
-            <button 
-              class="btn btn-secondary" 
+            <Button 
+              variant="outline"
               @click="handleDeny" 
               :disabled="authorizing"
+              class="flex-1"
             >
               拒绝
-            </button>
-            <button 
-              class="btn btn-primary" 
+            </Button>
+            <Button 
               @click="handleLoginAndAuthorize" 
               :disabled="authorizing || !loginForm.username || !loginForm.password"
+              class="flex-1"
             >
               {{ authorizing ? '处理中...' : '登录并授权' }}
-            </button>
+            </Button>
           </div>
 
           <div class="authorize-notice">
@@ -391,6 +408,33 @@ onMounted(() => {
   min-height: 300px;
 }
 
+.loading-state {
+  text-align: center;
+  padding: 48px 0;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 16px;
+  border: 3px solid rgba(3, 105, 161, 0.2);
+  border-top-color: #0369A1;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-state p {
+  margin: 0;
+  font-size: 14px;
+  color: #64748B;
+}
+
 .error-state {
   text-align: center;
   padding: 24px 0;
@@ -429,45 +473,6 @@ onMounted(() => {
   gap: 12px;
 }
 
-.login-section {
-  padding: 16px 0;
-}
-
-.login-title {
-  margin: 0 0 8px;
-  font-family: 'Poppins', sans-serif;
-  font-size: 20px;
-  font-weight: 600;
-  color: #0C4A6E;
-  text-align: center;
-}
-
-.login-subtitle {
-  margin: 0 0 20px;
-  font-size: 13px;
-  color: #64748B;
-  text-align: center;
-}
-
-.login-form {
-  max-width: 320px;
-  margin: 0 auto;
-  text-align: left;
-}
-
-.login-form :deep(.el-form-item) {
-  margin-bottom: 16px;
-}
-
-.login-form :deep(.el-form-item__label) {
-  font-weight: 500;
-  color: #334155;
-}
-
-.login-form :deep(.el-input__wrapper) {
-  border-radius: 8px;
-}
-
 /* 左右两栏布局 */
 .auth-layout {
   display: flex;
@@ -500,22 +505,12 @@ onMounted(() => {
   color: #64748B;
 }
 
-.login-form-compact :deep(.el-form-item) {
+.login-form-compact .form-item {
   margin-bottom: 12px;
 }
 
-.login-form-compact :deep(.el-input__wrapper) {
-  border-radius: 8px;
-  box-shadow: none;
-  border: 1px solid #E2E8F0;
-}
-
-.login-form-compact :deep(.el-input__wrapper:hover) {
-  border-color: #CBD5E1;
-}
-
-.login-form-compact :deep(.el-input__wrapper.is-focus) {
-  border-color: #0369A1;
+.login-form-compact .form-item:last-child {
+  margin-bottom: 0;
 }
 
 .app-info-compact {
@@ -601,132 +596,10 @@ onMounted(() => {
   color: #0369A1;
 }
 
-.application-info {
-  text-align: center;
-  padding: 16px 0;
-}
-
-.app-avatar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 72px;
-  height: 72px;
-  margin-bottom: 16px;
-  background: linear-gradient(135deg, #0369A1 0%, #0EA5E9 100%);
-  border-radius: 16px;
-  overflow: hidden;
-}
-
-.app-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.app-avatar-text {
-  font-family: 'Poppins', sans-serif;
-  font-size: 28px;
-  font-weight: 600;
-  color: white;
-}
-
-.app-name {
-  margin: 0 0 8px;
-  font-family: 'Poppins', sans-serif;
-  font-size: 22px;
-  font-weight: 600;
-  color: #0C4A6E;
-}
-
-.app-description {
-  margin: 0;
-  font-size: 14px;
-  color: #64748B;
-  line-height: 1.5;
-}
-
-.divider {
-  height: 1px;
-  background: rgba(148, 163, 184, 0.2);
-  margin: 24px 0;
-}
-
-.permissions {
-  padding: 0;
-}
-
-.permissions-title {
-  margin: 0 0 16px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #0C4A6E;
-}
-
-.scope-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.scope-list li {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  margin-bottom: 8px;
-  background: rgba(241, 245, 249, 0.5);
-  border-radius: 8px;
-  font-size: 14px;
-  color: #334155;
-}
-
-.scope-list li svg {
-  flex-shrink: 0;
-  color: #0369A1;
-}
-
 .authorize-actions {
   display: flex;
   gap: 12px;
   margin-bottom: 20px;
-}
-
-.btn {
-  flex: 1;
-  padding: 12px 24px;
-  border: none;
-  border-radius: 8px;
-  font-family: 'Open Sans', sans-serif;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, #0369A1 0%, #0EA5E9 100%);
-  color: white;
-  box-shadow: 0 4px 12px rgba(3, 105, 161, 0.3);
-}
-
-.btn-primary:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(3, 105, 161, 0.4);
-}
-
-.btn-secondary {
-  background: rgba(241, 245, 249, 0.8);
-  color: #475569;
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background: rgba(226, 232, 240, 0.9);
 }
 
 .authorize-notice {
@@ -773,6 +646,10 @@ onMounted(() => {
 
 @media (prefers-reduced-motion: reduce) {
   .shape {
+    animation: none;
+  }
+  
+  .loading-spinner {
     animation: none;
   }
 }

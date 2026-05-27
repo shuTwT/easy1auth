@@ -1,400 +1,507 @@
 <template>
-  <div class="personalization-settings">
-    <div class="page-header">
-      <div class="header-content">
-        <h1 class="page-title">个性化设置</h1>
-        <p class="page-subtitle">自定义域名、登录页面样式和消息模板</p>
-      </div>
+  <div class="personalization-settings p-6 min-h-[calc(100vh-64px)]">
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-foreground mb-2">个性化设置</h1>
+      <p class="text-sm text-muted-foreground">自定义域名、登录页面样式和消息模板</p>
     </div>
 
-    <el-card class="settings-card">
-      <el-tabs v-model="activeTab" class="settings-tabs">
-        <el-tab-pane label="自定义域名" name="domains">
-          <div class="tab-content">
-            <div class="section-header">
-              <h3 class="section-title">域名管理</h3>
-              <el-button type="primary" @click="showDomainDialog = true">
-                <el-icon><Plus /></el-icon>
+    <Card>
+      <CardContent class="pt-6">
+        <Tabs v-model="activeTab">
+          <TabsList class="mb-6">
+            <TabsTrigger value="domains">自定义域名</TabsTrigger>
+            <TabsTrigger value="loginStyle">登录页面</TabsTrigger>
+            <TabsTrigger value="templates">消息模板</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="domains" class="px-2">
+            <div class="flex justify-between items-center mb-5">
+              <h3 class="text-base font-semibold">域名管理</h3>
+              <Button @click="showDomainDialog = true">
+                <Plus class="size-4 mr-2" />
                 添加域名
-              </el-button>
+              </Button>
             </div>
 
-            <el-table :data="domains" v-loading="domainsLoading" class="domain-table">
-              <el-table-column prop="domain" label="域名" min-width="200">
-                <template #default="{ row }">
-                  <div class="domain-cell">
-                    <span class="domain-name">{{ row.domain }}</span>
-                    <el-tag v-if="row.status === 'verified'" type="success" size="small">已验证</el-tag>
-                    <el-tag v-else-if="row.status === 'pending'" type="warning" size="small">待验证</el-tag>
-                    <el-tag v-else-if="row.status === 'verifying'" type="info" size="small">验证中</el-tag>
-                    <el-tag v-else type="danger" size="small">验证失败</el-tag>
-                  </div>
-                </template>
-              </el-table-column>
-              <el-table-column prop="sslStatus" label="SSL状态" width="120">
-                <template #default="{ row }">
-                  <el-tag v-if="row.sslStatus === 'active'" type="success" size="small">已配置</el-tag>
-                  <el-tag v-else type="info" size="small">未配置</el-tag>
-                </template>
-              </el-table-column>
-              <el-table-column prop="verificationMethod" label="验证方式" width="100">
-                <template #default="{ row }">
-                  {{ row.verificationMethod === 'dns' ? 'DNS记录' : '文件验证' }}
-                </template>
-              </el-table-column>
-              <el-table-column prop="createdAt" label="创建时间" width="180">
-                <template #default="{ row }">
-                  {{ formatDate(row.createdAt) }}
-                </template>
-              </el-table-column>
-              <el-table-column label="操作" width="200" fixed="right">
-                <template #default="{ row }">
-                  <el-button 
-                    v-if="row.status !== 'verified'" 
-                    link 
-                    type="primary" 
-                    @click="handleVerifyDomain(row)"
-                  >
-                    验证
-                  </el-button>
-                  <el-button 
-                    v-if="row.status === 'verified'" 
-                    link 
-                    type="primary" 
-                    @click="handleShowSSLDialog(row)"
-                  >
-                    配置SSL
-                  </el-button>
-                  <el-button link type="danger" @click="handleDeleteDomain(row)">删除</el-button>
-                </template>
-              </el-table-column>
-            </el-table>
+            <div class="rounded-md border mb-6">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead class="min-w-[200px]">域名</TableHead>
+                    <TableHead class="w-[120px]">SSL状态</TableHead>
+                    <TableHead class="w-[100px]">验证方式</TableHead>
+                    <TableHead class="w-[180px]">创建时间</TableHead>
+                    <TableHead class="w-[200px] text-right">操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow v-if="domainsLoading">
+                    <TableCell colspan="5" class="text-center py-8 text-muted-foreground">加载中...</TableCell>
+                  </TableRow>
+                  <TableRow v-for="domain in domains" :key="domain.id">
+                    <TableCell>
+                      <div class="flex items-center gap-2">
+                        <span class="font-medium">{{ domain.domain }}</span>
+                        <Badge v-if="domain.status === 'verified'" variant="default" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">已验证</Badge>
+                        <Badge v-else-if="domain.status === 'pending'" variant="secondary" class="bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20">待验证</Badge>
+                        <Badge v-else-if="domain.status === 'verifying'" variant="outline">验证中</Badge>
+                        <Badge v-else variant="destructive">验证失败</Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge v-if="domain.sslStatus === 'active'" variant="default" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">已配置</Badge>
+                      <Badge v-else variant="outline">未配置</Badge>
+                    </TableCell>
+                    <TableCell>{{ domain.verificationMethod === 'dns' ? 'DNS记录' : '文件验证' }}</TableCell>
+                    <TableCell>{{ formatDate(domain.createdAt) }}</TableCell>
+                    <TableCell class="text-right">
+                      <div class="flex justify-end gap-2">
+                        <Button v-if="domain.status !== 'verified'" variant="link" size="sm" class="h-auto p-0" @click="handleVerifyDomain(domain)">验证</Button>
+                        <Button v-if="domain.status === 'verified'" variant="link" size="sm" class="h-auto p-0" @click="handleShowSSLDialog(domain)">配置SSL</Button>
+                        <Button variant="link" size="sm" class="h-auto p-0 text-destructive" @click="handleDeleteDomain(domain)">删除</Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
 
-            <div class="help-section">
-              <el-alert type="info" :closable="false">
-                <template #title>
-                  <div class="alert-title">
-                    <el-icon><InfoFilled /></el-icon>
-                    域名验证说明
+            <Alert class="bg-blue-50 dark:bg-blue-950/50 border-blue-100 dark:border-blue-900">
+              <Info class="size-4" />
+              <AlertTitle class="flex items-center gap-2 font-semibold">
+                域名验证说明
+              </AlertTitle>
+              <AlertDescription class="mt-2 space-y-2">
+                <p><strong>DNS验证：</strong>在DNS服务商添加TXT记录，主机记录为 @ 或空，记录值为验证令牌</p>
+                <p><strong>文件验证：</strong>在网站根目录创建 .well-known/easy1auth-verification.txt 文件，内容为验证令牌</p>
+              </AlertDescription>
+            </Alert>
+          </TabsContent>
+
+          <TabsContent value="loginStyle" class="px-2">
+            <form class="max-w-[800px]">
+              <div class="mb-8 pb-6 border-b">
+                <h3 class="text-base font-semibold mb-5">基础信息</h3>
+                <div class="grid gap-4">
+                  <div class="grid gap-2">
+                    <label class="text-sm font-medium">页面标题</label>
+                    <Input v-model="loginStyle.title" placeholder="请输入登录页面标题" />
                   </div>
-                </template>
-                <div class="help-steps">
-                  <p><strong>DNS验证：</strong>在DNS服务商添加TXT记录，主机记录为 @ 或空，记录值为验证令牌</p>
-                  <p><strong>文件验证：</strong>在网站根目录创建 .well-known/easy1auth-verification.txt 文件，内容为验证令牌</p>
+                  <div class="grid gap-2">
+                    <label class="text-sm font-medium">页面副标题</label>
+                    <Input v-model="loginStyle.subtitle" placeholder="请输入登录页面副标题" />
+                  </div>
                 </div>
-              </el-alert>
-            </div>
-          </div>
-        </el-tab-pane>
-
-        <el-tab-pane label="登录页面" name="loginStyle">
-          <div class="tab-content">
-            <el-form :model="loginStyle" label-width="120px" class="settings-form">
-              <div class="form-section">
-                <h3 class="section-title">基础信息</h3>
-                <el-form-item label="页面标题">
-                  <el-input v-model="loginStyle.title" placeholder="请输入登录页面标题" />
-                </el-form-item>
-                <el-form-item label="页面副标题">
-                  <el-input v-model="loginStyle.subtitle" placeholder="请输入登录页面副标题" />
-                </el-form-item>
               </div>
 
-              <div class="form-section">
-                <h3 class="section-title">品牌元素</h3>
-                <el-form-item label="Logo">
-                  <div class="upload-container">
-                    <el-upload
-                      class="logo-uploader"
-                      action="#"
-                      :show-file-list="false"
-                      :before-upload="beforeLogoUpload"
-                      :http-request="(options: any) => handleLogoUpload(options, 'logo')"
-                    >
-                      <img v-if="loginStyle.logo" :src="loginStyle.logo" class="logo-preview" />
-                      <div v-else class="upload-placeholder">
-                        <el-icon class="upload-icon"><Plus /></el-icon>
-                        <span class="upload-text">上传Logo</span>
-                      </div>
-                    </el-upload>
-                    <el-button v-if="loginStyle.logo" link type="danger" @click="loginStyle.logo = undefined">
-                      删除Logo
-                    </el-button>
-                  </div>
-                </el-form-item>
-
-                <el-form-item label="背景图片">
-                  <div class="upload-container">
-                    <el-upload
-                      class="bg-uploader"
-                      action="#"
-                      :show-file-list="false"
-                      :before-upload="beforeBgUpload"
-                      :http-request="(options: any) => handleLogoUpload(options, 'backgroundImage')"
-                    >
-                      <img v-if="loginStyle.backgroundImage" :src="loginStyle.backgroundImage" class="bg-preview" />
-                      <div v-else class="upload-placeholder bg-placeholder">
-                        <el-icon class="upload-icon"><Plus /></el-icon>
-                        <span class="upload-text">上传背景图片</span>
-                      </div>
-                    </el-upload>
-                    <el-button v-if="loginStyle.backgroundImage" link type="danger" @click="loginStyle.backgroundImage = undefined">
-                      删除背景图片
-                    </el-button>
-                  </div>
-                </el-form-item>
-
-                <el-form-item label="背景颜色">
-                  <div class="color-input">
-                    <el-color-picker v-model="loginStyle.backgroundColor" />
-                    <el-input v-model="loginStyle.backgroundColor" placeholder="#f5f7fa" style="width: 200px" />
-                  </div>
-                </el-form-item>
-
-                <el-form-item label="主题色">
-                  <div class="color-input">
-                    <el-color-picker v-model="loginStyle.primaryColor" />
-                    <el-input v-model="loginStyle.primaryColor" placeholder="#0369A1" style="width: 200px" />
-                  </div>
-                  <div class="color-presets">
-                    <span class="preset-label">预设颜色：</span>
-                    <div 
-                      v-for="color in colorPresets" 
-                      :key="color.value" 
-                      class="color-preset"
-                      :style="{ backgroundColor: color.value }"
-                      @click="loginStyle.primaryColor = color.value"
-                    >
-                      <el-icon v-if="loginStyle.primaryColor === color.value" class="check-icon"><Check /></el-icon>
+              <div class="mb-8 pb-6 border-b">
+                <h3 class="text-base font-semibold mb-5">品牌元素</h3>
+                <div class="grid gap-4">
+                  <div class="grid gap-2">
+                    <label class="text-sm font-medium">Logo</label>
+                    <div class="flex flex-col gap-3">
+                      <Upload
+                        :http-request="(options: { file: { raw: File } }) => handleLogoUpload(options, 'logo')"
+                        :before-upload="beforeLogoUpload"
+                        accept="image/*"
+                        :show-file-list="false"
+                      >
+                        <img v-if="loginStyle.logo" :src="loginStyle.logo" class="w-[120px] h-[120px] object-contain rounded-lg border-2 border-dashed border-border hover:border-primary transition-colors cursor-pointer" />
+                        <div v-else class="w-[120px] h-[120px] flex flex-col items-center justify-center border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary transition-colors">
+                          <Plus class="size-8 text-muted-foreground mb-2" />
+                          <span class="text-xs text-muted-foreground">上传Logo</span>
+                        </div>
+                      </Upload>
+                      <Button v-if="loginStyle.logo" variant="link" class="text-destructive justify-start p-0 h-auto" @click="loginStyle.logo = undefined">
+                        删除Logo
+                      </Button>
                     </div>
                   </div>
-                </el-form-item>
+
+                  <div class="grid gap-2">
+                    <label class="text-sm font-medium">背景图片</label>
+                    <div class="flex flex-col gap-3">
+                      <Upload
+                        :http-request="(options: { file: { raw: File } }) => handleLogoUpload(options, 'backgroundImage')"
+                        :before-upload="beforeBgUpload"
+                        accept="image/*"
+                        :show-file-list="false"
+                      >
+                        <img v-if="loginStyle.backgroundImage" :src="loginStyle.backgroundImage" class="w-full max-w-[400px] h-[200px] object-cover rounded-lg border-2 border-dashed border-border hover:border-primary transition-colors cursor-pointer" />
+                        <div v-else class="w-full max-w-[400px] h-[200px] flex flex-col items-center justify-center border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary transition-colors">
+                          <Plus class="size-8 text-muted-foreground mb-2" />
+                          <span class="text-xs text-muted-foreground">上传背景图片</span>
+                        </div>
+                      </Upload>
+                      <Button v-if="loginStyle.backgroundImage" variant="link" class="text-destructive justify-start p-0 h-auto" @click="loginStyle.backgroundImage = undefined">
+                        删除背景图片
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div class="grid gap-2">
+                    <label class="text-sm font-medium">背景颜色</label>
+                    <div class="flex items-center gap-3">
+                      <ColorPicker v-model="loginStyle.backgroundColor" :presets="colorPresets.map(c => c.value)" />
+                      <Input v-model="loginStyle.backgroundColor" placeholder="#f5f7fa" class="w-[200px]" />
+                    </div>
+                  </div>
+
+                  <div class="grid gap-2">
+                    <label class="text-sm font-medium">主题色</label>
+                    <div class="flex items-center gap-3">
+                      <ColorPicker v-model="loginStyle.primaryColor" :presets="colorPresets.map(c => c.value)" />
+                      <Input v-model="loginStyle.primaryColor" placeholder="#0369A1" class="w-[200px]" />
+                    </div>
+                    <div class="flex items-center gap-2 mt-3">
+                      <span class="text-sm text-muted-foreground">预设颜色：</span>
+                      <div 
+                        v-for="color in colorPresets" 
+                        :key="color.value" 
+                        class="w-7 h-7 rounded flex items-center justify-center cursor-pointer transition-transform hover:scale-110 border-2 border-transparent"
+                        :style="{ backgroundColor: color.value }"
+                        @click="loginStyle.primaryColor = color.value"
+                      >
+                        <Check v-if="loginStyle.primaryColor === color.value" class="size-3.5 text-white" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div class="form-section">
-                <h3 class="section-title">登录方式</h3>
-                <el-form-item label="启用方式">
-                  <el-checkbox-group v-model="loginStyle.loginMethods">
-                    <el-checkbox label="password">账号密码</el-checkbox>
-                    <el-checkbox label="email">邮箱验证码</el-checkbox>
-                    <el-checkbox label="passkey">Passkey</el-checkbox>
-                  </el-checkbox-group>
-                </el-form-item>
+              <div class="mb-8 pb-6 border-b">
+                <h3 class="text-base font-semibold mb-5">登录方式</h3>
+                <div class="grid gap-2">
+                  <label class="text-sm font-medium">启用方式</label>
+                  <div class="flex flex-wrap gap-4">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <Checkbox 
+                        :checked="loginStyle.loginMethods?.includes('password')" 
+                        @update:checked="toggleLoginMethod('password')"
+                      />
+                      <span class="text-sm">账号密码</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <Checkbox 
+                        :checked="loginStyle.loginMethods?.includes('email')" 
+                        @update:checked="toggleLoginMethod('email')"
+                      />
+                      <span class="text-sm">邮箱验证码</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <Checkbox 
+                        :checked="loginStyle.loginMethods?.includes('passkey')" 
+                        @update:checked="toggleLoginMethod('passkey')"
+                      />
+                      <span class="text-sm">Passkey</span>
+                    </label>
+                  </div>
+                </div>
               </div>
 
-              <div class="form-section">
-                <h3 class="section-title">自定义样式</h3>
-                <el-form-item label="自定义CSS">
-                  <el-input
+              <div class="mb-8">
+                <h3 class="text-base font-semibold mb-5">自定义样式</h3>
+                <div class="grid gap-2">
+                  <label class="text-sm font-medium">自定义CSS</label>
+                  <Textarea
                     v-model="loginStyle.customCSS"
-                    type="textarea"
                     :rows="8"
                     placeholder="请输入自定义CSS样式"
-                    class="code-input"
+                    class="font-mono text-[13px] leading-relaxed bg-muted/50"
                   />
-                </el-form-item>
+                </div>
               </div>
 
-              <el-form-item>
-                <el-button type="primary" @click="handleSaveLoginStyle" :loading="savingLoginStyle">
-                  保存设置
-                </el-button>
-              </el-form-item>
-            </el-form>
-          </div>
-        </el-tab-pane>
+              <Button @click="handleSaveLoginStyle" :disabled="savingLoginStyle">
+                保存设置
+              </Button>
+            </form>
+          </TabsContent>
 
-        <el-tab-pane label="消息模板" name="templates">
-          <div class="tab-content">
-            <div class="section-header">
-              <h3 class="section-title">模板管理</h3>
-              <div class="header-actions">
-                <el-button @click="handleInitTemplates" :loading="initingTemplates">
+          <TabsContent value="templates" class="px-2">
+            <div class="flex justify-between items-center mb-5">
+              <h3 class="text-base font-semibold">模板管理</h3>
+              <div class="flex gap-3">
+                <Button variant="outline" @click="handleInitTemplates" :disabled="initingTemplates">
                   初始化默认模板
-                </el-button>
-                <el-button type="primary" @click="showTemplateDialog = true">
-                  <el-icon><Plus /></el-icon>
+                </Button>
+                <Button @click="showTemplateDialog = true">
+                  <Plus class="size-4 mr-2" />
                   新建模板
-                </el-button>
+                </Button>
               </div>
             </div>
 
-            <el-tabs v-model="templateType" class="template-type-tabs">
-              <el-tab-pane label="邮件模板" name="email">
-                <el-table :data="emailTemplates" v-loading="templatesLoading">
-                  <el-table-column prop="name" label="模板名称" width="150" />
-                  <el-table-column prop="code" label="模板代码" width="150" />
-                  <el-table-column prop="subject" label="邮件主题" min-width="200" />
-                  <el-table-column prop="isDefault" label="默认" width="80">
-                    <template #default="{ row }">
-                      <el-tag v-if="row.isDefault" type="success" size="small">是</el-tag>
-                      <el-tag v-else type="info" size="small">否</el-tag>
-                    </template>
-                  </el-table-column>
-                  <el-table-column prop="status" label="状态" width="80">
-                    <template #default="{ row }">
-                      <el-tag v-if="row.status === 'active'" type="success" size="small">启用</el-tag>
-                      <el-tag v-else type="info" size="small">禁用</el-tag>
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="操作" width="150" fixed="right">
-                    <template #default="{ row }">
-                      <el-button link type="primary" @click="handleEditTemplate(row)">编辑</el-button>
-                      <el-button link type="danger" @click="handleDeleteTemplate(row)">删除</el-button>
-                    </template>
-                  </el-table-column>
-                </el-table>
-              </el-tab-pane>
-              <el-tab-pane label="短信模板" name="sms">
-                <el-table :data="smsTemplates" v-loading="templatesLoading">
-                  <el-table-column prop="name" label="模板名称" width="150" />
-                  <el-table-column prop="code" label="模板代码" width="150" />
-                  <el-table-column prop="content" label="模板内容" min-width="300" show-overflow-tooltip />
-                  <el-table-column prop="isDefault" label="默认" width="80">
-                    <template #default="{ row }">
-                      <el-tag v-if="row.isDefault" type="success" size="small">是</el-tag>
-                      <el-tag v-else type="info" size="small">否</el-tag>
-                    </template>
-                  </el-table-column>
-                  <el-table-column prop="status" label="状态" width="80">
-                    <template #default="{ row }">
-                      <el-tag v-if="row.status === 'active'" type="success" size="small">启用</el-tag>
-                      <el-tag v-else type="info" size="small">禁用</el-tag>
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="操作" width="150" fixed="right">
-                    <template #default="{ row }">
-                      <el-button link type="primary" @click="handleEditTemplate(row)">编辑</el-button>
-                      <el-button link type="danger" @click="handleDeleteTemplate(row)">删除</el-button>
-                    </template>
-                  </el-table-column>
-                </el-table>
-              </el-tab-pane>
-            </el-tabs>
+            <Tabs v-model="templateType">
+              <TabsList class="mb-4">
+                <TabsTrigger value="email">邮件模板</TabsTrigger>
+                <TabsTrigger value="sms">短信模板</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="email">
+                <div class="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead class="w-[150px]">模板名称</TableHead>
+                        <TableHead class="w-[150px]">模板代码</TableHead>
+                        <TableHead class="min-w-[200px]">邮件主题</TableHead>
+                        <TableHead class="w-[80px]">默认</TableHead>
+                        <TableHead class="w-[80px]">状态</TableHead>
+                        <TableHead class="w-[150px] text-right">操作</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow v-if="templatesLoading">
+                        <TableCell colspan="6" class="text-center py-8 text-muted-foreground">加载中...</TableCell>
+                      </TableRow>
+                      <TableRow v-for="template in emailTemplates" :key="template.id">
+                        <TableCell>{{ template.name }}</TableCell>
+                        <TableCell>{{ template.code }}</TableCell>
+                        <TableCell>{{ template.subject }}</TableCell>
+                        <TableCell>
+                          <Badge v-if="template.isDefault" variant="default" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">是</Badge>
+                          <Badge v-else variant="outline">否</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge v-if="template.status === 'active'" variant="default" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">启用</Badge>
+                          <Badge v-else variant="outline">禁用</Badge>
+                        </TableCell>
+                        <TableCell class="text-right">
+                          <div class="flex justify-end gap-2">
+                            <Button variant="link" size="sm" class="h-auto p-0" @click="handleEditTemplate(template)">编辑</Button>
+                            <Button variant="link" size="sm" class="h-auto p-0 text-destructive" @click="handleDeleteTemplate(template)">删除</Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="sms">
+                <div class="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead class="w-[150px]">模板名称</TableHead>
+                        <TableHead class="w-[150px]">模板代码</TableHead>
+                        <TableHead class="min-w-[300px]">模板内容</TableHead>
+                        <TableHead class="w-[80px]">默认</TableHead>
+                        <TableHead class="w-[80px]">状态</TableHead>
+                        <TableHead class="w-[150px] text-right">操作</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow v-if="templatesLoading">
+                        <TableCell colspan="6" class="text-center py-8 text-muted-foreground">加载中...</TableCell>
+                      </TableRow>
+                      <TableRow v-for="template in smsTemplates" :key="template.id">
+                        <TableCell>{{ template.name }}</TableCell>
+                        <TableCell>{{ template.code }}</TableCell>
+                        <TableCell class="max-w-[300px] truncate">{{ template.content }}</TableCell>
+                        <TableCell>
+                          <Badge v-if="template.isDefault" variant="default" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">是</Badge>
+                          <Badge v-else variant="outline">否</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge v-if="template.status === 'active'" variant="default" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">启用</Badge>
+                          <Badge v-else variant="outline">禁用</Badge>
+                        </TableCell>
+                        <TableCell class="text-right">
+                          <div class="flex justify-end gap-2">
+                            <Button variant="link" size="sm" class="h-auto p-0" @click="handleEditTemplate(template)">编辑</Button>
+                            <Button variant="link" size="sm" class="h-auto p-0 text-destructive" @click="handleDeleteTemplate(template)">删除</Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
+
+    <Dialog v-model:open="showDomainDialog">
+      <DialogContent class="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>添加域名</DialogTitle>
+        </DialogHeader>
+        <form>
+          <div class="grid gap-4 py-4">
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">域名</label>
+              <div class="flex">
+                <div class="flex items-center px-3 bg-muted border border-r-0 rounded-l-md text-sm text-muted-foreground">https://</div>
+                <Input v-model="domainForm.domain" placeholder="例如：login.yourcompany.com" class="rounded-l-none" />
+              </div>
+            </div>
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">验证方式</label>
+              <RadioGroup v-model="domainForm.verificationMethod">
+                <div class="flex items-center gap-2">
+                  <RadioGroupItem value="dns" />
+                  <label class="text-sm cursor-pointer">DNS记录验证</label>
+                </div>
+                <div class="flex items-center gap-2">
+                  <RadioGroupItem value="file" />
+                  <label class="text-sm cursor-pointer">文件验证</label>
+                </div>
+              </RadioGroup>
+            </div>
           </div>
-        </el-tab-pane>
-      </el-tabs>
-    </el-card>
+        </form>
+        <DialogFooter>
+          <Button variant="outline" @click="showDomainDialog = false">取消</Button>
+          <Button @click="handleCreateDomain" :disabled="creatingDomain">添加</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
-    <el-dialog v-model="showDomainDialog" title="添加域名" width="500px">
-      <el-form :model="domainForm" label-width="100px">
-        <el-form-item label="域名">
-          <el-input v-model="domainForm.domain" placeholder="例如：login.yourcompany.com">
-            <template #prepend>https://</template>
-          </el-input>
-        </el-form-item>
-        <el-form-item label="验证方式">
-          <el-radio-group v-model="domainForm.verificationMethod">
-            <el-radio label="dns">DNS记录验证</el-radio>
-            <el-radio label="file">文件验证</el-radio>
-          </el-radio-group>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showDomainDialog = false">取消</el-button>
-        <el-button type="primary" @click="handleCreateDomain" :loading="creatingDomain">添加</el-button>
-      </template>
-    </el-dialog>
+    <Dialog v-model:open="showSSLDialog">
+      <DialogContent class="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle>配置SSL证书</DialogTitle>
+        </DialogHeader>
+        <form>
+          <div class="grid gap-4 py-4">
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">SSL证书</label>
+              <Textarea
+                v-model="sslForm.sslCertificate"
+                :rows="8"
+                placeholder="请粘贴SSL证书内容（PEM格式）"
+              />
+            </div>
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">私钥</label>
+              <Textarea
+                v-model="sslForm.sslPrivateKey"
+                :rows="8"
+                placeholder="请粘贴SSL私钥内容（PEM格式）"
+              />
+            </div>
+          </div>
+        </form>
+        <DialogFooter>
+          <Button variant="outline" @click="showSSLDialog = false">取消</Button>
+          <Button @click="handleSaveSSL" :disabled="savingSSL">保存</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
-    <el-dialog v-model="showSSLDialog" title="配置SSL证书" width="600px">
-      <el-form :model="sslForm" label-width="120px">
-        <el-form-item label="SSL证书">
-          <el-input
-            v-model="sslForm.sslCertificate"
-            type="textarea"
-            :rows="8"
-            placeholder="请粘贴SSL证书内容（PEM格式）"
-          />
-        </el-form-item>
-        <el-form-item label="私钥">
-          <el-input
-            v-model="sslForm.sslPrivateKey"
-            type="textarea"
-            :rows="8"
-            placeholder="请粘贴SSL私钥内容（PEM格式）"
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showSSLDialog = false">取消</el-button>
-        <el-button type="primary" @click="handleSaveSSL" :loading="savingSSL">保存</el-button>
-      </template>
-    </el-dialog>
+    <Dialog v-model:open="showTemplateDialog">
+      <DialogContent class="sm:max-w-[700px]">
+        <DialogHeader>
+          <DialogTitle>{{ editingTemplate ? '编辑模板' : '新建模板' }}</DialogTitle>
+        </DialogHeader>
+        <form>
+          <div class="grid gap-4 py-4">
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">模板类型</label>
+              <RadioGroup v-model="templateForm.type" :disabled="!!editingTemplate">
+                <div class="flex items-center gap-2">
+                  <RadioGroupItem value="email" />
+                  <label class="text-sm cursor-pointer">邮件</label>
+                </div>
+                <div class="flex items-center gap-2">
+                  <RadioGroupItem value="sms" />
+                  <label class="text-sm cursor-pointer">短信</label>
+                </div>
+              </RadioGroup>
+            </div>
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">模板代码</label>
+              <Input v-model="templateForm.code" placeholder="例如：verification_code" :disabled="!!editingTemplate" />
+            </div>
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">模板名称</label>
+              <Input v-model="templateForm.name" placeholder="请输入模板名称" />
+            </div>
+            <div v-if="templateForm.type === 'email'" class="grid gap-2">
+              <label class="text-sm font-medium">邮件主题</label>
+              <Input v-model="templateForm.subject" placeholder="请输入邮件主题，支持变量如 {{appName}}" />
+            </div>
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">模板内容</label>
+              <Textarea
+                v-model="templateForm.content"
+                :rows="10"
+                placeholder="请输入模板内容，支持变量如 {{code}}, {{username}} 等"
+              />
+            </div>
+            <div class="flex items-center gap-2">
+              <Switch :checked="templateForm.isDefault" @update:checked="templateForm.isDefault = $event" />
+              <label class="text-sm cursor-pointer">设为默认</label>
+            </div>
+          </div>
+        </form>
+        <DialogFooter>
+          <Button variant="outline" @click="showTemplateDialog = false">取消</Button>
+          <Button @click="handleSaveTemplate" :disabled="savingTemplate">保存</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
-    <el-dialog v-model="showTemplateDialog" :title="editingTemplate ? '编辑模板' : '新建模板'" width="700px">
-      <el-form :model="templateForm" label-width="100px">
-        <el-form-item label="模板类型">
-          <el-radio-group v-model="templateForm.type" :disabled="!!editingTemplate">
-            <el-radio label="email">邮件</el-radio>
-            <el-radio label="sms">短信</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="模板代码">
-          <el-input v-model="templateForm.code" placeholder="例如：verification_code" :disabled="!!editingTemplate" />
-        </el-form-item>
-        <el-form-item label="模板名称">
-          <el-input v-model="templateForm.name" placeholder="请输入模板名称" />
-        </el-form-item>
-        <el-form-item v-if="templateForm.type === 'email'" label="邮件主题">
-          <el-input v-model="templateForm.subject" placeholder="请输入邮件主题，支持变量如 {{appName}}" />
-        </el-form-item>
-        <el-form-item label="模板内容">
-          <el-input
-            v-model="templateForm.content"
-            type="textarea"
-            :rows="10"
-            placeholder="请输入模板内容，支持变量如 {{code}}, {{username}} 等"
-          />
-        </el-form-item>
-        <el-form-item label="设为默认">
-          <el-switch v-model="templateForm.isDefault" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showTemplateDialog = false">取消</el-button>
-        <el-button type="primary" @click="handleSaveTemplate" :loading="savingTemplate">保存</el-button>
-      </template>
-    </el-dialog>
-
-    <el-dialog v-model="showVerifyDialog" title="域名验证" width="600px">
-      <div class="verify-content">
-        <el-alert type="info" :closable="false" class="verify-alert">
-          <template #title>
-            <span>请按照以下步骤完成验证</span>
-          </template>
-        </el-alert>
-        <div v-if="verifyingDomain?.verificationMethod === 'dns'" class="verify-steps">
-          <h4>DNS记录验证</h4>
-          <p>在您的DNS服务商处添加以下TXT记录：</p>
-          <div class="code-block">
-            <p><strong>记录类型：</strong>TXT</p>
-            <p><strong>主机记录：</strong>@ 或 留空</p>
-            <p><strong>记录值：</strong></p>
-            <pre>{{ verifyingDomain?.verificationToken }}</pre>
+    <Dialog v-model:open="showVerifyDialog">
+      <DialogContent class="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle>域名验证</DialogTitle>
+        </DialogHeader>
+        <div class="py-4">
+          <Alert class="mb-5">
+            <AlertTitle>请按照以下步骤完成验证</AlertTitle>
+          </Alert>
+          <div v-if="verifyingDomain?.verificationMethod === 'dns'" class="space-y-3">
+            <h4 class="font-semibold">DNS记录验证</h4>
+            <p class="text-sm text-muted-foreground">在您的DNS服务商处添加以下TXT记录：</p>
+            <div class="bg-muted p-4 rounded-lg space-y-2">
+              <p class="text-sm"><strong>记录类型：</strong>TXT</p>
+              <p class="text-sm"><strong>主机记录：</strong>@ 或 留空</p>
+              <p class="text-sm"><strong>记录值：</strong></p>
+              <pre class="bg-background p-3 rounded text-sm font-mono break-all">{{ verifyingDomain?.verificationToken }}</pre>
+            </div>
+          </div>
+          <div v-else class="space-y-3">
+            <h4 class="font-semibold">文件验证</h4>
+            <p class="text-sm text-muted-foreground">在您的网站根目录创建以下文件：</p>
+            <div class="bg-muted p-4 rounded-lg space-y-2">
+              <p class="text-sm"><strong>文件路径：</strong>/.well-known/easy1auth-verification.txt</p>
+              <p class="text-sm"><strong>文件内容：</strong></p>
+              <pre class="bg-background p-3 rounded text-sm font-mono break-all">{{ verifyingDomain?.verificationToken?.split('=')[1] }}</pre>
+            </div>
           </div>
         </div>
-        <div v-else class="verify-steps">
-          <h4>文件验证</h4>
-          <p>在您的网站根目录创建以下文件：</p>
-          <div class="code-block">
-            <p><strong>文件路径：</strong>/.well-known/easy1auth-verification.txt</p>
-            <p><strong>文件内容：</strong></p>
-            <pre>{{ verifyingDomain?.verificationToken?.split('=')[1] }}</pre>
-          </div>
-        </div>
-      </div>
-      <template #footer>
-        <el-button @click="showVerifyDialog = false">取消</el-button>
-        <el-button type="primary" @click="handleVerifyDomainConfirm" :loading="verifying">验证</el-button>
-      </template>
-    </el-dialog>
+        <DialogFooter>
+          <Button variant="outline" @click="showVerifyDialog = false">取消</Button>
+          <Button @click="handleVerifyDomainConfirm" :disabled="verifying">验证</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed, reactive } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Check, InfoFilled } from '@element-plus/icons-vue'
+import { toast } from 'vue-sonner'
+import { Plus, Check, Info } from '@lucide/vue'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Card, CardContent } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Switch } from '@/components/ui/switch'
+import { ColorPicker } from '@/components/ui/color-picker'
+import { Upload, type UploadFile } from '@/components/ui/upload'
 import { customDomainApi, type CustomDomain, type CreateDomainDto, type UpdateSSLDto } from '@/api/customDomain'
 import { messageTemplateApi, type MessageTemplate, type CreateTemplateDto } from '@/api/messageTemplate'
 import { loginStyleApi, type UpdateLoginStyleDto } from '@/api/loginStyle'
@@ -430,6 +537,7 @@ const loginStyle = reactive<UpdateLoginStyleDto>({
   primaryColor: '#0369A1',
   loginMethods: ['password', 'email', 'passkey'],
 })
+
 const savingLoginStyle = ref(false)
 
 const templates = ref<MessageTemplate[]>([])
@@ -463,6 +571,18 @@ const formatDate = (date: string) => {
   return new Date(date).toLocaleString('zh-CN')
 }
 
+const toggleLoginMethod = (method: string) => {
+  if (!loginStyle.loginMethods) {
+    loginStyle.loginMethods = []
+  }
+  const index = loginStyle.loginMethods.indexOf(method)
+  if (index > -1) {
+    loginStyle.loginMethods.splice(index, 1)
+  } else {
+    loginStyle.loginMethods.push(method)
+  }
+}
+
 const loadDomains = async () => {
   domainsLoading.value = true
   try {
@@ -470,7 +590,7 @@ const loadDomains = async () => {
     domains.value = response.data.data
   } catch (error) {
     console.error('加载域名列表失败:', error)
-    ElMessage.error('加载域名列表失败')
+    toast.error('加载域名列表失败')
   } finally {
     domainsLoading.value = false
   }
@@ -478,20 +598,20 @@ const loadDomains = async () => {
 
 const handleCreateDomain = async () => {
   if (!domainForm.domain) {
-    ElMessage.warning('请输入域名')
+    toast.warning('请输入域名')
     return
   }
 
   creatingDomain.value = true
   try {
     await customDomainApi.create(domainForm)
-    ElMessage.success('域名添加成功，请完成验证')
+    toast.success('域名添加成功，请完成验证')
     showDomainDialog.value = false
     domainForm.domain = ''
     domainForm.verificationMethod = 'dns'
     loadDomains()
   } catch (error: any) {
-    ElMessage.error(error.response?.data?.message || '添加域名失败')
+    toast.error(error.response?.data?.message || '添加域名失败')
   } finally {
     creatingDomain.value = false
   }
@@ -508,12 +628,12 @@ const handleVerifyDomainConfirm = async () => {
   verifying.value = true
   try {
     await customDomainApi.verify(verifyingDomain.value.id)
-    ElMessage.success('域名验证成功')
+    toast.success('域名验证成功')
     showVerifyDialog.value = false
     verifyingDomain.value = null
     loadDomains()
   } catch (error: any) {
-    ElMessage.error(error.response?.data?.message || '域名验证失败')
+    toast.error(error.response?.data?.message || '域名验证失败')
   } finally {
     verifying.value = false
   }
@@ -528,35 +648,32 @@ const handleShowSSLDialog = (domain: CustomDomain) => {
 
 const handleSaveSSL = async () => {
   if (!sslForm.sslCertificate || !sslForm.sslPrivateKey) {
-    ElMessage.warning('请填写SSL证书和私钥')
+    toast.warning('请填写SSL证书和私钥')
     return
   }
 
   savingSSL.value = true
   try {
     await customDomainApi.updateSSL(currentDomainId.value, sslForm)
-    ElMessage.success('SSL证书配置成功')
+    toast.success('SSL证书配置成功')
     showSSLDialog.value = false
     loadDomains()
   } catch (error: any) {
-    ElMessage.error(error.response?.data?.message || '配置SSL证书失败')
+    toast.error(error.response?.data?.message || '配置SSL证书失败')
   } finally {
     savingSSL.value = false
   }
 }
 
 const handleDeleteDomain = async (domain: CustomDomain) => {
+  if (!window.confirm('确定要删除该域名吗？')) return
+  
   try {
-    await ElMessageBox.confirm('确定要删除该域名吗？', '提示', {
-      type: 'warning',
-    })
     await customDomainApi.delete(domain.id)
-    ElMessage.success('域名删除成功')
+    toast.success('域名删除成功')
     loadDomains()
   } catch (error: any) {
-    if (error !== 'cancel') {
-      ElMessage.error(error.response?.data?.message || '删除域名失败')
-    }
+    toast.error(error.response?.data?.message || '删除域名失败')
   }
 }
 
@@ -573,48 +690,51 @@ const handleSaveLoginStyle = async () => {
   savingLoginStyle.value = true
   try {
     await loginStyleApi.update(loginStyle)
-    ElMessage.success('保存成功')
+    toast.success('保存成功')
   } catch (error: any) {
-    ElMessage.error(error.response?.data?.message || '保存失败')
+    toast.error(error.response?.data?.message || '保存失败')
   } finally {
     savingLoginStyle.value = false
   }
 }
 
-const beforeLogoUpload = (file: any) => {
+const beforeLogoUpload = (file: UploadFile) => {
   const isImage = file.type.startsWith('image/')
   const isLt2M = file.size / 1024 / 1024 < 2
   if (!isImage) {
-    ElMessage.error('只能上传图片文件!')
+    toast.error('只能上传图片文件!')
     return false
   }
   if (!isLt2M) {
-    ElMessage.error('图片大小不能超过 2MB!')
+    toast.error('图片大小不能超过 2MB!')
     return false
   }
   return true
 }
 
-const beforeBgUpload = (file: any) => {
+const beforeBgUpload = (file: UploadFile) => {
   const isImage = file.type.startsWith('image/')
   const isLt5M = file.size / 1024 / 1024 < 5
   if (!isImage) {
-    ElMessage.error('只能上传图片文件!')
+    toast.error('只能上传图片文件!')
     return false
   }
   if (!isLt5M) {
-    ElMessage.error('图片大小不能超过 5MB!')
+    toast.error('图片大小不能超过 5MB!')
     return false
   }
   return true
 }
 
-const handleLogoUpload = (options: any, field: 'logo' | 'logoDark' | 'backgroundImage') => {
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    (loginStyle as any)[field] = e.target?.result as string
-  }
-  reader.readAsDataURL(options.file)
+const handleLogoUpload = (options: { file: { raw: File } }, field: 'logo' | 'logoDark' | 'backgroundImage') => {
+  return new Promise<void>((resolve) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      (loginStyle as any)[field] = e.target?.result as string
+      resolve()
+    }
+    reader.readAsDataURL(options.file.raw)
+  })
 }
 
 const loadTemplates = async () => {
@@ -624,7 +744,7 @@ const loadTemplates = async () => {
     templates.value = response.data.data
   } catch (error) {
     console.error('加载模板列表失败:', error)
-    ElMessage.error('加载模板列表失败')
+    toast.error('加载模板列表失败')
   } finally {
     templatesLoading.value = false
   }
@@ -634,10 +754,10 @@ const handleInitTemplates = async () => {
   initingTemplates.value = true
   try {
     await messageTemplateApi.initDefaults()
-    ElMessage.success('默认模板初始化成功')
+    toast.success('默认模板初始化成功')
     loadTemplates()
   } catch (error: any) {
-    ElMessage.error(error.response?.data?.message || '初始化模板失败')
+    toast.error(error.response?.data?.message || '初始化模板失败')
   } finally {
     initingTemplates.value = false
   }
@@ -656,7 +776,7 @@ const handleEditTemplate = (template: MessageTemplate) => {
 
 const handleSaveTemplate = async () => {
   if (!templateForm.code || !templateForm.name || !templateForm.content) {
-    ElMessage.warning('请填写完整信息')
+    toast.warning('请填写完整信息')
     return
   }
 
@@ -669,10 +789,10 @@ const handleSaveTemplate = async () => {
         content: templateForm.content,
         isDefault: templateForm.isDefault,
       })
-      ElMessage.success('模板更新成功')
+      toast.success('模板更新成功')
     } else {
       await messageTemplateApi.create(templateForm)
-      ElMessage.success('模板创建成功')
+      toast.success('模板创建成功')
     }
     showTemplateDialog.value = false
     editingTemplate.value = null
@@ -684,24 +804,21 @@ const handleSaveTemplate = async () => {
     templateForm.isDefault = false
     loadTemplates()
   } catch (error: any) {
-    ElMessage.error(error.response?.data?.message || '保存模板失败')
+    toast.error(error.response?.data?.message || '保存模板失败')
   } finally {
     savingTemplate.value = false
   }
 }
 
 const handleDeleteTemplate = async (template: MessageTemplate) => {
+  if (!window.confirm('确定要删除该模板吗？')) return
+  
   try {
-    await ElMessageBox.confirm('确定要删除该模板吗？', '提示', {
-      type: 'warning',
-    })
     await messageTemplateApi.delete(template.id)
-    ElMessage.success('模板删除成功')
+    toast.success('模板删除成功')
     loadTemplates()
   } catch (error: any) {
-    if (error !== 'cancel') {
-      ElMessage.error(error.response?.data?.message || '删除模板失败')
-    }
+    toast.error(error.response?.data?.message || '删除模板失败')
   }
 }
 
@@ -711,269 +828,3 @@ onMounted(() => {
   loadTemplates()
 })
 </script>
-
-<style scoped>
-.personalization-settings {
-  padding: 24px;
-  min-height: calc(100vh - 64px);
-}
-
-.page-header {
-  margin-bottom: 24px;
-}
-
-.page-title {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0 0 8px 0;
-}
-
-.page-subtitle {
-  font-size: 14px;
-  color: var(--text-muted);
-  margin: 0;
-}
-
-.settings-card {
-  border-radius: var(--border-radius-lg);
-}
-
-.settings-tabs :deep(.el-tabs__header) {
-  margin-bottom: 24px;
-}
-
-.tab-content {
-  padding: 0 8px;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.section-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.header-actions {
-  display: flex;
-  gap: 12px;
-}
-
-.domain-table {
-  margin-bottom: 24px;
-}
-
-.domain-cell {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.domain-name {
-  font-weight: 500;
-}
-
-.help-section {
-  margin-top: 16px;
-}
-
-.alert-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-}
-
-.help-steps {
-  margin-top: 12px;
-}
-
-.help-steps p {
-  margin: 8px 0;
-  font-size: 13px;
-}
-
-.settings-form {
-  max-width: 800px;
-}
-
-.form-section {
-  margin-bottom: 32px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.form-section:last-child {
-  margin-bottom: 0;
-  padding-bottom: 0;
-  border-bottom: none;
-}
-
-.upload-container {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.logo-uploader {
-  width: 120px;
-  height: 120px;
-  border: 2px dashed var(--border-color);
-  border-radius: var(--border-radius-lg);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  overflow: hidden;
-}
-
-.logo-uploader:hover {
-  border-color: var(--primary-color);
-}
-
-.upload-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-muted);
-}
-
-.upload-icon {
-  font-size: 32px;
-  margin-bottom: 8px;
-}
-
-.upload-text {
-  font-size: 12px;
-}
-
-.logo-preview {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.bg-uploader {
-  width: 100%;
-  max-width: 400px;
-  height: 200px;
-  border: 2px dashed var(--border-color);
-  border-radius: var(--border-radius-lg);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  overflow: hidden;
-}
-
-.bg-uploader:hover {
-  border-color: var(--primary-color);
-}
-
-.bg-placeholder {
-  width: 100%;
-  height: 100%;
-}
-
-.bg-preview {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.color-input {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.color-presets {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.preset-label {
-  font-size: 13px;
-  color: var(--text-muted);
-}
-
-.color-preset {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--transition-fast);
-  border: 2px solid transparent;
-}
-
-.color-preset:hover {
-  transform: scale(1.1);
-}
-
-.color-preset .check-icon {
-  color: white;
-  font-size: 14px;
-}
-
-.code-input :deep(.el-textarea__inner) {
-  font-family: 'Fira Code', 'Monaco', 'Consolas', monospace;
-  font-size: 13px;
-  line-height: 1.6;
-  background-color: #F8FAFC;
-  border-radius: var(--border-radius);
-}
-
-.template-type-tabs {
-  margin-top: 16px;
-}
-
-.verify-content {
-  padding: 16px 0;
-}
-
-.verify-alert {
-  margin-bottom: 20px;
-}
-
-.verify-steps h4 {
-  margin: 0 0 12px;
-  color: var(--text-primary);
-}
-
-.verify-steps p {
-  margin: 8px 0;
-  color: var(--text-secondary);
-}
-
-.code-block {
-  background: #f5f7fa;
-  padding: 16px;
-  border-radius: 8px;
-  margin-top: 12px;
-}
-
-.code-block p {
-  margin: 4px 0;
-}
-
-.code-block pre {
-  margin: 8px 0 0;
-  padding: 12px;
-  background: #fff;
-  border-radius: 4px;
-  font-family: monospace;
-  font-size: 13px;
-  word-break: break-all;
-}
-</style>

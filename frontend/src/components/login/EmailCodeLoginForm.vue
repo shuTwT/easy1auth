@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { reactive } from 'vue'
 import { useAuth } from '@/composables/useAuth'
+import { Input } from '@/components/ui/input'
 
 const emit = defineEmits<{
   switchToPassword: []
@@ -14,22 +15,40 @@ const form = reactive({
   code: ''
 })
 
-const rules = {
-  email: [
-    { required: true, message: '请输入邮箱地址', trigger: 'blur' },
-    { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
-  ],
-  code: [
-    { required: true, message: '请输入验证码', trigger: 'blur' },
-    { len: 6, message: '验证码长度为6位', trigger: 'blur' }
-  ]
+const errors = reactive({
+  email: '',
+  code: '',
+})
+
+function validate(): boolean {
+  let valid = true
+  if (!form.email) {
+    errors.email = '请输入邮箱地址'
+    valid = false
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+    errors.email = '请输入正确的邮箱地址'
+    valid = false
+  } else {
+    errors.email = ''
+  }
+  if (!form.code) {
+    errors.code = '请输入验证码'
+    valid = false
+  } else if (form.code.length !== 6) {
+    errors.code = '验证码长度为6位'
+    valid = false
+  } else {
+    errors.code = ''
+  }
+  return valid
 }
 
 async function handleSendCode() {
   if (!form.email) {
+    errors.email = '请输入邮箱地址'
     return
   }
-  
+  errors.email = ''
   await sendCode({
     email: form.email,
     type: 'login'
@@ -37,6 +56,7 @@ async function handleSendCode() {
 }
 
 async function handleSubmit() {
+  if (!validate()) return
   await login({
     email: form.email,
     code: form.code,
@@ -46,43 +66,49 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <el-form :model="form" :rules="rules" @submit.prevent="handleSubmit">
-    <el-form-item prop="email">
+  <form @submit.prevent="handleSubmit">
+    <div class="grid gap-2">
       <label class="form-label">邮箱地址</label>
-      <el-input
-        v-model="form.email"
-        placeholder="请输入邮箱地址"
-        size="large"
-        clearable
-        class="custom-input"
-      >
-        <template #prefix>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-            <polyline points="22,6 12,13 2,6"/>
-          </svg>
-        </template>
-      </el-input>
-    </el-form-item>
+      <div class="relative">
+        <svg
+          class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+          width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        >
+          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+          <polyline points="22,6 12,13 2,6"/>
+        </svg>
+        <Input
+          v-model="form.email"
+          placeholder="请输入邮箱地址"
+          class="login-input h-11 pl-10"
+          :class="{ 'border-destructive': errors.email }"
+          @input="errors.email = ''"
+        />
+      </div>
+      <p v-if="errors.email" class="text-destructive text-xs px-1">{{ errors.email }}</p>
+    </div>
 
-    <el-form-item prop="code">
+    <div class="grid gap-2 mt-4">
       <label class="form-label">验证码</label>
       <div class="code-input-wrapper">
-        <el-input
-          v-model="form.code"
-          placeholder="请输入6位验证码"
-          size="large"
-          maxlength="6"
-          class="custom-input"
-          @keyup.enter="handleSubmit"
-        >
-          <template #prefix>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-            </svg>
-          </template>
-        </el-input>
+        <div class="relative flex-1">
+          <svg
+            class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+            width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          >
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          <Input
+            v-model="form.code"
+            placeholder="请输入6位验证码"
+            maxlength="6"
+            class="login-input h-11 pl-10"
+            :class="{ 'border-destructive': errors.code }"
+            @input="errors.code = ''"
+            @keyup.enter="handleSubmit"
+          />
+        </div>
         <button
           type="button"
           class="code-button"
@@ -94,19 +120,17 @@ async function handleSubmit() {
           <span>{{ isCountingDown ? `${countdown}s后重试` : '获取验证码' }}</span>
         </button>
       </div>
-    </el-form-item>
+      <p v-if="errors.code" class="text-destructive text-xs px-1">{{ errors.code }}</p>
+    </div>
 
-    <el-form-item>
-      <button
-        type="submit"
-        class="submit-button"
-        :disabled="loading"
-        @click="handleSubmit"
-      >
-        <span v-if="loading" class="loading-spinner"></span>
-        <span>{{ loading ? '登录中...' : '登录' }}</span>
-      </button>
-    </el-form-item>
+    <button
+      type="submit"
+      class="submit-button"
+      :disabled="loading"
+    >
+      <span v-if="loading" class="loading-spinner"></span>
+      <span>{{ loading ? '登录中...' : '登录' }}</span>
+    </button>
 
     <div class="form-footer">
       <button
@@ -125,7 +149,7 @@ async function handleSubmit() {
         立即注册
       </button>
     </div>
-  </el-form>
+  </form>
 </template>
 
 <style scoped>
@@ -137,19 +161,14 @@ async function handleSubmit() {
   color: #0C4A6E;
 }
 
-.custom-input :deep(.el-input__wrapper) {
-  background: rgba(255, 255, 255, 0.6);
+.login-input {
+  background: rgba(255, 255, 255, 0.6) !important;
   border: 1px solid #E2E8F0;
   border-radius: 8px;
-  box-shadow: none;
   transition: all 0.2s ease;
 }
 
-.custom-input :deep(.el-input__wrapper:hover) {
-  border-color: #0369A1;
-}
-
-.custom-input :deep(.el-input__wrapper.is-focus) {
+.login-input:focus {
   background: white;
   border-color: #0369A1;
   box-shadow: 0 0 0 3px rgba(3, 105, 161, 0.1);
@@ -159,10 +178,6 @@ async function handleSubmit() {
   display: flex;
   gap: 12px;
   width: 100%;
-}
-
-.code-input-wrapper .custom-input {
-  flex: 1;
 }
 
 .code-button {
@@ -176,11 +191,12 @@ async function handleSubmit() {
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
-  height: 40px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .code-button:hover:not(:disabled) {
@@ -208,6 +224,7 @@ async function handleSubmit() {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  margin-top: 24px;
 }
 
 .submit-button:hover:not(:disabled) {

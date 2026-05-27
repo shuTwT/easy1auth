@@ -14,7 +14,7 @@ export const socialIdentityProviderApi = {
     return request.get('/social-identity-providers/stats')
   },
 
-  getList(params?: { type?: string; status?: string }): Promise<SocialIdentityProvider[]> {
+  getList(params?: { type?: string; status?: string; search?: string }): Promise<SocialIdentityProvider[]> {
     return request.get('/social-identity-providers', { params })
   },
 

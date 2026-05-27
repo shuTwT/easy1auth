@@ -1,17 +1,14 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useUserStore } from '@/stores/user'
-import { 
-  OfficeBuilding,
-  TrendCharts, 
-  User, 
-  Monitor, 
-  Connection,
-  ArrowUp,
-  ArrowDown,
-  MoreFilled,
-  Refresh
-} from '@element-plus/icons-vue'
+import { Building2, TrendingUp, User, Monitor, Link, ArrowUp, ArrowDown, MoreHorizontal, RefreshCw, ArrowRight, Library, FileText } from '@lucide/vue'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 const userStore = useUserStore()
 
@@ -19,7 +16,7 @@ const stats = ref([
   { 
     title: '租户总数', 
     value: 128, 
-    icon: OfficeBuilding, 
+    icon: Building2, 
     trend: '+12%',
     trendUp: true,
     color: 'primary'
@@ -43,7 +40,7 @@ const stats = ref([
   { 
     title: '今日登录', 
     value: 8920, 
-    icon: Connection, 
+    icon: Link, 
     trend: '-2.1%',
     trendUp: false,
     color: 'info'
@@ -59,10 +56,10 @@ const recentLogins = ref([
 ])
 
 const quickActions = ref([
-  { title: '添加用户', icon: 'User', route: '/user', color: 'primary' },
-  { title: '创建应用', icon: 'Monitor', route: '/application', color: 'success' },
-  { title: '角色管理', icon: 'Collection', route: '/role', color: 'warning' },
-  { title: '审计日志', icon: 'Document', route: '/audit', color: 'info' }
+  { title: '添加用户', icon: User, route: '/user', color: 'primary' },
+  { title: '创建应用', icon: Monitor, route: '/application', color: 'success' },
+  { title: '角色管理', icon: Library, route: '/role', color: 'warning' },
+  { title: '审计日志', icon: FileText, route: '/audit', color: 'info' }
 ])
 
 const loading = ref(false)
@@ -74,8 +71,8 @@ const handleRefresh = () => {
   }, 1000)
 }
 
-const getStatusType = (status: string) => {
-  return status === 'success' ? 'success' : 'danger'
+const getStatusVariant = (status: string) => {
+  return status === 'success' ? 'default' : 'destructive'
 }
 
 const getStatusText = (status: string) => {
@@ -95,184 +92,206 @@ const formatNumber = (num: number) => {
         <p class="page-subtitle">欢迎回来，{{ userStore.userInfo?.username || '管理员' }}</p>
       </div>
       <div class="header-actions">
-        <el-button @click="handleRefresh" :loading="loading">
-          <el-icon><Refresh /></el-icon>
+        <Button @click="handleRefresh" :disabled="loading">
+          <RefreshCw class="w-4 h-4 mr-2" :class="{ 'animate-spin': loading }" />
           刷新数据
-        </el-button>
+        </Button>
       </div>
     </div>
 
     <div class="stats-grid">
-      <el-card v-for="stat in stats" :key="stat.title" class="stat-card" shadow="hover">
-        <div class="stat-content">
-          <div class="stat-icon" :class="stat.color">
-            <el-icon :size="24">
-              <component :is="stat.icon" />
-            </el-icon>
+      <Card v-for="stat in stats" :key="stat.title" class="stat-card">
+        <CardContent class="pt-6">
+          <div class="stat-content">
+            <div class="stat-icon" :class="stat.color">
+              <component :is="stat.icon" class="w-6 h-6" />
+            </div>
+            <div class="stat-info">
+              <div class="stat-value">{{ formatNumber(stat.value) }}</div>
+              <div class="stat-title">{{ stat.title }}</div>
+            </div>
+            <div class="stat-trend" :class="{ 'trend-up': stat.trendUp, 'trend-down': !stat.trendUp }">
+              <component :is="stat.trendUp ? ArrowUp : ArrowDown" class="w-3.5 h-3.5" />
+              <span>{{ stat.trend }}</span>
+            </div>
           </div>
-          <div class="stat-info">
-            <div class="stat-value">{{ formatNumber(stat.value) }}</div>
-            <div class="stat-title">{{ stat.title }}</div>
-          </div>
-          <div class="stat-trend" :class="{ 'trend-up': stat.trendUp, 'trend-down': !stat.trendUp }">
-            <el-icon :size="14">
-              <component :is="stat.trendUp ? ArrowUp : ArrowDown" />
-            </el-icon>
-            <span>{{ stat.trend }}</span>
-          </div>
-        </div>
-      </el-card>
+        </CardContent>
+      </Card>
     </div>
 
-    <el-row :gutter="24" class="content-row">
-      <el-col :span="16">
-        <el-card class="content-card">
-          <template #header>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2 space-y-6">
+        <Card>
+          <CardHeader>
             <div class="card-header">
-              <span class="card-title">最近登录</span>
-              <el-button link type="primary">
+              <CardTitle>最近登录</CardTitle>
+              <Button variant="link" size="sm">
                 查看全部
-                <el-icon class="el-icon--right"><ArrowRight /></el-icon>
-              </el-button>
+                <ArrowRight class="w-4 h-4 ml-1" />
+              </Button>
             </div>
-          </template>
-          <el-table :data="recentLogins" style="width: 100%" :show-header="true">
-            <el-table-column prop="username" label="用户名" width="120">
-              <template #default="{ row }">
-                <div class="user-cell">
-                  <el-avatar :size="28" class="user-avatar">
-                    {{ row.username.charAt(0).toUpperCase() }}
-                  </el-avatar>
-                  <span>{{ row.username }}</span>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>用户名</TableHead>
+                  <TableHead>邮箱</TableHead>
+                  <TableHead>IP地址</TableHead>
+                  <TableHead>登录时间</TableHead>
+                  <TableHead>状态</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow v-for="login in recentLogins" :key="login.username + login.time">
+                  <TableCell>
+                    <div class="user-cell">
+                      <Avatar class="h-7 w-7">
+                        <AvatarFallback class="text-xs">
+                          {{ login.username.charAt(0).toUpperCase() }}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span>{{ login.username }}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>{{ login.email }}</TableCell>
+                  <TableCell>{{ login.ip }}</TableCell>
+                  <TableCell>{{ login.time }}</TableCell>
+                  <TableCell>
+                    <Badge :variant="getStatusVariant(login.status)">
+                      {{ getStatusText(login.status) }}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div class="card-header">
+              <CardTitle>登录趋势</CardTitle>
+              <DropdownMenu>
+                <DropdownMenuTrigger as-child>
+                  <Button variant="ghost" size="sm">
+                    <MoreHorizontal class="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem>最近7天</DropdownMenuItem>
+                  <DropdownMenuItem>最近30天</DropdownMenuItem>
+                  <DropdownMenuItem>最近90天</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div class="chart-placeholder">
+              <TrendingUp class="w-12 h-12 text-slate-300" />
+              <p>登录趋势图表</p>
+              <p class="chart-hint">集成图表库后显示数据可视化</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div class="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>快捷操作</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div class="quick-actions">
+              <div 
+                v-for="action in quickActions" 
+                :key="action.title" 
+                class="quick-action-item"
+                :class="action.color"
+              >
+                <div class="action-icon">
+                  <component :is="action.icon" class="w-6 h-6" />
                 </div>
-              </template>
-            </el-table-column>
-            <el-table-column prop="email" label="邮箱" width="180" />
-            <el-table-column prop="ip" label="IP地址" width="130" />
-            <el-table-column prop="time" label="登录时间" width="170" />
-            <el-table-column prop="status" label="状态" width="100">
-              <template #default="{ row }">
-                <el-tag :type="getStatusType(row.status)" size="small">
-                  {{ getStatusText(row.status) }}
-                </el-tag>
-              </template>
-            </el-table-column>
-          </el-table>
-        </el-card>
-
-        <el-card class="content-card" style="margin-top: 24px">
-          <template #header>
-            <div class="card-header">
-              <span class="card-title">登录趋势</span>
-              <el-dropdown trigger="click">
-                <el-button link>
-                  <el-icon><MoreFilled /></el-icon>
-                </el-button>
-                <template #dropdown>
-                  <el-dropdown-menu>
-                    <el-dropdown-item>最近7天</el-dropdown-item>
-                    <el-dropdown-item>最近30天</el-dropdown-item>
-                    <el-dropdown-item>最近90天</el-dropdown-item>
-                  </el-dropdown-menu>
-                </template>
-              </el-dropdown>
-            </div>
-          </template>
-          <div class="chart-placeholder">
-            <el-icon :size="48" color="#CBD5E1"><TrendCharts /></el-icon>
-            <p>登录趋势图表</p>
-            <p class="chart-hint">集成图表库后显示数据可视化</p>
-          </div>
-        </el-card>
-      </el-col>
-
-      <el-col :span="8">
-        <el-card class="content-card quick-actions-card">
-          <template #header>
-            <div class="card-header">
-              <span class="card-title">快捷操作</span>
-            </div>
-          </template>
-          <div class="quick-actions">
-            <div 
-              v-for="action in quickActions" 
-              :key="action.title" 
-              class="quick-action-item"
-              :class="action.color"
-            >
-              <div class="action-icon">
-                <el-icon :size="24"><component :is="action.icon" /></el-icon>
-              </div>
-              <span class="action-title">{{ action.title }}</span>
-            </div>
-          </div>
-        </el-card>
-
-        <el-card class="content-card" style="margin-top: 24px">
-          <template #header>
-            <div class="card-header">
-              <span class="card-title">系统公告</span>
-            </div>
-          </template>
-          <div class="announcement-list">
-            <div class="announcement-item">
-              <div class="announcement-dot"></div>
-              <div class="announcement-content">
-                <div class="announcement-title">系统升级通知</div>
-                <div class="announcement-desc">系统将于本周六凌晨进行升级维护</div>
-                <div class="announcement-time">2024-01-15</div>
+                <span class="action-title">{{ action.title }}</span>
               </div>
             </div>
-            <div class="announcement-item">
-              <div class="announcement-dot"></div>
-              <div class="announcement-content">
-                <div class="announcement-title">新功能上线</div>
-                <div class="announcement-desc">支持微信、QQ等社会化登录</div>
-                <div class="announcement-time">2024-01-10</div>
-              </div>
-            </div>
-            <div class="announcement-item">
-              <div class="announcement-dot"></div>
-              <div class="announcement-content">
-                <div class="announcement-title">安全提醒</div>
-                <div class="announcement-desc">请定期更新密码，确保账号安全</div>
-                <div class="announcement-time">2024-01-05</div>
-              </div>
-            </div>
-          </div>
-        </el-card>
+          </CardContent>
+        </Card>
 
-        <el-card class="content-card system-info-card" style="margin-top: 24px">
-          <template #header>
-            <div class="card-header">
-              <span class="card-title">系统信息</span>
+        <Card>
+          <CardHeader>
+            <CardTitle>系统公告</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div class="announcement-list">
+              <div class="announcement-item">
+                <div class="announcement-dot"></div>
+                <div class="announcement-content">
+                  <div class="announcement-title">系统升级通知</div>
+                  <div class="announcement-desc">系统将于本周六凌晨进行升级维护</div>
+                  <div class="announcement-time">2024-01-15</div>
+                </div>
+              </div>
+              <div class="announcement-item">
+                <div class="announcement-dot"></div>
+                <div class="announcement-content">
+                  <div class="announcement-title">新功能上线</div>
+                  <div class="announcement-desc">支持微信、QQ等社会化登录</div>
+                  <div class="announcement-time">2024-01-10</div>
+                </div>
+              </div>
+              <div class="announcement-item">
+                <div class="announcement-dot"></div>
+                <div class="announcement-content">
+                  <div class="announcement-title">安全提醒</div>
+                  <div class="announcement-desc">请定期更新密码，确保账号安全</div>
+                  <div class="announcement-time">2024-01-05</div>
+                </div>
+              </div>
             </div>
-          </template>
-          <div class="system-info">
-            <div class="info-item">
-              <span class="info-label">系统版本</span>
-              <span class="info-value">v1.0.0</span>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>系统信息</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div class="system-info">
+              <div class="info-item">
+                <span class="info-label">系统版本</span>
+                <span class="info-value">v1.0.0</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">运行时间</span>
+                <span class="info-value">30 天</span>
+              </div>
+              <div class="info-item">
+                <div class="flex justify-between mb-2">
+                  <span class="info-label">CPU使用率</span>
+                  <span class="info-value">45%</span>
+                </div>
+                <Progress :model-value="45" class="h-1.5" />
+              </div>
+              <div class="info-item">
+                <div class="flex justify-between mb-2">
+                  <span class="info-label">内存使用率</span>
+                  <span class="info-value">68%</span>
+                </div>
+                <Progress :model-value="68" class="h-1.5" />
+              </div>
+              <div class="info-item">
+                <div class="flex justify-between mb-2">
+                  <span class="info-label">磁盘使用率</span>
+                  <span class="info-value">32%</span>
+                </div>
+                <Progress :model-value="32" class="h-1.5" />
+              </div>
             </div>
-            <div class="info-item">
-              <span class="info-label">运行时间</span>
-              <span class="info-value">30 天</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">CPU使用率</span>
-              <el-progress :percentage="45" :stroke-width="6" />
-            </div>
-            <div class="info-item">
-              <span class="info-label">内存使用率</span>
-              <el-progress :percentage="68" :stroke-width="6" status="warning" />
-            </div>
-            <div class="info-item">
-              <span class="info-label">磁盘使用率</span>
-              <el-progress :percentage="32" :stroke-width="6" status="success" />
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -394,37 +413,17 @@ const formatNumber = (num: number) => {
   background: rgba(239, 68, 68, 0.1);
 }
 
-.content-row {
-  margin-top: 0;
-}
-
-.content-card {
-  border-radius: var(--border-radius-lg);
-}
-
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-}
-
-.card-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
+  width: 100%;
 }
 
 .user-cell {
   display: flex;
   align-items: center;
   gap: 10px;
-}
-
-.user-avatar {
-  background: var(--primary-gradient);
-  color: white;
-  font-size: 12px;
-  font-weight: 600;
 }
 
 .chart-placeholder {
@@ -589,11 +588,6 @@ const formatNumber = (num: number) => {
 @media (max-width: 768px) {
   .stats-grid {
     grid-template-columns: 1fr;
-  }
-  
-  .content-row .el-col {
-    span: 24;
-    margin-bottom: 24px;
   }
 }
 </style>

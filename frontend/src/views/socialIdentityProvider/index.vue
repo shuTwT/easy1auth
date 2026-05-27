@@ -1,272 +1,26 @@
-<template>
-  <div class="social-identity-provider-management">
-    <div class="stats-cards">
-      <el-row :gutter="20">
-        <el-col :span="6">
-          <el-card shadow="hover">
-            <div class="stat-card">
-              <div class="stat-icon total">
-                <el-icon><Connection /></el-icon>
-              </div>
-              <div class="stat-content">
-                <div class="stat-value">{{ stats.totalProviders }}</div>
-                <div class="stat-label">总身份源</div>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card shadow="hover">
-            <div class="stat-card">
-              <div class="stat-icon active">
-                <el-icon><CircleCheck /></el-icon>
-              </div>
-              <div class="stat-content">
-                <div class="stat-value">{{ stats.activeProviders }}</div>
-                <div class="stat-label">已启用</div>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card shadow="hover">
-            <div class="stat-card">
-              <div class="stat-icon inactive">
-                <el-icon><CircleClose /></el-icon>
-              </div>
-              <div class="stat-content">
-                <div class="stat-value">{{ stats.inactiveProviders }}</div>
-                <div class="stat-label">已禁用</div>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card shadow="hover">
-            <div class="stat-card">
-              <div class="stat-icon types">
-                <el-icon><Grid /></el-icon>
-              </div>
-              <div class="stat-content">
-                <div class="stat-value">{{ Object.keys(stats.byType).length }}</div>
-                <div class="stat-label">类型数量</div>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
-    </div>
-
-    <el-card class="main-card">
-      <template #header>
-        <div class="card-header">
-          <div class="header-left">
-            <el-select v-model="filterType" placeholder="身份源类型" clearable style="width: 150px" @change="loadProviders">
-              <el-option v-for="(config, key) in PROVIDER_CONFIGS" :key="key" :label="config.name" :value="key" />
-            </el-select>
-            <el-select v-model="filterStatus" placeholder="状态" clearable style="width: 120px; margin-left: 10px" @change="loadProviders">
-              <el-option label="已启用" value="active" />
-              <el-option label="已禁用" value="inactive" />
-            </el-select>
-          </div>
-          <div class="header-right">
-            <el-button type="primary" @click="handleCreate">
-              <el-icon><Plus /></el-icon>
-              添加身份源
-            </el-button>
-          </div>
-        </div>
-      </template>
-
-      <el-table :data="providers" style="width: 100%" v-loading="loading">
-        <el-table-column prop="name" label="名称" width="200" />
-        <el-table-column label="类型" width="150">
-          <template #default="{ row }">
-            <div class="provider-type">
-              <el-icon :style="{ color: PROVIDER_CONFIGS[row.type as SocialProviderType]?.color }">
-                <component :is="PROVIDER_CONFIGS[row.type as SocialProviderType]?.icon || 'Connection'" />
-              </el-icon>
-              <span>{{ PROVIDER_CONFIGS[row.type as SocialProviderType]?.name || row.type }}</span>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column prop="clientId" label="Client ID" width="250" show-overflow-tooltip />
-        <el-table-column label="状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 'active' ? 'success' : 'danger'" size="small">
-              {{ row.status === 'active' ? '已启用' : '已禁用' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="Scope" width="200">
-          <template #default="{ row }">
-            <el-tag v-for="scope in row.scope.slice(0, 2)" :key="scope" size="small" style="margin-right: 4px">
-              {{ scope }}
-            </el-tag>
-            <el-tag v-if="row.scope.length > 2" size="small">+{{ row.scope.length - 2 }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="创建时间" width="180">
-          <template #default="{ row }">
-            {{ formatDate(row.createdAt) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="250" fixed="right">
-          <template #default="{ row }">
-            <el-button link type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
-            <el-button
-              link
-              :type="row.status === 'active' ? 'warning' : 'success'"
-              size="small"
-              @click="handleToggleStatus(row)"
-            >
-              {{ row.status === 'active' ? '禁用' : '启用' }}
-            </el-button>
-            <el-button link type="primary" size="small" @click="handleViewGuide(row)">配置指南</el-button>
-            <el-button link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
-
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="700px">
-      <el-form :model="providerForm" :rules="rules" ref="formRef" label-width="140px">
-        <el-form-item label="身份源名称" prop="name">
-          <el-input v-model="providerForm.name" placeholder="请输入身份源名称" />
-        </el-form-item>
-        <el-form-item label="身份源类型" prop="type">
-          <el-select v-model="providerForm.type" placeholder="请选择身份源类型" :disabled="isEdit" style="width: 100%" @change="handleTypeChange">
-            <el-option v-for="(config, key) in PROVIDER_CONFIGS" :key="key" :label="config.name" :value="key">
-              <div class="provider-option">
-                <el-icon :style="{ color: config.color }">
-                  <component :is="config.icon" />
-                </el-icon>
-                <span>{{ config.name }}</span>
-              </div>
-            </el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="Client ID" prop="clientId">
-          <el-input v-model="providerForm.clientId" placeholder="请输入Client ID" />
-        </el-form-item>
-        <el-form-item label="Client Secret" prop="clientSecret">
-          <el-input v-model="providerForm.clientSecret" type="password" placeholder="请输入Client Secret" show-password />
-        </el-form-item>
-        <el-form-item label="授权端点" prop="authorizationEndpoint">
-          <el-input v-model="providerForm.authorizationEndpoint" placeholder="OAuth授权端点URL" />
-        </el-form-item>
-        <el-form-item label="Token端点" prop="tokenEndpoint">
-          <el-input v-model="providerForm.tokenEndpoint" placeholder="OAuth Token端点URL" />
-        </el-form-item>
-        <el-form-item label="用户信息端点" prop="userInfoEndpoint">
-          <el-input v-model="providerForm.userInfoEndpoint" placeholder="用户信息端点URL" />
-        </el-form-item>
-        <el-form-item label="Scope" prop="scope">
-          <el-select v-model="providerForm.scope" multiple placeholder="请选择Scope" style="width: 100%">
-            <el-option v-for="scope in getAvailableScopes()" :key="scope" :label="scope" :value="scope" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="属性映射" prop="attributeMapping">
-          <el-input
-            v-model="attributeMappingStr"
-            type="textarea"
-            :rows="4"
-            placeholder="JSON格式的属性映射配置，例如：{&quot;username&quot;: &quot;login&quot;, &quot;email&quot;: &quot;email&quot;}"
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit" :loading="submitting">确定</el-button>
-      </template>
-    </el-dialog>
-
-    <el-dialog v-model="guideDialogVisible" title="配置指南" width="800px">
-      <div class="guide-content" v-if="currentProvider">
-        <el-alert type="info" :closable="false" style="margin-bottom: 20px">
-          <template #title>
-            <strong>{{ PROVIDER_CONFIGS[currentProvider.type]?.name }} 身份源配置指南</strong>
-          </template>
-        </el-alert>
-
-        <el-steps :active="1" direction="vertical">
-          <el-step title="创建应用">
-            <template #description>
-              <div class="step-content">
-                <p>1. 访问 {{ PROVIDER_CONFIGS[currentProvider.type]?.name }} 开放平台</p>
-                <p>2. 创建一个网站应用或移动应用</p>
-                <p>3. 获取应用的 Client ID 和 Client Secret</p>
-              </div>
-            </template>
-          </el-step>
-          <el-step title="配置回调地址">
-            <template #description>
-              <div class="step-content">
-                <p>在应用配置中添加以下回调地址：</p>
-                <el-input
-                  :model-value="`${baseUrl}/auth/callback/${currentProvider.type}`"
-                  readonly
-                  style="margin-top: 10px"
-                >
-                  <template #append>
-                    <el-button @click="copyCallbackUrl">复制</el-button>
-                  </template>
-                </el-input>
-              </div>
-            </template>
-          </el-step>
-          <el-step title="填写配置信息">
-            <template #description>
-              <div class="step-content">
-                <p>将获取到的 Client ID 和 Client Secret 填写到上方表单中</p>
-              </div>
-            </template>
-          </el-step>
-          <el-step title="测试连接">
-            <template #description>
-              <div class="step-content">
-                <p>保存配置后，点击"测试连接"按钮验证配置是否正确</p>
-              </div>
-            </template>
-          </el-step>
-        </el-steps>
-
-        <el-divider />
-
-        <div class="config-info">
-          <h4>当前配置信息</h4>
-          <el-descriptions :column="1" border>
-            <el-descriptions-item label="Client ID">{{ currentProvider.clientId }}</el-descriptions-item>
-            <el-descriptions-item label="授权端点">{{ currentProvider.authorizationEndpoint }}</el-descriptions-item>
-            <el-descriptions-item label="Token端点">{{ currentProvider.tokenEndpoint }}</el-descriptions-item>
-            <el-descriptions-item label="用户信息端点">{{ currentProvider.userInfoEndpoint }}</el-descriptions-item>
-            <el-descriptions-item label="Scope">{{ currentProvider.scope.join(', ') }}</el-descriptions-item>
-          </el-descriptions>
-        </div>
-      </div>
-    </el-dialog>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import {
-  Connection,
-  CircleCheck,
-  CircleClose,
-  Grid,
-  Plus,
-} from '@element-plus/icons-vue'
-import { socialIdentityProviderApi } from '../../api/socialIdentityProvider'
+import { toast } from 'vue-sonner'
+import { Link, CheckCircle, XCircle, Grid3X3, Plus, Search, RefreshCw } from '@lucide/vue'
+import { socialIdentityProviderApi } from '@/api/socialIdentityProvider'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Alert, AlertTitle } from '@/components/ui/alert'
+import { Separator } from '@/components/ui/separator'
 import type {
   SocialIdentityProvider,
   CreateSocialIdentityProviderDto,
   UpdateSocialIdentityProviderDto,
   SocialIdentityProviderStats,
   SocialProviderType,
-} from '../../types/socialIdentityProvider'
-import { PROVIDER_CONFIGS as PROVIDER_CONFIGS_CONST } from '../../types/socialIdentityProvider'
+} from '@/types/socialIdentityProvider'
+import { PROVIDER_CONFIGS as PROVIDER_CONFIGS_CONST } from '@/types/socialIdentityProvider'
 
 const PROVIDER_CONFIGS = PROVIDER_CONFIGS_CONST
 
@@ -280,11 +34,11 @@ const stats = ref<SocialIdentityProviderStats>({
 })
 const filterType = ref('')
 const filterStatus = ref('')
+const searchQuery = ref('')
 
 const dialogVisible = ref(false)
 const isEdit = ref(false)
 const submitting = ref(false)
-const formRef = ref()
 const providerForm = reactive<CreateSocialIdentityProviderDto & UpdateSocialIdentityProviderDto & { id?: string }>({
   name: '',
   type: 'github' as SocialProviderType,
@@ -308,16 +62,6 @@ const attributeMappingStr = computed({
   },
 })
 
-const rules = {
-  name: [{ required: true, message: '请输入身份源名称', trigger: 'blur' }],
-  type: [{ required: true, message: '请选择身份源类型', trigger: 'change' }],
-  clientId: [{ required: true, message: '请输入Client ID', trigger: 'blur' }],
-  clientSecret: [{ required: true, message: '请输入Client Secret', trigger: 'blur' }],
-  authorizationEndpoint: [{ required: true, message: '请输入授权端点', trigger: 'blur' }],
-  tokenEndpoint: [{ required: true, message: '请输入Token端点', trigger: 'blur' }],
-  userInfoEndpoint: [{ required: true, message: '请输入用户信息端点', trigger: 'blur' }],
-}
-
 const dialogTitle = computed(() => (isEdit.value ? '编辑身份源' : '添加身份源'))
 
 const guideDialogVisible = ref(false)
@@ -333,23 +77,35 @@ const loadStats = async () => {
   }
 }
 
+const handleSearch = () => {
+  loadProviders()
+}
+
+const handleReset = () => {
+  filterType.value = ''
+  filterStatus.value = ''
+  searchQuery.value = ''
+  loadProviders()
+}
+
 const loadProviders = async () => {
   loading.value = true
   try {
     const data = await socialIdentityProviderApi.getList({
-      type: filterType.value,
-      status: filterStatus.value,
+      type: filterType.value || undefined,
+      status: filterStatus.value || undefined,
+      search: searchQuery.value || undefined,
     })
     providers.value = data
   } catch (error) {
-    ElMessage.error('加载身份源列表失败')
+    toast.error('加载身份源列表失败')
   } finally {
     loading.value = false
   }
 }
 
 const handleTypeChange = (type: SocialProviderType) => {
-  const configs: Record<SocialProviderType, any> = {
+  const configs: Record<SocialProviderType, { authorizationEndpoint: string; tokenEndpoint: string; userInfoEndpoint: string; scope: string[] }> = {
     wechat: {
       authorizationEndpoint: 'https://open.weixin.qq.com/connect/qrconnect',
       tokenEndpoint: 'https://api.weixin.qq.com/sns/oauth2/access_token',
@@ -459,78 +215,67 @@ const handleEdit = (row: SocialIdentityProvider) => {
 }
 
 const handleSubmit = async () => {
-  if (!formRef.value) return
-
-  await formRef.value.validate(async (valid: boolean) => {
-    if (!valid) return
-
-    submitting.value = true
-    try {
-      if (isEdit.value) {
-        await socialIdentityProviderApi.update(providerForm.id!, {
-          name: providerForm.name,
-          clientId: providerForm.clientId,
-          clientSecret: providerForm.clientSecret,
-          authorizationEndpoint: providerForm.authorizationEndpoint,
-          tokenEndpoint: providerForm.tokenEndpoint,
-          userInfoEndpoint: providerForm.userInfoEndpoint,
-          scope: providerForm.scope,
-          attributeMapping: providerForm.attributeMapping,
-        })
-        ElMessage.success('更新成功')
-      } else {
-        await socialIdentityProviderApi.create({
-          name: providerForm.name,
-          type: providerForm.type,
-          clientId: providerForm.clientId,
-          clientSecret: providerForm.clientSecret,
-          authorizationEndpoint: providerForm.authorizationEndpoint,
-          tokenEndpoint: providerForm.tokenEndpoint,
-          userInfoEndpoint: providerForm.userInfoEndpoint,
-          scope: providerForm.scope,
-          attributeMapping: providerForm.attributeMapping,
-        })
-        ElMessage.success('创建成功')
-      }
-      dialogVisible.value = false
-      loadProviders()
-      loadStats()
-    } catch (error: any) {
-      ElMessage.error(error.response?.data?.error || '操作失败')
-    } finally {
-      submitting.value = false
+  submitting.value = true
+  try {
+    if (isEdit.value) {
+      await socialIdentityProviderApi.update(providerForm.id!, {
+        name: providerForm.name,
+        clientId: providerForm.clientId,
+        clientSecret: providerForm.clientSecret,
+        authorizationEndpoint: providerForm.authorizationEndpoint,
+        tokenEndpoint: providerForm.tokenEndpoint,
+        userInfoEndpoint: providerForm.userInfoEndpoint,
+        scope: providerForm.scope,
+        attributeMapping: providerForm.attributeMapping,
+      })
+      toast.success('更新成功')
+    } else {
+      await socialIdentityProviderApi.create({
+        name: providerForm.name,
+        type: providerForm.type,
+        clientId: providerForm.clientId,
+        clientSecret: providerForm.clientSecret,
+        authorizationEndpoint: providerForm.authorizationEndpoint,
+        tokenEndpoint: providerForm.tokenEndpoint,
+        userInfoEndpoint: providerForm.userInfoEndpoint,
+        scope: providerForm.scope,
+        attributeMapping: providerForm.attributeMapping,
+      })
+      toast.success('创建成功')
     }
-  })
+    dialogVisible.value = false
+    loadProviders()
+    loadStats()
+  } catch (error: any) {
+    toast.error(error.response?.data?.error || '操作失败')
+  } finally {
+    submitting.value = false
+  }
 }
 
 const handleToggleStatus = async (row: SocialIdentityProvider) => {
   try {
     const newStatus = row.status === 'active' ? 'inactive' : 'active'
     await socialIdentityProviderApi.update(row.id, { status: newStatus })
-    ElMessage.success('状态更新成功')
+    toast.success('状态更新成功')
     loadProviders()
     loadStats()
   } catch (error: any) {
-    ElMessage.error(error.response?.data?.error || '状态更新失败')
+    toast.error(error.response?.data?.error || '状态更新失败')
   }
 }
 
 const handleDelete = async (row: SocialIdentityProvider) => {
-  try {
-    await ElMessageBox.confirm('确定要删除该身份源吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning',
-    })
+  const confirmed = window.confirm('确定要删除该身份源吗？')
+  if (!confirmed) return
 
+  try {
     await socialIdentityProviderApi.delete(row.id)
-    ElMessage.success('删除成功')
+    toast.success('删除成功')
     loadProviders()
     loadStats()
   } catch (error: any) {
-    if (error !== 'cancel') {
-      ElMessage.error(error.response?.data?.error || '删除失败')
-    }
+    toast.error(error.response?.data?.error || '删除失败')
   }
 }
 
@@ -543,12 +288,22 @@ const copyCallbackUrl = () => {
   if (currentProvider.value) {
     const url = `${baseUrl.value}/auth/callback/${currentProvider.value.type}`
     navigator.clipboard.writeText(url)
-    ElMessage.success('回调地址已复制到剪贴板')
+    toast.success('回调地址已复制到剪贴板')
   }
 }
 
 const formatDate = (date: string) => {
   return new Date(date).toLocaleString('zh-CN')
+}
+
+const toggleScope = (scope: string) => {
+  const arr = providerForm.scope!
+  const index = arr.indexOf(scope)
+  if (index > -1) {
+    arr.splice(index, 1)
+  } else {
+    arr.push(scope)
+  }
 }
 
 onMounted(() => {
@@ -557,115 +312,338 @@ onMounted(() => {
 })
 </script>
 
-<style scoped>
-.social-identity-provider-management {
-  padding: 20px;
-}
+<template>
+  <div class="p-5">
+    <div class="grid grid-cols-4 gap-5 mb-5">
+      <Card>
+        <CardContent class="pt-6">
+          <div class="flex items-center gap-4">
+            <div class="w-14 h-14 rounded-lg flex items-center justify-center text-white text-xl bg-gradient-to-br from-indigo-500 to-purple-600">
+              <Link class="w-7 h-7" />
+            </div>
+            <div>
+              <div class="text-2xl font-bold">{{ stats.totalProviders }}</div>
+              <div class="text-sm text-muted-foreground">总身份源</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent class="pt-6">
+          <div class="flex items-center gap-4">
+            <div class="w-14 h-14 rounded-lg flex items-center justify-center text-white text-xl bg-gradient-to-br from-emerald-400 to-teal-400">
+              <CheckCircle class="w-7 h-7" />
+            </div>
+            <div>
+              <div class="text-2xl font-bold">{{ stats.activeProviders }}</div>
+              <div class="text-sm text-muted-foreground">已启用</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent class="pt-6">
+          <div class="flex items-center gap-4">
+            <div class="w-14 h-14 rounded-lg flex items-center justify-center text-white text-xl bg-gradient-to-br from-pink-400 to-rose-500">
+              <XCircle class="w-7 h-7" />
+            </div>
+            <div>
+              <div class="text-2xl font-bold">{{ stats.inactiveProviders }}</div>
+              <div class="text-sm text-muted-foreground">已禁用</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent class="pt-6">
+          <div class="flex items-center gap-4">
+            <div class="w-14 h-14 rounded-lg flex items-center justify-center text-white text-xl bg-gradient-to-br from-blue-400 to-cyan-400">
+              <Grid3X3 class="w-7 h-7" />
+            </div>
+            <div>
+              <div class="text-2xl font-bold">{{ Object.keys(stats.byType).length }}</div>
+              <div class="text-sm text-muted-foreground">类型数量</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
 
-.stats-cards {
-  margin-bottom: 20px;
-}
+    <Card>
+      <CardHeader>
+        <div class="flex justify-between items-center">
+          <div class="flex items-center gap-3">
+            <Input
+              v-model="searchQuery"
+              placeholder="搜索身份源名称"
+              class="w-52"
+            >
+              <template #prefix>
+                <Search class="w-4 h-4 text-muted-foreground" />
+              </template>
+            </Input>
+            <Select v-model="filterType" @update:model-value="loadProviders">
+              <SelectTrigger class="w-36">
+                <SelectValue placeholder="身份源类型" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="(config, key) in PROVIDER_CONFIGS" :key="key" :value="key">
+                  {{ config.name }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <Select v-model="filterStatus" @update:model-value="loadProviders">
+              <SelectTrigger class="w-28">
+                <SelectValue placeholder="状态" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">已启用</SelectItem>
+                <SelectItem value="inactive">已禁用</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button @click="handleSearch">
+              <Search class="w-4 h-4 mr-2" />
+              搜索
+            </Button>
+            <Button variant="outline" @click="handleReset">
+              <RefreshCw class="w-4 h-4 mr-2" />
+              重置
+            </Button>
+          </div>
+          <Button @click="handleCreate">
+            <Plus class="w-4 h-4 mr-2" />
+            添加身份源
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead class="w-48">名称</TableHead>
+              <TableHead class="w-36">类型</TableHead>
+              <TableHead class="w-64">Client ID</TableHead>
+              <TableHead class="w-24">状态</TableHead>
+              <TableHead class="w-48">Scope</TableHead>
+              <TableHead class="w-40">创建时间</TableHead>
+              <TableHead class="w-60">操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow v-for="row in providers" :key="row.id">
+              <TableCell>{{ row.name }}</TableCell>
+              <TableCell>
+                <div class="flex items-center gap-2">
+                  <Link :style="{ color: PROVIDER_CONFIGS[row.type as SocialProviderType]?.color }" class="w-4 h-4" />
+                  <span>{{ PROVIDER_CONFIGS[row.type as SocialProviderType]?.name || row.type }}</span>
+                </div>
+              </TableCell>
+              <TableCell>{{ row.clientId }}</TableCell>
+              <TableCell>
+                <Badge :variant="row.status === 'active' ? 'default' : 'destructive'">
+                  {{ row.status === 'active' ? '已启用' : '已禁用' }}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                <div class="flex flex-wrap gap-1">
+                  <Badge v-for="scope in row.scope.slice(0, 2)" :key="scope" variant="secondary" class="text-xs">
+                    {{ scope }}
+                  </Badge>
+                  <Badge v-if="row.scope.length > 2" variant="outline" class="text-xs">
+                    +{{ row.scope.length - 2 }}
+                  </Badge>
+                </div>
+              </TableCell>
+              <TableCell>{{ formatDate(row.createdAt) }}</TableCell>
+              <TableCell>
+                <div class="flex gap-1 flex-wrap">
+                  <Button variant="link" size="sm" class="h-auto p-0" @click="handleEdit(row)">编辑</Button>
+                  <Button 
+                    variant="link" 
+                    size="sm" 
+                    class="h-auto p-0"
+                    @click="handleToggleStatus(row)"
+                  >
+                    {{ row.status === 'active' ? '禁用' : '启用' }}
+                  </Button>
+                  <Button variant="link" size="sm" class="h-auto p-0" @click="handleViewGuide(row)">配置指南</Button>
+                  <Button variant="link" size="sm" class="h-auto p-0 text-destructive" @click="handleDelete(row)">删除</Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
 
-.stat-card {
-  display: flex;
-  align-items: center;
-}
+    <Dialog v-model:open="dialogVisible">
+      <DialogContent class="max-w-xl">
+        <DialogHeader>
+          <DialogTitle>{{ dialogTitle }}</DialogTitle>
+        </DialogHeader>
+        <form>
+          <div class="grid gap-4 py-4">
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">身份源名称</label>
+              <Input v-model="providerForm.name" placeholder="请输入身份源名称" />
+            </div>
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">身份源类型</label>
+              <Select v-model="providerForm.type" :disabled="isEdit" @update:model-value="handleTypeChange($event as SocialProviderType)">
+                <SelectTrigger>
+                  <SelectValue placeholder="请选择身份源类型" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem v-for="(config, key) in PROVIDER_CONFIGS" :key="key" :value="key">
+                    <div class="flex items-center gap-2">
+                      <Link :style="{ color: config.color }" class="w-4 h-4" />
+                      <span>{{ config.name }}</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">Client ID</label>
+              <Input v-model="providerForm.clientId" placeholder="请输入Client ID" />
+            </div>
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">Client Secret</label>
+              <Input v-model="providerForm.clientSecret" type="password" placeholder="请输入Client Secret" />
+            </div>
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">授权端点</label>
+              <Input v-model="providerForm.authorizationEndpoint" placeholder="OAuth授权端点URL" />
+            </div>
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">Token端点</label>
+              <Input v-model="providerForm.tokenEndpoint" placeholder="OAuth Token端点URL" />
+            </div>
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">用户信息端点</label>
+              <Input v-model="providerForm.userInfoEndpoint" placeholder="用户信息端点URL" />
+            </div>
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">Scope</label>
+              <div class="flex flex-wrap gap-2">
+                <Badge
+                  v-for="scope in getAvailableScopes()"
+                  :key="scope"
+                  :variant="providerForm.scope!.includes(scope) ? 'default' : 'outline'"
+                  class="cursor-pointer"
+                  @click="toggleScope(scope)"
+                >
+                  {{ scope }}
+                </Badge>
+              </div>
+            </div>
+            <div class="grid gap-2">
+              <label class="text-sm font-medium">属性映射</label>
+              <Textarea
+                v-model="attributeMappingStr"
+                :rows="4"
+                placeholder='JSON格式的属性映射配置，例如：{"username": "login", "email": "email"}'
+              />
+            </div>
+          </div>
+        </form>
+        <DialogFooter>
+          <Button variant="outline" @click="dialogVisible = false">取消</Button>
+          <Button @click="handleSubmit" :disabled="submitting">确定</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
-.stat-icon {
-  width: 60px;
-  height: 60px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 28px;
-  color: white;
-  margin-right: 15px;
-}
+    <Dialog v-model:open="guideDialogVisible">
+      <DialogContent class="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>配置指南</DialogTitle>
+        </DialogHeader>
+        <div class="py-5" v-if="currentProvider">
+          <Alert class="mb-5">
+            <AlertTitle class="font-semibold">
+              {{ PROVIDER_CONFIGS[currentProvider.type]?.name }} 身份源配置指南
+            </AlertTitle>
+          </Alert>
 
-.stat-icon.total {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
+          <div class="flex flex-col gap-4">
+            <div class="border rounded-lg p-4">
+              <div class="flex items-center gap-2 mb-2">
+                <Badge variant="default">步骤 1</Badge>
+                <span class="font-semibold">创建应用</span>
+              </div>
+              <div class="text-sm space-y-1">
+                <p>1. 访问 {{ PROVIDER_CONFIGS[currentProvider.type]?.name }} 开放平台</p>
+                <p>2. 创建一个网站应用或移动应用</p>
+                <p>3. 获取应用的 Client ID 和 Client Secret</p>
+              </div>
+            </div>
+            <div class="border rounded-lg p-4">
+              <div class="flex items-center gap-2 mb-2">
+                <Badge variant="default">步骤 2</Badge>
+                <span class="font-semibold">配置回调地址</span>
+              </div>
+              <div class="text-sm space-y-1">
+                <p>在应用配置中添加以下回调地址：</p>
+                <div class="flex gap-2 mt-2">
+                  <Input
+                    :model-value="`${baseUrl}/auth/callback/${currentProvider.type}`"
+                    readonly
+                    class="flex-1"
+                  />
+                  <Button @click="copyCallbackUrl">复制</Button>
+                </div>
+              </div>
+            </div>
+            <div class="border rounded-lg p-4">
+              <div class="flex items-center gap-2 mb-2">
+                <Badge variant="default">步骤 3</Badge>
+                <span class="font-semibold">填写配置信息</span>
+              </div>
+              <div class="text-sm space-y-1">
+                <p>将获取到的 Client ID 和 Client Secret 填写到上方表单中</p>
+              </div>
+            </div>
+            <div class="border rounded-lg p-4">
+              <div class="flex items-center gap-2 mb-2">
+                <Badge variant="default">步骤 4</Badge>
+                <span class="font-semibold">测试连接</span>
+              </div>
+              <div class="text-sm space-y-1">
+                <p>保存配置后，点击"测试连接"按钮验证配置是否正确</p>
+              </div>
+            </div>
+          </div>
 
-.stat-icon.active {
-  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-}
+          <Separator class="my-4" />
 
-.stat-icon.inactive {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-}
-
-.stat-icon.types {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-}
-
-.stat-content {
-  flex: 1;
-}
-
-.stat-value {
-  font-size: 24px;
-  font-weight: bold;
-  color: #303133;
-}
-
-.stat-label {
-  font-size: 14px;
-  color: #909399;
-  margin-top: 5px;
-}
-
-.main-card {
-  margin-top: 20px;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-}
-
-.provider-type {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.provider-option {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.guide-content {
-  padding: 20px 0;
-}
-
-.step-content {
-  padding: 10px 0;
-}
-
-.step-content p {
-  margin: 8px 0;
-  line-height: 1.6;
-}
-
-.config-info {
-  margin-top: 20px;
-}
-
-.config-info h4 {
-  margin-bottom: 15px;
-  color: #303133;
-}
-</style>
+          <div class="mt-4">
+            <h4 class="font-semibold mb-3">当前配置信息</h4>
+            <div class="grid gap-2 text-sm">
+              <div class="flex gap-4">
+                <span class="text-muted-foreground w-28">Client ID:</span>
+                <span>{{ currentProvider.clientId }}</span>
+              </div>
+              <div class="flex gap-4">
+                <span class="text-muted-foreground w-28">授权端点:</span>
+                <span>{{ currentProvider.authorizationEndpoint }}</span>
+              </div>
+              <div class="flex gap-4">
+                <span class="text-muted-foreground w-28">Token端点:</span>
+                <span>{{ currentProvider.tokenEndpoint }}</span>
+              </div>
+              <div class="flex gap-4">
+                <span class="text-muted-foreground w-28">用户信息端点:</span>
+                <span>{{ currentProvider.userInfoEndpoint }}</span>
+              </div>
+              <div class="flex gap-4">
+                <span class="text-muted-foreground w-28">Scope:</span>
+                <span>{{ currentProvider.scope.join(', ') }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  </div>
+</template>

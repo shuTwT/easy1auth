@@ -1,6 +1,6 @@
 import { shallowRef, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { toast } from 'vue-sonner'
 import { authApi } from '@/api/auth'
 import { useUserStore } from '@/stores/user'
 import type {
@@ -38,11 +38,11 @@ export function useAuth() {
           userStore.setCurrentTenant(currentTenant)
         }
       }
-      ElMessage.success('登录成功')
+      toast.success('登录成功')
       await router.push('/dashboard')
       return response
     } catch (error: any) {
-      ElMessage.error(error.response?.data?.message || '登录失败')
+      toast.error(error.response?.data?.message || '登录失败')
       throw error
     } finally {
       loading.value = false
@@ -55,11 +55,11 @@ export function useAuth() {
     sendingCode.value = true
     try {
       const response = await authApi.sendCode(data)
-      ElMessage.success(response.message || '验证码已发送')
+      toast.success(response.message || '验证码已发送')
       startCountdown(60)
       return response
     } catch (error: any) {
-      ElMessage.error(error.response?.data?.message || '发送验证码失败')
+      toast.error(error.response?.data?.message || '发送验证码失败')
       throw error
     } finally {
       sendingCode.value = false
@@ -95,11 +95,11 @@ export function useAuth() {
           userStore.setCurrentTenant(currentTenant)
         }
       }
-      ElMessage.success('注册成功')
+      toast.success('注册成功')
       await router.push('/dashboard')
       return response
     } catch (error: any) {
-      ElMessage.error(error.response?.data?.message || '注册失败')
+      toast.error(error.response?.data?.message || '注册失败')
       throw error
     } finally {
       loading.value = false
@@ -147,14 +147,14 @@ export function useAuth() {
       const loginResponse = await authApi.passkeyLoginFinish(finishData)
       userStore.setToken(loginResponse.token)
       userStore.setUserInfo(loginResponse.user)
-      ElMessage.success('登录成功')
+      toast.success('登录成功')
       await router.push('/dashboard')
       return loginResponse
     } catch (error: any) {
       if (error.name === 'NotAllowedError') {
-        ElMessage.error('用户取消或认证超时')
+        toast.error('用户取消或认证超时')
       } else {
-        ElMessage.error(error.response?.data?.message || 'Passkey 登录失败')
+        toast.error(error.response?.data?.message || 'Passkey 登录失败')
       }
       throw error
     } finally {
@@ -168,7 +168,7 @@ export function useAuth() {
       const { url } = await authApi.getSocialLoginUrl(provider)
       window.location.href = url
     } catch (error: any) {
-      ElMessage.error(error.response?.data?.message || '获取授权链接失败')
+      toast.error(error.response?.data?.message || '获取授权链接失败')
       throw error
     } finally {
       loading.value = false
@@ -183,15 +183,15 @@ export function useAuth() {
       userStore.setUserInfo(response.user)
       
       if (response.isNewUser) {
-        ElMessage.success('注册成功，欢迎使用')
+        toast.success('注册成功，欢迎使用')
       } else {
-        ElMessage.success('登录成功')
+        toast.success('登录成功')
       }
       
       await router.push('/dashboard')
       return response
     } catch (error: any) {
-      ElMessage.error(error.response?.data?.message || '第三方登录失败')
+      toast.error(error.response?.data?.message || '第三方登录失败')
       throw error
     } finally {
       loading.value = false

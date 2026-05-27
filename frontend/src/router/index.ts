@@ -81,6 +81,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '安全设置', requiresAuth: true }
       },
       {
+        path: 'permission',
+        name: 'Permission',
+        component: () => import('@/views/permission/index.vue'),
+        meta: { title: '权限管理', requiresAuth: true }
+      },
+      {
         path: 'personalization',
         name: 'Personalization',
         component: () => import('@/views/personalization/index.vue'),

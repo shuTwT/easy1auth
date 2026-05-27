@@ -1,6 +1,6 @@
 import axios from 'axios'
 import type { AxiosInstance, AxiosResponse } from 'axios'
-import { ElMessage } from 'element-plus'
+import { toast } from 'vue-sonner'
 import { useUserStore } from '@/stores/user'
 
 const request: AxiosInstance = axios.create({
@@ -41,7 +41,7 @@ request.interceptors.response.use(
       switch (response.status) {
         case 401:
           if (window.location.pathname !== '/login') {
-            ElMessage.error('登录已过期，请重新登录')
+            toast.error('登录已过期，请重新登录')
             localStorage.removeItem('token')
             localStorage.removeItem('currentTenantId')
             const userStore = useUserStore()
@@ -50,19 +50,19 @@ request.interceptors.response.use(
           }
           break
         case 403:
-          ElMessage.error('没有权限访问')
+          toast.error('没有权限访问')
           break
         case 404:
-          ElMessage.error('请求资源不存在')
+          toast.error('请求资源不存在')
           break
         case 500:
-          ElMessage.error('服务器错误')
+          toast.error('服务器错误')
           break
         default:
-          ElMessage.error(response.data?.message || '请求失败')
+          toast.error(response.data?.message || '请求失败')
       }
     } else {
-      ElMessage.error('网络连接失败')
+      toast.error('网络连接失败')
     }
     return Promise.reject(error)
   }
