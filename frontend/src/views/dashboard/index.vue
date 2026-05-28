@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
@@ -64,6 +65,20 @@ const quickActions = [
   { title: '角色管理', icon: Library, route: '/role', color: 'warning' },
   { title: '审计日志', icon: FileText, route: '/audit', color: 'info' }
 ]
+
+const announcements = [
+  { title: '系统升级通知', desc: '系统将于本周六凌晨进行升级维护', time: '2024-01-15' },
+  { title: '新功能上线', desc: '支持微信、QQ等社会化登录', time: '2024-01-10' },
+  { title: '安全提醒', desc: '请定期更新密码，确保账号安全', time: '2024-01-05' }
+]
+
+const systemInfo = {
+  version: 'v1.0.0',
+  uptime: '30 天',
+  cpuUsage: 45,
+  memoryUsage: 68,
+  diskUsage: 32
+}
 
 const fetchDashboardData = async () => {
   error.value = null
@@ -128,8 +143,8 @@ onMounted(() => {
               <div class="stat-title">{{ stat.title }}</div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -235,6 +250,63 @@ onMounted(() => {
                   <component :is="action.icon" class="w-6 h-6" />
                 </div>
                 <span class="action-title">{{ action.title }}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>系统公告</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div class="announcement-list">
+              <div v-for="item in announcements" :key="item.title" class="announcement-item">
+                <div class="announcement-dot"></div>
+                <div class="announcement-content">
+                  <div class="announcement-title">{{ item.title }}</div>
+                  <div class="announcement-desc">{{ item.desc }}</div>
+                  <div class="announcement-time">{{ item.time }}</div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>系统信息</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div class="system-info">
+              <div class="info-item">
+                <span class="info-label">系统版本</span>
+                <span class="info-value">{{ systemInfo.version }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">运行时间</span>
+                <span class="info-value">{{ systemInfo.uptime }}</span>
+              </div>
+              <div class="info-item">
+                <div class="flex justify-between mb-2">
+                  <span class="info-label">CPU使用率</span>
+                  <span class="info-value">{{ systemInfo.cpuUsage }}%</span>
+                </div>
+                <Progress :model-value="systemInfo.cpuUsage" class="h-1.5" />
+              </div>
+              <div class="info-item">
+                <div class="flex justify-between mb-2">
+                  <span class="info-label">内存使用率</span>
+                  <span class="info-value">{{ systemInfo.memoryUsage }}%</span>
+                </div>
+                <Progress :model-value="systemInfo.memoryUsage" class="h-1.5" />
+              </div>
+              <div class="info-item">
+                <div class="flex justify-between mb-2">
+                  <span class="info-label">磁盘使用率</span>
+                  <span class="info-value">{{ systemInfo.diskUsage }}%</span>
+                </div>
+                <Progress :model-value="systemInfo.diskUsage" class="h-1.5" />
               </div>
             </div>
           </CardContent>
@@ -376,5 +448,49 @@ onMounted(() => {
 
 .error-banner {
   @apply p-4 rounded-lg text-sm;
+}
+
+.announcement-list {
+  @apply flex flex-col gap-4;
+}
+
+.announcement-item {
+  @apply flex gap-3 pb-4 border-b last:pb-0 last:border-b-0;
+}
+
+.announcement-dot {
+  @apply w-2 h-2 rounded-full bg-primary mt-1.5 shrink-0;
+}
+
+.announcement-content {
+  @apply flex-1;
+}
+
+.announcement-title {
+  @apply text-sm font-medium mb-1;
+}
+
+.announcement-desc {
+  @apply text-xs text-muted-foreground mb-1;
+}
+
+.announcement-time {
+  @apply text-xs text-muted-foreground/60;
+}
+
+.system-info {
+  @apply flex flex-col gap-4;
+}
+
+.info-item {
+  @apply flex flex-col gap-2;
+}
+
+.info-label {
+  @apply text-sm text-muted-foreground;
+}
+
+.info-value {
+  @apply text-sm font-medium;
 }
 </style>

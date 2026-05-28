@@ -249,18 +249,18 @@ onMounted(() => {
             <div class="p-5">
               <h4 class="text-base font-semibold mb-2">1. 获取授权码</h4>
               <p class="text-sm text-muted-foreground mb-2">将用户重定向到授权端点：</p>
-              <pre class="bg-muted p-3 rounded-md text-sm overflow-x-auto font-mono">{{ baseUrl }}/oauth2/authorize?client_id=YOUR_CLIENT_ID&redirect_uri=YOUR_REDIRECT_URI&response_type=code&scope=openid profile email&state=RANDOM_STATE</pre>
+              <pre class="bg-muted p-3 rounded-md text-sm overflow-x-auto font-mono whitespace-pre-wrap break-all">{{ baseUrl }}/oauth2/authorize?client_id=YOUR_CLIENT_ID&redirect_uri=YOUR_REDIRECT_URI&response_type=code&scope=openid profile email&state=RANDOM_STATE</pre>
               
               <h4 class="text-base font-semibold mt-5 mb-2">2. 使用授权码换取 Token</h4>
               <p class="text-sm text-muted-foreground mb-2">向 Token 端点发送 POST 请求：</p>
-              <pre class="bg-muted p-3 rounded-md text-sm overflow-x-auto font-mono">POST {{ baseUrl }}/oauth2/token
+              <pre class="bg-muted p-3 rounded-md text-sm overflow-x-auto font-mono whitespace-pre-wrap break-all">POST {{ baseUrl }}/oauth2/token
 Content-Type: application/x-www-form-urlencoded
 
 grant_type=authorization_code&code=AUTHORIZATION_CODE&redirect_uri=YOUR_REDIRECT_URI&client_id=YOUR_CLIENT_ID&client_secret=YOUR_CLIENT_SECRET</pre>
               
               <h4 class="text-base font-semibold mt-5 mb-2">3. 获取用户信息</h4>
               <p class="text-sm text-muted-foreground mb-2">使用 Access Token 获取用户信息：</p>
-              <pre class="bg-muted p-3 rounded-md text-sm overflow-x-auto font-mono">GET {{ baseUrl }}/oauth2/userinfo
+              <pre class="bg-muted p-3 rounded-md text-sm overflow-x-auto font-mono whitespace-pre-wrap break-all">GET {{ baseUrl }}/oauth2/userinfo
 Authorization: Bearer ACCESS_TOKEN</pre>
             </div>
           </TabsContent>
@@ -272,10 +272,10 @@ Authorization: Bearer ACCESS_TOKEN</pre>
               <p class="text-sm text-muted-foreground mb-2">Code Challenge: BASE64URL(SHA256(code_verifier))</p>
               
               <h4 class="text-base font-semibold mt-5 mb-2">2. 授权请求</h4>
-              <pre class="bg-muted p-3 rounded-md text-sm overflow-x-auto font-mono">{{ baseUrl }}/oauth2/authorize?client_id=YOUR_CLIENT_ID&redirect_uri=YOUR_REDIRECT_URI&response_type=code&scope=openid profile email&state=RANDOM_STATE&code_challenge=CODE_CHALLENGE&code_challenge_method=S256</pre>
+              <pre class="bg-muted p-3 rounded-md text-sm overflow-x-auto font-mono whitespace-pre-wrap break-all">{{ baseUrl }}/oauth2/authorize?client_id=YOUR_CLIENT_ID&redirect_uri=YOUR_REDIRECT_URI&response_type=code&scope=openid profile email&state=RANDOM_STATE&code_challenge=CODE_CHALLENGE&code_challenge_method=S256</pre>
               
               <h4 class="text-base font-semibold mt-5 mb-2">3. Token 请求</h4>
-              <pre class="bg-muted p-3 rounded-md text-sm overflow-x-auto font-mono">POST {{ baseUrl }}/oauth2/token
+              <pre class="bg-muted p-3 rounded-md text-sm overflow-x-auto font-mono whitespace-pre-wrap break-all">POST {{ baseUrl }}/oauth2/token
 Content-Type: application/x-www-form-urlencoded
 
 grant_type=authorization_code&code=AUTHORIZATION_CODE&redirect_uri=YOUR_REDIRECT_URI&client_id=YOUR_CLIENT_ID&code_verifier=CODE_VERIFIER</pre>
@@ -285,7 +285,7 @@ grant_type=authorization_code&code=AUTHORIZATION_CODE&redirect_uri=YOUR_REDIRECT
           <TabsContent value="client">
             <div class="p-5">
               <h4 class="text-base font-semibold mb-2">适用于机器对机器通信</h4>
-              <pre class="bg-muted p-3 rounded-md text-sm overflow-x-auto font-mono">POST {{ baseUrl }}/oauth2/token
+              <pre class="bg-muted p-3 rounded-md text-sm overflow-x-auto font-mono whitespace-pre-wrap break-all">POST {{ baseUrl }}/oauth2/token
 Content-Type: application/x-www-form-urlencoded
 
 grant_type=client_credentials&client_id=YOUR_CLIENT_ID&client_secret=YOUR_CLIENT_SECRET&scope=read write</pre>
