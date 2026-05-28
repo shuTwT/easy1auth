@@ -57,12 +57,14 @@ router.get('/', async (req: Request, res: Response) => {
       throw new AppError('缺少租户信息', 400)
     }
 
-    const { search, type } = req.query
-    const roles = await roleService.findAll(tenantId, {
+    const { search, type, page, pageSize } = req.query
+    const result = await roleService.findAll(tenantId, {
       search: search as string,
       type: type as string,
+      page: page ? Number(page) : undefined,
+      pageSize: pageSize ? Number(pageSize) : undefined,
     })
-    res.json(roles)
+    res.json(result)
   } catch (error) {
     if (error instanceof AppError) {
       res.status(error.statusCode).json({ error: error.message })

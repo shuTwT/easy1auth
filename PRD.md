@@ -835,7 +835,7 @@ interface AuditLog {
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                      前端层                              │
-│  Vue 3 + Element Plus + TypeScript + Vite              │
+│  Vue 3 + shadcn-vue + TypeScript + Vite + Tailwind CSS 4│
 └─────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────┐
@@ -863,7 +863,7 @@ interface AuditLog {
 
 #### 4.2.1 前端技术栈
 - **框架**: Vue 3 (Composition API)
-- **UI组件库**: Element Plus
+- **UI组件库**: shadcn-vue + Reka-UI + Tailwind CSS 4
 - **状态管理**: Pinia
 - **路由**: Vue Router 4
 - **HTTP客户端**: Axios
@@ -1063,3 +1063,4 @@ interface AuditLog {
 |------|------|----------|------|
 | v1.0 | 2026-03-04 | 初始版本 | - |
 | v1.1 | 2026-03-04 | 数据库从 PostgreSQL 改为 SQLite | - |
+| v1.2 | 2026-05-28 | UI 组件库从 Element Plus 更换为 shadcn-vue + Reka-UI + Tailwind CSS 4 | - |

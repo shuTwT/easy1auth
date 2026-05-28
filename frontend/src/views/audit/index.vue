@@ -352,6 +352,9 @@ onMounted(() => {
             <TableRow v-if="loading">
               <TableCell colspan="9" class="text-center text-muted-foreground">加载中...</TableCell>
             </TableRow>
+            <TableRow v-else-if="logs.length === 0">
+              <TableCell colspan="9" class="text-center py-8 text-muted-foreground">暂无数据</TableCell>
+            </TableRow>
             <TableRow v-for="item in logs" :key="item.id">
               <TableCell>{{ formatDate(item.createdAt) }}</TableCell>
               <TableCell>{{ item.username || '-' }}</TableCell>

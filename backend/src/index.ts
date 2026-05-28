@@ -21,6 +21,7 @@ import customDomainRoutes from './routes/customDomain.routes'
 import messageTemplateRoutes from './routes/messageTemplate.routes'
 import loginStyleRoutes from './routes/loginStyle.routes'
 import permissionRoutes from './routes/permission.routes'
+import dashboardRoutes from './routes/dashboard.routes'
 
 dotenv.config()
 
@@ -53,6 +54,7 @@ app.use('/api/custom-domains', customDomainRoutes)
 app.use('/api/message-templates', messageTemplateRoutes)
 app.use('/api/login-style', loginStyleRoutes)
 app.use('/api/permissions', permissionRoutes)
+app.use('/api/dashboard', dashboardRoutes)
 
 app.use(auditMiddleware())
 

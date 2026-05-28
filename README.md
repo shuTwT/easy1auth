@@ -58,9 +58,8 @@ Easy1Auth 是一个功能完整的企业级统一身份管理平台,提供集中
 ### 环境要求
 
 - Node.js >= 18.0.0
-- PostgreSQL >= 13.0
-- Redis >= 6.0
-- npm 或 yarn
+- SQLite（开发环境默认）
+- pnpm
 
 ### 安装步骤
 
@@ -76,34 +75,28 @@ cd easy1auth
 ```bash
 # 安装前端依赖
 cd frontend
-npm install
+pnpm install
 
 # 安装后端依赖
 cd ../backend
-npm install
+pnpm install
 ```
 
 #### 3. 配置数据库
 
-创建PostgreSQL数据库:
-
-```sql
-CREATE DATABASE easy1auth;
-```
-
-配置环境变量:
-
-```bash
-# 后端配置
-cd backend
-cp .env.example .env
-# 编辑 .env 文件,配置数据库连接信息
-```
+项目使用 SQLite 作为开发数据库，无需额外安装数据库服务。数据库文件位于 `backend/data/dev.db`。
 
 执行数据库迁移:
 
 ```bash
-npm run prisma:migrate
+cd backend
+pnpm db:migrate
+```
+
+初始化种子数据（默认管理员: admin / Admin123!@#）:
+
+```bash
+pnpm db:seed
 ```
 
 #### 4. 启动服务
@@ -111,17 +104,16 @@ npm run prisma:migrate
 ```bash
 # 启动后端服务
 cd backend
-npm run dev
+pnpm dev
 
 # 新终端窗口启动前端服务
 cd frontend
-npm run dev
+pnpm dev
 ```
 
 访问应用:
-- 前端: http://localhost:5173
-- 后端API: http://localhost:3000
-- API文档: http://localhost:3000/api-docs
+- 前端: http://localhost:18849
+- 后端API: http://localhost:18848
 
 ---
 
@@ -130,29 +122,25 @@ npm run dev
 ### 前端技术
 
 - **框架**: Vue 3 (Composition API + TypeScript)
-- **UI组件库**: Element Plus
+- **UI组件库**: shadcn-vue + Reka-UI + Tailwind CSS 4
 - **状态管理**: Pinia
 - **路由**: Vue Router 4
 - **HTTP客户端**: Axios
 - **构建工具**: Vite
-- **代码规范**: ESLint + Prettier
+- **表单验证**: vee-validate + zod
 
 ### 后端技术
 
 - **运行时**: Node.js 18+
 - **框架**: Express.js
-- **ORM**: Prisma
-- **数据库**: PostgreSQL
-- **缓存**: Redis
+- **ORM**: Prisma v7（@prisma/adapter-libsql）
+- **数据库**: SQLite（开发环境）
 - **认证**: JWT (jsonwebtoken)
 - **语言**: TypeScript
 
 ### 基础设施
 
 - **容器化**: Docker + Docker Compose
-- **CI/CD**: GitHub Actions
-- **监控**: Prometheus + Grafana
-- **日志**: ELK Stack / Loki
 
 ---
 
@@ -180,10 +168,13 @@ easy1auth/
 │   ├── src/
 │   │   ├── middleware/      # 中间件
 │   │   ├── routes/          # 路由
+│   │   ├── services/        # 业务逻辑层
+│   │   ├── types/           # 类型定义
 │   │   ├── lib/             # 工具库
 │   │   └── index.ts         # 入口文件
 │   ├── prisma/
-│   │   └── schema.prisma    # 数据库模型
+│   │   ├── schema.prisma    # 数据库模型
+│   │   └── seed.ts          # 种子数据
 │   ├── .env                 # 环境变量
 │   ├── tsconfig.json        # TypeScript配置
 │   └── package.json
@@ -203,42 +194,32 @@ easy1auth/
 
 ```bash
 # 开发模式
-npm run dev
+pnpm dev
 
 # 构建生产版本
-npm run build
-
-# 代码检查
-npm run lint
+pnpm build
 
 # 类型检查
-npm run type-check
+vue-tsc -b
 ```
 
 #### 后端
 
 ```bash
 # 开发模式
-npm run dev
-
-# 构建
-npm run build
-
-# 生产模式
-npm start
+pnpm dev
 
 # Prisma命令
-npm run prisma:generate   # 生成Prisma客户端
-npm run prisma:migrate    # 运行数据库迁移
-npm run prisma:studio     # 打开Prisma Studio
+pnpm db:generate   # 生成Prisma客户端
+pnpm db:migrate    # 运行数据库迁移
+pnpm db:studio     # 打开Prisma Studio
 ```
 
 ### 代码规范
 
 - 使用TypeScript编写代码
-- 遵循ESLint和Prettier配置
-- 提交代码前运行lint检查
-- 编写单元测试覆盖核心功能
+- 后端路由层调用Service层（routes-call-services 模式）
+- `<script setup lang="ts">` 编写 Vue SFC
 
 ### Git提交规范
 
@@ -280,21 +261,15 @@ chore: 构建/工具链相关
 ## 🗺️ 路线图
 
 ### v1.0.0 (当前版本)
-- ✅ 项目基础架构
-- ✅ 核心数据模型
-- ✅ 基础API接口
-- ✅ 前端基础页面
-
-### v1.1.0 (计划中)
-- 🔲 完整的租户管理功能
-- 🔲 用户注册登录功能
-- 🔲 应用管理与SSO
-- 🔲 基础权限管理
-
-### v1.2.0 (计划中)
-- 🔲 社会化身份源集成
-- 🔲 MFA多因素认证
-- 🔲 审计日志完善
+- ✅ 多租户管理与数据隔离
+- ✅ 用户/用户组/岗位管理
+- ✅ 应用管理与 OAuth 2.0/OIDC SSO
+- ✅ 角色与权限管理 (RBAC)
+- ✅ 社会化身份源集成（微信、钉钉、飞书、GitHub 等）
+- ✅ MFA 多因素认证 (TOTP)
+- ✅ 密码策略与安全设置
+- ✅ 审计日志
+- ✅ 个性化设置（域名、登录框样式、消息模板）
 
 ---
 

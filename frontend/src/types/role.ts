@@ -25,6 +25,13 @@ export interface RoleTree {
   children?: RoleTree[]
 }
 
+export interface RoleListResponse {
+  roles: Role[]
+  total: number
+  page: number
+  pageSize: number
+}
+
 export interface RoleStats {
   totalRoles: number
   systemRoles: number

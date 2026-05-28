@@ -26,6 +26,9 @@ const PROVIDER_CONFIGS = PROVIDER_CONFIGS_CONST
 
 const loading = ref(false)
 const providers = ref<SocialIdentityProvider[]>([])
+const total = ref(0)
+const page = ref(1)
+const pageSize = ref(10)
 const stats = ref<SocialIdentityProviderStats>({
   totalProviders: 0,
   activeProviders: 0,
@@ -78,6 +81,7 @@ const loadStats = async () => {
 }
 
 const handleSearch = () => {
+  page.value = 1
   loadProviders()
 }
 
@@ -85,6 +89,7 @@ const handleReset = () => {
   filterType.value = ''
   filterStatus.value = ''
   searchQuery.value = ''
+  page.value = 1
   loadProviders()
 }
 
@@ -95,8 +100,11 @@ const loadProviders = async () => {
       type: filterType.value || undefined,
       status: filterStatus.value || undefined,
       search: searchQuery.value || undefined,
+      page: page.value,
+      pageSize: pageSize.value,
     })
-    providers.value = data
+    providers.value = data.providers
+    total.value = data.total
   } catch (error) {
     toast.error('加载身份源列表失败')
   } finally {
@@ -306,6 +314,13 @@ const toggleScope = (scope: string) => {
   }
 }
 
+const totalPages = computed(() => Math.ceil(total.value / pageSize.value))
+
+const handlePageChange = (newPage: number) => {
+  page.value = newPage
+  loadProviders()
+}
+
 onMounted(() => {
   loadStats()
   loadProviders()
@@ -430,6 +445,12 @@ onMounted(() => {
             </TableRow>
           </TableHeader>
           <TableBody>
+            <TableRow v-if="loading">
+              <TableCell colspan="7" class="text-center py-8 text-muted-foreground">加载中...</TableCell>
+            </TableRow>
+            <TableRow v-else-if="providers.length === 0">
+              <TableCell colspan="7" class="text-center py-8 text-muted-foreground">暂无数据</TableCell>
+            </TableRow>
             <TableRow v-for="row in providers" :key="row.id">
               <TableCell>{{ row.name }}</TableCell>
               <TableCell>
@@ -473,6 +494,19 @@ onMounted(() => {
             </TableRow>
           </TableBody>
         </Table>
+
+        <div class="flex items-center justify-between mt-5">
+          <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
+          <div class="flex items-center gap-1">
+            <Button variant="outline" size="sm" :disabled="page <= 1" @click="handlePageChange(page - 1)">
+              上一页
+            </Button>
+            <span class="text-sm px-2">{{ page }} / {{ totalPages || 1 }}</span>
+            <Button variant="outline" size="sm" :disabled="page >= totalPages" @click="handlePageChange(page + 1)">
+              下一页
+            </Button>
+          </div>
+        </div>
       </CardContent>
     </Card>
 

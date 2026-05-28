@@ -55,8 +55,14 @@ export class RoleService {
     query?: {
       search?: string
       type?: string
+      page?: number
+      pageSize?: number
     }
-  ): Promise<RoleResponse[]> {
+  ): Promise<{ roles: RoleResponse[]; total: number; page: number; pageSize: number }> {
+    const page = query?.page || 1
+    const pageSize = query?.pageSize || 10
+    const skip = (page - 1) * pageSize
+
     const where: any = { tenantId }
 
     if (query?.search) {
@@ -71,24 +77,34 @@ export class RoleService {
       where.type = query.type
     }
 
-    const roles = await prisma.role.findMany({
-      where,
-      include: {
-        parent: {
-          select: { id: true, name: true, code: true },
+    const [roles, total] = await Promise.all([
+      prisma.role.findMany({
+        where,
+        skip,
+        take: pageSize,
+        include: {
+          parent: {
+            select: { id: true, name: true, code: true },
+          },
+          _count: {
+            select: { users: true },
+          },
         },
-        _count: {
-          select: { users: true },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    })
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.role.count({ where }),
+    ])
 
-    return roles.map((role) => ({
-      ...role,
-      permissions: role.permissions as Record<string, any>,
-      userCount: role._count.users,
-    }))
+    return {
+      roles: roles.map((role) => ({
+        ...role,
+        permissions: role.permissions as Record<string, any>,
+        userCount: role._count.users,
+      })),
+      total,
+      page,
+      pageSize,
+    }
   }
 
   async getTree(tenantId: string): Promise<RoleTreeResponse[]> {

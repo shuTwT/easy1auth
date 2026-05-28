@@ -1,6 +1,7 @@
 import request from '../utils/request'
 import type {
   Role,
+  RoleListResponse,
   RoleTree,
   RoleStats,
   CreateRoleDto,
@@ -19,7 +20,7 @@ export const roleApi = {
     return request.get('/roles/tree')
   },
 
-  getList(params?: { search?: string; type?: string }): Promise<Role[]> {
+  getList(params?: { search?: string; type?: string; page?: number; pageSize?: number }): Promise<RoleListResponse> {
     return request.get('/roles', { params })
   },
 

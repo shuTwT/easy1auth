@@ -1,152 +1,144 @@
-# Easy1Auth — Agent Guide
+# AGENTS.md — Easy1Auth
 
-## Project Overview
+Enterprise multi-tenant IAM platform (SaaS). Chinese-language admin UI.
 
-企业级多租户身份认证与访问管理(IAM) SaaS 平台. Monorepo with separate `frontend/` and `backend/` packages.
+## Monorepo layout
 
----
-
-## Quick Start (actual commands, not docs)
-
-```bash
-# Backend (port 18848, not 3000 as README says)
-cd backend && npm run dev          # tsx watch src/index.ts
-
-# Frontend (port 18849, not 5173 as README says)
-cd frontend && npm run dev          # vite
-
-# Prisma
-cd backend && npm run prisma:migrate    # prisma migrate dev
-cd backend && npm run prisma:generate   # prisma generate
-cd backend && npm run prisma:studio     # prisma studio
+```
+frontend/   Vue 3 + Vite + shadcn-vue + Tailwind CSS 4 + Reka-UI
+backend/    Express + Prisma v7 + SQLite
+design-system/  Design specs (easy1auth-admin/MASTER.md)
 ```
 
-Frontend proxies `/api` → `http://localhost:18848` via Vite config.
+Each package is independent — separate `pnpm-workspace.yaml`, separate `node_modules`. **Not** a root workspace.
 
----
+## ⚠️ README is out of date — trust the code, not the README
 
-## Actual Tech Stack vs Documentation
+| Claim in README | Actual |
+|---|---|
+| PostgreSQL | **SQLite** (`provider = "sqlite"` in schema, `@prisma/adapter-libsql`) |
+| npm | **pnpm** (only lockfiles are `pnpm-lock.yaml`) |
+| Element Plus UI | **shadcn-vue + Reka-UI + Tailwind CSS 4** |
+| Backend port 3000 | **18848** (`backend/src/index.ts`) |
+| Frontend port 5173 | **18849** (`frontend/vite.config.ts`) |
 
-| Aspect | Documented | Actual |
-|---|---|---|
-| Database | PostgreSQL | SQLite via `@prisma/adapter-libsql` (Turso) |
-| Backend port | 3000 | **18848** |
-| Frontend port | 5173 | **18849** |
-| Dev runner | ts-node (nodemon.json, stale) | `tsx watch` |
-| Linting | ESLint + Prettier | **Not configured** |
-| Testing | Mentioned in README | **No test files or framework** |
-| CI/CD | GitHub Actions | **Not configured** |
+SQLite is the dev default. `@prisma/adapter-pg` is installed as a dependency but unused. DB file: `backend/data/dev.db`.
 
-**Do NOT trust README/PRD for ports, database, or linting — verify against source.**
+## Development commands
 
----
+All commands run from within `frontend/` or `backend/`:
 
-## Database
+```bash
+# Backend
+cd backend && pnpm dev          # tsx watch src/index.ts (port 18848)
+cd backend && pnpm db:migrate   # prisma migrate dev
+cd backend && pnpm db:seed      # seed data (default admin: admin/Admin123!@#)
+cd backend && pnpm db:studio    # prisma studio
 
-- **SQLite** via Prisma + `@prisma/adapter-libsql`. File: `backend/dev.db`.
-- docker-compose.yml includes a PostgreSQL service but it is **not used** by the running backend.
-- Prisma v7.4.2. Datasource declared without explicit URL in schema — URL comes from `DATABASE_URL` env var (default: `file:./dev.db`).
-- 7 migration directories in `backend/prisma/migrations/`.
-- Array fields stored as JSON (SQLite limitation). Prisma schema uses `Json` type for arrays.
+# Frontend
+cd frontend && pnpm dev         # Vite dev server (port 18849)
+cd frontend && pnpm build       # vue-tsc --build && vite build
+```
 
----
+Vite proxies `/api` → `http://localhost:18848` (see `frontend/vite.config.ts`).
 
-## Backend Architecture
+### Running a single Prisma migration
 
-**Entry**: `backend/src/index.ts` → Express 5 app.
+```bash
+cd backend && npx prisma migrate dev --name <name>
+```
 
-**Pattern**: Mixed — some modules use Service classes (`tenant.service.ts`, `oauth2.service.ts`, `token.service.ts`), others inline Prisma in routes (`auth.routes.ts`, `tenant.routes.ts`). Both are acceptable; follow the pattern of the file you're modifying.
+Docker Compose exists (`docker-compose.yml`) with PostgreSQL + Redis, but it is **not** the primary dev workflow.
 
-**Middleware chain** (order in index.ts):
-1. `helmet()` → `cors()` → `morgan('combined')` → `express.json()`
-2. Route groups (`/api/auth`, `/api/tenants`, etc.)
-3. `auditMiddleware()` — captures request/response for logging
-4. `errorHandler()` — catches `AppError` and unknown errors
+## Key architecture decisions
 
-**Key middleware files**:
-- `middleware/auth.ts` — JWT verification, sets `req.userId`, reads `tenant-id` header
-- `middleware/tenant.ts` — Tenant lookup & validation, `tenantDataFilter`, `checkTenantLimits`
-- `middleware/errorHandler.ts` — `AppError` class with `statusCode` + `status` field
-- `middleware/audit.middleware.ts` — Fire-and-forget audit logging via `audit.service.ts`
+### Backend: routes-call-services, sometimes routes-call-Prisma-directly
 
-**API Route groups** (all under `/api`):
-- `auth/` — login, register, send-code, passkey, social, refresh, logout
-- `tenants/` — CRUD + status + domain check
-- `users/` — CRUD + password reset + role/group assignment
-- `applications/` — CRUD + client credentials
-- `oauth2/` — authorize, token, userinfo, jwks, discover
-- `audit-logs/` — query, stats, export, cleanup
-- `groups/` — CRUD + hierarchy + members
-- `positions/` — CRUD
-- `roles/` — CRUD + hierarchy + user assignment
-- `social-identity-providers/` — CRUD
-- `brand-settings/` — brand settings CRUD
-- `security/` — password policy, MFA, CORS, security settings
-- `custom-domains/` — domain CRUD + verify
-- `message-templates/` — CRUD
-- `login-style/` — login page customization
+Route files live in `backend/src/routes/`. Most delegate to class-based services in `backend/src/services/` (e.g., `UserService`, `TenantService`), but **auth.routes.ts calls Prisma directly**. New code should follow the service pattern.
 
-**Auth tokens**: JWT via `jsonwebtoken`. `JWT_SECRET` from env or hardcoded fallback. Admin tokens expire in 7d, refresh tokens 30d. OAuth2 tokens stored in Redis via `token.service.ts`.
+API response shape: `{ status: 'ok' | 'error', data?, message? }`
 
-**Tenant isolation**: Every model has `tenantId` field. Middleware reads `tenant-id` header from frontend requests. Frontend sends it via Axios interceptor.
+Error handling uses `AppError` class from `middleware/errorHandler.ts`:
+```ts
+throw new AppError('message', 400)  // 4xx → status: 'fail', 5xx → status: 'error'
+```
 
-**Error responses** always use format: `{ status: 'error'|'success', message: string }` or `{ status, message, data }` for success.
+### Prisma v7 with adapter pattern
 
----
+```ts
+// backend/src/lib/prisma.ts
+const adapter = new PrismaLibSql({ url: 'file:./data/dev.db' })
+const prisma = new PrismaClient({ adapter })
+```
 
-## Frontend Architecture
+- **Always create PrismaClient with the adapter.** Direct `new PrismaClient()` will not work with the SQLite setup.
+- Seed file (`prisma/seed.ts`) and any standalone scripts must replicate this pattern.
+- Prisma config: `backend/prisma.config.ts`
 
-**Entry**: `frontend/src/main.ts` — Vue 3 app with Pinia, Element Plus, Vue Router.
+### Auth & multi-tenancy
 
-**Path alias**: `@/` → `src/` (configured in both vite.config.ts and tsconfig.app.json).
+- **JWT tokens** stored in `localStorage` (not httpOnly cookies).
+- All authenticated requests require `Authorization: Bearer <token>` header.
+- Tenant isolation via `tenant-id` request header (set by axios interceptor in `frontend/src/utils/request.ts`).
+- Middleware chain: auth → tenant → (optional) tenantDataFilter/checkTenantLimits.
+- `tenantDataFilter` auto-injects `tenantId` into `req.body`.
+- Auth middleware uses `AuthRequest` type extension; tenant middleware uses `TenantRequest`.
 
-**Directory structure**:
-- `api/` — Axios-based API modules, one per backend resource
-- `types/` — TypeScript interfaces, roughly mirror backend types
-- `stores/` — Pinia stores (currently only `user.ts`)
-- `composables/` — Vue composables (currently `useAuth.ts`)
-- `views/` — Page components, one subdirectory per feature
-- `layouts/` — `MainLayout.vue` with sidebar navigation
-- `components/` — Shared components
-- `utils/` — `request.ts` (Axios instance with interceptors)
-- `router/` — `index.ts` with lazy-loaded routes + auth guard
+### Frontend: shadcn-vue conventions
 
-**Routing pattern**: All authenticated routes nested under `MainLayout`, lazy-loaded. Login and OAuth2 authorize are standalone routes. Auth guard checks `localStorage.getItem('token')`.
+- `@/*` alias → `frontend/src/`. Configured in both `tsconfig.json` + `vite.config.ts`.
+- shadcn-vue config: `frontend/components.json` (style: "reka-nova", baseColor: "neutral").
+- UI components are in `frontend/src/components/ui/` (36 components), managed by shadcn-vue CLI.
+- Custom shared components go in `frontend/src/components/common/`.
+- Pinia store: single `user.ts` store (Composition API style).
+- Toast notifications: `vue-sonner` (not Element Plus's message).
+- Forms: `vee-validate` + `zod` (not Element Plus form validation).
+- Table: `@tanstack/vue-table` (not Element Plus table).
 
-**API request pattern**: Axios instance with interceptors:
-- Request: adds `Authorization: Bearer <token>` and `tenant-id` header
-- Response: unwraps `response.data` (so callers get the body directly)
-- Error: handles 401 → redirect to /login, displays ElMessage for other codes
+### Dual color schemes
 
-**State management**: Pinia composition store (`useUserStore`) with localStorage persistence for token, currentTenant, currentTenantId.
+Two color configs exist; they may diverge:
 
-**UI component library**: Element Plus, icons from `@element-plus/icons-vue` (globally registered in main.ts).
+1. **`frontend/src/styles/theme.css`** — Blue primary `#0369A1`, dark sidebar gradient. This is what the app actually loads (imported in `main.ts`).
+2. **`design-system/easy1auth-admin/MASTER.md`** — Purple `#7C3AED` + orange `#F97316`. Design spec, may or may not be fully applied.
 
----
+When changing colors, check both sources and decide which is the source of truth.
 
-## Key Conventions
+### Routing
 
-1. **Chinese error messages** throughout backend and frontend — maintain this pattern.
-2. **Error response format** is always `{ status: 'error'|'success', message: string }`.
-3. **No ESLint/Prettier** — don't add formatting tooling unless asked.
-4. **No tests exist** — don't assume testing infrastructure.
-5. **`<script setup lang="ts">`** for all Vue SFCs.
-6. **Composition API** with `ref`/`reactive`/`computed` — no Options API.
-7. **Lazy-loaded routes** with `() => import('@/views/...')`.
-8. **Element Plus form validation rules** in component scope.
-9. **Tenant header** is mandatory for multi-tenant API calls.
-10. **Error handling**: Backend wraps errors in `AppError` class; frontend shows `ElMessage.error()` with `error.response?.data?.message`.
+Frontend router (`frontend/src/router/index.ts`):
+- All authenticated pages are children of `/` with `MainLayout`.
+- Login page at `/login` (no layout, standalone page).
+- OAuth2 authorize at `/oauth2/authorize` (no layout).
+- Route guard checks `localStorage.getItem('token')` — no token → redirect to `/login`.
 
----
+## What's missing
 
-## Notable Gotchas
+- **No tests** — No vitest/jest config, no test runner scripts, no `*.test.ts` or `*.spec.ts` files.
+- **No linting** — No ESLint/Prettier config in either package.
+- **No CI/CD** — Mentioned in TODO.md but not implemented.
+- **No type-check script** — Backend lacks a `tsc --noEmit` or equivalent. Frontend runs `vue-tsc --build` as part of `pnpm build`.
 
-- `nodemon.json` is stale — the `dev` script actually uses `tsx watch`, not `ts-node`.
-- README.md and PRD.md contain inaccurate port numbers, database provider, and tooling claims. Do not use them as authoritative sources.
-- The PostgreSQL container in docker-compose.yml is unused by the running app (SQLite is used instead).
-- `prisma.config.ts` exists at the backend root (generated by Prisma) but the schema declares datasource inline without URL — `DATABASE_URL` env var is the source of truth.
-- `verification-code.service.ts` and `verificationCode.service.ts` both exist (duplicate, different casing). Be consistent when touching either.
-- Backend needs `DATABASE_URL` env var — defaults to SQLite file `./dev.db`.
-- Frontend build command is `vue-tsc -b && vite build` — requires TypeScript type-checking to pass first.
-- Frontend dev server uses port 18849 with Vite proxy to backend at 18848.
-- Backend port defaults to 18848 in `index.ts`: `process.env.PORT || 18848`.
+## Design system files
+
+When building UI, check these files first:
+
+1. `design-system/easy1auth-admin/MASTER.md` — Global design rules, colors, typography, component specs.
+2. `design-system/easy1auth-admin/pages/` — Per-page design overrides (override MASTER.md).
+3. `frontend/src/styles/theme.css` — Actual CSS variables currently loaded.
+4. `frontend/components.json` — shadcn-vue configuration.
+
+## File naming conventions
+
+- Backend routes: `*.routes.ts` (plural, lowercase kebab prefix)
+- Backend services: `*.service.ts`
+- Backend types: `*.types.ts`
+- Frontend API modules: `frontend/src/api/*.ts` (one per resource, exports object literal)
+- Frontend views: `frontend/src/views/<resource>/index.vue`
+- Vue SFC: `<script setup lang="ts">` with Composition API
+
+## Sisyphus configuration
+
+- `.sisyphus/` directory exists for work plans
+- `.agents/` directory contains project-local skills (Prisma agent skills)
+- `skills-lock.json` tracks installed skill versions

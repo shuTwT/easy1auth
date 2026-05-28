@@ -405,6 +405,12 @@ const toggleRole = (roleId: string) => {
             </TableRow>
           </TableHeader>
           <TableBody>
+            <TableRow v-if="loading">
+              <TableCell colspan="8" class="text-center py-8 text-muted-foreground">加载中...</TableCell>
+            </TableRow>
+            <TableRow v-else-if="users.length === 0">
+              <TableCell colspan="8" class="text-center py-8 text-muted-foreground">暂无数据</TableCell>
+            </TableRow>
             <TableRow v-for="row in users" :key="row.id">
               <TableCell>
                 <div class="flex items-center gap-3">

@@ -227,6 +227,7 @@ onMounted(() => {
                 <Input
                   v-model="passwordForm.currentPassword"
                   type="password"
+                  autocomplete="current-password"
                   placeholder="请输入当前密码"
                 />
               </div>
@@ -236,6 +237,7 @@ onMounted(() => {
                 <Input
                   v-model="passwordForm.newPassword"
                   type="password"
+                  autocomplete="new-password"
                   placeholder="请输入新密码"
                 />
                 <div v-if="passwordForm.newPassword" class="flex items-center gap-2 text-sm">
@@ -250,6 +252,7 @@ onMounted(() => {
                 <Input
                   v-model="passwordForm.confirmPassword"
                   type="password"
+                  autocomplete="new-password"
                   placeholder="请再次输入新密码"
                 />
               </div>

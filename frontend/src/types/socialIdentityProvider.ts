@@ -41,6 +41,13 @@ export interface UpdateSocialIdentityProviderDto {
   status?: 'active' | 'inactive'
 }
 
+export interface SocialIdentityProviderListResponse {
+  providers: SocialIdentityProvider[]
+  total: number
+  page: number
+  pageSize: number
+}
+
 export interface SocialIdentityProviderStats {
   totalProviders: number
   activeProviders: number

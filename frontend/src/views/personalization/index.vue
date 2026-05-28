@@ -38,6 +38,9 @@
                   <TableRow v-if="domainsLoading">
                     <TableCell colspan="5" class="text-center py-8 text-muted-foreground">加载中...</TableCell>
                   </TableRow>
+                  <TableRow v-else-if="domains.length === 0">
+                    <TableCell colspan="5" class="text-center py-8 text-muted-foreground">暂无数据</TableCell>
+                  </TableRow>
                   <TableRow v-for="domain in domains" :key="domain.id">
                     <TableCell>
                       <div class="flex items-center gap-2">
@@ -66,7 +69,7 @@
               </Table>
             </div>
 
-            <Alert class="bg-blue-50 dark:bg-blue-950/50 border-blue-100 dark:border-blue-900">
+            <Alert class="bg-muted border">
               <Info class="size-4" />
               <AlertTitle class="flex items-center gap-2 font-semibold">
                 域名验证说明
@@ -255,6 +258,9 @@
                       <TableRow v-if="templatesLoading">
                         <TableCell colspan="6" class="text-center py-8 text-muted-foreground">加载中...</TableCell>
                       </TableRow>
+                      <TableRow v-else-if="emailTemplates.length === 0">
+                        <TableCell colspan="6" class="text-center py-8 text-muted-foreground">暂无数据</TableCell>
+                      </TableRow>
                       <TableRow v-for="template in emailTemplates" :key="template.id">
                         <TableCell>{{ template.name }}</TableCell>
                         <TableCell>{{ template.code }}</TableCell>
@@ -295,6 +301,9 @@
                     <TableBody>
                       <TableRow v-if="templatesLoading">
                         <TableCell colspan="6" class="text-center py-8 text-muted-foreground">加载中...</TableCell>
+                      </TableRow>
+                      <TableRow v-else-if="smsTemplates.length === 0">
+                        <TableCell colspan="6" class="text-center py-8 text-muted-foreground">暂无数据</TableCell>
                       </TableRow>
                       <TableRow v-for="template in smsTemplates" :key="template.id">
                         <TableCell>{{ template.name }}</TableCell>
@@ -587,7 +596,7 @@ const loadDomains = async () => {
   domainsLoading.value = true
   try {
     const response = await customDomainApi.list()
-    domains.value = response.data.data
+    domains.value = response.data
   } catch (error) {
     console.error('加载域名列表失败:', error)
     toast.error('加载域名列表失败')
@@ -741,7 +750,7 @@ const loadTemplates = async () => {
   templatesLoading.value = true
   try {
     const response = await messageTemplateApi.list()
-    templates.value = response.data.data
+    templates.value = response.data
   } catch (error) {
     console.error('加载模板列表失败:', error)
     toast.error('加载模板列表失败')

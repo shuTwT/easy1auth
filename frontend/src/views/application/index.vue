@@ -345,6 +345,12 @@ onMounted(() => {
             </TableRow>
           </TableHeader>
           <TableBody>
+            <TableRow v-if="loading">
+              <TableCell colspan="8" class="text-center py-8 text-muted-foreground">加载中...</TableCell>
+            </TableRow>
+            <TableRow v-else-if="applications.length === 0">
+              <TableCell colspan="8" class="text-center py-8 text-muted-foreground">暂无数据</TableCell>
+            </TableRow>
             <TableRow v-for="row in applications" :key="row.id">
               <TableCell>{{ row.name }}</TableCell>
               <TableCell>{{ getTypeText(row.type) }}</TableCell>

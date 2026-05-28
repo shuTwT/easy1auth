@@ -97,7 +97,14 @@ export class SocialIdentityProviderService {
     }
   }
 
-  async findAll(tenantId: string, query?: { type?: string; status?: string }): Promise<SocialIdentityProviderResponse[]> {
+  async findAll(
+    tenantId: string,
+    query?: { type?: string; status?: string; page?: number; pageSize?: number }
+  ): Promise<{ providers: SocialIdentityProviderResponse[]; total: number; page: number; pageSize: number }> {
+    const page = query?.page || 1
+    const pageSize = query?.pageSize || 10
+    const skip = (page - 1) * pageSize
+
     const where: any = { tenantId }
 
     if (query?.type) {
@@ -108,16 +115,26 @@ export class SocialIdentityProviderService {
       where.status = query.status
     }
 
-    const providers = await prisma.socialIdentityProvider.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-    })
+    const [providers, total] = await Promise.all([
+      prisma.socialIdentityProvider.findMany({
+        where,
+        skip,
+        take: pageSize,
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.socialIdentityProvider.count({ where }),
+    ])
 
-    return providers.map((provider) => ({
-      ...provider,
-      scope: provider.scope as string[],
-      attributeMapping: provider.attributeMapping as Record<string, string>,
-    }))
+    return {
+      providers: providers.map((provider) => ({
+        ...provider,
+        scope: provider.scope as string[],
+        attributeMapping: provider.attributeMapping as Record<string, string>,
+      })),
+      total,
+      page,
+      pageSize,
+    }
   }
 
   async getStats(tenantId: string): Promise<SocialIdentityProviderStats> {

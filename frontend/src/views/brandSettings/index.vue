@@ -255,7 +255,7 @@
                 </div>
               </div>
 
-              <div class="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/50 dark:to-cyan-950/50 rounded-lg p-6 border border-blue-100 dark:border-blue-900">
+              <div class="bg-muted rounded-lg p-6 border">
                 <div class="flex items-center gap-2 mb-4">
                   <Info class="size-5 text-primary" />
                   <span class="text-base font-semibold">域名配置说明</span>

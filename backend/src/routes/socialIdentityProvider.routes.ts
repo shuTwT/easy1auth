@@ -37,12 +37,14 @@ router.get('/', async (req: Request, res: Response) => {
       throw new AppError('缺少租户信息', 400)
     }
 
-    const { type, status } = req.query
-    const providers = await providerService.findAll(tenantId, {
+    const { type, status, page, pageSize } = req.query
+    const result = await providerService.findAll(tenantId, {
       type: type as string,
       status: status as string,
+      page: page ? Number(page) : undefined,
+      pageSize: pageSize ? Number(pageSize) : undefined,
     })
-    res.json(providers)
+    res.json(result)
   } catch (error) {
     if (error instanceof AppError) {
       res.status(error.statusCode).json({ error: error.message })

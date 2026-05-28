@@ -30,6 +30,9 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 
 const loading = ref(false)
 const roles = ref<Role[]>([])
+const total = ref(0)
+const page = ref(1)
+const pageSize = ref(10)
 const roleTree = ref<RoleTree[]>([])
 const stats = ref<RoleStats>({
   totalRoles: 0,
@@ -123,12 +126,14 @@ const loadStats = async () => {
 }
 
 const handleSearch = () => {
+  page.value = 1
   loadRoles()
 }
 
 const handleReset = () => {
   searchQuery.value = ''
   filterType.value = ''
+  page.value = 1
   loadRoles()
 }
 
@@ -138,8 +143,11 @@ const loadRoles = async () => {
     const data = await roleApi.getList({
       search: searchQuery.value,
       type: filterType.value,
+      page: page.value,
+      pageSize: pageSize.value,
     })
-    roles.value = data
+    roles.value = data.roles
+    total.value = data.total
   } catch (error) {
     toast.error('加载角色列表失败')
   } finally {
@@ -337,6 +345,13 @@ function getTypeVariant(type: string): 'default' | 'secondary' | 'destructive' |
   return type === 'system' ? 'destructive' : 'default'
 }
 
+const totalPages = computed(() => Math.ceil(total.value / pageSize.value))
+
+const handlePageChange = (newPage: number) => {
+  page.value = newPage
+  loadRoles()
+}
+
 onMounted(() => {
   loadStats()
   loadRoles()
@@ -515,6 +530,19 @@ onMounted(() => {
               </TableRow>
             </TableBody>
           </Table>
+
+          <div class="flex items-center justify-between mt-5">
+            <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
+            <div class="flex items-center gap-1">
+              <Button variant="outline" size="sm" :disabled="page <= 1" @click="handlePageChange(page - 1)">
+                上一页
+              </Button>
+              <span class="text-sm px-2">{{ page }} / {{ totalPages || 1 }}</span>
+              <Button variant="outline" size="sm" :disabled="page >= totalPages" @click="handlePageChange(page + 1)">
+                下一页
+              </Button>
+            </div>
+          </div>
         </div>
 
         <div v-else>

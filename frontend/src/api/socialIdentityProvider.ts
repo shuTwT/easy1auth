@@ -1,6 +1,7 @@
 import request from '../utils/request'
 import type {
   SocialIdentityProvider,
+  SocialIdentityProviderListResponse,
   CreateSocialIdentityProviderDto,
   UpdateSocialIdentityProviderDto,
   SocialIdentityProviderStats,
@@ -14,7 +15,7 @@ export const socialIdentityProviderApi = {
     return request.get('/social-identity-providers/stats')
   },
 
-  getList(params?: { type?: string; status?: string; search?: string }): Promise<SocialIdentityProvider[]> {
+  getList(params?: { type?: string; status?: string; search?: string; page?: number; pageSize?: number }): Promise<SocialIdentityProviderListResponse> {
     return request.get('/social-identity-providers', { params })
   },
 

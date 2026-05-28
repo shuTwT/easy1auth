@@ -212,6 +212,9 @@ onMounted(() => {
             <TableRow v-if="loading">
               <TableCell colspan="8" class="text-center text-muted-foreground">加载中...</TableCell>
             </TableRow>
+            <TableRow v-else-if="tenants.length === 0">
+              <TableCell colspan="8" class="text-center py-8 text-muted-foreground">暂无数据</TableCell>
+            </TableRow>
             <TableRow v-for="item in tenants" :key="item.id">
               <TableCell>{{ item.name }}</TableCell>
               <TableCell>{{ item.domain }}</TableCell>
