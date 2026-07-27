@@ -30,7 +30,7 @@ router.post('/login', async (req: Request, res: Response) => {
       })
 
       if (!user) {
-        return res.status(401).json({
+        return res.status(400).json({
           status: 'error',
           message: '用户名或密码错误'
         })
@@ -45,7 +45,7 @@ router.post('/login', async (req: Request, res: Response) => {
 
       const isValidPassword = await bcrypt.compare(password, user.password)
       if (!isValidPassword) {
-        return res.status(401).json({
+        return res.status(400).json({
           status: 'error',
           message: '用户名或密码错误'
         })
@@ -150,14 +150,14 @@ router.post('/user-login', async (req: Request, res: Response) => {
     })
 
     if (!user) {
-      return res.status(401).json({
+      return res.status(400).json({
         status: 'error',
         message: '用户名或密码错误'
       })
     }
 
     if (!user.password) {
-      return res.status(401).json({
+      return res.status(400).json({
         status: 'error',
         message: '该账号未设置密码，请使用其他登录方式'
       })
@@ -165,7 +165,7 @@ router.post('/user-login', async (req: Request, res: Response) => {
 
     const isValidPassword = await bcrypt.compare(password, user.password)
     if (!isValidPassword) {
-      return res.status(401).json({
+      return res.status(400).json({
         status: 'error',
         message: '用户名或密码错误'
       })

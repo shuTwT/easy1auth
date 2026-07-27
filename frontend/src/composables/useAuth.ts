@@ -41,9 +41,6 @@ export function useAuth() {
       toast.success('登录成功')
       await router.push('/dashboard')
       return response
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || '登录失败')
-      throw error
     } finally {
       loading.value = false
     }
@@ -58,9 +55,6 @@ export function useAuth() {
       toast.success(response.message || '验证码已发送')
       startCountdown(60)
       return response
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || '发送验证码失败')
-      throw error
     } finally {
       sendingCode.value = false
     }
@@ -98,9 +92,6 @@ export function useAuth() {
       toast.success('注册成功')
       await router.push('/dashboard')
       return response
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || '注册失败')
-      throw error
     } finally {
       loading.value = false
     }
@@ -153,8 +144,6 @@ export function useAuth() {
     } catch (error: any) {
       if (error.name === 'NotAllowedError') {
         toast.error('用户取消或认证超时')
-      } else {
-        toast.error(error.response?.data?.message || 'Passkey 登录失败')
       }
       throw error
     } finally {
@@ -167,9 +156,6 @@ export function useAuth() {
     try {
       const { url } = await authApi.getSocialLoginUrl(provider)
       window.location.href = url
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || '获取授权链接失败')
-      throw error
     } finally {
       loading.value = false
     }
@@ -190,9 +176,6 @@ export function useAuth() {
       
       await router.push('/dashboard')
       return response
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || '第三方登录失败')
-      throw error
     } finally {
       loading.value = false
     }

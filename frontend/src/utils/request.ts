@@ -40,14 +40,11 @@ request.interceptors.response.use(
     if (response) {
       switch (response.status) {
         case 401:
-          if (window.location.pathname !== '/login') {
-            toast.error('登录已过期，请重新登录')
-            localStorage.removeItem('token')
-            localStorage.removeItem('currentTenantId')
-            const userStore = useUserStore()
-            userStore.logout()
-            window.location.href = '/login'
-          }
+          toast.error('登录已过期，请重新登录')
+          localStorage.removeItem('token')
+          localStorage.removeItem('currentTenantId')
+          useUserStore().logout()
+          window.location.href = '/login'
           break
         case 403:
           toast.error('没有权限访问')
