@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import { PrismaLibSql } from '@prisma/adapter-libsql'
 import bcrypt from 'bcryptjs'
+import { ensureDefaultAdminRoles } from '../src/lib/admin-permissions'
 
 // Use the same database path as .env: DATABASE_URL="file:./data/dev.db"
 const adapter = new PrismaLibSql({
@@ -48,17 +49,9 @@ async function main() {
   console.log('  邮箱: admin@easy1auth.com')
   console.log('  密码: Admin123!@#')
 
-  const adminRole = await prisma.adminRole.upsert({
-    where: { id: 'super-admin' },
-    update: {},
-    create: {
-      id: 'super-admin',
-      tenantId: tenant.id,
-      name: '超级管理员',
-      description: '拥有所有权限的系统管理员',
-      permissions: ['*'],
-      isSystem: true
-    }
+  const { superAdmin: adminRole } = await ensureDefaultAdminRoles(tenant.id, {
+    db: prisma,
+    includeReadOnly: true
   })
 
   console.log('✓ 管理员角色创建成功:', adminRole.name)

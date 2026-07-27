@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import prisma from '../lib/prisma'
+import { ensureDefaultAdminRoles } from '../lib/admin-permissions'
 import { VerificationCodeService } from '../services/verification-code.service'
 
 const router = Router()
@@ -339,6 +340,20 @@ router.post('/register', async (req: Request, res: Response) => {
           adminId: user.id,
           tenantId: tenant.id,
           role: 'owner'
+        }
+      })
+
+      const { superAdmin } = await ensureDefaultAdminRoles(tenant.id, {
+        db: tx,
+        includeReadOnly: true
+      })
+
+      await tx.admin.update({
+        where: { id: user.id },
+        data: {
+          roles: {
+            connect: { id: superAdmin.id }
+          }
         }
       })
 
