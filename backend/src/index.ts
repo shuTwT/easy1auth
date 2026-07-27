@@ -1,4 +1,4 @@
-import express from 'express'
+import express, { type Express } from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import morgan from 'morgan'
@@ -22,10 +22,12 @@ import messageTemplateRoutes from './routes/messageTemplate.routes'
 import loginStyleRoutes from './routes/loginStyle.routes'
 import permissionRoutes from './routes/permission.routes'
 import dashboardRoutes from './routes/dashboard.routes'
+import adminRoutes from './routes/admin.routes'
+import adminRoleRoutes from './routes/admin-role.routes'
 
 dotenv.config()
 
-const app = express()
+const app: Express = express()
 const PORT = process.env.PORT || 18848
 
 app.use(helmet())
@@ -55,6 +57,8 @@ app.use('/api/message-templates', messageTemplateRoutes)
 app.use('/api/login-style', loginStyleRoutes)
 app.use('/api/permissions', permissionRoutes)
 app.use('/api/dashboard', dashboardRoutes)
+app.use('/api/admin-users', adminRoutes)
+app.use('/api/admin-roles', adminRoleRoutes)
 
 app.use(auditMiddleware())
 
