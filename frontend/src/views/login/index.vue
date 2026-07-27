@@ -166,7 +166,10 @@ onMounted(() => {
         </transition>
       </div>
 
-      <SocialLogin v-if="currentMode !== 'register'" />
+      <SocialLogin
+        v-if="currentMode !== 'register'"
+        :providers="loginStyle?.socialProviders"
+      />
 
       <div class="login-footer">
         <p>© 2024 {{ loginStyle?.title || 'Easy1Auth' }}. All rights reserved.</p>

@@ -1,11 +1,10 @@
+import type { SocialProviderType } from '../config/socialIdentityProvider'
+
 export interface CreateSocialIdentityProviderDto {
   name: string
-  type: 'wechat' | 'qq' | 'feishu' | 'github' | 'gitee' | 'dingtalk' | 'wechat_work' | 'custom'
+  type: SocialProviderType
   clientId: string
   clientSecret: string
-  authorizationEndpoint?: string
-  tokenEndpoint?: string
-  userInfoEndpoint?: string
   scope?: string[]
   attributeMapping?: Record<string, string>
 }
@@ -14,9 +13,6 @@ export interface UpdateSocialIdentityProviderDto {
   name?: string
   clientId?: string
   clientSecret?: string
-  authorizationEndpoint?: string
-  tokenEndpoint?: string
-  userInfoEndpoint?: string
   scope?: string[]
   attributeMapping?: Record<string, string>
   status?: 'active' | 'inactive'

@@ -1,4 +1,14 @@
-export type SocialProviderType = 'wechat' | 'qq' | 'feishu' | 'github' | 'gitee' | 'dingtalk' | 'wechat_work' | 'custom'
+export const SOCIAL_PROVIDER_TYPES = [
+  'wechat_qr',
+  'wechat_mini_program_qr',
+  'wechat_official_account',
+  'wechat_mini_program',
+  'github',
+  'gitee',
+  'feishu',
+] as const
+
+export type SocialProviderType = (typeof SOCIAL_PROVIDER_TYPES)[number]
 
 export interface SocialIdentityProvider {
   id: string
@@ -22,9 +32,6 @@ export interface CreateSocialIdentityProviderDto {
   type: SocialProviderType
   clientId: string
   clientSecret: string
-  authorizationEndpoint?: string
-  tokenEndpoint?: string
-  userInfoEndpoint?: string
   scope?: string[]
   attributeMapping?: Record<string, string>
 }
@@ -33,9 +40,6 @@ export interface UpdateSocialIdentityProviderDto {
   name?: string
   clientId?: string
   clientSecret?: string
-  authorizationEndpoint?: string
-  tokenEndpoint?: string
-  userInfoEndpoint?: string
   scope?: string[]
   attributeMapping?: Record<string, string>
   status?: 'active' | 'inactive'
@@ -78,13 +82,57 @@ export interface SocialLoginResponse {
   isNewUser: boolean
 }
 
-export const PROVIDER_CONFIGS: Record<SocialProviderType, { name: string; icon: string; color: string }> = {
-  wechat: { name: '微信', icon: 'ChatDotRound', color: '#07C160' },
-  qq: { name: 'QQ', icon: 'ChatRound', color: '#12B7F5' },
-  feishu: { name: '飞书', icon: 'Connection', color: '#00D6B9' },
-  github: { name: 'GitHub', icon: 'Platform', color: '#24292E' },
-  gitee: { name: 'Gitee', icon: 'Platform', color: '#C71D23' },
-  dingtalk: { name: '钉钉', icon: 'ChatDotRound', color: '#0089FF' },
-  wechat_work: { name: '企业微信', icon: 'ChatDotRound', color: '#2B7EFF' },
-  custom: { name: '自定义', icon: 'Setting', color: '#909399' },
+type ProviderConfig = {
+  readonly name: string
+  readonly color: string
+  readonly defaultScopes: readonly string[]
+  readonly availableScopes: readonly string[]
 }
+
+export const PROVIDER_CONFIGS = {
+  wechat_qr: {
+    name: '微信扫码',
+    color: '#07C160',
+    defaultScopes: ['snsapi_login'],
+    availableScopes: ['snsapi_login'],
+  },
+  wechat_mini_program_qr: {
+    name: '小程序扫码',
+    color: '#07C160',
+    defaultScopes: ['snsapi_login'],
+    availableScopes: ['snsapi_login'],
+  },
+  wechat_official_account: {
+    name: '公众号网页授权',
+    color: '#07C160',
+    defaultScopes: ['snsapi_userinfo'],
+    availableScopes: ['snsapi_base', 'snsapi_userinfo'],
+  },
+  wechat_mini_program: {
+    name: '微信小程序',
+    color: '#07C160',
+    defaultScopes: [],
+    availableScopes: [],
+  },
+  github: {
+    name: 'GitHub',
+    color: '#24292E',
+    defaultScopes: ['user:email'],
+    availableScopes: ['user', 'user:email', 'repo', 'read:org'],
+  },
+  gitee: {
+    name: 'Gitee',
+    color: '#C71D23',
+    defaultScopes: ['user_info', 'emails'],
+    availableScopes: ['user_info', 'emails', 'projects', 'pull_requests', 'issues'],
+  },
+  feishu: {
+    name: '飞书网页授权',
+    color: '#3370FF',
+    defaultScopes: ['contact:user.base:readonly'],
+    availableScopes: ['contact:user.base:readonly', 'contact:user.email:readonly'],
+  },
+} as const satisfies Record<SocialProviderType, ProviderConfig>
+
+export const isSocialProviderType = (value: unknown): value is SocialProviderType =>
+  typeof value === 'string' && SOCIAL_PROVIDER_TYPES.some((type) => type === value)

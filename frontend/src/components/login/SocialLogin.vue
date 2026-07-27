@@ -1,37 +1,41 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Button } from '@/components/ui/button'
-import { MessageCircle, MessageSquare, GitFork } from '@lucide/vue'
+import { Separator } from '@/components/ui/separator'
+import { MessageCircle, MessageSquare, GitFork, QrCode, ScanLine, Smartphone } from '@lucide/vue'
+import {
+  PROVIDER_CONFIGS,
+  isSocialProviderType,
+  type SocialProviderType,
+} from '@/types/socialIdentityProvider'
+
+const props = defineProps<{
+  providers?: readonly string[]
+}>()
 
 const { loading, socialLogin } = useAuth()
 
-const socialProviders = [
-  {
-    name: '微信',
-    icon: MessageCircle,
-    provider: 'wechat',
-    color: '#07c160'
-  },
-  {
-    name: '钉钉',
-    icon: MessageSquare,
-    provider: 'dingtalk',
-    color: '#0089ff'
-  },
-  {
-    name: '飞书',
-    icon: MessageCircle,
-    provider: 'feishu',
-    color: '#3370ff'
-  },
-  {
-    name: 'GitHub',
-    icon: GitFork,
-    provider: 'github',
-    color: '#24292e'
-  }
-]
+const providerIcons = {
+  wechat_qr: QrCode,
+  wechat_mini_program_qr: ScanLine,
+  wechat_official_account: MessageCircle,
+  wechat_mini_program: Smartphone,
+  github: GitFork,
+  gitee: GitFork,
+  feishu: MessageSquare,
+} satisfies Record<SocialProviderType, typeof MessageCircle>
+
+const socialProviders = computed(() =>
+  (props.providers ?? [])
+    .filter(isSocialProviderType)
+    .map((provider) => ({
+      ...PROVIDER_CONFIGS[provider],
+      provider,
+      icon: providerIcons[provider],
+    })),
+)
 
 function handleSocialLogin(provider: string) {
   socialLogin(provider)
@@ -39,21 +43,24 @@ function handleSocialLogin(provider: string) {
 </script>
 
 <template>
-  <div class="social-login">
-    <div class="divider">
-      <span>第三方账号登录</span>
+  <div v-if="socialProviders.length > 0" class="mt-6 flex flex-col gap-5">
+    <div class="flex items-center gap-4">
+      <Separator class="flex-1" />
+      <span class="text-sm text-muted-foreground">第三方账号登录</span>
+      <Separator class="flex-1" />
     </div>
 
-    <div class="social-buttons">
+    <div class="flex flex-wrap justify-center gap-3">
       <TooltipProvider>
         <Tooltip v-for="item in socialProviders" :key="item.provider">
           <TooltipTrigger as-child>
             <Button
               variant="outline"
               size="icon-lg"
+              :aria-label="item.name"
               :disabled="loading"
               :style="{ backgroundColor: item.color, borderColor: item.color, color: 'white' }"
-              class="social-button"
+              class="size-12 rounded-full"
               @click="handleSocialLogin(item.provider)"
             >
               <component :is="item.icon" class="size-5" />
@@ -67,41 +74,3 @@ function handleSocialLogin(provider: string) {
     </div>
   </div>
 </template>
-
-<style scoped>
-.social-login {
-  margin-top: 24px;
-}
-
-.divider {
-  display: flex;
-  align-items: center;
-  margin: 20px 0;
-}
-
-.divider::before,
-.divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background-color: #dcdfe6;
-}
-
-.divider span {
-  padding: 0 16px;
-  font-size: 14px;
-  color: #909399;
-}
-
-.social-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 16px;
-}
-
-.social-button {
-  width: 48px !important;
-  height: 48px !important;
-  border-radius: 50% !important;
-}
-</style>

@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma'
+import type { Prisma, SocialIdentityProvider } from '@prisma/client'
 import { AppError } from '../middleware/errorHandler'
 import {
   CreateSocialIdentityProviderDto,
@@ -12,55 +13,17 @@ import {
 import axios from 'axios'
 import crypto from 'crypto'
 import jwt from 'jsonwebtoken'
-import { v4 as uuidv4 } from 'uuid'
-
-const OAUTH_CONFIGS: Record<string, any> = {
-  wechat: {
-    authorizationEndpoint: 'https://open.weixin.qq.com/connect/qrconnect',
-    tokenEndpoint: 'https://api.weixin.qq.com/sns/oauth2/access_token',
-    userInfoEndpoint: 'https://api.weixin.qq.com/sns/userinfo',
-    scope: ['snsapi_login'],
-  },
-  qq: {
-    authorizationEndpoint: 'https://graph.qq.com/oauth2.0/authorize',
-    tokenEndpoint: 'https://graph.qq.com/oauth2.0/token',
-    userInfoEndpoint: 'https://graph.qq.com/user/get_user_info',
-    scope: ['get_user_info'],
-  },
-  feishu: {
-    authorizationEndpoint: 'https://open.feishu.cn/open-apis/authen/v1/authorize',
-    tokenEndpoint: 'https://open.feishu.cn/open-apis/authen/v1/oidc/access_token',
-    userInfoEndpoint: 'https://open.feishu.cn/open-apis/authen/v1/user_info',
-    scope: ['contact:user.base:readonly'],
-  },
-  github: {
-    authorizationEndpoint: 'https://github.com/login/oauth/authorize',
-    tokenEndpoint: 'https://github.com/login/oauth/access_token',
-    userInfoEndpoint: 'https://api.github.com/user',
-    scope: ['user:email'],
-  },
-  gitee: {
-    authorizationEndpoint: 'https://gitee.com/oauth/authorize',
-    tokenEndpoint: 'https://gitee.com/oauth/token',
-    userInfoEndpoint: 'https://gitee.com/api/v5/user',
-    scope: ['user_info', 'emails'],
-  },
-  dingtalk: {
-    authorizationEndpoint: 'https://login.dingtalk.com/oauth2/auth',
-    tokenEndpoint: 'https://api.dingtalk.com/v1.0/oauth2/userAccessToken',
-    userInfoEndpoint: 'https://api.dingtalk.com/v1.0/contact/users/me',
-    scope: ['openid'],
-  },
-  wechat_work: {
-    authorizationEndpoint: 'https://open.work.weixin.qq.com/wwopen/sso/qrConnect',
-    tokenEndpoint: 'https://qyapi.weixin.qq.com/cgi-bin/miniprogram/jscode2session',
-    userInfoEndpoint: 'https://qyapi.weixin.qq.com/cgi-bin/user/get',
-    scope: ['snsapi_base'],
-  },
-}
+import {
+  SOCIAL_PROVIDER_CONFIGS,
+  isSocialProviderType,
+} from '../config/socialIdentityProvider'
 
 export class SocialIdentityProviderService {
   async create(tenantId: string, data: CreateSocialIdentityProviderDto): Promise<SocialIdentityProviderResponse> {
+    if (!isSocialProviderType(data.type)) {
+      throw new AppError('不支持的社会化身份源类型', 400)
+    }
+
     const existingProvider = await prisma.socialIdentityProvider.findFirst({
       where: {
         tenantId,
@@ -72,7 +35,7 @@ export class SocialIdentityProviderService {
       throw new AppError('该类型的社会化身份源已存在', 400)
     }
 
-    const config = OAUTH_CONFIGS[data.type] || {}
+    const config = SOCIAL_PROVIDER_CONFIGS[data.type]
 
     const provider = await prisma.socialIdentityProvider.create({
       data: {
@@ -81,10 +44,10 @@ export class SocialIdentityProviderService {
         type: data.type,
         clientId: data.clientId,
         clientSecret: data.clientSecret,
-        authorizationEndpoint: data.authorizationEndpoint || config.authorizationEndpoint || '',
-        tokenEndpoint: data.tokenEndpoint || config.tokenEndpoint || '',
-        userInfoEndpoint: data.userInfoEndpoint || config.userInfoEndpoint || '',
-        scope: data.scope || config.scope || [],
+        authorizationEndpoint: config.authorizationEndpoint,
+        tokenEndpoint: config.tokenEndpoint,
+        userInfoEndpoint: config.userInfoEndpoint,
+        scope: data.scope || [...config.scope],
         attributeMapping: data.attributeMapping || {},
         status: 'active',
       },
@@ -105,7 +68,7 @@ export class SocialIdentityProviderService {
     const pageSize = query?.pageSize || 10
     const skip = (page - 1) * pageSize
 
-    const where: any = { tenantId }
+    const where: Prisma.SocialIdentityProviderWhereInput = { tenantId }
 
     if (query?.type) {
       where.type = query.type
@@ -194,9 +157,6 @@ export class SocialIdentityProviderService {
         name: data.name,
         clientId: data.clientId,
         clientSecret: data.clientSecret,
-        authorizationEndpoint: data.authorizationEndpoint,
-        tokenEndpoint: data.tokenEndpoint,
-        userInfoEndpoint: data.userInfoEndpoint,
         scope: data.scope,
         attributeMapping: data.attributeMapping,
         status: data.status,
@@ -300,6 +260,7 @@ export class SocialIdentityProviderService {
 
     let socialAccount = await prisma.socialAccount.findFirst({
       where: {
+        tenantId,
         provider: providerType,
         providerId: providerUserId,
       },
@@ -337,6 +298,7 @@ export class SocialIdentityProviderService {
           emailVerified: !!userProfile.email,
           socialAccounts: {
             create: {
+              tenantId,
               provider: providerType,
               providerId: providerUserId,
               accessToken,
@@ -386,7 +348,7 @@ export class SocialIdentityProviderService {
   }
 
   private async exchangeCodeForToken(
-    provider: any,
+    provider: SocialIdentityProvider,
     code: string,
     redirectUri: string
   ): Promise<{ access_token: string; refresh_token?: string; user_id: string }> {
@@ -415,7 +377,7 @@ export class SocialIdentityProviderService {
   }
 
   private async fetchUserProfile(
-    provider: any,
+    provider: SocialIdentityProvider,
     accessToken: string,
     userId: string
   ): Promise<Record<string, any>> {

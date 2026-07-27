@@ -32,6 +32,7 @@ model Tenant {
   webhooks        Webhook[]
   auditLogs       AuditLog[]
   socialIdentityProviders SocialIdentityProvider[]
+  socialAccounts          SocialAccount[]
   customDomains   CustomDomain[]
   messageTemplates MessageTemplate[]
   loginStyle      LoginStyle?
@@ -240,6 +241,7 @@ model Permission {
 
 model SocialAccount {
   id           String   @id @default(uuid())
+  tenantId     String
   userId       String
   provider     String
   providerId   String
@@ -249,9 +251,11 @@ model SocialAccount {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  @@unique([provider, providerId])
+  @@unique([tenantId, provider, providerId])
+  @@index([tenantId])
   @@index([userId])
   @@map("social_accounts")
 }

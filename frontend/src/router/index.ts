@@ -105,6 +105,12 @@ const routes: RouteRecordRaw[] = [
     name: 'OAuth2Authorize',
     component: () => import('@/views/oauth2/authorize.vue'),
     meta: { title: 'OAuth2 授权', requiresAuth: false }
+  },
+  {
+    path: '/auth/callback/:provider',
+    name: 'SocialAuthCallback',
+    component: () => import('@/views/auth/callback.vue'),
+    meta: { title: '社会化登录', requiresAuth: false }
   }
 ]
 

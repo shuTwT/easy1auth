@@ -10,13 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Alert, AlertTitle } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
+import { Label } from '@/components/ui/label'
 import type {
   SocialIdentityProvider,
-  CreateSocialIdentityProviderDto,
-  UpdateSocialIdentityProviderDto,
   SocialIdentityProviderStats,
   SocialProviderType,
 } from '@/types/socialIdentityProvider'
@@ -42,14 +41,22 @@ const searchQuery = ref('')
 const dialogVisible = ref(false)
 const isEdit = ref(false)
 const submitting = ref(false)
-const providerForm = reactive<CreateSocialIdentityProviderDto & UpdateSocialIdentityProviderDto & { id?: string }>({
+type ProviderForm = {
+  id?: string
+  name: string
+  type: SocialProviderType
+  clientId: string
+  clientSecret: string
+  scope: string[]
+  attributeMapping: Record<string, string>
+  status?: 'active' | 'inactive'
+}
+
+const providerForm = reactive<ProviderForm>({
   name: '',
   type: 'github' as SocialProviderType,
   clientId: '',
   clientSecret: '',
-  authorizationEndpoint: '',
-  tokenEndpoint: '',
-  userInfoEndpoint: '',
   scope: [],
   attributeMapping: {},
 })
@@ -113,78 +120,13 @@ const loadProviders = async () => {
 }
 
 const handleTypeChange = (type: SocialProviderType) => {
-  const configs: Record<SocialProviderType, { authorizationEndpoint: string; tokenEndpoint: string; userInfoEndpoint: string; scope: string[] }> = {
-    wechat: {
-      authorizationEndpoint: 'https://open.weixin.qq.com/connect/qrconnect',
-      tokenEndpoint: 'https://api.weixin.qq.com/sns/oauth2/access_token',
-      userInfoEndpoint: 'https://api.weixin.qq.com/sns/userinfo',
-      scope: ['snsapi_login'],
-    },
-    qq: {
-      authorizationEndpoint: 'https://graph.qq.com/oauth2.0/authorize',
-      tokenEndpoint: 'https://graph.qq.com/oauth2.0/token',
-      userInfoEndpoint: 'https://graph.qq.com/user/get_user_info',
-      scope: ['get_user_info'],
-    },
-    feishu: {
-      authorizationEndpoint: 'https://open.feishu.cn/open-apis/authen/v1/authorize',
-      tokenEndpoint: 'https://open.feishu.cn/open-apis/authen/v1/oidc/access_token',
-      userInfoEndpoint: 'https://open.feishu.cn/open-apis/authen/v1/user_info',
-      scope: ['contact:user.base:readonly'],
-    },
-    github: {
-      authorizationEndpoint: 'https://github.com/login/oauth/authorize',
-      tokenEndpoint: 'https://github.com/login/oauth/access_token',
-      userInfoEndpoint: 'https://api.github.com/user',
-      scope: ['user:email'],
-    },
-    gitee: {
-      authorizationEndpoint: 'https://gitee.com/oauth/authorize',
-      tokenEndpoint: 'https://gitee.com/oauth/token',
-      userInfoEndpoint: 'https://gitee.com/api/v5/user',
-      scope: ['user_info', 'emails'],
-    },
-    dingtalk: {
-      authorizationEndpoint: 'https://login.dingtalk.com/oauth2/auth',
-      tokenEndpoint: 'https://api.dingtalk.com/v1.0/oauth2/userAccessToken',
-      userInfoEndpoint: 'https://api.dingtalk.com/v1.0/contact/users/me',
-      scope: ['openid'],
-    },
-    wechat_work: {
-      authorizationEndpoint: 'https://open.work.weixin.qq.com/wwopen/sso/qrConnect',
-      tokenEndpoint: 'https://qyapi.weixin.qq.com/cgi-bin/miniprogram/jscode2session',
-      userInfoEndpoint: 'https://qyapi.weixin.qq.com/cgi-bin/user/get',
-      scope: ['snsapi_base'],
-    },
-    custom: {
-      authorizationEndpoint: '',
-      tokenEndpoint: '',
-      userInfoEndpoint: '',
-      scope: [],
-    },
-  }
-
-  const config = configs[type]
-  if (config && !isEdit.value) {
-    providerForm.authorizationEndpoint = config.authorizationEndpoint
-    providerForm.tokenEndpoint = config.tokenEndpoint
-    providerForm.userInfoEndpoint = config.userInfoEndpoint
-    providerForm.scope = config.scope
+  if (!isEdit.value) {
+    providerForm.scope = [...PROVIDER_CONFIGS[type].defaultScopes]
   }
 }
 
 const getAvailableScopes = () => {
-  const scopesByType: Record<SocialProviderType, string[]> = {
-    wechat: ['snsapi_login', 'snsapi_userinfo'],
-    qq: ['get_user_info', 'get_simple_userinfo'],
-    feishu: ['contact:user.base:readonly', 'contact:user.email:readonly'],
-    github: ['user', 'user:email', 'repo', 'read:org'],
-    gitee: ['user_info', 'projects', 'pull_requests', 'issues'],
-    dingtalk: ['openid', 'corpid', 'userid'],
-    wechat_work: ['snsapi_base', 'snsapi_userinfo'],
-    custom: [],
-  }
-  return scopesByType[providerForm.type] || []
+  return PROVIDER_CONFIGS[providerForm.type].availableScopes
 }
 
 const handleCreate = () => {
@@ -194,9 +136,6 @@ const handleCreate = () => {
     type: 'github',
     clientId: '',
     clientSecret: '',
-    authorizationEndpoint: '',
-    tokenEndpoint: '',
-    userInfoEndpoint: '',
     scope: [],
     attributeMapping: {},
   })
@@ -212,9 +151,6 @@ const handleEdit = (row: SocialIdentityProvider) => {
     type: row.type,
     clientId: row.clientId,
     clientSecret: row.clientSecret,
-    authorizationEndpoint: row.authorizationEndpoint,
-    tokenEndpoint: row.tokenEndpoint,
-    userInfoEndpoint: row.userInfoEndpoint,
     scope: row.scope,
     attributeMapping: row.attributeMapping || {},
     status: row.status,
@@ -226,13 +162,11 @@ const handleSubmit = async () => {
   submitting.value = true
   try {
     if (isEdit.value) {
-      await socialIdentityProviderApi.update(providerForm.id!, {
+      if (!providerForm.id) return
+      await socialIdentityProviderApi.update(providerForm.id, {
         name: providerForm.name,
         clientId: providerForm.clientId,
         clientSecret: providerForm.clientSecret,
-        authorizationEndpoint: providerForm.authorizationEndpoint,
-        tokenEndpoint: providerForm.tokenEndpoint,
-        userInfoEndpoint: providerForm.userInfoEndpoint,
         scope: providerForm.scope,
         attributeMapping: providerForm.attributeMapping,
       })
@@ -243,9 +177,6 @@ const handleSubmit = async () => {
         type: providerForm.type,
         clientId: providerForm.clientId,
         clientSecret: providerForm.clientSecret,
-        authorizationEndpoint: providerForm.authorizationEndpoint,
-        tokenEndpoint: providerForm.tokenEndpoint,
-        userInfoEndpoint: providerForm.userInfoEndpoint,
         scope: providerForm.scope,
         attributeMapping: providerForm.attributeMapping,
       })
@@ -305,7 +236,7 @@ const formatDate = (date: string) => {
 }
 
 const toggleScope = (scope: string) => {
-  const arr = providerForm.scope!
+  const arr = providerForm.scope
   const index = arr.indexOf(scope)
   if (index > -1) {
     arr.splice(index, 1)
@@ -514,17 +445,18 @@ onMounted(() => {
       <DialogContent class="max-w-xl">
         <DialogHeader>
           <DialogTitle>{{ dialogTitle }}</DialogTitle>
+          <DialogDescription>选择预置身份源并填写第三方平台提供的应用凭据。</DialogDescription>
         </DialogHeader>
         <form>
           <div class="grid gap-4 py-4">
             <div class="grid gap-2">
-              <label class="text-sm font-medium">身份源名称</label>
-              <Input v-model="providerForm.name" placeholder="请输入身份源名称" />
+              <Label for="provider-name">身份源名称</Label>
+              <Input id="provider-name" v-model="providerForm.name" placeholder="请输入身份源名称" />
             </div>
             <div class="grid gap-2">
-              <label class="text-sm font-medium">身份源类型</label>
+              <Label for="provider-type">身份源类型</Label>
               <Select v-model="providerForm.type" :disabled="isEdit" @update:model-value="handleTypeChange($event as SocialProviderType)">
-                <SelectTrigger>
+                <SelectTrigger id="provider-type">
                   <SelectValue placeholder="请选择身份源类型" />
                 </SelectTrigger>
                 <SelectContent>
@@ -538,42 +470,34 @@ onMounted(() => {
               </Select>
             </div>
             <div class="grid gap-2">
-              <label class="text-sm font-medium">Client ID</label>
-              <Input v-model="providerForm.clientId" placeholder="请输入Client ID" />
+              <Label for="provider-client-id">Client ID</Label>
+              <Input id="provider-client-id" v-model="providerForm.clientId" placeholder="请输入Client ID" />
             </div>
             <div class="grid gap-2">
-              <label class="text-sm font-medium">Client Secret</label>
-              <Input v-model="providerForm.clientSecret" type="password" placeholder="请输入Client Secret" />
+              <Label for="provider-client-secret">Client Secret</Label>
+              <Input id="provider-client-secret" v-model="providerForm.clientSecret" type="password" placeholder="请输入Client Secret" />
             </div>
             <div class="grid gap-2">
-              <label class="text-sm font-medium">授权端点</label>
-              <Input v-model="providerForm.authorizationEndpoint" placeholder="OAuth授权端点URL" />
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">Token端点</label>
-              <Input v-model="providerForm.tokenEndpoint" placeholder="OAuth Token端点URL" />
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">用户信息端点</label>
-              <Input v-model="providerForm.userInfoEndpoint" placeholder="用户信息端点URL" />
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">Scope</label>
-              <div class="flex flex-wrap gap-2">
-                <Badge
+              <Label id="provider-scope-label">Scope</Label>
+              <div class="flex flex-wrap gap-2" role="group" aria-labelledby="provider-scope-label">
+                <button
                   v-for="scope in getAvailableScopes()"
                   :key="scope"
-                  :variant="providerForm.scope!.includes(scope) ? 'default' : 'outline'"
-                  class="cursor-pointer"
+                  type="button"
+                  :aria-pressed="providerForm.scope.includes(scope)"
+                  class="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   @click="toggleScope(scope)"
                 >
-                  {{ scope }}
-                </Badge>
+                  <Badge :variant="providerForm.scope.includes(scope) ? 'default' : 'outline'">
+                    {{ scope }}
+                  </Badge>
+                </button>
               </div>
             </div>
             <div class="grid gap-2">
-              <label class="text-sm font-medium">属性映射</label>
+              <Label for="provider-attribute-mapping">属性映射</Label>
               <Textarea
+                id="provider-attribute-mapping"
                 v-model="attributeMappingStr"
                 :rows="4"
                 placeholder='JSON格式的属性映射配置，例如：{"username": "login", "email": "email"}'
@@ -592,6 +516,7 @@ onMounted(() => {
       <DialogContent class="max-w-2xl">
         <DialogHeader>
           <DialogTitle>配置指南</DialogTitle>
+          <DialogDescription>按照第三方开放平台要求完成应用和回调地址配置。</DialogDescription>
         </DialogHeader>
         <div class="py-5" v-if="currentProvider">
           <Alert class="mb-5">
