@@ -43,6 +43,7 @@ import {
   Users,
   BriefcaseBusiness,
   ShieldCheck,
+  UserCog,
   LockKeyhole,
   Monitor,
   Link2,
@@ -90,6 +91,7 @@ const menuGroups = [
       { index: '/position', title: '岗位管理', icon: BriefcaseBusiness },
       { index: '/role', title: '角色管理', icon: ShieldCheck },
       { index: '/permission', title: '权限管理', icon: LockKeyhole },
+      { index: '/admin-user', title: '管理员管理', icon: UserCog },
     ],
   },
   {

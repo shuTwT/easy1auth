@@ -87,6 +87,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '权限管理', requiresAuth: true }
       },
       {
+        path: 'admin-user',
+        name: 'AdminUser',
+        component: () => import('@/views/adminUser/index.vue'),
+        meta: { title: '管理员管理', requiresAuth: true }
+      },
+      {
         path: 'personalization',
         name: 'Personalization',
         component: () => import('@/views/personalization/index.vue'),
