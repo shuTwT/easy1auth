@@ -596,7 +596,7 @@ const loadDomains = async () => {
   domainsLoading.value = true
   try {
     const response = await customDomainApi.list()
-    domains.value = response.data
+    domains.value = response
   } catch (error) {
     console.error('加载域名列表失败:', error)
     toast.error('加载域名列表失败')
@@ -689,7 +689,7 @@ const handleDeleteDomain = async (domain: CustomDomain) => {
 const loadLoginStyle = async () => {
   try {
     const response = await loginStyleApi.get()
-    Object.assign(loginStyle, response.data.data)
+    Object.assign(loginStyle, response)
   } catch (error) {
     console.error('加载登录样式失败:', error)
   }
@@ -750,7 +750,7 @@ const loadTemplates = async () => {
   templatesLoading.value = true
   try {
     const response = await messageTemplateApi.list()
-    templates.value = response.data
+    templates.value = response
   } catch (error) {
     console.error('加载模板列表失败:', error)
     toast.error('加载模板列表失败')

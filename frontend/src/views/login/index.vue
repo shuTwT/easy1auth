@@ -41,7 +41,7 @@ const loadLoginStyle = async () => {
   try {
     const hostname = window.location.hostname
     const response = await loginStyleApi.getPublic(hostname !== 'localhost' ? hostname : undefined)
-    loginStyle.value = response.data
+    loginStyle.value = response
     currentMode.value = firstAvailableMethod.value as LoginMode
     applyCustomStyles()
   } catch (error) {

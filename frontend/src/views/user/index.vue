@@ -203,7 +203,7 @@ const handleAssignRole = async (row: User) => {
       roleApi.getList(),
     ])
     userRoles.value = userRolesData
-    allRoles.value = allRolesData
+    allRoles.value = allRolesData.roles
     selectedRoleIds.value = userRolesData.map((role: Role) => role.id)
     assignRoleDialogVisible.value = true
   } catch (error) {

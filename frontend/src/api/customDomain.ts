@@ -25,17 +25,17 @@ export interface UpdateSSLDto {
 }
 
 export const customDomainApi = {
-  list: () => request.get<{ data: CustomDomain[] }>('/custom-domains'),
+  list: ():Promise<CustomDomain[]> => request.get('/custom-domains'),
   
-  create: (data: CreateDomainDto) => 
-    request.post<{ data: CustomDomain }>('/custom-domains', data),
+  create: (data: CreateDomainDto):Promise<CustomDomain> => 
+    request.post('/custom-domains', data),
   
-  verify: (id: string) => 
-    request.post<{ data: CustomDomain }>(`/custom-domains/${id}/verify`),
+  verify: (id: string):Promise<CustomDomain>  => 
+    request.post(`/custom-domains/${id}/verify`),
   
-  updateSSL: (id: string, data: UpdateSSLDto) => 
-    request.put<{ data: CustomDomain }>(`/custom-domains/${id}/ssl`, data),
+  updateSSL: (id: string, data: UpdateSSLDto):Promise<CustomDomain>  => 
+    request.put(`/custom-domains/${id}/ssl`, data),
   
-  delete: (id: string) => 
+  delete: (id: string):Promise<CustomDomain>  => 
     request.delete(`/custom-domains/${id}`),
 }

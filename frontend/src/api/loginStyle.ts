@@ -30,11 +30,11 @@ export interface UpdateLoginStyleDto {
 }
 
 export const loginStyleApi = {
-  get: () => request.get<{ data: LoginStyle }>('/login-style'),
+  get: ():Promise<LoginStyle> => request.get('/login-style'),
   
-  update: (data: UpdateLoginStyleDto) => 
-    request.put<{ data: LoginStyle }>('/login-style', data),
+  update: (data: UpdateLoginStyleDto):Promise<LoginStyle> => 
+    request.put('/login-style', data),
   
-  getPublic: (domain?: string) => 
-    request.get<{ data: LoginStyle }>('/login-style/public', { params: { domain } }),
+  getPublic: (domain?: string):Promise<LoginStyle> => 
+    request.get('/login-style/public', { params: { domain } }),
 }

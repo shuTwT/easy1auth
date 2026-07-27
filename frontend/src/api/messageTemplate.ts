@@ -34,17 +34,17 @@ export interface UpdateTemplateDto {
 }
 
 export const messageTemplateApi = {
-  list: (type?: 'email' | 'sms') => 
-    request.get<{ data: MessageTemplate[] }>('/message-templates', { params: { type } }),
+  list: (type?: 'email' | 'sms'):Promise<MessageTemplate[]> => 
+    request.get('/message-templates', { params: { type } }),
   
-  get: (id: string) => 
-    request.get<{ data: MessageTemplate }>(`/message-templates/${id}`),
+  get: (id: string):Promise<MessageTemplate > => 
+    request.get(`/message-templates/${id}`),
   
-  create: (data: CreateTemplateDto) => 
-    request.post<{ data: MessageTemplate }>('/message-templates', data),
+  create: (data: CreateTemplateDto):Promise<MessageTemplate > => 
+    request.post('/message-templates', data),
   
-  update: (id: string, data: UpdateTemplateDto) => 
-    request.put<{ data: MessageTemplate }>(`/message-templates/${id}`, data),
+  update: (id: string, data: UpdateTemplateDto):Promise<MessageTemplate > => 
+    request.put(`/message-templates/${id}`, data),
   
   delete: (id: string) => 
     request.delete(`/message-templates/${id}`),
