@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted, reactive } from 'vue'
+import { ref, onMounted, reactive, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import axios from 'axios'
 import { toast } from 'vue-sonner'
 import { Plus, Search, Copy, Trash2 } from '@lucide/vue'
 import { applicationApi } from '@/api/application'
@@ -17,6 +19,17 @@ import { NumberField, NumberFieldContent, NumberFieldDecrement, NumberFieldIncre
 import { Minus, Plus as PlusIcon } from '@lucide/vue'
 import type { Application, CreateApplicationDto, UpdateApplicationDto, ApplicationQueryDto } from '@/types/application'
 
+type ApiErrorResponse = {
+  readonly message?: string
+}
+
+const getApiErrorMessage = (error: unknown, fallback: string): string => {
+  if (!axios.isAxiosError<ApiErrorResponse>(error)) return fallback
+  return error.response?.data?.message ?? fallback
+}
+
+const router = useRouter()
+
 const loading = ref(false)
 const applications = ref<Application[]>([])
 const total = ref(0)
@@ -25,8 +38,6 @@ const dialogTitle = ref('新增应用')
 const currentApp = ref<Partial<Application>>({})
 const secretDialogVisible = ref(false)
 const newClientSecret = ref('')
-const showSecretDialogVisible = ref(false)
-const currentAppSecret = ref('')
 
 const queryForm = reactive<ApplicationQueryDto>({
   page: 1,
@@ -47,7 +58,65 @@ const appForm = reactive<CreateApplicationDto & UpdateApplicationDto>({
   refreshTokenLifetime: 2592000
 })
 
+const isEditing = computed(() => Boolean(currentApp.value.id))
+
 const redirectUriInput = ref('')
+
+const formErrors = reactive<{
+  name?: string
+  type?: string
+  allowedGrantTypes?: string
+  accessTokenLifetime?: string
+  refreshTokenLifetime?: string
+}>({})
+
+const resetFormErrors = () => {
+  formErrors.name = undefined
+  formErrors.type = undefined
+  formErrors.allowedGrantTypes = undefined
+  formErrors.accessTokenLifetime = undefined
+  formErrors.refreshTokenLifetime = undefined
+}
+
+const validateCreateForm = (): boolean => {
+  resetFormErrors()
+  let valid = true
+  if (!appForm.name || !appForm.name.trim()) {
+    formErrors.name = '请输入应用名称'
+    valid = false
+  }
+  if (!appForm.type) {
+    formErrors.type = '请选择应用类型'
+    valid = false
+  }
+  return valid
+}
+
+const validateEditForm = (): boolean => {
+  resetFormErrors()
+  let valid = true
+  if (!appForm.name || !appForm.name.trim()) {
+    formErrors.name = '请输入应用名称'
+    valid = false
+  }
+  if (!appForm.type) {
+    formErrors.type = '请选择应用类型'
+    valid = false
+  }
+  if (!appForm.allowedGrantTypes || appForm.allowedGrantTypes.length === 0) {
+    formErrors.allowedGrantTypes = '请至少选择一种授权类型'
+    valid = false
+  }
+  if (!appForm.accessTokenLifetime || appForm.accessTokenLifetime < 60) {
+    formErrors.accessTokenLifetime = '访问令牌有效期不能小于 60 秒'
+    valid = false
+  }
+  if (!appForm.refreshTokenLifetime || appForm.refreshTokenLifetime < 3600) {
+    formErrors.refreshTokenLifetime = '刷新令牌有效期不能小于 3600 秒'
+    valid = false
+  }
+  return valid
+}
 
 const loadApplications = async () => {
   loading.value = true
@@ -90,7 +159,12 @@ const handleAdd = () => {
   })
   redirectUriInput.value = ''
   currentApp.value = {}
+  resetFormErrors()
   dialogVisible.value = true
+}
+
+const handleDetail = (row: Application) => {
+  router.push(`/application/${row.id}`)
 }
 
 const handleEdit = (row: Application) => {
@@ -107,6 +181,7 @@ const handleEdit = (row: Application) => {
   })
   redirectUriInput.value = ''
   currentApp.value = row
+  resetFormErrors()
   dialogVisible.value = true
 }
 
@@ -135,26 +210,6 @@ const handleStatusChange = async (row: Application, status: string) => {
   }
 }
 
-const handleRegenerateSecret = async (row: Application) => {
-  const confirmed = window.confirm('重新生成密钥后，旧密钥将立即失效。确定要重新生成吗？')
-  if (!confirmed) return
-  
-  try {
-    const res = await applicationApi.regenerateSecret(row.id)
-    newClientSecret.value = res.data.clientSecret
-    secretDialogVisible.value = true
-    toast.success('密钥重新生成成功')
-  } catch (error) {
-    console.error('重新生成密钥失败:', error)
-    toast.error('重新生成密钥失败')
-  }
-}
-
-const handleShowSecret = (row: Application) => {
-  currentAppSecret.value = row.clientSecret
-  showSecretDialogVisible.value = true
-}
-
 const handleAddRedirectUri = () => {
   if (redirectUriInput.value) {
     if (!appForm.redirectUris) {
@@ -170,21 +225,30 @@ const handleRemoveRedirectUri = (index: number) => {
 }
 
 const handleSubmit = async () => {
+  const valid = isEditing.value ? validateEditForm() : validateCreateForm()
+  if (!valid) {
+    toast.error('请检查表单填写是否正确')
+    return
+  }
   try {
-    if (currentApp.value.id) {
+    if (isEditing.value && currentApp.value.id) {
       await applicationApi.update(currentApp.value.id, appForm)
       toast.success('更新成功')
     } else {
-      const res = await applicationApi.create(appForm as CreateApplicationDto)
+      const createPayload = {
+        name: appForm.name.trim(),
+        type: appForm.type
+      }
+      const res = await applicationApi.create(createPayload)
       newClientSecret.value = res.data.clientSecret
       secretDialogVisible.value = true
       toast.success('创建成功')
     }
     dialogVisible.value = false
     loadApplications()
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('保存应用失败:', error)
-    toast.error(error.response?.data?.message || '保存应用失败')
+    toast.error(getApiErrorMessage(error, '保存应用失败'))
   }
 }
 
@@ -372,9 +436,8 @@ onMounted(() => {
               <TableCell>{{ new Date(row.createdAt).toLocaleString() }}</TableCell>
               <TableCell>
                 <div class="flex gap-1 flex-wrap">
+                  <Button variant="link" size="sm" class="h-auto p-0" @click="handleDetail(row)">详情</Button>
                   <Button variant="link" size="sm" class="h-auto p-0" @click="handleEdit(row)">编辑</Button>
-                  <Button variant="link" size="sm" class="h-auto p-0" @click="handleShowSecret(row)">查看密钥</Button>
-                  <Button variant="link" size="sm" class="h-auto p-0 text-yellow-600" @click="handleRegenerateSecret(row)">重新生成密钥</Button>
                   <Button 
                     variant="link" 
                     size="sm" 
@@ -422,12 +485,13 @@ onMounted(() => {
           <div class="grid gap-4 py-4">
             <div class="grid gap-2">
               <label class="text-sm font-medium">应用名称</label>
-              <Input v-model="appForm.name" placeholder="请输入应用名称" />
+              <Input v-model="appForm.name" placeholder="请输入应用名称" :aria-invalid="!!formErrors.name" />
+              <p v-if="formErrors.name" class="text-sm text-destructive">{{ formErrors.name }}</p>
             </div>
             <div class="grid gap-2">
               <label class="text-sm font-medium">应用类型</label>
               <Select v-model="appForm.type">
-                <SelectTrigger>
+                <SelectTrigger :aria-invalid="!!formErrors.type">
                   <SelectValue placeholder="请选择应用类型" />
                 </SelectTrigger>
                 <SelectContent>
@@ -437,102 +501,108 @@ onMounted(() => {
                   <SelectItem value="machine">机器对机器</SelectItem>
                 </SelectContent>
               </Select>
+              <p v-if="formErrors.type" class="text-sm text-destructive">{{ formErrors.type }}</p>
             </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">应用描述</label>
-              <Textarea v-model="appForm.description" :rows="3" placeholder="请输入应用描述" />
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">应用Logo</label>
-              <Input v-model="appForm.logo" placeholder="请输入Logo URL" />
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">重定向URI</label>
-              <div class="flex gap-2 mb-2">
-                <Input v-model="redirectUriInput" placeholder="请输入重定向URI" class="flex-1" />
-                <Button type="button" @click="handleAddRedirectUri">添加</Button>
+            <template v-if="isEditing">
+              <div class="grid gap-2">
+                <label class="text-sm font-medium">应用描述</label>
+                <Textarea v-model="appForm.description" :rows="3" placeholder="请输入应用描述" />
               </div>
-              <div v-if="appForm.redirectUris && appForm.redirectUris.length > 0" class="flex flex-wrap gap-2">
-                <Badge
-                  v-for="(uri, index) in appForm.redirectUris"
-                  :key="index"
-                  variant="secondary"
-                  class="cursor-pointer"
-                  @click="handleRemoveRedirectUri(index)"
-                >
-                  {{ uri }}
-                  <Trash2 class="w-3 h-3 ml-1" />
-                </Badge>
+              <div class="grid gap-2">
+                <label class="text-sm font-medium">应用Logo</label>
+                <Input v-model="appForm.logo" placeholder="请输入Logo URL" />
               </div>
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">授权类型</label>
-              <div class="flex flex-col gap-2">
-                <div class="flex items-center gap-2">
-                  <Checkbox
-                    :checked="appForm.allowedGrantTypes?.includes('authorization_code')"
-                    @update:checked="toggleGrantType('authorization_code')"
-                  />
-                  <span class="text-sm">授权码模式</span>
+              <div class="grid gap-2">
+                <label class="text-sm font-medium">重定向URI</label>
+                <div class="flex gap-2 mb-2">
+                  <Input v-model="redirectUriInput" placeholder="请输入重定向URI" class="flex-1" />
+                  <Button type="button" @click="handleAddRedirectUri">添加</Button>
                 </div>
-                <div class="flex items-center gap-2">
-                  <Checkbox
-                    :checked="appForm.allowedGrantTypes?.includes('client_credentials')"
-                    @update:checked="toggleGrantType('client_credentials')"
-                  />
-                  <span class="text-sm">客户端凭证模式</span>
-                </div>
-                <div class="flex items-center gap-2">
-                  <Checkbox
-                    :checked="appForm.allowedGrantTypes?.includes('refresh_token')"
-                    @update:checked="toggleGrantType('refresh_token')"
-                  />
-                  <span class="text-sm">刷新令牌</span>
+                <div v-if="appForm.redirectUris && appForm.redirectUris.length > 0" class="flex flex-wrap gap-2">
+                  <Badge
+                    v-for="(uri, index) in appForm.redirectUris"
+                    :key="index"
+                    variant="secondary"
+                    class="cursor-pointer"
+                    @click="handleRemoveRedirectUri(index)"
+                  >
+                    {{ uri }}
+                    <Trash2 class="w-3 h-3 ml-1" />
+                  </Badge>
                 </div>
               </div>
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">访问令牌有效期</label>
-              <div class="flex items-center gap-2">
-                <NumberField
-                  v-model="appForm.accessTokenLifetime"
-                  :min="60"
-                  :max="86400"
-                >
-                  <NumberFieldContent>
-                    <NumberFieldDecrement>
-                      <Minus class="w-4 h-4" />
-                    </NumberFieldDecrement>
-                    <NumberFieldInput />
-                    <NumberFieldIncrement>
-                      <PlusIcon class="w-4 h-4" />
-                    </NumberFieldIncrement>
-                  </NumberFieldContent>
-                </NumberField>
-                <span class="text-sm text-muted-foreground">秒 ({{ formatLifetime(appForm.accessTokenLifetime) }})</span>
+              <div class="grid gap-2">
+                <label class="text-sm font-medium">授权类型</label>
+                <div class="flex flex-col gap-2">
+                  <div class="flex items-center gap-2">
+                    <Checkbox
+                      :checked="appForm.allowedGrantTypes?.includes('authorization_code')"
+                      @update:checked="toggleGrantType('authorization_code')"
+                    />
+                    <span class="text-sm">授权码模式</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <Checkbox
+                      :checked="appForm.allowedGrantTypes?.includes('client_credentials')"
+                      @update:checked="toggleGrantType('client_credentials')"
+                    />
+                    <span class="text-sm">客户端凭证模式</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <Checkbox
+                      :checked="appForm.allowedGrantTypes?.includes('refresh_token')"
+                      @update:checked="toggleGrantType('refresh_token')"
+                    />
+                    <span class="text-sm">刷新令牌</span>
+                  </div>
+                </div>
+                <p v-if="formErrors.allowedGrantTypes" class="text-sm text-destructive">{{ formErrors.allowedGrantTypes }}</p>
               </div>
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">刷新令牌有效期</label>
-              <div class="flex items-center gap-2">
-                <NumberField
-                  v-model="appForm.refreshTokenLifetime"
-                  :min="3600"
-                  :max="31536000"
-                >
-                  <NumberFieldContent>
-                    <NumberFieldDecrement>
-                      <Minus class="w-4 h-4" />
-                    </NumberFieldDecrement>
-                    <NumberFieldInput />
-                    <NumberFieldIncrement>
-                      <PlusIcon class="w-4 h-4" />
-                    </NumberFieldIncrement>
-                  </NumberFieldContent>
-                </NumberField>
-                <span class="text-sm text-muted-foreground">秒 ({{ formatLifetime(appForm.refreshTokenLifetime) }})</span>
+              <div class="grid gap-2">
+                <label class="text-sm font-medium">访问令牌有效期</label>
+                <div class="flex items-center gap-2">
+                  <NumberField
+                    v-model="appForm.accessTokenLifetime"
+                    :min="60"
+                    :max="86400"
+                  >
+                    <NumberFieldContent>
+                      <NumberFieldDecrement>
+                        <Minus class="w-4 h-4" />
+                      </NumberFieldDecrement>
+                      <NumberFieldInput />
+                      <NumberFieldIncrement>
+                        <PlusIcon class="w-4 h-4" />
+                      </NumberFieldIncrement>
+                    </NumberFieldContent>
+                  </NumberField>
+                  <span class="text-sm text-muted-foreground">秒 ({{ formatLifetime(appForm.accessTokenLifetime) }})</span>
+                </div>
+                <p v-if="formErrors.accessTokenLifetime" class="text-sm text-destructive">{{ formErrors.accessTokenLifetime }}</p>
               </div>
-            </div>
+              <div class="grid gap-2">
+                <label class="text-sm font-medium">刷新令牌有效期</label>
+                <div class="flex items-center gap-2">
+                  <NumberField
+                    v-model="appForm.refreshTokenLifetime"
+                    :min="3600"
+                    :max="31536000"
+                  >
+                    <NumberFieldContent>
+                      <NumberFieldDecrement>
+                        <Minus class="w-4 h-4" />
+                      </NumberFieldDecrement>
+                      <NumberFieldInput />
+                      <NumberFieldIncrement>
+                        <PlusIcon class="w-4 h-4" />
+                      </NumberFieldIncrement>
+                    </NumberFieldContent>
+                  </NumberField>
+                  <span class="text-sm text-muted-foreground">秒 ({{ formatLifetime(appForm.refreshTokenLifetime) }})</span>
+                </div>
+                <p v-if="formErrors.refreshTokenLifetime" class="text-sm text-destructive">{{ formErrors.refreshTokenLifetime }}</p>
+              </div>
+            </template>
           </div>
         </form>
         <DialogFooter>
@@ -563,22 +633,5 @@ onMounted(() => {
       </DialogContent>
     </Dialog>
 
-    <Dialog v-model:open="showSecretDialogVisible">
-      <DialogContent class="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Client Secret</DialogTitle>
-        </DialogHeader>
-        <Alert class="mb-5">
-          <AlertTitle class="font-semibold">客户端密钥</AlertTitle>
-        </Alert>
-        <div class="bg-muted p-3 rounded-md font-mono text-sm break-all">
-          {{ currentAppSecret }}
-        </div>
-        <DialogFooter>
-          <Button @click="copyToClipboard(currentAppSecret)">复制密钥</Button>
-          <Button variant="outline" @click="showSecretDialogVisible = false">关闭</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  </div>
+    </div>
 </template>

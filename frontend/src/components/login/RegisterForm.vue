@@ -12,8 +12,7 @@ const { loading, sendingCode, countdown, isCountingDown, register, sendCode } = 
 const form = reactive({
   email: '',
   password: '',
-  code: '',
-  username: ''
+  code: ''
 })
 
 const showPassword = shallowRef(false)
@@ -32,8 +31,7 @@ async function handleSubmit() {
   await register({
     email: form.email,
     password: form.password,
-    code: form.code,
-    username: form.username || undefined
+    code: form.code
   })
 }
 </script>
@@ -85,24 +83,6 @@ async function handleSubmit() {
           <span v-if="sendingCode" class="loading-spinner"></span>
           <span>{{ isCountingDown ? `${countdown}s后重试` : '获取验证码' }}</span>
         </button>
-      </div>
-    </div>
-
-    <div class="grid gap-2 mt-4">
-      <label class="form-label">用户名（可选）</label>
-      <div class="relative">
-        <svg
-          class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
-          width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-        >
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-          <circle cx="12" cy="7" r="4"/>
-        </svg>
-        <Input
-          v-model="form.username"
-          placeholder="请输入用户名"
-          class="login-input h-11 pl-10"
-        />
       </div>
     </div>
 

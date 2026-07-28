@@ -33,6 +33,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '应用管理', requiresAuth: true }
       },
       {
+        path: 'application/:id',
+        name: 'ApplicationDetail',
+        component: () => import('@/views/application/detail.vue'),
+        meta: { title: '应用详情', requiresAuth: true }
+      },
+      {
         path: 'audit',
         name: 'Audit',
         component: () => import('@/views/audit/index.vue'),
@@ -69,12 +75,6 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '品牌设置', requiresAuth: true }
       },
       {
-        path: 'sso',
-        name: 'SSO',
-        component: () => import('@/views/sso/index.vue'),
-        meta: { title: '单点登录', requiresAuth: true }
-      },
-      {
         path: 'security',
         name: 'Security',
         component: () => import('@/views/security/index.vue'),
@@ -99,6 +99,10 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '个性化设置', requiresAuth: true }
       }
     ]
+  },
+  {
+    path: '/sso',
+    redirect: '/application'
   },
   {
     path: '/login',

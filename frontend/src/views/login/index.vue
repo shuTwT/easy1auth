@@ -119,7 +119,7 @@ onMounted(() => {
         <p class="subtitle">{{ loginStyle?.subtitle || '企业级统一身份管理平台' }}</p>
       </div>
 
-      <div v-if="availableMethods.length > 1" class="login-tabs">
+      <div v-if="availableMethods.length > 1 && currentMode !== 'register'" class="login-tabs">
         <button
           v-if="availableMethods.includes('password')"
           :class="['tab-button', { active: currentMode === 'password' }]"

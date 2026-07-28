@@ -140,20 +140,9 @@ function togglePassword() {
     </button>
 
     <div class="form-footer">
-      <button
-        type="button"
-        class="link-button"
-        @click="emit('switchToEmail')"
-      >
-        邮箱验证码登录
-      </button>
-      <span class="divider">|</span>
-      <button
-        type="button"
-        class="link-button"
-        @click="emit('switchToRegister')"
-      >
-        立即注册
+      <span>没有账号？</span>
+      <button type="button" class="link-button" @click="emit('switchToRegister')">
+        去注册
       </button>
     </div>
   </form>

@@ -47,7 +47,6 @@ import {
   LockKeyhole,
   Monitor,
   Link2,
-  Fingerprint,
   Palette,
   Lock,
   WandSparkles,
@@ -99,7 +98,6 @@ const menuGroups = [
     items: [
       { index: '/application', title: '应用管理', icon: Monitor },
       { index: '/social-identity-provider', title: '社会化身份源', icon: Link2 },
-      { index: '/sso', title: '单点登录', icon: Fingerprint },
     ],
   },
   {
@@ -123,12 +121,22 @@ const handleSelect = (index: string) => {
   router.push(index)
 }
 
-const isActive = (path: string) => route.path === path
+const isActive = (path: string) => {
+  if (path === '/application') {
+    return route.path === '/application' || /^\/application\/[^/]+$/.test(route.path)
+  }
+
+  return route.path === path
+}
 
 const isChildActive = (children: { index: string }[]) =>
   children.some((child) => isActive(child.index))
 
 const currentMenuTitle = computed(() => {
+  if (/^\/application\/[^/]+$/.test(route.path)) {
+    return (route.meta.title as string | undefined) ?? '应用详情'
+  }
+
   for (const group of menuGroups) {
     for (const item of group.items) {
       if (item.index === route.path) {
