@@ -83,8 +83,8 @@ const loadGroups = async () => {
   loading.value = true
   try {
     const res = await groupApi.getList(queryForm)
-    groups.value = res.data.groups
-    total.value = res.data.total
+    groups.value = res.items
+    total.value = res.total
   } catch (error) {
     console.error('加载用户组列表失败:', error)
     toast.error('加载用户组列表失败')
@@ -96,7 +96,7 @@ const loadGroups = async () => {
 const loadTree = async () => {
   try {
     const res = await groupApi.getTree()
-    treeData.value = res.data
+    treeData.value = res
   } catch (error) {
     console.error('加载用户组树失败:', error)
   }
@@ -105,7 +105,7 @@ const loadTree = async () => {
 const loadStats = async () => {
   try {
     const res = await groupApi.getStats()
-    stats.value = res.data
+    stats.value = res
   } catch (error) {
     console.error('加载统计数据失败:', error)
   }
@@ -180,7 +180,7 @@ const handleSubmit = async () => {
     loadStats()
   } catch (error: any) {
     console.error('保存用户组失败:', error)
-    toast.error(error.response?.data?.message || '保存用户组失败')
+    toast.error(error.response?.data?.msg || '保存用户组失败')
   }
 }
 
@@ -194,9 +194,9 @@ const handleManageMembers = async (row: UserGroup) => {
       userApi.getList({ pageSize: 1000 })
     ])
     
-    memberForm.currentMembers = membersRes.data.members
-    memberForm.currentAdmins = membersRes.data.admins
-    memberForm.availableUsers = usersRes.data.users
+    memberForm.currentMembers = membersRes.members
+    memberForm.currentAdmins = membersRes.admins
+    memberForm.availableUsers = usersRes.items
     memberForm.selectedUsers = []
   } catch (error) {
     console.error('加载成员数据失败:', error)
@@ -214,9 +214,9 @@ const handleManageAdmins = async (row: UserGroup) => {
       userApi.getList({ pageSize: 1000 })
     ])
     
-    memberForm.currentMembers = membersRes.data.members
-    memberForm.currentAdmins = membersRes.data.admins
-    memberForm.availableUsers = usersRes.data.users
+    memberForm.currentMembers = membersRes.members
+    memberForm.currentAdmins = membersRes.admins
+    memberForm.availableUsers = usersRes.items
     memberForm.selectedUsers = []
   } catch (error) {
     console.error('加载管理员数据失败:', error)
@@ -236,7 +236,7 @@ const handleAddMembers = async () => {
     handleManageMembers({ id: currentGroupId.value } as UserGroup)
   } catch (error: any) {
     console.error('添加成员失败:', error)
-    toast.error(error.response?.data?.message || '添加成员失败')
+    toast.error(error.response?.data?.msg || '添加成员失败')
   }
 }
 
@@ -247,7 +247,7 @@ const handleRemoveMember = async (userId: string) => {
     handleManageMembers({ id: currentGroupId.value } as UserGroup)
   } catch (error: any) {
     console.error('移除成员失败:', error)
-    toast.error(error.response?.data?.message || '移除成员失败')
+    toast.error(error.response?.data?.msg || '移除成员失败')
   }
 }
 
@@ -263,7 +263,7 @@ const handleAddAdmins = async () => {
     handleManageAdmins({ id: currentGroupId.value } as UserGroup)
   } catch (error: any) {
     console.error('添加管理员失败:', error)
-    toast.error(error.response?.data?.message || '添加管理员失败')
+    toast.error(error.response?.data?.msg || '添加管理员失败')
   }
 }
 
@@ -274,7 +274,7 @@ const handleRemoveAdmin = async (userId: string) => {
     handleManageAdmins({ id: currentGroupId.value } as UserGroup)
   } catch (error: any) {
     console.error('移除管理员失败:', error)
-    toast.error(error.response?.data?.message || '移除管理员失败')
+    toast.error(error.response?.data?.msg || '移除管理员失败')
   }
 }
 

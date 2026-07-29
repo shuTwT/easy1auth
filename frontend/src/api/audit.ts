@@ -7,15 +7,15 @@ import type {
 } from '../types/audit'
 
 export const auditApi = {
-  getList(query: AuditLogQueryDto): Promise<{ status: string; data: AuditLogListResponse }> {
+  getList(query: AuditLogQueryDto): Promise<AuditLogListResponse> {
     return request.get('/audit-logs', { params: query })
   },
 
-  getById(id: string): Promise<{ status: string; data: AuditLog }> {
+  getById(id: string): Promise<AuditLog> {
     return request.get(`/audit-logs/${id}`)
   },
 
-  getStats(): Promise<{ status: string; data: AuditLogStats }> {
+  getStats(): Promise<AuditLogStats> {
     return request.get('/audit-logs/stats')
   },
 
@@ -26,7 +26,7 @@ export const auditApi = {
     })
   },
 
-  cleanup(days: number = 90): Promise<{ status: string; message: string }> {
+  cleanup(days: number = 90): Promise<void> {
     return request.delete(`/audit-logs/cleanup?days=${days}`)
   }
 }

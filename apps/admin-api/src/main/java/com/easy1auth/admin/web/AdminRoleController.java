@@ -3,6 +3,7 @@ package com.easy1auth.admin.web;
 import com.easy1auth.admin.security.TenantContextFilter;
 import com.easy1auth.adminaccess.*;
 import com.easy1auth.foundation.web.ApiResponse;
+import com.easy1auth.foundation.web.PageData;
 import com.easy1auth.tenant.TenantContext;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
@@ -15,7 +16,7 @@ public class AdminRoleController {
     AdminRoleController(AdminAccessService access){this.access=access;}
     @GetMapping("/stats") public ApiResponse<?> stats(HttpServletRequest r){return ApiResponse.ok(access.roleStats(context(r)));}
     @GetMapping("/permissions/catalog") public ApiResponse<?> catalog(HttpServletRequest r){access.require(context(r),"admin-role:read");return ApiResponse.ok(Map.of("permissions",AdminAccessService.PERMISSIONS));}
-    @GetMapping public ApiResponse<?> list(HttpServletRequest r,@RequestParam(defaultValue="1") int page,@RequestParam(defaultValue="10") int pageSize,@RequestParam(required=false) String name,@RequestParam(required=false) Boolean isSystem){return ApiResponse.ok(access.roles(context(r),page,pageSize,name,isSystem));}
+    @GetMapping public ApiResponse<?> list(HttpServletRequest r,@RequestParam(defaultValue="1") int page,@RequestParam(defaultValue="10") int pageSize,@RequestParam(required=false) String name,@RequestParam(required=false) Boolean isSystem){var p=access.roles(context(r),page,pageSize,name,isSystem);return ApiResponse.ok(PageData.of(p.roles(),p.page(),p.pageSize(),p.total()));}
     @GetMapping("/{id}") public ApiResponse<?> get(HttpServletRequest r,@PathVariable UUID id){return ApiResponse.ok(access.role(context(r),id));}
     @PostMapping public ApiResponse<?> create(HttpServletRequest r,@RequestBody RoleInput in){return ApiResponse.ok(access.create(context(r),in.name(),in.description(),in.permissions()),"管理员角色创建成功");}
     @PutMapping("/{id}") public ApiResponse<?> update(HttpServletRequest r,@PathVariable UUID id,@RequestBody RoleInput in){return ApiResponse.ok(access.update(context(r),id,in.name(),in.description(),in.permissions()),"管理员角色更新成功");}

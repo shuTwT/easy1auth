@@ -55,7 +55,7 @@ export interface UserQueryDto {
 }
 
 export interface UserListResponse {
-  users: User[]
+  items: User[]
   total: number
   page: number
   pageSize: number

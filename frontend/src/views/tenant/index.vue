@@ -43,7 +43,7 @@ const loadTenants = async () => {
   loading.value = true
   try {
     const res = await tenantApi.getList(queryForm)
-    tenants.value = res.tenants
+    tenants.value = res.items
     total.value = res.total
   } catch (error) {
     console.error('加载租户列表失败:', error)

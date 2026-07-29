@@ -9,27 +9,27 @@ import type {
 } from '@/types/position'
 
 export const positionApi = {
-  getList(query: PositionQueryDto): Promise<{ status: string; data: PositionListResponse }> {
+  getList(query: PositionQueryDto): Promise<PositionListResponse> {
     return request.get('/positions', { params: query })
   },
 
-  getById(id: string): Promise<{ status: string; data: Position }> {
+  getById(id: string): Promise<Position> {
     return request.get(`/positions/${id}`)
   },
 
-  create(data: CreatePositionDto): Promise<{ status: string; message: string; data: Position }> {
+  create(data: CreatePositionDto): Promise<Position> {
     return request.post('/positions', data)
   },
 
-  update(id: string, data: UpdatePositionDto): Promise<{ status: string; message: string; data: Position }> {
+  update(id: string, data: UpdatePositionDto): Promise<Position> {
     return request.put(`/positions/${id}`, data)
   },
 
-  delete(id: string): Promise<{ status: string; message: string }> {
+  delete(id: string): Promise<void> {
     return request.delete(`/positions/${id}`)
   },
 
-  getStats(): Promise<{ status: string; data: PositionStats }> {
+  getStats(): Promise<PositionStats> {
     return request.get('/positions/stats')
   }
 }

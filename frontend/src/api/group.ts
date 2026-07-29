@@ -15,51 +15,51 @@ import type {
 } from '@/types/group'
 
 export const groupApi = {
-  getList(query: GroupQueryDto): Promise<{ status: string; data: GroupListResponse }> {
+  getList(query: GroupQueryDto): Promise<GroupListResponse> {
     return request.get('/groups', { params: query })
   },
 
-  getById(id: string): Promise<{ status: string; data: UserGroup }> {
+  getById(id: string): Promise<UserGroup> {
     return request.get(`/groups/${id}`)
   },
 
-  create(data: CreateGroupDto): Promise<{ status: string; message: string; data: UserGroup }> {
+  create(data: CreateGroupDto): Promise<UserGroup> {
     return request.post('/groups', data)
   },
 
-  update(id: string, data: UpdateGroupDto): Promise<{ status: string; message: string; data: UserGroup }> {
+  update(id: string, data: UpdateGroupDto): Promise<UserGroup> {
     return request.put(`/groups/${id}`, data)
   },
 
-  delete(id: string): Promise<{ status: string; message: string }> {
+  delete(id: string): Promise<void> {
     return request.delete(`/groups/${id}`)
   },
 
-  getTree(): Promise<{ status: string; data: GroupTreeResponse[] }> {
+  getTree(): Promise<GroupTreeResponse[]> {
     return request.get('/groups/tree')
   },
 
-  getStats(): Promise<{ status: string; data: GroupStats }> {
+  getStats(): Promise<GroupStats> {
     return request.get('/groups/stats')
   },
 
-  getMembers(id: string): Promise<{ status: string; data: GroupMembersResponse }> {
+  getMembers(id: string): Promise<GroupMembersResponse> {
     return request.get(`/groups/${id}/members`)
   },
 
-  addMembers(id: string, data: AddMembersDto): Promise<{ status: string; message: string }> {
+  addMembers(id: string, data: AddMembersDto): Promise<void> {
     return request.post(`/groups/${id}/members`, data)
   },
 
-  removeMembers(id: string, data: RemoveMembersDto): Promise<{ status: string; message: string }> {
+  removeMembers(id: string, data: RemoveMembersDto): Promise<void> {
     return request.delete(`/groups/${id}/members`, { data })
   },
 
-  addAdmins(id: string, data: AddAdminsDto): Promise<{ status: string; message: string }> {
+  addAdmins(id: string, data: AddAdminsDto): Promise<void> {
     return request.post(`/groups/${id}/admins`, data)
   },
 
-  removeAdmins(id: string, data: RemoveAdminsDto): Promise<{ status: string; message: string }> {
+  removeAdmins(id: string, data: RemoveAdminsDto): Promise<void> {
     return request.delete(`/groups/${id}/admins`, { data })
   }
 }

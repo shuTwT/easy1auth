@@ -79,7 +79,7 @@ export function useAuth() {
     sendingCode.value = true
     try {
       const response = await authApi.sendCode(data)
-      toast.success(response.message || '验证码已发送')
+      toast.success('验证码已发送')
       startCountdown(60)
       return response
     } finally {

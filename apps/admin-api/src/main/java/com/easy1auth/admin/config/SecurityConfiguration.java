@@ -17,6 +17,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import com.easy1auth.admin.security.TenantContextFilter;
 import com.easy1auth.admin.security.AuditMutationFilter;
+import com.easy1auth.admin.security.ApiErrorWriter;
 
 @Configuration
 @EnableConfigurationProperties({AdminJwtProperties.class,RegistrationProperties.class})
@@ -40,10 +41,11 @@ public class SecurityConfiguration {
         return decoder;
     }
 
-    @Bean SecurityFilterChain security(HttpSecurity http, TenantContextFilter tenantContextFilter,AuditMutationFilter auditMutationFilter) throws Exception {
+    @Bean SecurityFilterChain security(HttpSecurity http, TenantContextFilter tenantContextFilter,AuditMutationFilter auditMutationFilter,ApiErrorWriter errors) throws Exception {
         return http.csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth.requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info", "/livez", "/readyz", "/api/auth/login", "/api/auth/mfa/verify", "/api/auth/register", "/api/auth/send-code", "/api/auth/refresh", "/api/brand-settings/public", "/api/login-style/public").permitAll().anyRequest().authenticated())
-                .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> {}))
+                .exceptionHandling(exceptions -> exceptions.accessDeniedHandler((request,response,exception) -> errors.write(response,403,"没有权限访问")))
+                .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> {}).authenticationEntryPoint((request,response,exception) -> errors.write(response,401,"登录状态无效或已过期")))
                 .addFilterAfter(tenantContextFilter, BearerTokenAuthenticationFilter.class).addFilterAfter(auditMutationFilter,TenantContextFilter.class).build();
     }
 

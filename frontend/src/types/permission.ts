@@ -59,7 +59,7 @@ export interface PermissionQueryDto {
 }
 
 export interface PermissionListResponse {
-  permissions: Permission[]
+  items: Permission[]
   total: number
   page: number
   pageSize: number

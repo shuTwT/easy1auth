@@ -620,7 +620,7 @@ const handleCreateDomain = async () => {
     domainForm.verificationMethod = 'dns'
     loadDomains()
   } catch (error: any) {
-    toast.error(error.response?.data?.message || '添加域名失败')
+    toast.error(error.response?.data?.msg || '添加域名失败')
   } finally {
     creatingDomain.value = false
   }
@@ -637,7 +637,7 @@ const handleVerifyDomainConfirm = async () => {
     verifyingDomain.value = null
     loadDomains()
   } catch (error: any) {
-    toast.error(error.response?.data?.message || '域名验证失败')
+    toast.error(error.response?.data?.msg || '域名验证失败')
   } finally {
     verifying.value = false
   }
@@ -656,7 +656,7 @@ const handleSaveSSL = async () => {
     showSSLDialog.value = false
     loadDomains()
   } catch (error: any) {
-    toast.error(error.response?.data?.message || '配置SSL证书失败')
+    toast.error(error.response?.data?.msg || '配置SSL证书失败')
   } finally {
     savingSSL.value = false
   }
@@ -670,7 +670,7 @@ const handleDeleteDomain = async (domain: CustomDomain) => {
     toast.success('域名删除成功')
     loadDomains()
   } catch (error: any) {
-    toast.error(error.response?.data?.message || '删除域名失败')
+    toast.error(error.response?.data?.msg || '删除域名失败')
   }
 }
 
@@ -689,7 +689,7 @@ const handleSaveLoginStyle = async () => {
     await loginStyleApi.update(loginStyle)
     toast.success('保存成功')
   } catch (error: any) {
-    toast.error(error.response?.data?.message || '保存失败')
+    toast.error(error.response?.data?.msg || '保存失败')
   } finally {
     savingLoginStyle.value = false
   }
@@ -754,7 +754,7 @@ const handleInitTemplates = async () => {
     toast.success('默认模板初始化成功')
     loadTemplates()
   } catch (error: any) {
-    toast.error(error.response?.data?.message || '初始化模板失败')
+    toast.error(error.response?.data?.msg || '初始化模板失败')
   } finally {
     initingTemplates.value = false
   }
@@ -801,7 +801,7 @@ const handleSaveTemplate = async () => {
     templateForm.isDefault = false
     loadTemplates()
   } catch (error: any) {
-    toast.error(error.response?.data?.message || '保存模板失败')
+    toast.error(error.response?.data?.msg || '保存模板失败')
   } finally {
     savingTemplate.value = false
   }
@@ -815,7 +815,7 @@ const handleDeleteTemplate = async (template: MessageTemplate) => {
     toast.success('模板删除成功')
     loadTemplates()
   } catch (error: any) {
-    toast.error(error.response?.data?.message || '删除模板失败')
+    toast.error(error.response?.data?.msg || '删除模板失败')
   }
 }
 

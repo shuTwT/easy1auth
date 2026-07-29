@@ -7,32 +7,23 @@ export interface CreateTenantRequest {
   plan?: string
 }
 
-export interface CreateTenantResponse {
-  status: string
-  message: string
-  tenant: TenantInfo
-}
-
-export interface GetTenantsResponse {
-  status: string
-  tenants: TenantInfo[]
-}
-
-export interface GetCurrentTenantResponse {
-  status: string
-  tenant: TenantInfo
+export interface TenantPageResponse {
+  items: TenantInfo[]
+  page: number
+  pageSize: number
+  total: number
 }
 
 export const tenantApi = {
-  getTenants(): Promise<GetTenantsResponse> {
+  getTenants(): Promise<TenantPageResponse> {
     return request.get('/tenants/list')
   },
 
-  createTenant(data: CreateTenantRequest): Promise<CreateTenantResponse> {
+  createTenant(data: CreateTenantRequest): Promise<TenantInfo> {
     return request.post('/tenants/create', data)
   },
 
-  getCurrentTenant(): Promise<GetCurrentTenantResponse> {
+  getCurrentTenant(): Promise<TenantInfo> {
     return request.get('/tenants/current')
   },
 
@@ -40,19 +31,19 @@ export const tenantApi = {
     return request.get('/tenants/list', { params })
   },
 
-  create(data: CreateTenantDto): Promise<{ status: string; message: string; tenant: Tenant }> {
+  create(data: CreateTenantDto): Promise<Tenant> {
     return request.post('/tenants/create', data)
   },
 
-  update(id: string, data: UpdateTenantDto): Promise<{ status: string; message: string; tenant: Tenant }> {
+  update(id: string, data: UpdateTenantDto): Promise<Tenant> {
     return request.put(`/tenants/${id}`, data)
   },
 
-  delete(id: string): Promise<{ status: string; message: string }> {
+  delete(id: string): Promise<void> {
     return request.delete(`/tenants/${id}`)
   },
 
-  updateStatus(id: string, status: string): Promise<{ status: string; message: string; tenant: Tenant }> {
+  updateStatus(id: string, status: string): Promise<Tenant> {
     return request.put(`/tenants/${id}/status`, { status })
   }
 }

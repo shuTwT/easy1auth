@@ -43,8 +43,8 @@ const loadLogs = async () => {
     }
     
     const res = await auditApi.getList(queryForm)
-    logs.value = res.data.logs
-    total.value = res.data.total
+    logs.value = res.items
+    total.value = res.total
   } catch (error) {
     console.error('加载审计日志失败:', error)
     toast.error('加载审计日志失败')
@@ -56,7 +56,7 @@ const loadLogs = async () => {
 const loadStats = async () => {
   try {
     const res = await auditApi.getStats()
-    stats.value = res.data
+    stats.value = res
   } catch (error) {
     console.error('加载统计数据失败:', error)
   }

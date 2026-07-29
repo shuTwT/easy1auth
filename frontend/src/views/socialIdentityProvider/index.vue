@@ -112,7 +112,7 @@ const loadProviders = async () => {
       page: page.value,
       pageSize: pageSize.value,
     })
-    providers.value = data.providers
+    providers.value = data.items
     total.value = data.total
   } catch (error) {
     toast.error('加载身份源列表失败')
@@ -192,7 +192,7 @@ const handleSubmit = async () => {
     loadProviders()
     loadStats()
   } catch (error: any) {
-    toast.error(error.response?.data?.error || '操作失败')
+    toast.error(error.response?.data?.msg || '操作失败')
   } finally {
     submitting.value = false
   }
@@ -206,7 +206,7 @@ const handleToggleStatus = async (row: SocialIdentityProvider) => {
     loadProviders()
     loadStats()
   } catch (error: any) {
-    toast.error(error.response?.data?.error || '状态更新失败')
+    toast.error(error.response?.data?.msg || '状态更新失败')
   }
 }
 
@@ -220,7 +220,7 @@ const handleDelete = async (row: SocialIdentityProvider) => {
     loadProviders()
     loadStats()
   } catch (error: any) {
-    toast.error(error.response?.data?.error || '删除失败')
+    toast.error(error.response?.data?.msg || '删除失败')
   }
 }
 

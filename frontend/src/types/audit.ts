@@ -36,7 +36,7 @@ export interface AuditLogQueryDto {
 }
 
 export interface AuditLogListResponse {
-  logs: AuditLog[]
+  items: AuditLog[]
   total: number
   page: number
   pageSize: number

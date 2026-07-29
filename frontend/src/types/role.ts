@@ -26,7 +26,7 @@ export interface RoleTree {
 }
 
 export interface RoleListResponse {
-  roles: Role[]
+  items: Role[]
   total: number
   page: number
   pageSize: number

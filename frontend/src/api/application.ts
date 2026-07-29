@@ -10,35 +10,35 @@ import type {
 } from '../types/application'
 
 export const applicationApi = {
-  getList(query: ApplicationQueryDto): Promise<{ status: string; data: ApplicationListResponse }> {
+  getList(query: ApplicationQueryDto): Promise<ApplicationListResponse> {
     return request.get('/applications', { params: query })
   },
 
-  getById(id: string): Promise<{ status: string; data: Application }> {
+  getById(id: string): Promise<Application> {
     return request.get(`/applications/${id}`)
   },
 
-  create(data: CreateApplicationDto): Promise<{ status: string; message: string; data: Application }> {
+  create(data: CreateApplicationDto): Promise<Application> {
     return request.post('/applications', data)
   },
 
-  update(id: string, data: UpdateApplicationDto): Promise<{ status: string; message: string; data: Application }> {
+  update(id: string, data: UpdateApplicationDto): Promise<Application> {
     return request.put(`/applications/${id}`, data)
   },
 
-  delete(id: string): Promise<{ status: string; message: string }> {
+  delete(id: string): Promise<void> {
     return request.delete(`/applications/${id}`)
   },
 
-  updateStatus(id: string, status: string): Promise<{ status: string; message: string; data: Application }> {
+  updateStatus(id: string, status: string): Promise<Application> {
     return request.put(`/applications/${id}/status`, { status })
   },
 
-  regenerateSecret(id: string): Promise<{ status: string; message: string; data: RegenerateSecretResponse }> {
+  regenerateSecret(id: string): Promise<RegenerateSecretResponse> {
     return request.post(`/applications/${id}/regenerate-secret`)
   },
 
-  getStats(): Promise<{ status: string; data: ApplicationStats }> {
+  getStats(): Promise<ApplicationStats> {
     return request.get('/applications/stats')
   }
 }

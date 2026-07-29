@@ -14,10 +14,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class ApplicationControllerContractTest {
-    @Test void listKeepsVueEnvelopeAndNeverReturnsStoredSecret()throws Exception{
+    @Test void listUsesStandardEnvelopeAndPagination()throws Exception{
         UUID tenant=UUID.randomUUID();var service=mock(ApplicationService.class);when(service.list(eq(tenant),eq(1),eq(10),isNull(),isNull(),isNull())).thenReturn(new ApplicationService.ApplicationPage(List.of(),0,1,10));
         var mvc=MockMvcBuilders.standaloneSetup(new ApplicationController(service)).build();
         mvc.perform(get("/api/applications").requestAttr(TenantContextFilter.ATTRIBUTE,new TenantContext(UUID.randomUUID(),tenant,UUID.randomUUID(),"owner",Set.of(),Set.of(),"trace")))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("success")).andExpect(jsonPath("$.data.applications").isArray()).andExpect(jsonPath("$.data.pageSize").value(10));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(0)).andExpect(jsonPath("$.data.items").isArray()).andExpect(jsonPath("$.data.pageSize").value(10)).andExpect(jsonPath("$.msg").value("成功"));
     }
 }

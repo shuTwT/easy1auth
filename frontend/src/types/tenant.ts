@@ -43,7 +43,7 @@ export interface TenantQueryDto {
 }
 
 export interface TenantListResponse {
-  tenants: Tenant[]
+  items: Tenant[]
   total: number
   page: number
   pageSize: number

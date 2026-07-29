@@ -20,12 +20,12 @@ import { Minus, Plus as PlusIcon } from '@lucide/vue'
 import type { Application, CreateApplicationDto, UpdateApplicationDto, ApplicationQueryDto } from '@/types/application'
 
 type ApiErrorResponse = {
-  readonly message?: string
+  readonly msg?: string
 }
 
 const getApiErrorMessage = (error: unknown, fallback: string): string => {
   if (!axios.isAxiosError<ApiErrorResponse>(error)) return fallback
-  return error.response?.data?.message ?? fallback
+  return error.response?.data?.msg ?? fallback
 }
 
 const router = useRouter()
@@ -122,8 +122,8 @@ const loadApplications = async () => {
   loading.value = true
   try {
     const res = await applicationApi.getList(queryForm)
-    applications.value = res.data.applications
-    total.value = res.data.total
+    applications.value = res.items
+    total.value = res.total
   } catch (error) {
     console.error('加载应用列表失败:', error)
     toast.error('加载应用列表失败')
@@ -233,8 +233,8 @@ const handleSubmit = async () => {
   try {
     if (isEditing.value && currentApp.value.id) {
       const res = await applicationApi.update(currentApp.value.id, appForm)
-      if (res.data.clientSecret) {
-        newClientSecret.value = res.data.clientSecret
+      if (res.clientSecret) {
+        newClientSecret.value = res.clientSecret
         secretDialogVisible.value = true
       }
       toast.success('更新成功')
@@ -244,7 +244,7 @@ const handleSubmit = async () => {
         type: appForm.type
       }
       const res = await applicationApi.create(createPayload)
-      newClientSecret.value = res.data.clientSecret ?? ''
+      newClientSecret.value = res.clientSecret ?? ''
       secretDialogVisible.value = true
       toast.success('创建成功')
     }

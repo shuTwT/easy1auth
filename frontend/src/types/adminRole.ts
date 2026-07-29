@@ -31,7 +31,7 @@ export interface AdminRoleQueryDto {
 
 /** Response shape for GET /admin-roles (list). Mirrors backend AdminRoleListResponse. */
 export interface AdminRoleListResponse {
-  roles: AdminRole[]
+  items: AdminRole[]
   total: number
   page: number
   pageSize: number

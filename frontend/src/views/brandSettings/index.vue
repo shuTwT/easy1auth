@@ -342,7 +342,7 @@ const handleSave = async () => {
     applyAdminPanelStyles()
   } catch (error: any) {
     console.error('保存品牌设置失败:', error)
-    toast.error(error.response?.data?.message || '保存失败')
+    toast.error(error.response?.data?.msg || '保存失败')
   } finally {
     saving.value = false
   }

@@ -56,7 +56,7 @@ export interface ApplicationQueryDto {
 }
 
 export interface ApplicationListResponse {
-  applications: Application[]
+  items: Application[]
   total: number
   page: number
   pageSize: number

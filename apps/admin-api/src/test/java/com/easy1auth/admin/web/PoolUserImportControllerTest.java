@@ -59,9 +59,9 @@ class PoolUserImportControllerTest {
         }
 
         var file=new MockMultipartFile("file","users.xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",workbookBytes);
-        Map<String,Object> response=controller.upload(request,file);
-        assertThat(response.get("status")).isEqualTo("success");
-        @SuppressWarnings("unchecked") var data=(Map<String,Object>)response.get("data");
+        var response=controller.upload(request,file);
+        assertThat(response.code()).isZero();
+        @SuppressWarnings("unchecked") var data=(Map<String,Object>)response.data();
         assertThat(data).containsEntry("success",1).containsEntry("failed",1).containsEntry("total",2);
         assertThat((java.util.List<?>)data.get("errors")).singleElement().extracting("row").isEqualTo(3);
     }

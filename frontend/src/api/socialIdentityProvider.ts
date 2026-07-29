@@ -13,27 +13,27 @@ import type {
 export const socialIdentityProviderApi = {
   async getStats(): Promise<SocialIdentityProviderStats> {
     const response: any = await request.get('/social-identity-providers/stats')
-    return response.data
+    return response
   },
 
   async getList(params?: { type?: string; status?: string; search?: string; page?: number; pageSize?: number }): Promise<SocialIdentityProviderListResponse> {
     const response: any = await request.get('/social-identity-providers', { params })
-    return { ...response.data, providers: response.data.providers.map(mapProvider) }
+    return { ...response, items: response.items.map(mapProvider) }
   },
 
   async getById(id: string): Promise<SocialIdentityProvider> {
     const response: any = await request.get(`/social-identity-providers/${id}`)
-    return mapProvider(response.data)
+    return mapProvider(response)
   },
 
   async create(data: CreateSocialIdentityProviderDto): Promise<SocialIdentityProvider> {
     const response: any = await request.post('/social-identity-providers', wire(data))
-    return mapProvider(response.data)
+    return mapProvider(response)
   },
 
   async update(id: string, data: UpdateSocialIdentityProviderDto): Promise<SocialIdentityProvider> {
     const response: any = await request.put(`/social-identity-providers/${id}`, wire(data))
-    return mapProvider(response.data)
+    return mapProvider(response)
   },
 
   delete(id: string): Promise<void> {

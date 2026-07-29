@@ -85,11 +85,11 @@ const fetchDashboardData = async () => {
   loading.value = true
   try {
     const res = await dashboardApi.getStats()
-    const data = res.data
+    const data = res
     stats.value = data.stats
     recentLogins.value = data.recentLogins
   } catch (e: any) {
-    error.value = e?.response?.data?.message || e?.message || '获取控制台数据失败'
+    error.value = e?.response?.data?.msg || e?.message || '获取控制台数据失败'
   } finally {
     loading.value = false
   }

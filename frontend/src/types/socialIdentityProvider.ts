@@ -15,7 +15,7 @@ export interface UpdateSocialIdentityProviderDto {
   scope?: string[]; attributeMapping?: Record<string,string>; jitProvisioning?: boolean
   status?: 'active' | 'disabled'
 }
-export interface SocialIdentityProviderListResponse { providers: SocialIdentityProvider[]; total: number; page: number; pageSize: number }
+export interface SocialIdentityProviderListResponse { items: SocialIdentityProvider[]; total: number; page: number; pageSize: number }
 export interface SocialIdentityProviderStats { totalProviders: number; activeProviders: number; inactiveProviders: number; byType: Record<string,number> }
 export interface OAuthAuthorizeUrlResponse { authorizeUrl: string; state: string }
 export interface OAuthCallbackDto { code: string; state: string; redirectUri: string }

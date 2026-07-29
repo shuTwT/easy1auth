@@ -1,107 +1,111 @@
 # AGENTS.md — Easy1Auth
 
-Enterprise multi-tenant IAM platform (SaaS). Chinese-language admin UI.
+企业级多租户身份与访问管理平台（SaaS），管理端界面使用中文。
 
-## Monorepo layout
+## Monorepo 目录结构
 
+```text
+apps/ 和 modules/  Java 21 + Spring Boot 3.5 后端（根 Gradle 构建）
+database-migration/ Flyway 数据库迁移与初始化应用
+frontend/           Vue 3 + Vite + shadcn-vue + Tailwind CSS 4 + Reka UI
+design-system/      设计规范（easy1auth-admin/MASTER.md）
+docs/               文档
 ```
-apps/ and modules/  Java 21 + Spring Boot 3.5 backend (root Gradle build)
-database-migration/ Flyway migration and bootstrap application
-frontend/           Vue 3 + Vite + shadcn-vue + Tailwind CSS 4 + Reka-UI
-design-system/  Design specs (easy1auth-admin/MASTER.md)
-```
 
-The Java backend is a Gradle build rooted at the repository root. `frontend/` is an independent
-pnpm package and is not part of a root pnpm workspace.
+Java 后端以仓库根目录作为 Gradle 构建根目录。`frontend/` 是独立的 pnpm 包，
+不属于根目录 pnpm workspace。
 
-## Current stack
+## 当前技术栈
 
-- PostgreSQL is the only application database.
-- Frontend packages use pnpm.
-- The UI uses shadcn-vue + Reka-UI + Tailwind CSS 4.
-- Admin API: `18848`; authorization server: `18850`; frontend: `18849`.
+- PostgreSQL 是唯一的应用数据库。
+- 前端依赖使用 pnpm 管理。
+- UI 使用 shadcn-vue、Reka UI 和 Tailwind CSS 4。
+- 管理 API 端口：`18848`；授权服务器端口：`18850`；前端端口：`18849`。
 
-## Development commands
+## 开发命令
 
-Java commands run from the repository root. Frontend commands run from `frontend/`:
+Java 命令在仓库根目录运行，前端命令在 `frontend/` 目录运行：
 
 ```bash
-# Java backend
+# Java 后端
 docker compose -f docker-compose.java-dev.yml up -d postgres
 ./gradlew :database-migration:bootRun
-./gradlew :apps:admin-api:bootRun       # port 18848
-./gradlew :apps:authorization-server:bootRun # port 18850
+./gradlew :apps:admin-api:bootRun             # 端口 18848
+./gradlew :apps:authorization-server:bootRun  # 端口 18850
 
-# Frontend
-cd frontend && pnpm dev         # Vite dev server (port 18849)
-cd frontend && pnpm build       # vue-tsc --build && vite build
+# 前端
+cd frontend && pnpm dev    # Vite 开发服务器，端口 18849
+cd frontend && pnpm build  # vue-tsc --build && vite build
 ```
 
-Vite proxies `/api` → `http://localhost:18848` (see `frontend/vite.config.ts`).
+Vite 将 `/api` 代理到 `http://localhost:18848`，配置见 `frontend/vite.config.ts`。
 
-`docker-compose.java-dev.yml` provides the development PostgreSQL database. Production
-orchestration is `deploy/compose.production.yml`.
+`docker-compose.java-dev.yml` 提供开发环境 PostgreSQL；生产环境编排配置为
+`deploy/compose.production.yml`。
 
-## Key architecture decisions
+## 关键架构决策
 
-### Auth & multi-tenancy
+### 认证与多租户
 
-- **JWT tokens** stored in `localStorage` (not httpOnly cookies).
-- All authenticated requests require `Authorization: Bearer <token>` header.
-- Tenant isolation via `tenant-id` request header (set by axios interceptor in `frontend/src/utils/request.ts`).
-- The admin API resolves tenant context in `TenantContextFilter` and enforces access in domain services.
+- JWT Token 存储在 `localStorage` 中，不使用 httpOnly Cookie。
+- 所有需要认证的请求必须携带 `Authorization: Bearer <token>` 请求头。
+- 通过 `tenant-id` 请求头实现租户隔离；该请求头由
+  `frontend/src/utils/request.ts` 中的 Axios 拦截器设置。
+- 管理 API 通过 `TenantContextFilter` 解析租户上下文，并在领域服务中执行权限校验。
 
-### Frontend: shadcn-vue conventions
+### 前端 shadcn-vue 约定
 
-- `@/*` alias → `frontend/src/`. Configured in both `tsconfig.json` + `vite.config.ts`.
-- shadcn-vue config: `frontend/components.json` (style: "reka-nova", baseColor: "neutral").
-- UI components are in `frontend/src/components/ui/` (36 components), managed by shadcn-vue CLI.
-- Custom shared components go in `frontend/src/components/common/`.
-- Pinia store: single `user.ts` store (Composition API style).
-- Toast notifications: `vue-sonner` (not Element Plus's message).
-- Forms: `vee-validate` + `zod` (not Element Plus form validation).
-- Table: `@tanstack/vue-table` (not Element Plus table).
+- `@/*` 别名指向 `frontend/src/`，同时配置于 `tsconfig.json` 和 `vite.config.ts`。
+- shadcn-vue 配置文件为 `frontend/components.json`，样式为 `reka-nova`，
+  基础色为 `neutral`。
+- UI 组件位于 `frontend/src/components/ui/`，由 shadcn-vue CLI 管理。
+- 自定义共享组件放在 `frontend/src/components/common/`。
+- Pinia Store 使用组合式 API 风格，目前统一放在 `user.ts`。
+- Toast 通知使用 `vue-sonner`，不使用 Element Plus Message。
+- 表单使用 `vee-validate` 和 `zod`，不使用 Element Plus 表单校验。
+- 表格使用 `@tanstack/vue-table`，不使用 Element Plus Table。
 
-### Dual color schemes
+### 前端编码规范
 
-Two color configs exist; they may diverge:
+- 不得将error等消息放在页面中，应当使用toast或message显示
 
-1. **`frontend/src/styles/theme.css`** — Blue primary `#0369A1`, dark sidebar gradient. This is what the app actually loads (imported in `main.ts`).
-2. **`design-system/easy1auth-admin/MASTER.md`** — Purple `#7C3AED` + orange `#F97316`. Design spec, may or may not be fully applied.
+### 双配色方案
 
-When changing colors, check both sources and decide which is the source of truth.
+目前存在两套可能不一致的颜色配置：
 
-### Routing
+1. `frontend/src/styles/theme.css`：主色为蓝色 `#0369A1`，侧边栏使用深色渐变。
+   这是应用实际加载的主题，由 `main.ts` 引入。
+2. `design-system/easy1auth-admin/MASTER.md`：主色为紫色 `#7C3AED`，
+   辅色为橙色 `#F97316`。这是设计规范，可能尚未完整应用。
 
-Frontend router (`frontend/src/router/index.ts`):
-- All authenticated pages are children of `/` with `MainLayout`.
-- Login page at `/login` (no layout, standalone page).
-- OAuth2 authorize at `/oauth2/authorize` (no layout).
-- Route guard checks `localStorage.getItem('token')` — no token → redirect to `/login`.
+修改颜色时必须同时检查这两个来源，并明确哪一个是当前需求的事实来源。
 
-## What's missing
+### 路由
 
-- **Frontend has no tests** — No vitest/jest config or frontend test runner. Java tests exist under the Gradle subprojects.
-- **Frontend has no linting** — No ESLint/Prettier config.
-- **No CI/CD** — Mentioned in TODO.md but not implemented.
+前端路由配置位于 `frontend/src/router/index.ts`：
 
-## Design system files
+- 所有需要认证的页面都是 `/` 的子路由，并使用 `MainLayout`。
+- 登录页位于 `/login`，不使用主布局，是独立页面。
+- OAuth2 授权页位于 `/oauth2/authorize`，不使用主布局。
+- 路由守卫检查 `localStorage.getItem('token')`；无 Token 时重定向到 `/login`。
 
-When building UI, check these files first:
+## 当前缺失项
 
-1. `design-system/easy1auth-admin/MASTER.md` — Global design rules, colors, typography, component specs.
-2. `design-system/easy1auth-admin/pages/` — Per-page design overrides (override MASTER.md).
-3. `frontend/src/styles/theme.css` — Actual CSS variables currently loaded.
-4. `frontend/components.json` — shadcn-vue configuration.
+- 前端没有测试：不存在 Vitest/Jest 配置或前端测试运行器；Java 测试位于各 Gradle 子项目中。
+- 前端没有代码检查：不存在 ESLint/Prettier 配置。
+- 没有 CI/CD：`TODO.md` 中已提及，但尚未实现。
 
-## File naming conventions
+## 设计系统文件
 
-- Frontend API modules: `frontend/src/api/*.ts` (one per resource, exports object literal)
-- Frontend views: `frontend/src/views/<resource>/index.vue`
-- Vue SFC: `<script setup lang="ts">` with Composition API
+构建或修改 UI 时，按以下顺序检查：
 
-## Sisyphus configuration
+1. `design-system/easy1auth-admin/MASTER.md`：全局设计规则、颜色、字体和组件规范。
+2. `design-system/easy1auth-admin/pages/`：页面级设计覆盖，优先级高于 `MASTER.md`。
+3. `frontend/src/styles/theme.css`：应用当前实际加载的 CSS 变量。
+4. `frontend/components.json`：shadcn-vue 配置。
 
-- `.sisyphus/` directory exists for work plans
-- `.agents/` directory contains project-local frontend skills
-- `skills-lock.json` tracks installed skill versions
+## 文件命名约定
+
+- 前端 API 模块：`frontend/src/api/*.ts`，每个资源一个文件并导出对象字面量。
+- 前端视图：`frontend/src/views/<resource>/index.vue`。
+- Vue 单文件组件：使用 `<script setup lang="ts">` 和组合式 API。

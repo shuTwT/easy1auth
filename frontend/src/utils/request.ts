@@ -33,6 +33,13 @@ request.interceptors.request.use(
 request.interceptors.response.use(
   (response: AxiosResponse) => {
     const { data } = response
+    if (data && typeof data === 'object' && typeof data.code === 'number') {
+      if (data.code !== 0) {
+        toast.error(data.msg || '请求失败')
+        return Promise.reject(new Error(data.msg || '请求失败'))
+      }
+      return data.data
+    }
     return data
   },
   (error) => {
@@ -56,7 +63,7 @@ request.interceptors.response.use(
           toast.error('服务器错误')
           break
         default:
-          toast.error(response.data?.message || '请求失败')
+          toast.error(response.data?.msg || '请求失败')
       }
     } else {
       toast.error('网络连接失败')

@@ -29,8 +29,6 @@ export interface SendCodeRequest {
 }
 
 export interface SendCodeResponse {
-  status: string
-  message: string
   code?: string
 }
 

@@ -68,8 +68,8 @@ const loadUsers = async () => {
   loading.value = true
   try {
     const res = await userApi.getList(queryForm)
-    users.value = res.data.users
-    total.value = res.data.total
+    users.value = res.items
+    total.value = res.total
   } catch (error) {
     console.error('加载用户列表失败:', error)
     toast.error('加载用户列表失败')
@@ -174,7 +174,7 @@ const handleSubmit = async () => {
     loadUsers()
   } catch (error: any) {
     console.error('保存用户失败:', error)
-    toast.error(error.response?.data?.message || '保存用户失败')
+    toast.error(error.response?.data?.msg || '保存用户失败')
   }
 }
 
@@ -190,7 +190,7 @@ const handleResetPasswordSubmit = async () => {
     resetPasswordDialogVisible.value = false
   } catch (error: any) {
     console.error('重置密码失败:', error)
-    toast.error(error.response?.data?.message || '重置密码失败')
+    toast.error(error.response?.data?.msg || '重置密码失败')
   }
 }
 
@@ -203,7 +203,7 @@ const handleAssignRole = async (row: User) => {
       roleApi.getList(),
     ])
     userRoles.value = userRolesData
-    allRoles.value = allRolesData.roles
+    allRoles.value = allRolesData.items
     selectedRoleIds.value = userRolesData.map((role: Role) => role.id)
     assignRoleDialogVisible.value = true
   } catch (error) {
@@ -223,7 +223,7 @@ const handleAssignRoleSubmit = async () => {
     loadUsers()
   } catch (error: any) {
     console.error('分配角色失败:', error)
-    toast.error(error.response?.data?.error || '分配角色失败')
+    toast.error(error.response?.data?.msg || '分配角色失败')
   } finally {
     assignRoleLoading.value = false
   }
@@ -301,12 +301,12 @@ const handleFileChange = async (file: any) => {
     
     const result = await response.json()
     
-    if (result.status === 'success') {
+    if (result.code === 0) {
       importResult.value = result.data
-      toast.success(result.message)
+      toast.success(result.msg)
       loadUsers()
     } else {
-      toast.error(result.message || '导入失败')
+      toast.error(result.msg || '导入失败')
     }
   } catch (error) {
     console.error('导入用户失败:', error)

@@ -49,13 +49,13 @@ async function handleCreateTenant() {
   loading.value = true
   try {
     const response = await tenantApi.createTenant({ name: newTenantName.value })
-    userStore.setTenants([...tenants.value, response.tenant])
-    userStore.setCurrentTenant(response.tenant)
+    userStore.setTenants([...tenants.value, response])
+    userStore.setCurrentTenant(response)
     toast.success('租户创建成功')
     showCreateDialog.value = false
     newTenantName.value = ''
   } catch (error: any) {
-    toast.error(error.response?.data?.message || '创建租户失败')
+    toast.error(error.response?.data?.msg || '创建租户失败')
   } finally {
     loading.value = false
   }

@@ -91,7 +91,7 @@ const handlePermCheck = (_checkedNode: PermissionTree, checkedInfo: { checkedKey
 const loadPermissionTree = async () => {
   try {
     const res = await permissionApi.getTree()
-    permissionTree.value = res.data
+    permissionTree.value = res
   } catch (error) {
     console.error('加载权限树失败:', error)
   }
@@ -146,7 +146,7 @@ const loadRoles = async () => {
       page: page.value,
       pageSize: pageSize.value,
     })
-    roles.value = data.roles
+    roles.value = data.items
     total.value = data.total
   } catch (error) {
     toast.error('加载角色列表失败')
@@ -225,7 +225,7 @@ const handleSubmit = async () => {
     loadRoleTree()
     loadStats()
   } catch (error: any) {
-    toast.error(error.response?.data?.error || '操作失败')
+    toast.error(error.response?.data?.msg || '操作失败')
   } finally {
     submitting.value = false
   }
@@ -243,7 +243,7 @@ const handleDelete = async (row: Role) => {
     loadRoleTree()
     loadStats()
   } catch (error: any) {
-    toast.error(error.response?.data?.error || '删除失败')
+    toast.error(error.response?.data?.msg || '删除失败')
   }
 }
 
@@ -272,7 +272,7 @@ const loadRoleUsers = async () => {
 const handleAssignUsers = async () => {
   try {
     const response = await userApi.getList()
-    allUsers.value = response.data.users.map((user: any) => ({
+    allUsers.value = response.items.map((user: any) => ({
       id: user.id,
       name: `${user.name} (${user.username})`,
       disabled: roleUsers.value.some((ru) => ru.id === user.id),
@@ -302,7 +302,7 @@ const handleSubmitAssignUsers = async () => {
     loadRoleUsers()
     loadStats()
   } catch (error: any) {
-    toast.error(error.response?.data?.error || '分配用户失败')
+    toast.error(error.response?.data?.msg || '分配用户失败')
   } finally {
     assigning.value = false
   }
@@ -323,7 +323,7 @@ const handleRemoveUser = async (user: RoleUser) => {
     loadRoleUsers()
     loadStats()
   } catch (error: any) {
-    toast.error(error.response?.data?.error || '移除失败')
+    toast.error(error.response?.data?.msg || '移除失败')
   }
 }
 

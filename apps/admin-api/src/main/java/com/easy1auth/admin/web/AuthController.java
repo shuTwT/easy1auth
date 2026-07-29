@@ -4,6 +4,7 @@ import com.easy1auth.admin.config.AdminJwtProperties;
 import com.easy1auth.admin.security.AdminTokenService;
 import com.easy1auth.adminidentity.*;
 import com.easy1auth.foundation.error.DomainException;
+import com.easy1auth.foundation.web.ApiResponse;
 import com.easy1auth.tenant.TenantService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -30,38 +31,38 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public LoginResponse login(@RequestBody LoginRequest request, HttpServletRequest http) {
+    public ApiResponse<LoginResponse> login(@RequestBody LoginRequest request, HttpServletRequest http) {
         if (!"password".equals(request.loginType())) throw new DomainException("LOGIN_TYPE_UNSUPPORTED", "当前仅支持密码登录", 400);
         var result = identities.authenticate(request.username(), request.password(), jwt.refreshTtl(), http.getHeader("User-Agent"), http.getRemoteAddr());
-        if(result.account().mfaEnabled()){identities.logout(result.refreshToken());var challenge=security.issueTotpChallenge("admin",result.account().id(),null,"login");return LoginResponse.mfa(challenge.token(),challenge.expiresIn());}
-        return response(result.account(), result.refreshToken());
+        if(result.account().mfaEnabled()){identities.logout(result.refreshToken());var challenge=security.issueTotpChallenge("admin",result.account().id(),null,"login");return ApiResponse.ok(LoginResponse.mfa(challenge.token(),challenge.expiresIn()));}
+        return ApiResponse.ok(response(result.account(), result.refreshToken()));
     }
 
     @PostMapping("/mfa/verify")
-    public LoginResponse verifyMfa(@RequestBody MfaLoginRequest request,HttpServletRequest http){UUID account=security.consumeTotpChallenge(request.challengeToken(),request.code());var result=identities.completeMfa(account,jwt.refreshTtl(),http.getHeader("User-Agent"),http.getRemoteAddr());return response(result.account(),result.refreshToken());}
+    public ApiResponse<LoginResponse> verifyMfa(@RequestBody MfaLoginRequest request,HttpServletRequest http){UUID account=security.consumeTotpChallenge(request.challengeToken(),request.code());var result=identities.completeMfa(account,jwt.refreshTtl(),http.getHeader("User-Agent"),http.getRemoteAddr());return ApiResponse.ok(response(result.account(),result.refreshToken()));}
 
     @PostMapping("/register")
     @Transactional
-    public LoginResponse register(@RequestBody RegisterRequest request, HttpServletRequest http) {
+    public ApiResponse<LoginResponse> register(@RequestBody RegisterRequest request, HttpServletRequest http) {
         String username = request.username() == null || request.username().isBlank() ? request.email().split("@",2)[0] : request.username();
         var result = identities.register(username, request.email(), request.password(), request.code(), jwt.refreshTtl(), http.getHeader("User-Agent"), http.getRemoteAddr());
         var tenant=tenants.create(result.account().id(),username+"的租户","basic");
         access.ensureDefaultRoles(tenant.id());
-        return response(result.account(), result.refreshToken());
+        return ApiResponse.ok(response(result.account(), result.refreshToken()), "注册成功");
     }
 
-    @PostMapping("/send-code") @Transactional public Map<String,Object> sendCode(@RequestBody SendCodeRequest request){if(!"register".equals(request.type()))throw new DomainException("CODE_TYPE_UNSUPPORTED","当前仅支持注册验证码",400);var issued=registrationCodes.issue(request.email());delivery.enqueueEmail(null,issued.email(),"Easy1Auth 注册验证码","您的验证码是 "+issued.code()+"，10分钟内有效。","registration:"+issued.email()+":"+java.time.Instant.now().getEpochSecond()/60);var body=new HashMap<String,Object>();body.put("status","success");body.put("message","验证码已进入发送队列");if(registration.exposeCode())body.put("code",issued.code());return body;}
+    @PostMapping("/send-code") @Transactional public ApiResponse<Map<String,Object>> sendCode(@RequestBody SendCodeRequest request){if(!"register".equals(request.type()))throw new DomainException("CODE_TYPE_UNSUPPORTED","当前仅支持注册验证码",400);var issued=registrationCodes.issue(request.email());delivery.enqueueEmail(null,issued.email(),"Easy1Auth 注册验证码","您的验证码是 "+issued.code()+"，10分钟内有效。","registration:"+issued.email()+":"+java.time.Instant.now().getEpochSecond()/60);var body=new HashMap<String,Object>();if(registration.exposeCode())body.put("code",issued.code());return ApiResponse.ok(body,"验证码已进入发送队列");}
 
     @PostMapping("/refresh")
-    public Map<String,String> refresh(@RequestBody RefreshRequest request, HttpServletRequest http) {
+    public ApiResponse<Map<String,String>> refresh(@RequestBody RefreshRequest request, HttpServletRequest http) {
         var result = identities.rotate(request.refreshToken(), jwt.refreshTtl(), http.getHeader("User-Agent"), http.getRemoteAddr());
-        return Map.of("token", tokens.issue(result.account()), "refreshToken", result.replacementToken());
+        return ApiResponse.ok(Map.of("token", tokens.issue(result.account()), "refreshToken", result.replacementToken()));
     }
 
     @PostMapping("/logout")
-    public Map<String,String> logout(@RequestBody(required=false) RefreshRequest request,@AuthenticationPrincipal Jwt principal) {
+    public ApiResponse<Void> logout(@RequestBody(required=false) RefreshRequest request,@AuthenticationPrincipal Jwt principal) {
         if(request!=null&&request.refreshToken()!=null)identities.logout(request.refreshToken());else identities.logoutAllAndInvalidate(UUID.fromString(principal.getSubject()));
-        return Map.of("status", "success", "message", "退出成功");
+        return ApiResponse.ok(null, "退出成功");
     }
 
     private LoginResponse response(AdminAccount account, String refresh) {

@@ -60,7 +60,7 @@ const loadSecurityData = async () => {
     
     passwordPolicy.value = policyRes.policy
     expiryStatus.value = policyRes.expiryStatus
-    mfaStatus.value = mfaRes.mfa
+    mfaStatus.value = mfaRes
   } catch (error) {
     console.error('加载安全设置失败:', error)
   } finally {
@@ -90,7 +90,7 @@ const handleChangePassword = async () => {
     }
     loadSecurityData()
   } catch (error: any) {
-    toast.error(error.response?.data?.message || '密码修改失败')
+    toast.error(error.response?.data?.msg || '密码修改失败')
   } finally {
     loading.value = false
   }
@@ -100,10 +100,10 @@ const handleSetupMfa = async () => {
   try {
     loading.value = true
     const res = await securityApi.setupMfa()
-    mfaSetupData.value = res.data
+    mfaSetupData.value = res
     showMfaSetup.value = true
   } catch (error: any) {
-    toast.error(error.response?.data?.message || 'MFA设置失败')
+    toast.error(error.response?.data?.msg || 'MFA设置失败')
   } finally {
     loading.value = false
   }
@@ -123,7 +123,7 @@ const handleEnableMfa = async () => {
     mfaToken.value = ''
     loadSecurityData()
   } catch (error: any) {
-    toast.error(error.response?.data?.message || '启用MFA失败')
+    toast.error(error.response?.data?.msg || '启用MFA失败')
   } finally {
     loading.value = false
   }
@@ -142,7 +142,7 @@ const handleDisableMfa = async () => {
     mfaToken.value = ''
     loadSecurityData()
   } catch (error: any) {
-    toast.error(error.response?.data?.message || '禁用MFA失败')
+    toast.error(error.response?.data?.msg || '禁用MFA失败')
   } finally {
     loading.value = false
   }

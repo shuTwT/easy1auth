@@ -3,6 +3,7 @@ package com.easy1auth.admin.web;
 import com.easy1auth.admin.security.TenantContextFilter;
 import com.easy1auth.directory.DirectoryCatalogService;
 import com.easy1auth.foundation.web.ApiResponse;
+import com.easy1auth.foundation.web.PageData;
 import com.easy1auth.tenant.TenantContext;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
@@ -17,7 +18,7 @@ public class DirectoryCatalogController {
     ApiResponse<?> groups(HttpServletRequest r, @RequestParam(defaultValue="1") int page, @RequestParam(defaultValue="10") int pageSize,
                           @RequestParam(required=false) String name, @RequestParam(required=false) String type, @RequestParam(required=false) UUID parentId) {
         var x = catalog.groups(c(r).tenantId(), page, pageSize, name, type, parentId);
-        return ApiResponse.ok(Map.of("groups", x.data(), "total", x.total(), "page", x.page(), "pageSize", x.pageSize()));
+        return ApiResponse.ok(PageData.of(x.data(), x.page(), x.pageSize(), x.total()));
     }
     @GetMapping("/api/groups/tree") ApiResponse<?> groupTree(HttpServletRequest r) { return ApiResponse.ok(catalog.groupTree(c(r).tenantId())); }
     @GetMapping("/api/groups/stats") ApiResponse<?> groupStats(HttpServletRequest r) { return ApiResponse.ok(catalog.groupStats(c(r).tenantId())); }
@@ -36,7 +37,7 @@ public class DirectoryCatalogController {
                              @RequestParam(required=false) String name, @RequestParam(required=false) String code,
                              @RequestParam(required=false) UUID departmentId, @RequestParam(required=false) Integer level) {
         var x = catalog.positions(c(r).tenantId(), page, pageSize, name, code, departmentId, level);
-        return ApiResponse.ok(Map.of("positions", x.data(), "total", x.total(), "page", x.page(), "pageSize", x.pageSize()));
+        return ApiResponse.ok(PageData.of(x.data(), x.page(), x.pageSize(), x.total()));
     }
     @GetMapping("/api/positions/stats") ApiResponse<?> positionStats(HttpServletRequest r) { return ApiResponse.ok(catalog.positionStats(c(r).tenantId())); }
     @GetMapping("/api/positions/{id}") ApiResponse<?> position(HttpServletRequest r, @PathVariable UUID id) { return ApiResponse.ok(catalog.position(c(r).tenantId(), id)); }

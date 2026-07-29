@@ -4,6 +4,7 @@ import com.easy1auth.admin.security.TenantContextFilter;
 import com.easy1auth.adminaccess.AdminAccessService;
 import com.easy1auth.adminidentity.AdminIdentityService;
 import com.easy1auth.foundation.web.ApiResponse;
+import com.easy1auth.foundation.web.PageData;
 import com.easy1auth.tenant.TenantContext;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
@@ -14,7 +15,7 @@ import java.util.*;
 public class AdminUserController {
     private final AdminAccessService access; private final AdminIdentityService identities; private final com.easy1auth.tenant.TenantService tenants;
     AdminUserController(AdminAccessService access,AdminIdentityService identities,com.easy1auth.tenant.TenantService tenants){this.access=access;this.identities=identities;this.tenants=tenants;}
-    @GetMapping public ApiResponse<?> list(HttpServletRequest r,@RequestParam(defaultValue="1")int page,@RequestParam(defaultValue="10")int pageSize,@RequestParam(required=false)String username,@RequestParam(required=false)String email,@RequestParam(required=false)String status,@RequestParam(required=false)UUID roleId){return ApiResponse.ok(access.members(context(r),page,pageSize,username,email,status,roleId));}
+    @GetMapping public ApiResponse<?> list(HttpServletRequest r,@RequestParam(defaultValue="1")int page,@RequestParam(defaultValue="10")int pageSize,@RequestParam(required=false)String username,@RequestParam(required=false)String email,@RequestParam(required=false)String status,@RequestParam(required=false)UUID roleId){var p=access.members(context(r),page,pageSize,username,email,status,roleId);return ApiResponse.ok(PageData.of(p.admins(),p.page(),p.pageSize(),p.total()));}
     @GetMapping("/stats") public ApiResponse<?> stats(HttpServletRequest r){return ApiResponse.ok(access.memberStats(context(r)));}
     @GetMapping("/{id}") public ApiResponse<?> get(HttpServletRequest r,@PathVariable UUID id){return ApiResponse.ok(access.member(context(r),id));}
     @PutMapping("/{id}") public ApiResponse<?> update(HttpServletRequest r,@PathVariable UUID id,@RequestBody ProfileInput in){var c=context(r);access.require(c,"admin-user:update");access.member(c,id);identities.updateProfile(id,in.username(),in.email(),in.phone());return ApiResponse.ok(access.member(c,id),"管理员信息更新成功");}

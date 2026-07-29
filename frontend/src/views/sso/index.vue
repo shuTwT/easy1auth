@@ -27,10 +27,10 @@ const loadApplications = async () => {
   loading.value = true
   try {
     const res = await applicationApi.getList({ pageSize: 1000 })
-    applications.value = res.data.applications
+    applications.value = res.items
     
     stats.value = {
-      totalApps: res.data.total,
+      totalApps: res.total,
       activeApps: applications.value.filter(app => app.status === 'active').length,
       webApps: applications.value.filter(app => app.type === 'web').length,
       spaApps: applications.value.filter(app => app.type === 'spa').length,

@@ -48,8 +48,8 @@ const loadPositions = async () => {
   loading.value = true
   try {
     const res = await positionApi.getList(queryForm)
-    positions.value = res.data.positions
-    total.value = res.data.total
+    positions.value = res.items
+    total.value = res.total
   } catch (error) {
     console.error('加载岗位列表失败:', error)
     toast.error('加载岗位列表失败')
@@ -61,7 +61,7 @@ const loadPositions = async () => {
 const loadStats = async () => {
   try {
     const res = await positionApi.getStats()
-    stats.value = res.data
+    stats.value = res
   } catch (error) {
     console.error('加载统计数据失败:', error)
   }
@@ -124,7 +124,7 @@ const handleDelete = async (row: Position) => {
     loadStats()
   } catch (error: any) {
     console.error('删除岗位失败:', error)
-    toast.error(error.response?.data?.message || '删除岗位失败')
+    toast.error(error.response?.data?.msg || '删除岗位失败')
   }
 }
 
@@ -142,7 +142,7 @@ const handleSubmit = async () => {
     loadStats()
   } catch (error: any) {
     console.error('保存岗位失败:', error)
-    toast.error(error.response?.data?.message || '保存岗位失败')
+    toast.error(error.response?.data?.msg || '保存岗位失败')
   }
 }
 

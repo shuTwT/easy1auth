@@ -21,8 +21,8 @@ const firstValue = (value: unknown): string | undefined => {
 }
 
 const getErrorMessage = (error: unknown): string => {
-  if (axios.isAxiosError<{ message?: string; error?: string }>(error)) {
-    return error.response?.data.message ?? error.response?.data.error ?? '社会化登录失败，请重试'
+  if (axios.isAxiosError<{ msg?: string }>(error)) {
+    return error.response?.data.msg ?? '社会化登录失败，请重试'
   }
   return error instanceof Error ? error.message : '社会化登录失败，请重试'
 }

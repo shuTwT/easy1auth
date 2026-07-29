@@ -78,7 +78,7 @@ function getTypeVariant(type: string): 'default' | 'secondary' | 'destructive' |
 async function loadStats() {
   try {
     const res = await permissionApi.getStats()
-    stats.value = res.data
+    stats.value = res
   } catch (error) {
     console.error('加载统计信息失败:', error)
   }
@@ -94,8 +94,8 @@ async function loadPermissions() {
       type: filterType.value,
       resource: filterResource.value,
     })
-    permissions.value = res.data.permissions
-    total.value = res.data.total
+    permissions.value = res.items
+    total.value = res.total
   } catch (error) {
     toast.error('加载权限列表失败')
   } finally {
@@ -106,7 +106,7 @@ async function loadPermissions() {
 async function loadTree() {
   try {
     const res = await permissionApi.getTree()
-    permissionTree.value = res.data
+    permissionTree.value = res
   } catch (error) {
     console.error('加载权限树失败:', error)
   }
@@ -190,7 +190,7 @@ async function handleSubmit() {
     loadTree()
     loadStats()
   } catch (error: any) {
-    toast.error(error.response?.data?.message || '操作失败')
+    toast.error(error.response?.data?.msg || '操作失败')
   } finally {
     submitting.value = false
   }
@@ -207,7 +207,7 @@ async function handleDelete(row: Permission) {
     loadTree()
     loadStats()
   } catch (error: any) {
-    toast.error(error.response?.data?.message || '删除失败')
+    toast.error(error.response?.data?.msg || '删除失败')
   }
 }
 

@@ -29,7 +29,7 @@ export interface MfaSetupResult {
 }
 
 export const securityApi = {
-  getPasswordPolicy(): Promise<{ status: string; policy: PasswordPolicy; expiryStatus: PasswordExpiryStatus }> {
+  getPasswordPolicy(): Promise<{ policy: PasswordPolicy; expiryStatus: PasswordExpiryStatus }> {
     return request.get('/security/password-policy')
   },
 
@@ -37,31 +37,31 @@ export const securityApi = {
     currentPassword: string
     newPassword: string
     confirmPassword: string
-  }): Promise<{ status: string; message: string }> {
+  }): Promise<void> {
     return request.post('/security/change-password', data)
   },
 
-  getMfaStatus(): Promise<{ status: string; mfa: MfaStatus }> {
+  getMfaStatus(): Promise<MfaStatus> {
     return request.get('/security/mfa/status')
   },
 
-  setupMfa(): Promise<{ status: string; data: MfaSetupResult }> {
+  setupMfa(): Promise<MfaSetupResult> {
     return request.post('/security/mfa/setup')
   },
 
-  enableMfa(token: string): Promise<{ status: string; message: string }> {
+  enableMfa(token: string): Promise<void> {
     return request.post('/security/mfa/enable', { token })
   },
 
-  disableMfa(token: string): Promise<{ status: string; message: string }> {
+  disableMfa(token: string): Promise<void> {
     return request.post('/security/mfa/disable', { token })
   },
 
-  verifyMfa(token: string, type?: string): Promise<{ status: string; message: string }> {
+  verifyMfa(token: string, type?: string): Promise<void> {
     return request.post('/security/mfa/verify', { token, type })
   },
 
-  sendMfaEmailCode(): Promise<{ status: string; message: string }> {
+  sendMfaEmailCode(): Promise<{ challengeToken: string }> {
     return request.post('/security/mfa/send-email-code')
   }
 }

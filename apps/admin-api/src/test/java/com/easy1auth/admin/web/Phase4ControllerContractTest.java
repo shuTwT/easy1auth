@@ -37,31 +37,31 @@ class Phase4ControllerContractTest {
         ).build();
     }
 
-    @Test void userListKeepsLegacyEnvelopeAndPaginationFields() throws Exception {
+    @Test void userListUsesStandardEnvelopeAndPaginationFields() throws Exception {
         when(users.list(eq(tenantId),eq(1),eq(10),isNull(),isNull(),isNull(),isNull(),isNull(),isNull()))
                 .thenReturn(new PoolUserService.Page(List.of(),0,1,10));
         mvc.perform(get("/api/users").with(context()))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("success"))
-                .andExpect(jsonPath("$.data.users").isArray()).andExpect(jsonPath("$.data.total").value(0))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.items").isArray()).andExpect(jsonPath("$.data.total").value(0))
                 .andExpect(jsonPath("$.data.page").value(1)).andExpect(jsonPath("$.data.pageSize").value(10));
     }
 
-    @Test void groupAndPositionListsKeepLegacyEnvelopes() throws Exception {
+    @Test void groupAndPositionListsUseStandardPagination() throws Exception {
         when(directory.groups(eq(tenantId),eq(1),eq(10),isNull(),isNull(),isNull())).thenReturn(new DirectoryCatalogService.Page<>(List.of(),0,1,10));
         when(directory.positions(eq(tenantId),eq(1),eq(10),isNull(),isNull(),isNull(),isNull())).thenReturn(new DirectoryCatalogService.Page<>(List.of(),0,1,10));
         mvc.perform(get("/api/groups").with(context())).andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("success")).andExpect(jsonPath("$.data.groups").isArray()).andExpect(jsonPath("$.data.pageSize").value(10));
+                .andExpect(jsonPath("$.code").value(0)).andExpect(jsonPath("$.data.items").isArray()).andExpect(jsonPath("$.data.pageSize").value(10));
         mvc.perform(get("/api/positions").with(context())).andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("success")).andExpect(jsonPath("$.data.positions").isArray()).andExpect(jsonPath("$.data.pageSize").value(10));
+                .andExpect(jsonPath("$.code").value(0)).andExpect(jsonPath("$.data.items").isArray()).andExpect(jsonPath("$.data.pageSize").value(10));
     }
 
-    @Test void rolesRemainDirectWhilePermissionsKeepEnvelope() throws Exception {
+    @Test void rolesAndPermissionsUseTheSameEnvelope() throws Exception {
         when(access.roles(eq(tenantId),eq(1),eq(10),isNull(),isNull())).thenReturn(new UserAccessCatalogService.RolePage(List.of(),0,1,10));
         when(access.permissions(eq(tenantId),eq(1),eq(50),isNull(),isNull(),isNull())).thenReturn(new UserAccessCatalogService.PermissionPage(List.of(),0,1,50));
         mvc.perform(get("/api/roles").with(context())).andExpect(status().isOk())
-                .andExpect(jsonPath("$.roles").isArray()).andExpect(jsonPath("$.pageSize").value(10)).andExpect(jsonPath("$.status").doesNotExist());
+                .andExpect(jsonPath("$.code").value(0)).andExpect(jsonPath("$.data.items").isArray()).andExpect(jsonPath("$.data.pageSize").value(10));
         mvc.perform(get("/api/permissions").with(context())).andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("success")).andExpect(jsonPath("$.data.permissions").isArray()).andExpect(jsonPath("$.data.pageSize").value(50));
+                .andExpect(jsonPath("$.code").value(0)).andExpect(jsonPath("$.data.items").isArray()).andExpect(jsonPath("$.data.pageSize").value(50));
     }
 
     private RequestPostProcessor context(){return request->{request.setAttribute(TenantContextFilter.ATTRIBUTE,new TenantContext(UUID.randomUUID(),tenantId,UUID.randomUUID(),"owner",Set.of("owner"),Set.of("*"),"trace"));return request;};}

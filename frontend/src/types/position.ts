@@ -43,7 +43,7 @@ export interface PositionQueryDto {
 }
 
 export interface PositionListResponse {
-  positions: Position[]
+  items: Position[]
   total: number
   page: number
   pageSize: number

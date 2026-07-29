@@ -2,11 +2,11 @@ package com.easy1auth.admin.web;
 
 import com.easy1auth.foundation.trace.TraceIdFilter;
 import com.easy1auth.foundation.web.ApiResponse;
+import com.easy1auth.foundation.web.PageData;
 import com.easy1auth.tenant.*;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
 import java.security.Principal;
-import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -16,23 +16,23 @@ public class TenantController {
     TenantController(TenantService tenants) { this.tenants = tenants; }
 
     @GetMapping("/list")
-    public Map<String, Object> list(Principal principal) {
+    public ApiResponse<PageData<TenantSummary>> list(Principal principal) {
         var rows = tenants.list(accountId(principal));
-        return Map.of("status", "success", "tenants", rows, "total", rows.size());
+        return ApiResponse.ok(PageData.of(rows, 1, rows.size(), rows.size()));
     }
 
     @PostMapping("/create")
-    public Map<String, Object> create(Principal principal, @RequestBody CreateTenant request) {
+    public ApiResponse<?> create(Principal principal, @RequestBody CreateTenant request) {
         var tenant = tenants.create(accountId(principal), request.name(), request.plan());
-        return Map.of("status", "success", "message", "租户创建成功", "tenant", tenant);
+        return ApiResponse.ok(tenant, "租户创建成功");
     }
 
     @GetMapping("/current")
-    public Map<String, Object> current(Principal principal, @RequestHeader("tenant-id") UUID tenantId,
+    public ApiResponse<?> current(Principal principal, @RequestHeader("tenant-id") UUID tenantId,
                                        HttpServletRequest request) {
         var context = tenants.resolve(accountId(principal), tenantId, traceId(request));
         var tenant = tenants.list(context.accountId()).stream().filter(it -> it.id().equals(tenantId)).findFirst().orElseThrow();
-        return Map.of("status", "success", "tenant", tenant);
+        return ApiResponse.ok(tenant);
     }
 
     @PostMapping("/{tenantId}/owner-transfer")

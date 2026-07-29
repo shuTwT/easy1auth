@@ -56,12 +56,12 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
 
 type ApiErrorResponse = {
-  readonly message?: string
+  readonly msg?: string
 }
 
 const getApiErrorMessage = (error: unknown, fallback: string): string => {
   if (!axios.isAxiosError<ApiErrorResponse>(error)) return fallback
-  return error.response?.data?.message ?? fallback
+  return error.response?.data?.msg ?? fallback
 }
 
 const userStore = useUserStore()
@@ -251,7 +251,7 @@ function formatDate(date: string | null): string {
 const loadAdminStats = async () => {
   try {
     const res = await adminUserApi.getStats()
-    adminStats.value = res.data
+    adminStats.value = res
   } catch (error) {
     console.error('加载管理员统计失败:', error)
   }
@@ -269,8 +269,8 @@ const loadAdmins = async () => {
       status: adminQuery.status,
       roleId: adminQuery.roleId || undefined,
     })
-    admins.value = res.data.admins
-    adminTotal.value = res.data.total
+    admins.value = res.items
+    adminTotal.value = res.total
   } catch (error) {
     console.error('加载管理员列表失败:', error)
   } finally {
@@ -281,7 +281,7 @@ const loadAdmins = async () => {
 const loadAdminRolesForFilter = async () => {
   try {
     const res = await adminRoleApi.getList({ pageSize: 100 })
-    adminRolesForFilter.value = res.data.roles
+    adminRolesForFilter.value = res.items
   } catch (error) {
     console.error('加载管理员角色失败:', error)
   }
@@ -473,7 +473,7 @@ const roleTotalPages = computed(() => Math.max(1, Math.ceil(roleTotal.value / ro
 const loadRoleStats = async () => {
   try {
     const res = await adminRoleApi.getStats()
-    roleStats.value = res.data
+    roleStats.value = res
   } catch (error) {
     console.error('加载管理员角色统计失败:', error)
   }
@@ -487,8 +487,8 @@ const loadRoles = async () => {
       pageSize: rolePageSize.value,
       name: roleSearch.value || undefined,
     })
-    roles.value = res.data.roles
-    roleTotal.value = res.data.total
+    roles.value = res.items
+    roleTotal.value = res.total
   } catch (error) {
     console.error('加载管理员角色列表失败:', error)
   } finally {
@@ -499,7 +499,7 @@ const loadRoles = async () => {
 const loadPermissionCatalog = async () => {
   try {
     const res = await adminRoleApi.getPermissionCatalog()
-    permissionCatalog.value = res.data.permissions
+    permissionCatalog.value = res.permissions
   } catch (error) {
     console.error('加载权限目录失败:', error)
   }

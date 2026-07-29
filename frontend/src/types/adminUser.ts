@@ -56,7 +56,7 @@ export interface AdminUserQueryDto {
 
 /** Response shape for GET /admin-users (list). Mirrors backend AdminListResponse. */
 export interface AdminUserListResponse {
-  admins: AdminUser[]
+  items: AdminUser[]
   total: number
   page: number
   pageSize: number

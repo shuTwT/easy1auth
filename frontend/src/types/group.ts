@@ -40,7 +40,7 @@ export interface GroupQueryDto {
 }
 
 export interface GroupListResponse {
-  groups: UserGroup[]
+  items: UserGroup[]
   total: number
   page: number
   pageSize: number

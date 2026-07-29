@@ -21,7 +21,7 @@ export interface DashboardData {
 }
 
 export const dashboardApi = {
-  getStats(): Promise<{ status: string; data: DashboardData }> {
+  getStats(): Promise<DashboardData> {
     return request.get('/dashboard/stats')
   }
 }

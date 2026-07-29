@@ -3,6 +3,7 @@ package com.easy1auth.admin.web;
 import com.easy1auth.admin.security.TenantContextFilter;
 import com.easy1auth.directory.PoolUserService;
 import com.easy1auth.foundation.error.DomainException;
+import com.easy1auth.foundation.web.ApiResponse;
 import com.easy1auth.tenant.TenantContext;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.poi.ss.usermodel.*;
@@ -35,7 +36,7 @@ public class PoolUserImportController {
     }
 
     @PostMapping
-    Map<String,Object> upload(HttpServletRequest request, @RequestParam("file") MultipartFile file) throws IOException {
+    ApiResponse<?> upload(HttpServletRequest request, @RequestParam("file") MultipartFile file) throws IOException {
         if (file.isEmpty() || file.getSize() > MAX_FILE_SIZE) throw new DomainException("IMPORT_FILE_INVALID", "导入文件为空或超过5MB", 400);
         UUID tenant = context(request).tenantId(); List<Map<String,Object>> errors = new ArrayList<>(); List<Map<String,Object>> imported = new ArrayList<>(); int total = 0;
         try (var input = new BufferedInputStream(file.getInputStream()); var workbook = WorkbookFactory.create(input)) {
@@ -48,7 +49,7 @@ public class PoolUserImportController {
                 catch (RuntimeException ex) { var error=new LinkedHashMap<String,Object>();error.put("row",rowIndex+1);error.put("username",username);error.put("error",ex instanceof DomainException?ex.getMessage():"导入失败或数据重复");errors.add(error); }
             }
         }
-        return Map.of("status","success","message","导入完成：成功 "+imported.size()+" 条，失败 "+errors.size()+" 条","data",Map.of("success",imported.size(),"failed",errors.size(),"total",total,"errors",errors,"importedUsers",imported));
+        return ApiResponse.ok(Map.of("success",imported.size(),"failed",errors.size(),"total",total,"errors",errors,"importedUsers",imported),"导入完成：成功 "+imported.size()+" 条，失败 "+errors.size()+" 条");
     }
     private static String value(Row row,int index,DataFormatter formatter){var cell=row.getCell(index,Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);return cell==null?"":formatter.formatCellValue(cell).strip();}
     private static String blank(String value){return value==null||value.isBlank()?null:value;}

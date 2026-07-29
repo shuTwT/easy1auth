@@ -34,7 +34,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 
 type ApiErrorResponse = {
-  message?: string
+  msg?: string
 }
 
 type ConfigForm = {
@@ -176,7 +176,7 @@ const clientCredentialsExamples = computed(() => [
 
 const getApiErrorMessage = (error: unknown, fallback: string) => {
   if (axios.isAxiosError<ApiErrorResponse>(error)) {
-    return error.response?.data?.message ?? fallback
+    return error.response?.data?.msg ?? fallback
   }
   return error instanceof Error ? error.message : fallback
 }
@@ -210,9 +210,9 @@ const loadApplication = async () => {
 
   try {
     const response = await applicationApi.getById(applicationId.value)
-    application.value = response.data
-    populateForms(response.data)
-    document.title = `${response.data.name} - 应用详情`
+    application.value = response
+    populateForms(response)
+    document.title = `${response.name} - 应用详情`
   } catch (error: unknown) {
     if (axios.isAxiosError(error) && error.response?.status === 404) {
       notFound.value = true
@@ -280,9 +280,9 @@ const saveConfig = async () => {
 
   try {
     const response = await applicationApi.update(applicationId.value, payload)
-    application.value = response.data
-    if (response.data.clientSecret) secretVisible.value = true
-    document.title = `${response.data.name} - 应用详情`
+    application.value = response
+    if (response.clientSecret) secretVisible.value = true
+    document.title = `${response.name} - 应用详情`
     toast.success('应用配置已保存')
   } catch (error: unknown) {
     console.error('保存应用配置失败:', error)
@@ -317,7 +317,7 @@ const saveLoginControl = async () => {
 
   try {
     const response = await applicationApi.update(applicationId.value, payload)
-    application.value = response.data
+    application.value = response
     toast.success('登录控制已保存')
   } catch (error: unknown) {
     console.error('保存登录控制失败:', error)
@@ -333,7 +333,7 @@ const regenerateSecret = async () => {
 
   try {
     const response = await applicationApi.regenerateSecret(applicationId.value)
-    application.value = { ...application.value, clientSecret: response.data.clientSecret }
+    application.value = { ...application.value, clientSecret: response.clientSecret }
     secretVisible.value = true
     toast.success('密钥重新生成成功，请立即复制并妥善保管')
   } catch (error: unknown) {

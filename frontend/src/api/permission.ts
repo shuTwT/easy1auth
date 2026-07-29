@@ -10,31 +10,31 @@ import type {
 } from '@/types/permission'
 
 export const permissionApi = {
-  getList(query: PermissionQueryDto): Promise<{ status: string; data: PermissionListResponse }> {
+  getList(query: PermissionQueryDto): Promise<PermissionListResponse> {
     return request.get('/permissions', { params: query })
   },
 
-  getTree(): Promise<{ status: string; data: PermissionTree[] }> {
+  getTree(): Promise<PermissionTree[]> {
     return request.get('/permissions/tree')
   },
 
-  getStats(): Promise<{ status: string; data: PermissionStats }> {
+  getStats(): Promise<PermissionStats> {
     return request.get('/permissions/stats')
   },
 
-  getById(id: string): Promise<{ status: string; data: Permission }> {
+  getById(id: string): Promise<Permission> {
     return request.get(`/permissions/${id}`)
   },
 
-  create(data: CreatePermissionDto): Promise<{ status: string; data: Permission; message: string }> {
+  create(data: CreatePermissionDto): Promise<Permission> {
     return request.post('/permissions', data)
   },
 
-  update(id: string, data: UpdatePermissionDto): Promise<{ status: string; data: Permission; message: string }> {
+  update(id: string, data: UpdatePermissionDto): Promise<Permission> {
     return request.put(`/permissions/${id}`, data)
   },
 
-  delete(id: string): Promise<{ status: string; message: string }> {
+  delete(id: string): Promise<void> {
     return request.delete(`/permissions/${id}`)
   },
 }
