@@ -10,7 +10,7 @@ const emit = defineEmits<{
   switchToRegister: []
 }>()
 
-const { loading, login } = useAuth()
+const { loading, login, mfaChallenge, verifyMfa } = useAuth()
 
 const form = reactive({
   username: '',
@@ -19,6 +19,7 @@ const form = reactive({
 })
 
 const showPassword = shallowRef(false)
+const mfaCode = shallowRef('')
 
 const errors = reactive({
   username: '',
@@ -46,6 +47,11 @@ function validate(): boolean {
 }
 
 async function handleSubmit() {
+  if (mfaChallenge.value) {
+    if (!/^\d{6}$/.test(mfaCode.value)) { errors.password = '请输入6位动态验证码'; return }
+    await verifyMfa(mfaCode.value)
+    return
+  }
   if (!validate()) return
   await login({
     username: form.username,
@@ -61,6 +67,12 @@ function togglePassword() {
 
 <template>
   <form @submit.prevent="handleSubmit">
+    <div v-if="mfaChallenge" class="grid gap-2">
+      <label class="form-label">动态验证码</label>
+      <Input v-model="mfaCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="请输入6位验证码" class="login-input h-11" />
+      <p class="text-xs text-muted-foreground">密码已验证，完成 MFA 后才会签发登录令牌。</p>
+    </div>
+    <template v-else>
     <div class="grid gap-2">
       <label class="form-label">用户名或邮箱</label>
       <div class="relative">
@@ -129,6 +141,7 @@ function togglePassword() {
         忘记密码？
       </button>
     </div>
+    </template>
 
     <button
       type="submit"
@@ -136,7 +149,7 @@ function togglePassword() {
       :disabled="loading"
     >
       <span v-if="loading" class="loading-spinner"></span>
-      <span>{{ loading ? '登录中...' : '登录' }}</span>
+      <span>{{ loading ? '验证中...' : (mfaChallenge ? '验证并登录' : '登录') }}</span>
     </button>
 
     <div class="form-footer">

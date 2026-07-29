@@ -845,15 +845,15 @@ interface AuditLog {
                             ↓
 ┌─────────────────────────────────────────────────────────┐
 │                      应用层                              │
-│  Express.js + TypeScript                                │
-│  ├─ API服务                                             │
-│  ├─ 认证服务                                            │
-│  └─ 后台任务                                            │
+│  Java 21 + Spring Boot 3.5                              │
+│  ├─ 管理 API                                            │
+│  ├─ OAuth2/OIDC 授权服务                                │
+│  └─ 数据库迁移应用                                      │
 └─────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────┐
 │                      数据层                              │
-│  ├─ SQLite (主数据库)                                   │
+│  ├─ PostgreSQL (主数据库)                               │
 │  ├─ Redis (缓存/会话)                                   │
 │  └─ OSS (文件存储)                                      │
 └─────────────────────────────────────────────────────────┘
@@ -872,14 +872,15 @@ interface AuditLog {
 - **代码规范**: ESLint + Prettier
 
 #### 4.2.2 后端技术栈
-- **运行时**: Node.js 18+
-- **框架**: Express.js
-- **ORM**: Prisma
-- **数据库**: SQLite
+- **运行时**: Java 21
+- **框架**: Spring Boot 3.5
+- **数据访问**: Spring JDBC
+- **数据库迁移**: Flyway
+- **数据库**: PostgreSQL
 - **缓存**: Redis
-- **认证**: Passport.js / JOSE (JWT)
-- **语言**: TypeScript
-- **API文档**: Swagger / OpenAPI
+- **认证**: Spring Security / JOSE (JWT)
+- **语言**: Java
+- **API文档**: OpenAPI
 
 #### 4.2.3 基础设施
 - **容器化**: Docker + Docker Compose
@@ -891,20 +892,15 @@ interface AuditLog {
 ### 4.3 数据库设计原则
 
 **数据库选择说明**：
-- 本项目使用 SQLite 作为主数据库，适用于中小型企业和开发测试环境
-- SQLite 具有以下优势：
-  - 零配置、无服务器架构
-  - 轻量级、易于部署和维护
-  - 单文件存储，便于备份和迁移
-  - 足够的性能支持中小型应用
-- 对于大型企业或高并发场景，可平滑迁移至 PostgreSQL 或 MySQL
+- 本项目使用 PostgreSQL 作为主数据库，以支持生产级并发、事务、约束和可观测性需求
+- 数据库结构由独立的 Flyway 迁移应用统一管理，业务应用启动时仅校验迁移状态
 
 - **多租户隔离**: 使用 `tenantId` 字段实现逻辑隔离
 - **软删除**: 重要数据使用软删除,保留 `deletedAt` 字段
 - **审计字段**: 所有表包含 `createdAt`、`updatedAt` 字段
 - **索引优化**: 针对查询频繁的字段建立索引
 - **数据加密**: 敏感字段(密码、密钥)加密存储
-- **JSON字段**: 由于 SQLite 不支持数组类型，数组字段使用 JSON 类型存储
+- **JSON字段**: 结构化扩展数据使用 PostgreSQL `jsonb`，可查询关系优先规范化建模
 
 ### 4.4 安全设计
 
@@ -1064,3 +1060,4 @@ interface AuditLog {
 | v1.0 | 2026-03-04 | 初始版本 | - |
 | v1.1 | 2026-03-04 | 数据库从 PostgreSQL 改为 SQLite | - |
 | v1.2 | 2026-05-28 | UI 组件库从 Element Plus 更换为 shadcn-vue + Reka-UI + Tailwind CSS 4 | - |
+| v1.3 | 2026-07-29 | 后端迁移至 Java 21、Spring Boot 3.5 与 PostgreSQL | - |

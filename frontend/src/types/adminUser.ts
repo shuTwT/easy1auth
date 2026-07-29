@@ -1,5 +1,5 @@
 // Frontend types mirroring backend admin-user DTOs.
-// Source of truth: backend/src/types/admin.types.ts + AdminDto (admin.service.helpers.ts)
+// Keep aligned with the Java admin API contract.
 // These types are intentionally separate from the normal User types; admin users
 // are a distinct domain with their own endpoints (/admin-users/*).
 

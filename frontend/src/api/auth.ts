@@ -16,6 +16,9 @@ export const authApi = {
   login(data: LoginRequest): Promise<LoginResponse> {
     return request.post('/auth/login', data)
   },
+  verifyMfa(challengeToken: string, code: string): Promise<LoginResponse> {
+    return request.post('/auth/mfa/verify', { challengeToken, code })
+  },
 
   sendCode(data: SendCodeRequest): Promise<SendCodeResponse> {
     return request.post('/auth/send-code', data)

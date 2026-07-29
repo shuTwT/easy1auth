@@ -45,16 +45,18 @@ type ProviderForm = {
   id?: string
   name: string
   type: SocialProviderType
+  issuer: string
   clientId: string
   clientSecret: string
   scope: string[]
   attributeMapping: Record<string, string>
-  status?: 'active' | 'inactive'
+  status?: 'active' | 'disabled'
 }
 
 const providerForm = reactive<ProviderForm>({
   name: '',
-  type: 'github' as SocialProviderType,
+  type: 'oidc' as SocialProviderType,
+  issuer: '',
   clientId: '',
   clientSecret: '',
   scope: [],
@@ -133,13 +135,14 @@ const handleCreate = () => {
   isEdit.value = false
   Object.assign(providerForm, {
     name: '',
-    type: 'github',
+    type: 'oidc',
+    issuer: '',
     clientId: '',
     clientSecret: '',
     scope: [],
     attributeMapping: {},
   })
-  handleTypeChange('github')
+  handleTypeChange('oidc')
   dialogVisible.value = true
 }
 
@@ -149,6 +152,7 @@ const handleEdit = (row: SocialIdentityProvider) => {
     id: row.id,
     name: row.name,
     type: row.type,
+    issuer: row.issuer,
     clientId: row.clientId,
     clientSecret: row.clientSecret,
     scope: row.scope,
@@ -165,6 +169,7 @@ const handleSubmit = async () => {
       if (!providerForm.id) return
       await socialIdentityProviderApi.update(providerForm.id, {
         name: providerForm.name,
+        issuer: providerForm.issuer,
         clientId: providerForm.clientId,
         clientSecret: providerForm.clientSecret,
         scope: providerForm.scope,
@@ -175,6 +180,7 @@ const handleSubmit = async () => {
       await socialIdentityProviderApi.create({
         name: providerForm.name,
         type: providerForm.type,
+        issuer: providerForm.issuer,
         clientId: providerForm.clientId,
         clientSecret: providerForm.clientSecret,
         scope: providerForm.scope,
@@ -194,7 +200,7 @@ const handleSubmit = async () => {
 
 const handleToggleStatus = async (row: SocialIdentityProvider) => {
   try {
-    const newStatus = row.status === 'active' ? 'inactive' : 'active'
+    const newStatus = row.status === 'active' ? 'disabled' : 'active'
     await socialIdentityProviderApi.update(row.id, { status: newStatus })
     toast.success('状态更新成功')
     loadProviders()
@@ -225,7 +231,7 @@ const handleViewGuide = (row: SocialIdentityProvider) => {
 
 const copyCallbackUrl = () => {
   if (currentProvider.value) {
-    const url = `${baseUrl.value}/auth/callback/${currentProvider.value.type}`
+    const url = `${baseUrl.value}/t/{tenantId}/federation/${currentProvider.value.id}/callback`
     navigator.clipboard.writeText(url)
     toast.success('回调地址已复制到剪贴板')
   }
@@ -445,10 +451,14 @@ onMounted(() => {
       <DialogContent class="max-w-xl">
         <DialogHeader>
           <DialogTitle>{{ dialogTitle }}</DialogTitle>
-          <DialogDescription>选择预置身份源并填写第三方平台提供的应用凭据。</DialogDescription>
+          <DialogDescription>配置支持 Discovery 的标准 OpenID Connect 身份源。</DialogDescription>
         </DialogHeader>
         <form>
           <div class="grid gap-4 py-4">
+            <div class="grid gap-2">
+              <Label for="provider-issuer">Issuer</Label>
+              <Input id="provider-issuer" v-model="providerForm.issuer" placeholder="https://idp.example.com" />
+            </div>
             <div class="grid gap-2">
               <Label for="provider-name">身份源名称</Label>
               <Input id="provider-name" v-model="providerForm.name" placeholder="请输入身份源名称" />
@@ -584,16 +594,8 @@ onMounted(() => {
                 <span>{{ currentProvider.clientId }}</span>
               </div>
               <div class="flex gap-4">
-                <span class="text-muted-foreground w-28">授权端点:</span>
-                <span>{{ currentProvider.authorizationEndpoint }}</span>
-              </div>
-              <div class="flex gap-4">
-                <span class="text-muted-foreground w-28">Token端点:</span>
-                <span>{{ currentProvider.tokenEndpoint }}</span>
-              </div>
-              <div class="flex gap-4">
-                <span class="text-muted-foreground w-28">用户信息端点:</span>
-                <span>{{ currentProvider.userInfoEndpoint }}</span>
+                <span class="text-muted-foreground w-28">Issuer:</span>
+                <span>{{ currentProvider.issuer }}</span>
               </div>
               <div class="flex gap-4">
                 <span class="text-muted-foreground w-28">Scope:</span>

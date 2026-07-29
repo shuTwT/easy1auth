@@ -1,0 +1,17 @@
+.git
+.worktrees
+.gradle
+.gradle-user-home
+**/build
+**/.idea
+**/*.iml
+**/src/test
+**/node_modules
+frontend/dist
+backend
+design-system
+docs
+.omo
+.playwright-mcp
+deploy/secrets
+deploy/backups

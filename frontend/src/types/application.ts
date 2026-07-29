@@ -9,9 +9,14 @@ export interface Application {
   description: string | null
   type: ApplicationType
   clientId: string
-  clientSecret: string
+  /** Only present in create/regenerate responses. */
+  clientSecret?: string | null
   redirectUris: string[]
+  postLogoutRedirectUris?: string[]
   allowedGrantTypes: string[]
+  scopes?: string[]
+  requirePkce?: boolean
+  requireConsent?: boolean
   accessTokenLifetime: number
   refreshTokenLifetime: number
   status: ApplicationStatus

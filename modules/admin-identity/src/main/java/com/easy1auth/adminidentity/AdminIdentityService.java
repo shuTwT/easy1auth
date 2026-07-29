@@ -1,0 +1,89 @@
+package com.easy1auth.adminidentity;
+
+import com.easy1auth.foundation.error.DomainException;
+import com.easy1auth.foundation.id.UuidV7;
+import com.easy1auth.security.*;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import java.security.SecureRandom;
+import java.time.*;
+import java.util.Base64;
+import java.util.UUID;
+
+@Service
+public class AdminIdentityService {
+    private static final SecureRandom RANDOM = new SecureRandom();
+    private final AdminIdentityRepository repository;
+    private final PasswordEncoder passwords; private final LoginProtectionService protection; private final SecurityPolicyService security;
+    AdminIdentityService(AdminIdentityRepository repository, PasswordEncoder passwords,LoginProtectionService protection,SecurityPolicyService security) { this.repository = repository; this.passwords = passwords; this.protection=protection; this.security=security; }
+
+    @Transactional
+    public AuthenticatedAdmin authenticate(String login, String password, Duration refreshTtl, String userAgent, String ip) {
+        if (login == null || password == null) throw invalidCredentials();
+        String key=login.strip().toLowerCase();protection.assertAllowed("admin",key,null);
+        var found=repository.findCredential(login.strip());if(found.isEmpty()){protection.failed("admin",key,null,5,1800);throw invalidCredentials();}var row=found.get();
+        if (!"active".equals(row.account().status())) throw new DomainException("ADMIN_DISABLED", "账号已被禁用", 403);
+        if (!passwords.matches(password, row.passwordHash())){protection.failed("admin",key,null,5,1800);throw invalidCredentials();}
+        protection.succeeded("admin",key,null);
+        repository.recordLogin(row.account().id());
+        return new AuthenticatedAdmin(row.account(), issueRefresh(row.account(), refreshTtl, userAgent, ip).token());
+    }
+
+    @Transactional
+    public AuthenticatedAdmin register(String username, String email, String password, String code, Duration refreshTtl, String userAgent, String ip) {
+        validateRegistration(username, email, password);
+        if (code == null || code.isBlank() || !repository.consumeRegistrationCode(email, TokenHash.sha256(code)))
+            throw new DomainException("VERIFICATION_CODE_INVALID", "验证码无效或已过期", 400);
+        if (repository.exists(username, email)) throw new DomainException("ADMIN_EXISTS", "用户名或邮箱已被注册", 409);
+        var account = repository.create(username.strip(), email.strip().toLowerCase(), passwords.encode(password));
+        return new AuthenticatedAdmin(account, issueRefresh(account, refreshTtl, userAgent, ip).token());
+    }
+
+    @Transactional(readOnly = true)
+    public AdminAccount validateTokenSubject(UUID accountId, long securityVersion) {
+        var account = repository.findActive(accountId).orElseThrow(() -> new DomainException("ADMIN_SESSION_INVALID", "管理员会话已失效", 401));
+        if (account.securityVersion() != securityVersion) throw new DomainException("ADMIN_SESSION_INVALID", "管理员会话已失效", 401);
+        return account;
+    }
+
+    @Transactional
+    public RefreshSession rotate(String token, Duration ttl, String userAgent, String ip) {
+        if (token == null || token.isBlank()) throw invalidRefresh();
+        var old = repository.lockSession(TokenHash.sha256(token)).orElseThrow(AdminIdentityService::invalidRefresh);
+        var account = old.account();
+        if (!"active".equals(account.status()) || account.securityVersion() != old.sessionSecurityVersion()) throw invalidRefresh();
+        var replacement = issueRefresh(account, ttl, userAgent, ip);
+        repository.rotate(old.id(), replacement.id());
+        return new RefreshSession(old.id(), account, replacement.token());
+    }
+    @Transactional public void logout(String refreshToken) { if (refreshToken != null && !refreshToken.isBlank()) repository.revoke(TokenHash.sha256(refreshToken)); }
+    @Transactional public void logoutAll(UUID accountId) { repository.revokeAll(accountId); }
+    @Transactional public void logoutAllAndInvalidate(UUID accountId){repository.invalidateAccountSessions(accountId);}
+    @Transactional public AdminAccount updateProfile(UUID id,String username,String email,String phone) { return repository.updateProfile(id,username,email,phone); }
+    @Transactional public AdminAccount updateStatus(UUID actor,UUID id,String status) { if(actor.equals(id)) throw new DomainException("SELF_STATUS_CHANGE","不能修改自己的账号状态",409); if(!java.util.Set.of("active","disabled").contains(status)) throw new DomainException("STATUS_INVALID","账号状态无效",400); var account=repository.updateStatus(id,status); repository.revokeAll(id); return account; }
+    @Transactional public void resetPassword(UUID id,String password) { validatePassword(password); repository.resetPassword(id,passwords.encode(password)); repository.revokeAll(id); }
+    @Transactional public void changePassword(UUID id,String current,String replacement){var account=repository.findActive(id).orElseThrow(AdminIdentityService::invalidCredentials);var credential=repository.findCredential(account.username()).orElseThrow(AdminIdentityService::invalidCredentials);if(!passwords.matches(current,credential.passwordHash()))throw new DomainException("CURRENT_PASSWORD_INVALID","当前密码错误",400);security.validatePassword(replacement,SecurityPolicyService.adminPolicy());security.rejectReusedPassword("admin",id,replacement,credential.passwordHash(),passwords,SecurityPolicyService.adminPolicy().historyCount());repository.resetPassword(id,passwords.encode(replacement));security.rememberPassword("admin",id,credential.passwordHash(),SecurityPolicyService.adminPolicy().historyCount());repository.revokeAll(id);}
+    @Transactional public AdminAccount resetMfa(UUID id) { var account=repository.resetMfa(id); repository.revokeAll(id); return account; }
+    @Transactional public AdminAccount enableMfa(UUID id,String type){var account=repository.enableMfa(id,type);repository.revokeAll(id);return account;}
+    @Transactional(readOnly=true) public AdminAccount account(UUID id){return repository.findActive(id).orElseThrow(AdminIdentityService::invalidCredentials);}
+    @Transactional public AuthenticatedAdmin completeMfa(UUID id,Duration ttl,String userAgent,String ip){var account=account(id);return new AuthenticatedAdmin(account,issueRefresh(account,ttl,userAgent,ip).token());}
+
+    private IssuedRefresh issueRefresh(AdminAccount account, Duration ttl, String agent, String ip) {
+        byte[] bytes = new byte[32]; RANDOM.nextBytes(bytes);
+        String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+        UUID id = UuidV7.randomUuid();
+        repository.createSession(id, account.id(), TokenHash.sha256(token), account.securityVersion(), Instant.now().plus(ttl), trim(agent, 512), trim(ip, 64));
+        return new IssuedRefresh(id, token);
+    }
+    private static void validateRegistration(String username, String email, String password) {
+        if (username == null || username.isBlank() || username.length() > 100) throw new DomainException("USERNAME_INVALID", "用户名不能为空且不能超过100字符", 400);
+        if (email == null || !email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$") || email.length() > 320) throw new DomainException("EMAIL_INVALID", "邮箱格式不正确", 400);
+        validatePassword(password);
+    }
+    private static void validatePassword(String password){if(password==null||password.length()<8||password.length()>128||!password.matches(".*[a-z].*")||!password.matches(".*[A-Z].*")||!password.matches(".*\\d.*"))throw new DomainException("PASSWORD_WEAK","密码至少8位且必须包含大小写字母和数字",400);}
+    private static DomainException invalidCredentials() { return new DomainException("INVALID_CREDENTIALS", "用户名或密码错误", 401); }
+    private static DomainException invalidRefresh() { return new DomainException("INVALID_REFRESH_TOKEN", "刷新令牌无效或已失效", 401); }
+    private static String trim(String value, int max) { return value == null ? null : value.substring(0, Math.min(value.length(), max)); }
+    private record IssuedRefresh(UUID id, String token) {}
+}

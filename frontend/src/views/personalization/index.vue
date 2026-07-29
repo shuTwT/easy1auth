@@ -59,8 +59,8 @@
                     <TableCell>{{ formatDate(domain.createdAt) }}</TableCell>
                     <TableCell class="text-right">
                       <div class="flex justify-end gap-2">
-                        <Button v-if="domain.status !== 'verified'" variant="link" size="sm" class="h-auto p-0" @click="handleVerifyDomain(domain)">验证</Button>
-                        <Button v-if="domain.status === 'verified'" variant="link" size="sm" class="h-auto p-0" @click="handleShowSSLDialog(domain)">配置SSL</Button>
+                        <Button v-if="domain.status !== 'verified'" variant="link" size="sm" class="h-auto p-0" disabled title="阶段 6 仅登记域名">验证未启用</Button>
+                        <Button v-if="domain.status === 'verified'" variant="link" size="sm" class="h-auto p-0" disabled title="TLS 由外部网关管理">TLS由网关管理</Button>
                         <Button variant="link" size="sm" class="h-auto p-0 text-destructive" @click="handleDeleteDomain(domain)">删除</Button>
                       </div>
                     </TableCell>
@@ -72,11 +72,11 @@
             <Alert class="bg-muted border">
               <Info class="size-4" />
               <AlertTitle class="flex items-center gap-2 font-semibold">
-                域名验证说明
+                阶段 6 域名管理说明
               </AlertTitle>
               <AlertDescription class="mt-2 space-y-2">
-                <p><strong>DNS验证：</strong>在DNS服务商添加TXT记录，主机记录为 @ 或空，记录值为验证令牌</p>
-                <p><strong>文件验证：</strong>在网站根目录创建 .well-known/easy1auth-verification.txt 文件，内容为验证令牌</p>
+                <p>当前仅登记域名和验证令牌，不执行自动所有权验证。</p>
+                <p>TLS 证书由部署网关或证书控制面管理，Easy1Auth 不接收证书私钥。</p>
               </AlertDescription>
             </Alert>
           </TabsContent>
@@ -626,11 +626,6 @@ const handleCreateDomain = async () => {
   }
 }
 
-const handleVerifyDomain = (domain: CustomDomain) => {
-  verifyingDomain.value = domain
-  showVerifyDialog.value = true
-}
-
 const handleVerifyDomainConfirm = async () => {
   if (!verifyingDomain.value) return
 
@@ -646,13 +641,6 @@ const handleVerifyDomainConfirm = async () => {
   } finally {
     verifying.value = false
   }
-}
-
-const handleShowSSLDialog = (domain: CustomDomain) => {
-  currentDomainId.value = domain.id
-  sslForm.sslCertificate = ''
-  sslForm.sslPrivateKey = ''
-  showSSLDialog.value = true
 }
 
 const handleSaveSSL = async () => {

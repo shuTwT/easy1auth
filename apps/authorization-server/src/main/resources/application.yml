@@ -1,0 +1,25 @@
+server.port: ${PORT:18850}
+server.forward-headers-strategy: framework
+spring:
+  config:
+    import: optional:file:./.env[.properties]
+  application.name: easy1auth-authorization-server
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/easy1auth}
+    username: ${DATABASE_USERNAME:easy1auth}
+    password: ${DATABASE_PASSWORD:easy1auth}
+  flyway.enabled: false
+  lifecycle.timeout-per-shutdown-phase: 20s
+management.endpoints.web.exposure.include: health,info
+management.endpoint.health:
+  probes.enabled: true
+  group:
+    liveness:
+      include: livenessState
+      additional-path: server:/livez
+    readiness:
+      include: readinessState,phase7Readiness
+      additional-path: server:/readyz
+easy1auth.oauth2.key-encryption-secret: ${OAUTH2_KEY_ENCRYPTION_SECRET}
+easy1auth.oauth2.issuer-base: ${OAUTH2_ISSUER_BASE:http://localhost:18850}
+easy1auth.security.data-encryption-secret: ${SECURITY_DATA_ENCRYPTION_SECRET}

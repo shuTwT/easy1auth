@@ -6,12 +6,18 @@ yarn.lock
 # Build outputs
 dist/
 build/
+**/build/
 *.tsbuildinfo
+
+# Gradle
+.gradle/
+.gradle-user-home/
 
 # Environment variables
 .env
 .env.local
 .env.*.local
+/.local-secrets/
 
 # IDE
 .vscode/
@@ -40,9 +46,12 @@ tmp/
 temp/
 .cache/
 
-# Prisma
-backend/prisma/*.db
-backend/prisma/*.db-journal
-
 /.omo
 /.playwright-mcp
+/.worktrees/
+
+# Production deployment material
+/deploy/.env.production
+/deploy/.env.production.images
+/deploy/secrets/*.txt
+/deploy/backups/

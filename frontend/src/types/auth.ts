@@ -7,9 +7,13 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
-  token: string
-  refreshToken: string
-  user: {
+  status?: 'success' | 'mfa_required'
+  token?: string
+  refreshToken?: string
+  challengeToken?: string
+  methods?: Array<'totp' | 'email'>
+  expiresIn?: number
+  user?: {
     id: string
     username: string
     email: string

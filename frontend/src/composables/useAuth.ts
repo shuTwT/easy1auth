@@ -16,6 +16,7 @@ export function useAuth() {
   const loading = shallowRef(false)
   const sendingCode = shallowRef(false)
   const countdown = shallowRef(0)
+  const mfaChallenge = shallowRef<string | null>(null)
 
   const isCountingDown = computed(() => countdown.value > 0)
 
@@ -23,12 +24,19 @@ export function useAuth() {
     loading.value = true
     try {
       const response = await authApi.login(data)
+      if (response.status === 'mfa_required' && response.challengeToken) {
+        mfaChallenge.value = response.challengeToken
+        toast.info('请输入身份验证器中的动态验证码')
+        return response
+      }
+      if (!response.token || !response.user) throw new Error('登录响应无效')
+      const user = response.user
       userStore.setToken(response.token)
       userStore.setUserInfo(response.user)
       if (response.tenants && response.tenants.length > 0) {
         userStore.setTenants(response.tenants)
         
-        let currentTenant = response.tenants.find(t => t.id === response.user.currentTenantId)
+        let currentTenant = response.tenants.find(t => t.id === user.currentTenantId)
         
         if (!currentTenant) {
           currentTenant = response.tenants[0]
@@ -44,6 +52,25 @@ export function useAuth() {
     } finally {
       loading.value = false
     }
+  }
+
+  async function verifyMfa(code: string) {
+    if (!mfaChallenge.value) throw new Error('MFA 挑战不存在或已过期')
+    loading.value = true
+    try {
+      const response = await authApi.verifyMfa(mfaChallenge.value, code)
+      if (!response.token || !response.user) throw new Error('MFA 登录响应无效')
+      mfaChallenge.value = null
+      userStore.setToken(response.token)
+      userStore.setUserInfo(response.user)
+      if (response.tenants?.length) {
+        userStore.setTenants(response.tenants)
+        userStore.setCurrentTenant(response.tenants.find(t => t.id === response.user?.currentTenantId) || response.tenants[0] || null)
+      }
+      toast.success('登录成功')
+      await router.push('/dashboard')
+      return response
+    } finally { loading.value = false }
   }
 
   async function sendCode(data: SendCodeRequest) {
@@ -136,6 +163,7 @@ export function useAuth() {
       }
 
       const loginResponse = await authApi.passkeyLoginFinish(finishData)
+      if (!loginResponse.token || !loginResponse.user) throw new Error('Passkey 登录响应无效')
       userStore.setToken(loginResponse.token)
       userStore.setUserInfo(loginResponse.user)
       toast.success('登录成功')
@@ -192,5 +220,7 @@ export function useAuth() {
     passkeyLogin,
     socialLogin,
     handleSocialCallback
+    ,mfaChallenge
+    ,verifyMfa
   }
 }

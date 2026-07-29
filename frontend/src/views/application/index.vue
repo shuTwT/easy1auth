@@ -232,7 +232,11 @@ const handleSubmit = async () => {
   }
   try {
     if (isEditing.value && currentApp.value.id) {
-      await applicationApi.update(currentApp.value.id, appForm)
+      const res = await applicationApi.update(currentApp.value.id, appForm)
+      if (res.data.clientSecret) {
+        newClientSecret.value = res.data.clientSecret
+        secretDialogVisible.value = true
+      }
       toast.success('更新成功')
     } else {
       const createPayload = {
@@ -240,7 +244,7 @@ const handleSubmit = async () => {
         type: appForm.type
       }
       const res = await applicationApi.create(createPayload)
-      newClientSecret.value = res.data.clientSecret
+      newClientSecret.value = res.data.clientSecret ?? ''
       secretDialogVisible.value = true
       toast.success('创建成功')
     }

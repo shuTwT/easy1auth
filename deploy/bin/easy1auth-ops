@@ -1,0 +1,110 @@
+#!/bin/sh
+set -eu
+
+repo_root=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
+compose_file="$repo_root/deploy/compose.production.yml"
+env_file="${EASY1AUTH_ENV_FILE:-$repo_root/deploy/.env.production}"
+
+compose() {
+  images=$(docker compose --env-file "$env_file" -f "$compose_file" config --images)
+  for image in $images; do
+    case "$image" in
+      postgres:17.5-alpine3.21|*@sha256:*) ;;
+      *) printf 'Production image is not digest-pinned: %s\n' "$image" >&2; exit 1 ;;
+    esac
+  done
+  docker compose --env-file "$env_file" -f "$compose_file" "$@"
+}
+
+usage() {
+  printf '%s\n' \
+    'Usage: easy1auth-ops COMMAND [ARGUMENTS]' \
+    '  build-images VERSION                  Build fixed local image tags (does not push)' \
+    '  lock-digests MIG ADMIN AUTH GATEWAY   Record pushed image digests in .env.production.images' \
+    '  migrate                               Apply Flyway migrations' \
+    '  flyway-info                           Show current/applied/pending Flyway state' \
+    '  flyway-validate                       Validate migration checksums and require V7' \
+    '  bootstrap-admin                       Run the one-time explicit bootstrap profile' \
+    '  up-maintenance                        Start applications with public business routes blocked' \
+    '  maintenance-on|maintenance-off        Toggle the gateway marker without a restart' \
+    '  readiness                             Check gateway and both application readiness endpoints' \
+    '  oidc TENANT_ID BASE_URL               Check Discovery and JWK for one tenant' \
+    '  backup-postgres OUTPUT.dump           Create a custom-format PostgreSQL backup' \
+    '  restore-postgres INPUT.dump           Restore only when ALLOW_RESTORE=yes'
+}
+
+command=${1:-}
+[ -n "$command" ] || { usage; exit 2; }
+shift
+
+case "$command" in
+  build-images)
+    version=${1:?VERSION is required}
+    docker build -f "$repo_root/Dockerfile" \
+      --build-arg GRADLE_PROJECT=:database-migration \
+      --build-arg APP_DIRECTORY=database-migration \
+      -t "easy1auth/database-migration:$version" "$repo_root"
+    docker build -f "$repo_root/Dockerfile" \
+      --build-arg GRADLE_PROJECT=:apps:admin-api \
+      --build-arg APP_DIRECTORY=apps/admin-api \
+      -t "easy1auth/admin-api:$version" "$repo_root"
+    docker build -f "$repo_root/Dockerfile" \
+      --build-arg GRADLE_PROJECT=:apps:authorization-server \
+      --build-arg APP_DIRECTORY=apps/authorization-server \
+      -t "easy1auth/authorization-server:$version" "$repo_root"
+    docker build -f "$repo_root/deploy/nginx/Dockerfile" \
+      -t "easy1auth/gateway:$version" "$repo_root"
+    ;;
+  lock-digests)
+    [ "$#" -eq 4 ] || { usage; exit 2; }
+    output="$repo_root/deploy/.env.production.images"
+    : > "$output"
+    for pair in "DATABASE_MIGRATION_IMAGE:$1" "ADMIN_API_IMAGE:$2" "AUTHORIZATION_SERVER_IMAGE:$3" "GATEWAY_IMAGE:$4"; do
+      key=${pair%%:*}
+      ref=${pair#*:}
+      digest=$(docker buildx imagetools inspect "$ref" --format '{{.Manifest.Digest}}')
+      case "$digest" in sha256:*) ;; *) printf 'No immutable digest found for %s\n' "$ref" >&2; exit 1 ;; esac
+      printf '%s=%s@%s\n' "$key" "$ref" "$digest" >> "$output"
+    done
+    printf 'Wrote %s; merge these four values into %s\n' "$output" "$env_file"
+    ;;
+  migrate) compose run --rm database-migration ;;
+  flyway-info) compose run --rm database-migration flyway-info ;;
+  flyway-validate) compose run --rm database-migration flyway-validate ;;
+  bootstrap-admin) compose --profile bootstrap run --rm bootstrap-admin ;;
+  up-maintenance)
+    MAINTENANCE_MODE=on compose up -d
+    ;;
+  maintenance-on)
+    compose exec gateway sh -c 'touch /var/run/easy1auth/maintenance'
+    ;;
+  maintenance-off)
+    compose exec gateway sh -c 'rm -f /var/run/easy1auth/maintenance'
+    ;;
+  readiness)
+    compose exec admin-api wget -qO- http://127.0.0.1:18848/livez
+    compose exec admin-api wget -qO- http://127.0.0.1:18848/readyz
+    compose exec authorization-server wget -qO- http://127.0.0.1:18850/livez
+    compose exec authorization-server wget -qO- http://127.0.0.1:18850/readyz
+    compose exec gateway wget -qO- http://127.0.0.1:8080/healthz
+    ;;
+  oidc)
+    tenant=${1:?TENANT_ID is required}
+    base=${2:?BASE_URL is required}
+    curl --fail --show-error --silent "$base/t/$tenant/.well-known/openid-configuration"
+    curl --fail --show-error --silent "$base/t/$tenant/oauth2/jwks"
+    ;;
+  backup-postgres)
+    output=${1:?OUTPUT.dump is required}
+    umask 077
+    compose exec -T postgres pg_dump -U easy1auth -d easy1auth --format=custom > "$output"
+    sha256sum "$output"
+    ;;
+  restore-postgres)
+    input=${1:?INPUT.dump is required}
+    [ "${ALLOW_RESTORE:-no}" = yes ] || { printf '%s\n' 'Set ALLOW_RESTORE=yes after explicit operator approval.' >&2; exit 1; }
+    [ -f "$input" ] || { printf 'Backup not found: %s\n' "$input" >&2; exit 1; }
+    compose exec -T postgres pg_restore -U easy1auth -d easy1auth --clean --if-exists < "$input"
+    ;;
+  *) usage; exit 2 ;;
+esac

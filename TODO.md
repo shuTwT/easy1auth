@@ -2,7 +2,7 @@
 
 ## 项目概述
 - **项目名称**: Easy1Auth - 企业级统一身份管理平台(SaaS)
-- **技术栈**: Vue 3 + shadcn-vue + Express + Prisma + SQLite
+- **技术栈**: Vue 3 + shadcn-vue + Java 21 + Spring Boot 3.5 + PostgreSQL
 - **开始日期**: 2026-03-04
 - **预计完成**: 2026-08-19 (24周)
 
@@ -13,8 +13,8 @@
 ### Week 1-2: 项目初始化与基础架构
 - [x] 创建项目基础结构
   - [x] 前端项目初始化 (Vue 3 + Vite + TypeScript)
-  - [x] 后端项目初始化 (Express + TypeScript)
-  - [x] 数据库设计与Prisma配置
+  - [x] 后端项目初始化 (Java 21 + Spring Boot 3.5)
+  - [x] PostgreSQL 数据库设计与 Flyway 配置
   - [x] 项目文档编写 (PRD.md, README.md)
 - [x] 基础设施搭建
   - [x] Docker配置
@@ -197,8 +197,8 @@
 - ✅ PRD文档编写
 - ✅ 项目基础结构创建
 - ✅ 前端项目初始化(Vue 3 + shadcn-vue + TypeScript)
-- ✅ 后端项目初始化(Express + TypeScript)
-- ✅ 数据库模型设计(Prisma Schema)
+- ✅ Java 21 + Spring Boot 3.5 后端项目初始化
+- ✅ PostgreSQL 数据模型与 Flyway 迁移设计
 - ✅ Docker配置
 - ✅ 开发环境配置
 - ✅ README文档编写

@@ -4,7 +4,7 @@ import { useAuth } from '@/composables/useAuth'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { MessageCircle, MessageSquare, GitFork, QrCode, ScanLine, Smartphone } from '@lucide/vue'
+import { KeyRound } from '@lucide/vue'
 import {
   PROVIDER_CONFIGS,
   isSocialProviderType,
@@ -18,14 +18,8 @@ const props = defineProps<{
 const { loading, socialLogin } = useAuth()
 
 const providerIcons = {
-  wechat_qr: QrCode,
-  wechat_mini_program_qr: ScanLine,
-  wechat_official_account: MessageCircle,
-  wechat_mini_program: Smartphone,
-  github: GitFork,
-  gitee: GitFork,
-  feishu: MessageSquare,
-} satisfies Record<SocialProviderType, typeof MessageCircle>
+  oidc: KeyRound,
+} satisfies Record<SocialProviderType, typeof KeyRound>
 
 const socialProviders = computed(() =>
   (props.providers ?? [])

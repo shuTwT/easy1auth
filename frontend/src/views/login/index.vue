@@ -43,7 +43,7 @@ const loadLoginStyle = async () => {
     const response = await loginStyleApi.getPublic(hostname !== 'localhost' ? hostname : undefined)
     loginStyle.value = response
     currentMode.value = firstAvailableMethod.value as LoginMode
-    applyCustomStyles()
+    applySafeTheme()
   } catch (error) {
     console.error('加载登录样式失败:', error)
   } finally {
@@ -51,7 +51,7 @@ const loadLoginStyle = async () => {
   }
 }
 
-const applyCustomStyles = () => {
+const applySafeTheme = () => {
   if (!loginStyle.value) return
 
   const root = document.documentElement
@@ -60,15 +60,6 @@ const applyCustomStyles = () => {
     root.style.setProperty('--login-primary-color', loginStyle.value.primaryColor)
   }
 
-  if (loginStyle.value.customCSS) {
-    let styleElement = document.getElementById('custom-login-styles')
-    if (!styleElement) {
-      styleElement = document.createElement('style')
-      styleElement.id = 'custom-login-styles'
-      document.head.appendChild(styleElement)
-    }
-    styleElement.textContent = loginStyle.value.customCSS
-  }
 }
 
 onMounted(() => {

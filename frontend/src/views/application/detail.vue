@@ -73,6 +73,8 @@ const grantTypeOptions = [
 const route = useRoute()
 const router = useRouter()
 const baseUrl = window.location.origin
+const authorizationServerBase = import.meta.env.VITE_AUTHORIZATION_SERVER_URL
+  || (import.meta.env.DEV ? `${window.location.protocol}//${window.location.hostname}:18850` : baseUrl)
 
 const applicationId = computed(() => {
   const { id } = route.params
@@ -103,9 +105,10 @@ const loginForm = reactive<LoginForm>({
   refreshTokenLifetime: 2592000
 })
 
-const authorizationEndpoint = `${baseUrl}/oauth2/authorize`
-const tokenEndpoint = `${baseUrl}/api/oauth2/token`
-const userinfoEndpoint = `${baseUrl}/api/oauth2/userinfo`
+const issuerEndpoint = computed(() => `${authorizationServerBase}/t/${application.value?.tenantId ?? 'TENANT_ID'}`)
+const authorizationEndpoint = computed(() => `${issuerEndpoint.value}/oauth2/authorize`)
+const tokenEndpoint = computed(() => `${issuerEndpoint.value}/oauth2/token`)
+const userinfoEndpoint = computed(() => `${issuerEndpoint.value}/userinfo`)
 
 const clientSecretDisplay = computed(() => {
   if (secretVisible.value) return application.value?.clientSecret ?? ''
@@ -117,31 +120,31 @@ const hasRedirectUri = computed(() => Boolean(selectedRedirectUri.value))
 const codeClientId = computed(() => application.value?.clientId ?? 'YOUR_CLIENT_ID')
 const codeRedirectUri = computed(() => selectedRedirectUri.value || 'YOUR_REDIRECT_URI')
 const codeClientSecret = computed(() => {
-  if (secretVisible.value && application.value) return application.value.clientSecret
+  if (secretVisible.value && application.value) return application.value.clientSecret ?? ''
   return 'YOUR_CLIENT_SECRET'
 })
 
 const endpoints = computed(() => [
-  { label: 'Authorization endpoint', value: authorizationEndpoint },
-  { label: 'Token endpoint', value: tokenEndpoint },
-  { label: 'Userinfo endpoint', value: userinfoEndpoint }
+  { label: 'Authorization endpoint', value: authorizationEndpoint.value },
+  { label: 'Token endpoint', value: tokenEndpoint.value },
+  { label: 'Userinfo endpoint', value: userinfoEndpoint.value }
 ])
 
 const oauth2Examples = computed(() => [
   {
     title: '1. 获取授权码',
     description: '将用户重定向到授权端点：',
-    code: `${authorizationEndpoint}?client_id=${codeClientId.value}&redirect_uri=${codeRedirectUri.value}&response_type=code&scope=openid%20profile%20email&state=RANDOM_STATE`
+    code: `${authorizationEndpoint.value}?client_id=${codeClientId.value}&redirect_uri=${codeRedirectUri.value}&response_type=code&scope=openid%20profile%20email&state=RANDOM_STATE`
   },
   {
     title: '2. 使用授权码换取 Token',
     description: '向 Token 端点发送 POST 请求：',
-    code: `POST ${tokenEndpoint}\nContent-Type: application/x-www-form-urlencoded\n\ngrant_type=authorization_code&code=AUTHORIZATION_CODE&redirect_uri=${codeRedirectUri.value}&client_id=${codeClientId.value}&client_secret=${codeClientSecret.value}`
+    code: `POST ${tokenEndpoint.value}\nContent-Type: application/x-www-form-urlencoded\n\ngrant_type=authorization_code&code=AUTHORIZATION_CODE&redirect_uri=${codeRedirectUri.value}&client_id=${codeClientId.value}&client_secret=${codeClientSecret.value}`
   },
   {
     title: '3. 获取用户信息',
     description: '使用 Access Token 获取用户信息：',
-    code: `GET ${userinfoEndpoint}\nAuthorization: Bearer ACCESS_TOKEN`
+    code: `GET ${userinfoEndpoint.value}\nAuthorization: Bearer ACCESS_TOKEN`
   }
 ])
 
@@ -154,12 +157,12 @@ const pkceExamples = computed(() => [
   {
     title: '2. 授权请求',
     description: '在授权请求中加入 PKCE 参数：',
-    code: `${authorizationEndpoint}?client_id=${codeClientId.value}&redirect_uri=${codeRedirectUri.value}&response_type=code&scope=openid%20profile%20email&state=RANDOM_STATE&code_challenge=CODE_CHALLENGE&code_challenge_method=S256`
+    code: `${authorizationEndpoint.value}?client_id=${codeClientId.value}&redirect_uri=${codeRedirectUri.value}&response_type=code&scope=openid%20profile%20email&state=RANDOM_STATE&code_challenge=CODE_CHALLENGE&code_challenge_method=S256`
   },
   {
     title: '3. Token 请求',
     description: '使用 code_verifier 换取 Token，无需在客户端保存密钥：',
-    code: `POST ${tokenEndpoint}\nContent-Type: application/x-www-form-urlencoded\n\ngrant_type=authorization_code&code=AUTHORIZATION_CODE&redirect_uri=${codeRedirectUri.value}&client_id=${codeClientId.value}&code_verifier=CODE_VERIFIER`
+    code: `POST ${tokenEndpoint.value}\nContent-Type: application/x-www-form-urlencoded\n\ngrant_type=authorization_code&code=AUTHORIZATION_CODE&redirect_uri=${codeRedirectUri.value}&client_id=${codeClientId.value}&code_verifier=CODE_VERIFIER`
   }
 ])
 
@@ -167,7 +170,7 @@ const clientCredentialsExamples = computed(() => [
   {
     title: '适用于机器对机器通信',
     description: '服务端使用客户端凭证获取访问令牌：',
-    code: `POST ${tokenEndpoint}\nContent-Type: application/x-www-form-urlencoded\n\ngrant_type=client_credentials&client_id=${codeClientId.value}&client_secret=${codeClientSecret.value}&scope=read%20write`
+    code: `POST ${tokenEndpoint.value}\nContent-Type: application/x-www-form-urlencoded\n\ngrant_type=client_credentials&client_id=${codeClientId.value}&client_secret=${codeClientSecret.value}&scope=read%20write`
   }
 ])
 
@@ -278,6 +281,7 @@ const saveConfig = async () => {
   try {
     const response = await applicationApi.update(applicationId.value, payload)
     application.value = response.data
+    if (response.data.clientSecret) secretVisible.value = true
     document.title = `${response.data.name} - 应用详情`
     toast.success('应用配置已保存')
   } catch (error: unknown) {
@@ -451,7 +455,7 @@ onMounted(loadApplication)
                       <EyeOff v-if="secretVisible" data-icon="inline-start" />
                       <Eye v-else data-icon="inline-start" />
                     </Button>
-                    <Button type="button" variant="outline" size="icon" aria-label="复制 AppSecret" @click="copyToClipboard(application.clientSecret)">
+                    <Button type="button" variant="outline" size="icon" aria-label="复制 AppSecret" @click="copyToClipboard(application.clientSecret ?? '')">
                       <Copy data-icon="inline-start" />
                     </Button>
                     <Button type="button" variant="outline" size="icon" aria-label="重新生成 AppSecret" @click="regenerateSecret">

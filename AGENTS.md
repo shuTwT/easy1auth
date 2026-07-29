@@ -5,35 +5,32 @@ Enterprise multi-tenant IAM platform (SaaS). Chinese-language admin UI.
 ## Monorepo layout
 
 ```
-frontend/   Vue 3 + Vite + shadcn-vue + Tailwind CSS 4 + Reka-UI
-backend/    Express + Prisma v7 + SQLite
+apps/ and modules/  Java 21 + Spring Boot 3.5 backend (root Gradle build)
+database-migration/ Flyway migration and bootstrap application
+frontend/           Vue 3 + Vite + shadcn-vue + Tailwind CSS 4 + Reka-UI
 design-system/  Design specs (easy1auth-admin/MASTER.md)
 ```
 
-Each package is independent — separate `pnpm-workspace.yaml`, separate `node_modules`. **Not** a root workspace.
+The Java backend is a Gradle build rooted at the repository root. `frontend/` is an independent
+pnpm package and is not part of a root pnpm workspace.
 
-## ⚠️ README is out of date — trust the code, not the README
+## Current stack
 
-| Claim in README | Actual |
-|---|---|
-| PostgreSQL | **SQLite** (`provider = "sqlite"` in schema, `@prisma/adapter-libsql`) |
-| npm | **pnpm** (only lockfiles are `pnpm-lock.yaml`) |
-| Element Plus UI | **shadcn-vue + Reka-UI + Tailwind CSS 4** |
-| Backend port 3000 | **18848** (`backend/src/index.ts`) |
-| Frontend port 5173 | **18849** (`frontend/vite.config.ts`) |
-
-SQLite is the dev default. `@prisma/adapter-pg` is installed as a dependency but unused. DB file: `backend/data/dev.db`.
+- PostgreSQL is the only application database.
+- Frontend packages use pnpm.
+- The UI uses shadcn-vue + Reka-UI + Tailwind CSS 4.
+- Admin API: `18848`; authorization server: `18850`; frontend: `18849`.
 
 ## Development commands
 
-All commands run from within `frontend/` or `backend/`:
+Java commands run from the repository root. Frontend commands run from `frontend/`:
 
 ```bash
-# Backend
-cd backend && pnpm dev          # tsx watch src/index.ts (port 18848)
-cd backend && pnpm db:migrate   # prisma migrate dev
-cd backend && pnpm db:seed      # seed data (default admin: admin/Admin123!@#)
-cd backend && pnpm db:studio    # prisma studio
+# Java backend
+docker compose -f docker-compose.java-dev.yml up -d postgres
+./gradlew :database-migration:bootRun
+./gradlew :apps:admin-api:bootRun       # port 18848
+./gradlew :apps:authorization-server:bootRun # port 18850
 
 # Frontend
 cd frontend && pnpm dev         # Vite dev server (port 18849)
@@ -42,47 +39,17 @@ cd frontend && pnpm build       # vue-tsc --build && vite build
 
 Vite proxies `/api` → `http://localhost:18848` (see `frontend/vite.config.ts`).
 
-### Running a single Prisma migration
-
-```bash
-cd backend && npx prisma migrate dev --name <name>
-```
-
-Docker Compose exists (`docker-compose.yml`) with PostgreSQL + Redis, but it is **not** the primary dev workflow.
+`docker-compose.java-dev.yml` provides the development PostgreSQL database. Production
+orchestration is `deploy/compose.production.yml`.
 
 ## Key architecture decisions
-
-### Backend: routes-call-services, sometimes routes-call-Prisma-directly
-
-Route files live in `backend/src/routes/`. Most delegate to class-based services in `backend/src/services/` (e.g., `UserService`, `TenantService`), but **auth.routes.ts calls Prisma directly**. New code should follow the service pattern.
-
-API response shape: `{ status: 'ok' | 'error', data?, message? }`
-
-Error handling uses `AppError` class from `middleware/errorHandler.ts`:
-```ts
-throw new AppError('message', 400)  // 4xx → status: 'fail', 5xx → status: 'error'
-```
-
-### Prisma v7 with adapter pattern
-
-```ts
-// backend/src/lib/prisma.ts
-const adapter = new PrismaLibSql({ url: 'file:./data/dev.db' })
-const prisma = new PrismaClient({ adapter })
-```
-
-- **Always create PrismaClient with the adapter.** Direct `new PrismaClient()` will not work with the SQLite setup.
-- Seed file (`prisma/seed.ts`) and any standalone scripts must replicate this pattern.
-- Prisma config: `backend/prisma.config.ts`
 
 ### Auth & multi-tenancy
 
 - **JWT tokens** stored in `localStorage` (not httpOnly cookies).
 - All authenticated requests require `Authorization: Bearer <token>` header.
 - Tenant isolation via `tenant-id` request header (set by axios interceptor in `frontend/src/utils/request.ts`).
-- Middleware chain: auth → tenant → (optional) tenantDataFilter/checkTenantLimits.
-- `tenantDataFilter` auto-injects `tenantId` into `req.body`.
-- Auth middleware uses `AuthRequest` type extension; tenant middleware uses `TenantRequest`.
+- The admin API resolves tenant context in `TenantContextFilter` and enforces access in domain services.
 
 ### Frontend: shadcn-vue conventions
 
@@ -114,10 +81,9 @@ Frontend router (`frontend/src/router/index.ts`):
 
 ## What's missing
 
-- **No tests** — No vitest/jest config, no test runner scripts, no `*.test.ts` or `*.spec.ts` files.
-- **No linting** — No ESLint/Prettier config in either package.
+- **Frontend has no tests** — No vitest/jest config or frontend test runner. Java tests exist under the Gradle subprojects.
+- **Frontend has no linting** — No ESLint/Prettier config.
 - **No CI/CD** — Mentioned in TODO.md but not implemented.
-- **No type-check script** — Backend lacks a `tsc --noEmit` or equivalent. Frontend runs `vue-tsc --build` as part of `pnpm build`.
 
 ## Design system files
 
@@ -130,9 +96,6 @@ When building UI, check these files first:
 
 ## File naming conventions
 
-- Backend routes: `*.routes.ts` (plural, lowercase kebab prefix)
-- Backend services: `*.service.ts`
-- Backend types: `*.types.ts`
 - Frontend API modules: `frontend/src/api/*.ts` (one per resource, exports object literal)
 - Frontend views: `frontend/src/views/<resource>/index.vue`
 - Vue SFC: `<script setup lang="ts">` with Composition API
@@ -140,5 +103,5 @@ When building UI, check these files first:
 ## Sisyphus configuration
 
 - `.sisyphus/` directory exists for work plans
-- `.agents/` directory contains project-local skills (Prisma agent skills)
+- `.agents/` directory contains project-local frontend skills
 - `skills-lock.json` tracks installed skill versions

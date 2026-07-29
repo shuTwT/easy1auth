@@ -1,0 +1,200 @@
+name: easy1auth-java-production
+
+x-java-service: &java-service
+  restart: unless-stopped
+  read_only: true
+  tmpfs:
+    - /tmp:size=128m,mode=1777
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  pids_limit: 256
+  cpus: 1.0
+  mem_limit: 768m
+  stop_grace_period: 30s
+  environment: &java-environment
+    SPRING_PROFILES_ACTIVE: production
+    SPRING_CONFIG_IMPORT: configtree:/run/secrets/
+    DATABASE_URL: jdbc:postgresql://postgres:5432/easy1auth
+    DATABASE_USERNAME: easy1auth
+
+services:
+  postgres:
+    image: postgres:17.5-alpine3.21
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: easy1auth
+      POSTGRES_USER: easy1auth
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets:
+      - db_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U easy1auth -d easy1auth"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    networks:
+      - data
+    pids_limit: 256
+    cpus: 1.5
+    mem_limit: 1g
+
+  database-migration:
+    <<: *java-service
+    image: ${DATABASE_MIGRATION_IMAGE:?Set DATABASE_MIGRATION_IMAGE to an immutable repository@sha256 digest}
+    restart: "no"
+    environment:
+      <<: *java-environment
+    secrets:
+      - source: db_password
+        target: spring.datasource.password
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - data
+
+  bootstrap-admin:
+    <<: *java-service
+    image: ${DATABASE_MIGRATION_IMAGE:?Set DATABASE_MIGRATION_IMAGE to an immutable repository@sha256 digest}
+    profiles: ["bootstrap"]
+    restart: "no"
+    command: ["--spring.profiles.active=production,bootstrap-admin", "bootstrap-admin"]
+    environment:
+      <<: *java-environment
+    secrets:
+      - source: db_password
+        target: spring.datasource.password
+      - source: bootstrap_admin_username
+        target: easy1auth.bootstrap.username
+      - source: bootstrap_admin_email
+        target: easy1auth.bootstrap.email
+      - source: bootstrap_admin_password
+        target: easy1auth.bootstrap.password
+    depends_on:
+      database-migration:
+        condition: service_completed_successfully
+    networks:
+      - data
+
+  admin-api:
+    <<: *java-service
+    image: ${ADMIN_API_IMAGE:?Set ADMIN_API_IMAGE to an immutable repository@sha256 digest}
+    environment:
+      <<: *java-environment
+      PORT: "18848"
+      ADMIN_JWT_ISSUER: ${ADMIN_JWT_ISSUER:?Set the canonical HTTPS administrator issuer origin}
+      MAIL_HOST: ${MAIL_HOST:?Set the SMTP host}
+      MAIL_PORT: ${MAIL_PORT:-465}
+      REGISTRATION_FROM_ADDRESS: ${REGISTRATION_FROM_ADDRESS:?Set the SMTP envelope From address}
+    secrets:
+      - source: db_password
+        target: spring.datasource.password
+      - source: admin_jwt_secret
+        target: easy1auth.admin-jwt.secret
+      - source: security_data_encryption_secret
+        target: easy1auth.security.data-encryption-secret
+      - source: smtp_username
+        target: spring.mail.username
+      - source: smtp_password
+        target: spring.mail.password
+    depends_on:
+      database-migration:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:18848/readyz >/dev/null"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 30s
+    networks:
+      - gateway
+      - data
+
+  authorization-server:
+    <<: *java-service
+    image: ${AUTHORIZATION_SERVER_IMAGE:?Set AUTHORIZATION_SERVER_IMAGE to an immutable repository@sha256 digest}
+    environment:
+      <<: *java-environment
+      PORT: "18850"
+      OAUTH2_ISSUER_BASE: ${OAUTH2_ISSUER_BASE:?Set the canonical HTTPS authorization-server origin}
+    secrets:
+      - source: db_password
+        target: spring.datasource.password
+      - source: oauth2_key_encryption_secret
+        target: easy1auth.oauth2.key-encryption-secret
+      - source: security_data_encryption_secret
+        target: easy1auth.security.data-encryption-secret
+    depends_on:
+      database-migration:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:18850/readyz >/dev/null"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 30s
+    networks:
+      - gateway
+      - data
+
+  gateway:
+    image: ${GATEWAY_IMAGE:?Set GATEWAY_IMAGE to an immutable repository@sha256 digest}
+    restart: unless-stopped
+    read_only: true
+    environment:
+      MAINTENANCE_MODE: ${MAINTENANCE_MODE:-on}
+    ports:
+      - "${GATEWAY_PORT:-8080}:8080"
+    tmpfs:
+      - /var/cache/nginx:size=64m
+      - /var/run:size=8m
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    cpus: 0.5
+    mem_limit: 256m
+    depends_on:
+      admin-api:
+        condition: service_started
+      authorization-server:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/healthz >/dev/null"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+    networks:
+      - gateway
+
+volumes:
+  postgres_data:
+
+networks:
+  gateway:
+  data:
+    internal: true
+
+secrets:
+  db_password:
+    file: ${DB_PASSWORD_FILE:-./secrets/db_password.txt}
+  admin_jwt_secret:
+    file: ${ADMIN_JWT_SECRET_FILE:-./secrets/admin_jwt_secret.txt}
+  oauth2_key_encryption_secret:
+    file: ${OAUTH2_KEY_ENCRYPTION_SECRET_FILE:-./secrets/oauth2_key_encryption_secret.txt}
+  security_data_encryption_secret:
+    file: ${SECURITY_DATA_ENCRYPTION_SECRET_FILE:-./secrets/security_data_encryption_secret.txt}
+  smtp_username:
+    file: ${SMTP_USERNAME_FILE:-./secrets/smtp_username.txt}
+  smtp_password:
+    file: ${SMTP_PASSWORD_FILE:-./secrets/smtp_password.txt}
+  bootstrap_admin_username:
+    file: ${BOOTSTRAP_ADMIN_USERNAME_FILE:-./secrets/bootstrap_admin_username.txt}
+  bootstrap_admin_email:
+    file: ${BOOTSTRAP_ADMIN_EMAIL_FILE:-./secrets/bootstrap_admin_email.txt}
+  bootstrap_admin_password:
+    file: ${BOOTSTRAP_ADMIN_PASSWORD_FILE:-./secrets/bootstrap_admin_password.txt}

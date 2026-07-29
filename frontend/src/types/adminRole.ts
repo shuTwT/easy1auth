@@ -1,5 +1,5 @@
 // Frontend types mirroring backend admin-role DTOs.
-// Source of truth: backend/src/types/admin-role.types.ts
+// Keep aligned with the Java admin API contract.
 // These types are intentionally separate from the normal Role types; admin roles
 // are a distinct domain with their own endpoints (/admin-roles/*).
 
