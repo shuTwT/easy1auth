@@ -55,3 +55,5 @@ temp/
 /deploy/.env.production.images
 /deploy/secrets/*.txt
 /deploy/backups/
+
+/.claude
