@@ -93,7 +93,7 @@ Vite 将 `/api` 代理到 `http://localhost:18848`，配置见 `frontend/vite.co
 
 - 前端没有测试：不存在 Vitest/Jest 配置或前端测试运行器；Java 测试位于各 Gradle 子项目中。
 - 前端没有代码检查：不存在 ESLint/Prettier 配置。
-- 没有 CI/CD：`TODO.md` 中已提及，但尚未实现。
+- 没有 CI/CD
 
 ## 设计系统文件
 
@@ -109,3 +109,10 @@ Vite 将 `/api` 代理到 `http://localhost:18848`，配置见 `frontend/vite.co
 - 前端 API 模块：`frontend/src/api/*.ts`，每个资源一个文件并导出对象字面量。
 - 前端视图：`frontend/src/views/<resource>/index.vue`。
 - Vue 单文件组件：使用 `<script setup lang="ts">` 和组合式 API。
+
+## 概念
+
+- `pool_user`是用来给第三方介入的用户体系，给第三方授权登录。不应在系统后台登录，token也不得混用。
+- 租户：一个管理员`admin_user`拥有多个租户，可切换。租户绑定租户套餐，租户套餐有权限和套餐内容(用户数等)
+- 角色：不要混淆`pool_user`的角色和`admin_user`的角色。两者不是同一个角色管理，两者对应的权限列表也是不同的。
+- 品牌管理：登录样式指的是`pool_user`对应的登录页的样式，而不是`admin_user`登录页的样式。

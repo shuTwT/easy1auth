@@ -23,7 +23,7 @@ usage() {
     '  lock-digests MIG ADMIN AUTH GATEWAY   Record pushed image digests in .env.production.images' \
     '  migrate                               Apply Flyway migrations' \
     '  flyway-info                           Show current/applied/pending Flyway state' \
-    '  flyway-validate                       Validate migration checksums and require V7' \
+    '  flyway-validate                       Validate migration checksums and require V1' \
     '  bootstrap-admin                       Run the one-time explicit bootstrap profile' \
     '  up-maintenance                        Start applications with public business routes blocked' \
     '  maintenance-on|maintenance-off        Toggle the gateway marker without a restart' \

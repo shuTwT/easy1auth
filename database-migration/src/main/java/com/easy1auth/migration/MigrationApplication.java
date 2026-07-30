@@ -17,6 +17,7 @@ import java.sql.Types;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 
@@ -56,13 +57,13 @@ public class MigrationApplication {
                 if (!validation.validationSuccessful) {
                     throw new IllegalStateException("Flyway validation failed: " + validation.errorDetails.errorMessage);
                 }
-                requireV7(flyway);
-                LOG.info("Flyway validation complete; schema includes V7");
+                requireV1(flyway);
+                LOG.info("Flyway validation complete; schema includes V1");
                 return;
             }
 
             var result = flyway.migrate();
-            requireV7(flyway);
+            requireV1(flyway);
             LOG.info("Flyway migration complete; schema version={}, migrations executed={}",
                     flyway.info().current().getVersion(), result.migrationsExecuted);
 
@@ -74,15 +75,15 @@ public class MigrationApplication {
         };
     }
 
-    private static void requireV7(Flyway flyway) {
+    private static void requireV1(Flyway flyway) {
         boolean applied = Arrays.stream(flyway.info().applied())
-                .anyMatch(info -> info.getVersion() != null && "7".equals(info.getVersion().getVersion()));
-        if (!applied) throw new IllegalStateException("Flyway migration V7 must be applied before startup");
+                .anyMatch(info -> info.getVersion() != null && "1".equals(info.getVersion().getVersion()));
+        if (!applied) throw new IllegalStateException("Flyway migration V1 must be applied before startup");
     }
 
     private static void bootstrapAdmin(JdbcClient db, TransactionTemplate transactions, Environment environment) {
-        String username = required(environment, "easy1auth.bootstrap.username").strip();
-        String email = required(environment, "easy1auth.bootstrap.email").strip().toLowerCase();
+        String username = required(environment, "easy1auth.bootstrap.username").strip().toLowerCase(Locale.ROOT);
+        String email = required(environment, "easy1auth.bootstrap.email").strip().toLowerCase(Locale.ROOT);
         String password = SecretPolicy.require("BOOTSTRAP_ADMIN_PASSWORD",
                 required(environment, "easy1auth.bootstrap.password"), 8);
         validateIdentity(username, email, password);
@@ -96,9 +97,13 @@ public class MigrationApplication {
         UUID accountId = UuidV7.randomUuid();
         transactions.executeWithoutResult(status -> {
             db.sql("select pg_advisory_xact_lock(1163283534) as bootstrap_lock").query().singleRow();
-            Integer count = db.sql("select count(*) from admin_account").query(Integer.class).single();
-            if (count != null && count > 0) {
-                throw new IllegalStateException("bootstrap-admin refused: an administrator already exists");
+            Boolean existingBootstrapState = db.sql("select exists (select 1 from admin_account) " +
+                            "or exists (select 1 from admin_credential) " +
+                            "or exists (select 1 from tenant) " +
+                            "or exists (select 1 from tenant_membership)")
+                    .query(Boolean.class).single();
+            if (Boolean.TRUE.equals(existingBootstrapState)) {
+                throw new IllegalStateException("bootstrap-admin refused: bootstrap state is not empty");
             }
             OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
             db.sql("insert into admin_account (id, username, email, status, security_version, created_at, updated_at) " +
@@ -109,6 +114,15 @@ public class MigrationApplication {
             db.sql("insert into admin_credential (account_id, password_hash, password_changed_at, created_at, updated_at) " +
                             "values (:id, :hash, :now, :now, :now)")
                     .param("id", accountId).param("hash", passwordHash)
+                    .param("now", now, Types.TIMESTAMP_WITH_TIMEZONE).update();
+            UUID tenantId = UuidV7.randomUuid();
+            db.sql("insert into tenant (id, name, status, is_system, package_id, created_at, updated_at) " +
+                            "values (:id, :name, 'active', true, null, :now, :now)")
+                    .param("id", tenantId).param("name", "系统租户")
+                    .param("now", now, Types.TIMESTAMP_WITH_TIMEZONE).update();
+            db.sql("insert into tenant_membership (id, account_id, tenant_id, membership_role, status, created_at, updated_at) " +
+                            "values (:id, :accountId, :tenantId, 'super_admin', 'active', :now, :now)")
+                    .param("id", UuidV7.randomUuid()).param("accountId", accountId).param("tenantId", tenantId)
                     .param("now", now, Types.TIMESTAMP_WITH_TIMEZONE).update();
         });
         LOG.info("Initial administrator created; accountId={}", accountId);
@@ -131,8 +145,8 @@ public class MigrationApplication {
                 || !password.matches(".*[A-Z].*") || !password.matches(".*\\d.*")) {
             throw new IllegalStateException("Bootstrap administrator password must be 8-128 characters and include upper-case, lower-case, and numeric characters");
         }
-        String normalizedPassword = password.toLowerCase();
-        if (normalizedPassword.equals(username.toLowerCase()) || normalizedPassword.equals(email.toLowerCase())) {
+        String normalizedPassword = password.toLowerCase(Locale.ROOT);
+        if (normalizedPassword.equals(username.toLowerCase(Locale.ROOT)) || normalizedPassword.equals(email.toLowerCase(Locale.ROOT))) {
             throw new IllegalStateException("Bootstrap administrator password must not equal the username or email");
         }
     }

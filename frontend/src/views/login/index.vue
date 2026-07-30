@@ -82,7 +82,7 @@ onMounted(() => {
     </div>
 
     <div class="login-card">
-      <div class="login-header">
+      <div class="login-header flex items-center justify-center">
         <div class="logo">
           <img 
             v-if="loginStyle?.logo" 
@@ -106,8 +106,10 @@ onMounted(() => {
             </defs>
           </svg>
         </div>
-        <h1 class="title">{{ loginStyle?.title || 'Easy1Auth' }}</h1>
-        <p class="subtitle">{{ loginStyle?.subtitle || '企业级统一身份管理平台' }}</p>
+        <div class="flex flex-col">
+          <h1 class="title">{{ loginStyle?.title || 'Easy1Auth' }}</h1>
+          <p class="subtitle">{{ loginStyle?.subtitle || '企业级统一身份管理平台' }}</p>
+        </div>
       </div>
 
       <div v-if="availableMethods.length > 1 && currentMode !== 'register'" class="login-tabs">
@@ -257,7 +259,7 @@ onMounted(() => {
 
 .logo {
   display: inline-block;
-  margin-bottom: 16px;
+  margin-right: 16px;
 }
 
 .logo-image {
@@ -285,7 +287,7 @@ onMounted(() => {
 .login-tabs {
   display: flex;
   gap: 8px;
-  margin-bottom: 32px;
+  margin-bottom: 8px;
   padding: 4px;
   background: rgba(241, 245, 249, 0.5);
   border-radius: 8px;

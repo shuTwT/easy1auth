@@ -1,9 +1,102 @@
 package com.easy1auth.adminaccess;
-import com.easy1auth.adminaccess.model.*; import com.easy1auth.adminidentity.model.*; import com.easy1auth.tenant.TenantAuthorizationProvider; import org.babyfish.jimmer.sql.JSqlClient; import org.springframework.stereotype.Component; import java.util.*; import java.util.stream.Collectors;
-@Component final class JimmerTenantAuthorizationProvider implements TenantAuthorizationProvider{
- private static final AdminAccountEntityTable ACCOUNT=AdminAccountEntityTable.$; private static final AdminRoleEntityTable ROLE=AdminRoleEntityTable.$; private final JSqlClient sql;
- JimmerTenantAuthorizationProvider(JSqlClient sql){this.sql=sql;}
- public boolean isActiveAccount(UUID id){return sql.createQuery(ACCOUNT).where(ACCOUNT.id().eq(id),ACCOUNT.status().eq("active")).select(ACCOUNT.id()).exists();}
- public Set<String> roles(UUID membership,String membershipRole){var result=sql.createQuery(ROLE).where(ROLE.memberships(m->m.id().eq(membership))).select(ROLE.name()).execute().stream().collect(Collectors.toSet());result.add(membershipRole);return result;}
- public Set<String> permissions(UUID membership,String membershipRole){if("owner".equals(membershipRole))return Set.of("*");return sql.createQuery(ROLE).where(ROLE.memberships(m->m.id().eq(membership))).select(ROLE.permissions()).execute().stream().flatMap(Collection::stream).collect(Collectors.toUnmodifiableSet());}
+
+import com.easy1auth.adminidentity.model.AdminAccountEntityTable;
+import com.easy1auth.foundation.error.DomainException;
+import com.easy1auth.tenant.TenantAuthorization;
+import com.easy1auth.tenant.TenantAuthorizationProvider;
+import com.easy1auth.tenant.TenantAuthorizationRequest;
+import com.easy1auth.tenant.TenantDataBoundary;
+import com.easy1auth.tenant.TenantPackageService;
+import com.easy1auth.tenant.TenantPackageView;
+import org.babyfish.jimmer.sql.JSqlClient;
+import org.springframework.stereotype.Component;
+
+import java.util.Set;
+import java.util.UUID;
+
+@Component
+final class JimmerTenantAuthorizationProvider implements TenantAuthorizationProvider {
+    private static final AdminAccountEntityTable ACCOUNT = AdminAccountEntityTable.$;
+
+    private final JSqlClient sql;
+    private final ManagementPermissionCatalog catalog;
+    private final TenantPackageService packages;
+    private final PlatformAuthorizationResolver platforms;
+
+    JimmerTenantAuthorizationProvider(
+            JSqlClient sql,
+            ManagementPermissionCatalog catalog,
+            TenantPackageService packages,
+            PlatformAuthorizationResolver platforms) {
+        this.sql = sql;
+        this.catalog = catalog;
+        this.packages = packages;
+        this.platforms = platforms;
+    }
+
+    @Override
+    public boolean isActiveAccount(UUID accountId) {
+        return sql.createQuery(ACCOUNT)
+                .where(ACCOUNT.id().eq(accountId), ACCOUNT.status().eq("active"))
+                .select(ACCOUNT.id())
+                .exists();
+    }
+
+    @Override
+    public TenantAuthorization resolve(TenantAuthorizationRequest request) {
+        return request.systemTenant() ? resolveSystem(request) : resolveOrdinary(request);
+    }
+
+    private TenantAuthorization resolveSystem(TenantAuthorizationRequest request) {
+        return switch (request.membershipRole()) {
+            case "super_admin" -> resolveSuperAdmin(request);
+            case "common" -> new TenantAuthorization(Set.of(), TenantDataBoundary.NONE, packages.systemPackage());
+            default -> throw invalidMembershipRole();
+        };
+    }
+
+    private TenantAuthorization resolveSuperAdmin(TenantAuthorizationRequest request) {
+        var platform = platforms.resolve(request.accountId());
+        if (!request.tenantId().equals(platform.tenantId())) {
+            throw new DomainException("SYSTEM_TENANT_CONTEXT_INVALID", "系统租户上下文无效", 409);
+        }
+        return new TenantAuthorization(
+                platform.permissionCodes().stream().map(ManagementPermissionCode::value).collect(java.util.stream.Collectors.toUnmodifiableSet()),
+                TenantDataBoundary.PLATFORM_ALL,
+                packages.systemPackage());
+    }
+
+    private TenantAuthorization resolveOrdinary(TenantAuthorizationRequest request) {
+        TenantPackageView tenantPackage = activeOrdinaryPackage(request);
+        return switch (request.membershipRole()) {
+            case "tenant_admin" -> new TenantAuthorization(
+                    packagePermissions(tenantPackage), dataBoundary(tenantPackage), tenantPackage);
+            case "common" -> new TenantAuthorization(Set.of(), TenantDataBoundary.NONE, tenantPackage);
+            default -> throw invalidMembershipRole();
+        };
+    }
+
+    private TenantPackageView activeOrdinaryPackage(TenantAuthorizationRequest request) {
+        if (request.packageId() == null || request.packageId() <= 0) {
+            throw new DomainException("TENANT_PACKAGE_MISSING", "普通租户缺少有效套餐", 409);
+        }
+        return packages.getActive(request.packageId());
+    }
+
+    private Set<String> packagePermissions(TenantPackageView tenantPackage) {
+        return catalog.validate(tenantPackage.permissionCodes(), ManagementPermissionScope.TENANT).stream()
+                .map(ManagementPermissionCode::value)
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+    }
+
+    private TenantDataBoundary dataBoundary(TenantPackageView tenantPackage) {
+        if (tenantPackage.permissionCodes().contains(TenantDataBoundary.TENANT_ALL.code())) {
+            return TenantDataBoundary.TENANT_ALL;
+        }
+        throw new DomainException("TENANT_PACKAGE_DATA_BOUNDARY_MISSING", "普通租户套餐缺少数据范围", 409);
+    }
+
+    private static DomainException invalidMembershipRole() {
+        return new DomainException("TENANT_MEMBERSHIP_ROLE_INVALID", "成员角色与租户类型不匹配", 409);
+    }
 }

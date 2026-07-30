@@ -35,7 +35,7 @@ const code_challenge_method = route.query.code_challenge_method as string
 const loadApplicationInfo = async () => {
   try {
     if (!client_id) {
-      error.value = '缺少 client_id 参数'
+      toast.error('缺少 client_id 参数')
       loading.value = false
       return
     }
@@ -44,7 +44,8 @@ const loadApplicationInfo = async () => {
     const data = await res.json()
 
     if (!res.ok) {
-      error.value = data.error || '应用不存在或未授权'
+      toast.error(data.error || '应用不存在或未授权')
+      error.value = '应用不存在或未授权'
       loading.value = false
       return
     }
@@ -55,7 +56,8 @@ const loadApplicationInfo = async () => {
     loading.value = false
   } catch (err: any) {
     console.error('加载应用信息失败:', err)
-    error.value = err.message || '加载应用信息失败'
+    toast.error(err.message || '加载应用信息失败')
+    error.value = '加载应用信息失败'
     loading.value = false
   }
 }

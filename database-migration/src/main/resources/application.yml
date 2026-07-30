@@ -1,6 +1,6 @@
 spring:
   config:
-    import: optional:file:./.env[.properties]
+    import: optional:file:../.env[.properties]
   application.name: easy1auth-database-migration
   main.web-application-type: none
   datasource:

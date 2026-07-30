@@ -40,5 +40,5 @@ onMounted(async () => {
 
 <template>
   <router-view />
-  <Toaster rich-color />
+  <Toaster rich-colors />
 </template>

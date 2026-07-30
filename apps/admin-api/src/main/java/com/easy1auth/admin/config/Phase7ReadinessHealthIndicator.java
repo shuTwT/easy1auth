@@ -21,16 +21,16 @@ public final class Phase7ReadinessHealthIndicator implements HealthIndicator {
     public Health health() {
         try {
             Integer connected = db.sql("select 1").query(Integer.class).single();
-            Boolean v7 = db.sql("select exists(select 1 from flyway_schema_history where version='7' and success=true)")
+            Boolean v1 = db.sql("select exists(select 1 from flyway_schema_history where version='1' and success=true)")
                     .query(Boolean.class).single();
             URI issuer = URI.create(jwt.issuer());
-            if (connected == null || connected != 1 || !Boolean.TRUE.equals(v7)
+            if (connected == null || connected != 1 || !Boolean.TRUE.equals(v1)
                     || issuer.getScheme() == null || issuer.getHost() == null
                     || jwt.audience() == null || jwt.audience().isBlank()
                     || jwt.secret() == null || jwt.secret().getBytes(java.nio.charset.StandardCharsets.UTF_8).length < 32) {
-                return Health.down().withDetail("schema", "Flyway V7 or required configuration unavailable").build();
+                return Health.down().withDetail("schema", "Flyway V1 or required configuration unavailable").build();
             }
-            return Health.up().withDetail("schema", "V7").build();
+            return Health.up().withDetail("schema", "V1").build();
         } catch (RuntimeException ex) {
             return Health.down(ex).build();
         }

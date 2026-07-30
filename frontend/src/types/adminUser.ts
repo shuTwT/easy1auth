@@ -2,10 +2,19 @@
 // Keep aligned with the Java admin API contract.
 // These types are intentionally separate from the normal User types; admin users
 // are a distinct domain with their own endpoints (/admin-users/*).
+//
+// Backend AdminMemberView is account-level: one row per admin account, carrying
+// a `tenants` list of AdminMembershipView describing each tenant membership.
+// The top-level tenantId/tenantRole/roles are legacy compatibility fields
+// derived from the account's selected membership and may be null when the
+// account has no memberships. Membership mutations (assign roles, remove from
+// tenant) require an explicit tenantId targeting the currently selected tenant;
+// do not use the legacy fields or the request interceptor's tenant-id header as
+// mutation authority.
 
 export type AdminStatus = 'active' | 'disabled'
 
-/** Summary of an admin role assigned within the current tenant. */
+/** Summary of an admin role assigned within a tenant. */
 export interface AdminRoleSummary {
   id: string
   name: string
@@ -13,15 +22,30 @@ export interface AdminRoleSummary {
 }
 
 /**
+ * A single tenant membership of an admin account.
+ * Mirrors backend AdminMembershipView: the tenantId, the membership role
+ * (e.g. 'owner'), and the admin roles assigned within that tenant.
+ */
+export interface AdminMembership {
+  readonly tenantId: string
+  readonly tenantRole: string
+  readonly roles: AdminRoleSummary[]
+}
+
+/**
  * Admin user as returned by the admin-management API.
- * Mirrors backend AdminDto: the public projection of an Admin scoped to the
- * current tenant (no password, mfaSecret, or other credential fields).
+ * Mirrors backend AdminMemberView: an account-level projection (one row per
+ * admin account) carrying a `tenants` list of memberships. The top-level
+ * tenantId/tenantRole/roles are legacy compatibility fields derived from the
+ * account's selected membership and may be null when the account has no
+ * memberships; prefer the `tenants` list for membership-specific logic.
  */
 export interface AdminUser {
   id: string
-  tenantId: string
-  /** Role this admin holds within the current tenant (e.g. 'owner'). */
-  tenantRole: string
+  /** Legacy compat: tenantId of the selected membership, null when no membership. */
+  tenantId: string | null
+  /** Legacy compat: role within the selected membership, null when no membership. */
+  tenantRole: string | null
   currentTenantId: string | null
   username: string
   email: string
@@ -33,14 +57,10 @@ export interface AdminUser {
   lastLoginAt: string | null
   createdAt: string
   updatedAt: string
-  /** Admin roles assigned within the current tenant. */
+  /** Legacy compat: admin roles assigned within the selected membership. */
   roles: AdminRoleSummary[]
-}
-
-/** Tenant membership info for an admin user. */
-export interface AdminTenantInfo {
-  role: string
-  joinedAt: string
+  /** All tenant memberships for this account. Source of truth for membership logic. */
+  tenants: AdminMembership[]
 }
 
 /** Query parameters for GET /admin-users. */
@@ -89,10 +109,8 @@ export interface ResetPasswordDto {
   newPassword: string
 }
 
-/** Body for PUT /admin-users/:id/roles. */
+/** Body for PUT /admin-users/:id/roles. Mirrors backend RolesInput. */
 export interface AssignRolesDto {
+  tenantId: string
   roleIds: string[]
 }
-
-/** Body for DELETE /admin-users/:id/tenant (currently empty, sent as no body). */
-export interface RemoveFromTenantDto {}

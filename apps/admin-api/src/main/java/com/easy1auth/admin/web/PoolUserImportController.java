@@ -1,10 +1,13 @@
 package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.security.TenantContextFilter;
+import com.easy1auth.admin.security.TenantManagementPermission;
+import com.easy1auth.adminaccess.ManagementPermissionCode;
 import com.easy1auth.directory.PoolUserService;
 import com.easy1auth.foundation.error.DomainException;
 import com.easy1auth.foundation.web.ApiResponse;
 import com.easy1auth.tenant.TenantContext;
+import com.easy1auth.tenant.TenantDataBoundary;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -22,6 +25,7 @@ public class PoolUserImportController {
     private final PoolUserService users;
     PoolUserImportController(PoolUserService users) { this.users = users; }
 
+    @TenantManagementPermission(value = ManagementPermissionCode.USER_IMPORT_TEMPLATE, boundary = TenantDataBoundary.TENANT_ALL)
     @GetMapping("/template")
     ResponseEntity<byte[]> template() throws IOException {
         try (var workbook = new XSSFWorkbook(); var output = new ByteArrayOutputStream()) {
@@ -35,6 +39,7 @@ public class PoolUserImportController {
         }
     }
 
+    @TenantManagementPermission(value = ManagementPermissionCode.USER_IMPORT, boundary = TenantDataBoundary.TENANT_ALL)
     @PostMapping
     ApiResponse<?> upload(HttpServletRequest request, @RequestParam("file") MultipartFile file) throws IOException {
         if (file.isEmpty() || file.getSize() > MAX_FILE_SIZE) throw new DomainException("IMPORT_FILE_INVALID", "导入文件为空或超过5MB", 400);

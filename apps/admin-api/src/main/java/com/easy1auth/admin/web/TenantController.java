@@ -1,6 +1,11 @@
 package com.easy1auth.admin.web;
 
 import com.easy1auth.foundation.trace.TraceIdFilter;
+import com.easy1auth.admin.security.ManagementRouteClassification;
+import com.easy1auth.admin.security.ManagementRouteKind;
+import com.easy1auth.admin.security.PlatformManagementPermission;
+import com.easy1auth.adminaccess.ManagementPermissionCode;
+import com.easy1auth.adminaccess.PlatformAuthorizationResolver;
 import com.easy1auth.foundation.web.ApiResponse;
 import com.easy1auth.foundation.web.PageData;
 import com.easy1auth.tenant.*;
@@ -13,20 +18,28 @@ import java.util.UUID;
 @RequestMapping("/api/tenants")
 public class TenantController {
     private final TenantService tenants;
-    TenantController(TenantService tenants) { this.tenants = tenants; }
+    private final PlatformAuthorizationResolver platformAuthorization;
+    TenantController(TenantService tenants, PlatformAuthorizationResolver platformAuthorization) {
+        this.tenants = tenants;
+        this.platformAuthorization = platformAuthorization;
+    }
 
+    @ManagementRouteClassification(ManagementRouteKind.DEFERRED_TODO_7)
     @GetMapping("/list")
     public ApiResponse<PageData<TenantSummary>> list(Principal principal) {
         var rows = tenants.list(accountId(principal));
         return ApiResponse.ok(PageData.of(rows, 1, rows.size(), rows.size()));
     }
 
+    @PlatformManagementPermission(value = ManagementPermissionCode.TENANT_CREATE, boundary = TenantDataBoundary.PLATFORM_ALL)
     @PostMapping("/create")
     public ApiResponse<?> create(Principal principal, @RequestBody CreateTenant request) {
-        var tenant = tenants.create(accountId(principal), request.name(), request.plan());
+        platformAuthorization.require(accountId(principal), ManagementPermissionCode.TENANT_CREATE);
+        var tenant = tenants.createOrdinary(request.name(), request.packageId(), request.administratorAccountId());
         return ApiResponse.ok(tenant, "租户创建成功");
     }
 
+    @ManagementRouteClassification(ManagementRouteKind.DEFERRED_TODO_7)
     @GetMapping("/current")
     public ApiResponse<?> current(Principal principal, @RequestHeader("tenant-id") UUID tenantId,
                                        HttpServletRequest request) {
@@ -35,20 +48,7 @@ public class TenantController {
         return ApiResponse.ok(tenant);
     }
 
-    @PostMapping("/{tenantId}/owner-transfer")
-    public ApiResponse<Void> transfer(Principal principal, @PathVariable UUID tenantId, @RequestBody TransferOwner request) {
-        tenants.transferOwner(accountId(principal), tenantId, request.targetAccountId());
-        return ApiResponse.ok(null, "租户所有权转移成功");
-    }
-
-    @DeleteMapping("/{tenantId}/members/{accountId}")
-    public ApiResponse<Void> remove(Principal principal, @PathVariable UUID tenantId, @PathVariable UUID accountId) {
-        tenants.removeMember(accountId(principal), tenantId, accountId);
-        return ApiResponse.ok(null, "成员移除成功");
-    }
-
     private static UUID accountId(Principal principal) { return UUID.fromString(principal.getName()); }
     private static String traceId(HttpServletRequest request) { return request.getHeader(TraceIdFilter.HEADER); }
-    public record CreateTenant(String name, String plan) {}
-    public record TransferOwner(UUID targetAccountId) {}
+    public record CreateTenant(String name, long packageId, UUID administratorAccountId) {}
 }

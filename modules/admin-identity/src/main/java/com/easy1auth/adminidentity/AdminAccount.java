@@ -5,4 +5,5 @@ import java.util.UUID;
 
 public record AdminAccount(UUID id, String username, String email, String phone, String status,
                            long securityVersion, UUID lastTenantId, boolean mfaEnabled,
-                           String mfaType, Instant lastLoginAt, Instant createdAt, Instant updatedAt) {}
+                           String mfaType, Instant lastLoginAt, Instant createdAt, Instant updatedAt) {
+}

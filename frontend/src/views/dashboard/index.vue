@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { dashboardApi } from '@/api/dashboard'
 import type { DashboardStats, RecentLogin } from '@/api/dashboard'
+import { toast } from 'vue-sonner'
 import { Building2, TrendingUp, User, Monitor, Link, MoreHorizontal, RefreshCw, ArrowRight, Library, FileText, Loader2 } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -25,7 +26,6 @@ const stats = ref<DashboardStats>({
 
 const recentLogins = ref<RecentLogin[]>([])
 const loading = ref(false)
-const error = ref<string | null>(null)
 
 const getStatusVariant = (status: string) => {
   return status === 'success' ? 'default' : 'destructive'
@@ -81,15 +81,14 @@ const systemInfo = {
 }
 
 const fetchDashboardData = async () => {
-  error.value = null
   loading.value = true
   try {
     const res = await dashboardApi.getStats()
     const data = res
     stats.value = data.stats
     recentLogins.value = data.recentLogins
-  } catch (e: any) {
-    error.value = e?.response?.data?.msg || e?.message || '获取控制台数据失败'
+  } catch {
+    toast.error('获取控制台数据失败')
   } finally {
     loading.value = false
   }
@@ -122,10 +121,6 @@ onMounted(() => {
           刷新数据
         </Button>
       </div>
-    </div>
-
-    <div v-if="error" class="error-banner mb-6 p-4 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive text-sm">
-      {{ error }}
     </div>
 
     <div class="stats-grid">

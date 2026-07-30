@@ -24,7 +24,7 @@ public class TenantRegisteredClientRepository implements RegisteredClientReposit
         var builder=RegisteredClient.withId(app.id().toString()).clientId(app.clientId()).clientName(app.name());
         boolean publicClient="spa".equals(app.type())||"native".equals(app.type());
         if(publicClient)builder.clientAuthenticationMethod(ClientAuthenticationMethod.NONE);
-        else builder.clientSecret("{bcrypt}"+app.clientSecretHash()).clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC).clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_POST);
+        else builder.clientSecret(app.clientSecretHash()).clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC).clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_POST);
         app.allowedGrantTypes().forEach(value->builder.authorizationGrantType(new AuthorizationGrantType(value)));
         app.redirectUris().forEach(builder::redirectUri);app.postLogoutRedirectUris().forEach(builder::postLogoutRedirectUri);app.scopes().forEach(builder::scope);
         if(app.allowedGrantTypes().contains("authorization_code")&&!app.scopes().contains(OidcScopes.OPENID))builder.scope(OidcScopes.OPENID);

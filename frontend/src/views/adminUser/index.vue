@@ -20,6 +20,7 @@ import { adminUserApi } from '@/api/adminUser'
 import { adminRoleApi } from '@/api/adminRole'
 import type {
   AdminUser,
+  AdminMembership,
   AdminUserQueryDto,
   AdminUserStats,
   AdminStatus,
@@ -118,6 +119,10 @@ const assignRolesDialogVisible = ref(false)
 const assignRolesTarget = ref<AdminUser | null>(null)
 const assignRolesSelected = ref<string[]>([])
 const assignRolesSubmitting = ref(false)
+const assignRolesMembership = computed<AdminMembership | undefined>(() => {
+  const target = assignRolesTarget.value
+  return target ? currentMembership(target) : undefined
+})
 
 // remove from tenant confirmation
 const removeDialogVisible = ref(false)
@@ -218,8 +223,26 @@ function isSelf(row: AdminUser): boolean {
   return !!currentAdminId.value && row.id === currentAdminId.value
 }
 
-function isOwner(row: AdminUser): boolean {
-  return row.tenantRole === 'owner'
+/** The account owns at least one tenant (anywhere). Guards account-level actions. */
+function isAccountOwner(row: AdminUser): boolean {
+  return row.tenants.some((m) => m.tenantRole === 'owner')
+}
+
+/** Membership of this account within the currently selected tenant, if any. */
+function currentMembership(row: AdminUser): AdminMembership | undefined {
+  const tid = userStore.currentTenant?.id
+  if (!tid) return undefined
+  return row.tenants.find((m) => m.tenantId === tid)
+}
+
+/** Role of the current-tenant membership, or null when the account is not a member. */
+function currentTenantRole(row: AdminUser): string | null {
+  return currentMembership(row)?.tenantRole ?? null
+}
+
+/** The current membership's role is the immutable 'owner' role. */
+function isCurrentMembershipOwner(row: AdminUser): boolean {
+  return currentMembership(row)?.tenantRole === 'owner'
 }
 
 function adminStatusVariant(status: AdminStatus): 'default' | 'secondary' {
@@ -230,7 +253,8 @@ function adminStatusText(status: AdminStatus): string {
   return status === 'active' ? '正常' : '禁用'
 }
 
-function tenantRoleText(role: string): string {
+function tenantRoleText(role: string | null): string {
+  if (!role) return '-'
   const map: Record<string, string> = {
     owner: '租户所有者',
     admin: '管理员',
@@ -238,7 +262,7 @@ function tenantRoleText(role: string): string {
   return map[role] || role
 }
 
-function tenantRoleVariant(role: string): 'default' | 'secondary' | 'destructive' {
+function tenantRoleVariant(role: string | null): 'default' | 'secondary' | 'destructive' {
   if (role === 'owner') return 'destructive'
   return 'secondary'
 }
@@ -408,8 +432,10 @@ const handleResetMfaConfirm = async () => {
 
 // assign roles
 const openAssignRolesDialog = (row: AdminUser) => {
+  const membership = currentMembership(row)
+  if (!membership) return
   assignRolesTarget.value = row
-  assignRolesSelected.value = row.roles.map((r) => r.id)
+  assignRolesSelected.value = membership.roles.map((r) => r.id)
   assignRolesDialogVisible.value = true
 }
 
@@ -423,10 +449,15 @@ const toggleRoleSelection = (roleId: string) => {
 }
 
 const handleAssignRolesSubmit = async () => {
-  if (!assignRolesTarget.value) return
+  const target = assignRolesTarget.value
+  const membership = target ? currentMembership(target) : undefined
+  if (!target || !membership) return
   assignRolesSubmitting.value = true
   try {
-    await adminUserApi.assignRoles(assignRolesTarget.value.id, { roleIds: assignRolesSelected.value })
+    await adminUserApi.assignRoles(target.id, {
+      tenantId: membership.tenantId,
+      roleIds: assignRolesSelected.value,
+    })
     toast.success('角色分配成功')
     assignRolesDialogVisible.value = false
     loadAdmins()
@@ -444,10 +475,12 @@ const openRemoveDialog = (row: AdminUser) => {
 }
 
 const handleRemoveConfirm = async () => {
-  if (!removeTarget.value) return
+  const target = removeTarget.value
+  const membership = target ? currentMembership(target) : undefined
+  if (!target || !membership) return
   removeSubmitting.value = true
   try {
-    await adminUserApi.removeFromTenant(removeTarget.value.id)
+    await adminUserApi.removeFromTenant(target.id, membership.tenantId)
     toast.success('已将管理员移出租户')
     removeDialogVisible.value = false
     loadAdmins()
@@ -628,7 +661,7 @@ onMounted(() => {
   <div class="p-6 min-h-[calc(100vh-64px)]">
     <div class="mb-6">
       <h1 class="text-2xl font-bold text-foreground mb-2">管理员管理</h1>
-      <p class="text-sm text-muted-foreground">管理当前租户的管理员账号与管理员角色</p>
+      <p class="text-sm text-muted-foreground">管理员账号为全局账号；管理员角色归属于当前选中的租户</p>
     </div>
 
     <Tabs v-model="activeTab">
@@ -729,7 +762,7 @@ onMounted(() => {
                   <TableHead class="w-44">用户名</TableHead>
                   <TableHead class="w-48">邮箱</TableHead>
                   <TableHead class="w-32">手机号</TableHead>
-                  <TableHead class="w-28">租户角色</TableHead>
+                  <TableHead class="w-28">当前租户角色</TableHead>
                   <TableHead class="w-20">状态</TableHead>
                   <TableHead class="w-20">MFA</TableHead>
                   <TableHead class="w-40">最后登录</TableHead>
@@ -761,9 +794,10 @@ onMounted(() => {
                   <TableCell>{{ row.email }}</TableCell>
                   <TableCell>{{ row.phone || '-' }}</TableCell>
                   <TableCell>
-                    <Badge :variant="tenantRoleVariant(row.tenantRole)" class="text-xs">
-                      {{ tenantRoleText(row.tenantRole) }}
+                    <Badge v-if="currentTenantRole(row)" :variant="tenantRoleVariant(currentTenantRole(row))" class="text-xs">
+                      {{ tenantRoleText(currentTenantRole(row)) }}
                     </Badge>
+                    <span v-else class="text-muted-foreground">-</span>
                   </TableCell>
                   <TableCell>
                     <Badge :variant="adminStatusVariant(row.status)" class="text-xs">
@@ -783,7 +817,7 @@ onMounted(() => {
                         variant="link"
                         size="sm"
                         class="h-auto p-0"
-                        :disabled="isSelf(row) || isOwner(row)"
+                        :disabled="isSelf(row) || isAccountOwner(row)"
                         @click="openEditDialog(row)"
                       >
                         编辑
@@ -792,7 +826,7 @@ onMounted(() => {
                         variant="link"
                         size="sm"
                         class="h-auto p-0"
-                        :disabled="isSelf(row) || isOwner(row)"
+                        :disabled="isSelf(row) || isAccountOwner(row)"
                         @click="handleStatusToggle(row)"
                       >
                         {{ row.status === 'active' ? '禁用' : '启用' }}
@@ -801,7 +835,7 @@ onMounted(() => {
                         variant="link"
                         size="sm"
                         class="h-auto p-0"
-                        :disabled="isSelf(row) || isOwner(row)"
+                        :disabled="isSelf(row) || !currentMembership(row) || isCurrentMembershipOwner(row)"
                         @click="openAssignRolesDialog(row)"
                       >
                         分配角色
@@ -810,7 +844,7 @@ onMounted(() => {
                         variant="link"
                         size="sm"
                         class="h-auto p-0"
-                        :disabled="isSelf(row) || isOwner(row)"
+                        :disabled="isSelf(row) || isAccountOwner(row)"
                         @click="openResetPwdDialog(row)"
                       >
                         重置密码
@@ -819,7 +853,7 @@ onMounted(() => {
                         variant="link"
                         size="sm"
                         class="h-auto p-0"
-                        :disabled="isSelf(row) || isOwner(row) || !row.mfaEnabled"
+                        :disabled="isSelf(row) || isAccountOwner(row) || !row.mfaEnabled"
                         @click="openResetMfaDialog(row)"
                       >
                         重置 MFA
@@ -827,8 +861,8 @@ onMounted(() => {
                       <Button
                         variant="link"
                         size="sm"
-                        class="h-auto p-0 text-destructive"
-                        :disabled="isSelf(row) || isOwner(row)"
+                        class="h-auto p-0 text-destructive disabled:text-muted-foreground"
+                        :disabled="isSelf(row) || !currentMembership(row) || isCurrentMembershipOwner(row)"
                         @click="openRemoveDialog(row)"
                       >
                         移出租户
@@ -1118,9 +1152,9 @@ onMounted(() => {
         <div class="py-4">
           <div class="grid gap-2 mb-4">
             <Label>当前角色</Label>
-            <div v-if="assignRolesTarget && assignRolesTarget.roles.length > 0" class="flex flex-wrap gap-2">
+            <div v-if="assignRolesMembership && assignRolesMembership.roles.length > 0" class="flex flex-wrap gap-2">
               <Badge
-                v-for="role in assignRolesTarget.roles"
+                v-for="role in assignRolesMembership.roles"
                 :key="role.id"
                 variant="secondary"
                 class="text-xs"

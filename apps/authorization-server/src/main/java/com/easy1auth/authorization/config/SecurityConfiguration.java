@@ -100,14 +100,14 @@ public class SecurityConfiguration {
 
     @Bean OAuth2TokenCustomizer<JwtEncodingContext> tokenClaims(PoolUserService users,DirectoryCatalogService directory,UserAccessCatalogService access){
         return context->{
-            UUID tenant=TenantIssuerContext.tenantId();context.getClaims().audience(List.of(context.getRegisteredClient().getClientId())).claim("tenant_id",tenant.toString());
+            UUID tenant=TenantIssuerContext.tenantId();context.getClaims().audience(new ArrayList<>(List.of(context.getRegisteredClient().getClientId()))).claim("tenant_id",tenant.toString());
             if(AuthorizationGrantType.CLIENT_CREDENTIALS.equals(context.getAuthorizationGrantType())){context.getClaims().claim("subject_type","oauth_client");return;}
             try{
                 UUID userId=UUID.fromString(context.getPrincipal().getName());var user=users.get(tenant,userId);
                 context.getClaims().subject(userId.toString()).claim("subject_type","pool_user").claim("name",user.name()).claim("preferred_username",user.username()).claim("email",user.email()).claim("email_verified",user.emailVerified());
                 if(user.phone()!=null)context.getClaims().claim("phone_number",user.phone()).claim("phone_number_verified",user.phoneVerified());
                 if(user.avatar()!=null)context.getClaims().claim("picture",user.avatar());if(user.department()!=null)context.getClaims().claim("department",user.department());if(user.position()!=null)context.getClaims().claim("position",user.position());
-                context.getClaims().claim("roles",access.rolesForUser(tenant,userId).stream().map(UserAccessCatalogService.RoleView::code).toList()).claim("groups",directory.groupsForUser(tenant,userId).stream().map(DirectoryCatalogService.GroupView::name).toList());
+                context.getClaims().claim("roles",new ArrayList<>(access.rolesForUser(tenant,userId).stream().map(UserAccessCatalogService.RoleView::code).toList())).claim("groups",new ArrayList<>(directory.groupsForUser(tenant,userId).stream().map(DirectoryCatalogService.GroupView::name).toList()));
             }catch(IllegalArgumentException ignored){}
         };
     }
