@@ -4,25 +4,15 @@ import { message } from 'antdv-next'
 import { Plus, Search, Users, UserCog, Pencil, Trash2 } from '@lucide/vue'
 import { groupApi } from '@/api/group'
 import { userApi } from '@/api/user'
-import type { 
-  UserGroup, 
-  CreateGroupDto, 
-  UpdateGroupDto, 
+import type {
+  UserGroup,
+  CreateGroupDto,
+  UpdateGroupDto,
   GroupQueryDto,
   GroupTreeResponse,
   GroupStats,
   User
 } from '@/types/group'
-import { Button } from '@/components/antd-compat'
-import { Input } from '@/components/antd-compat'
-import { Card, CardContent, CardHeader } from '@/components/antd-compat'
-import { Badge } from '@/components/antd-compat'
-import { Tree } from '@/components/antd-compat'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/antd-compat'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/antd-compat'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/antd-compat'
-import { Textarea } from '@/components/antd-compat'
-
 const loading = ref(false)
 const groups = ref<UserGroup[]>([])
 const treeData = ref<GroupTreeResponse[]>([])
@@ -60,7 +50,7 @@ const memberForm = reactive({
 
 const parentOptions = computed(() => {
   const options: Array<{ value: string; label: string; disabled?: boolean }> = []
-  
+
   const addOptions = (items: GroupTreeResponse[], level = 0) => {
     items.forEach(item => {
       const prefix = '\u3000'.repeat(level)
@@ -74,7 +64,7 @@ const parentOptions = computed(() => {
       }
     })
   }
-  
+
   addOptions(treeData.value)
   return options
 })
@@ -152,7 +142,7 @@ const handleDelete = async (row: UserGroup) => {
   if (!window.confirm('确定要删除该用户组吗？删除后无法恢复！')) {
     return
   }
-  
+
   try {
     await groupApi.delete(row.id)
     message.success('删除成功')
@@ -187,13 +177,13 @@ const handleSubmit = async () => {
 const handleManageMembers = async (row: UserGroup) => {
   currentGroupId.value = row.id
   memberDialogVisible.value = true
-  
+
   try {
     const [membersRes, usersRes] = await Promise.all([
       groupApi.getMembers(row.id),
       userApi.getList({ pageSize: 1000 })
     ])
-    
+
     memberForm.currentMembers = membersRes.members
     memberForm.currentAdmins = membersRes.admins
     memberForm.availableUsers = usersRes.items
@@ -207,13 +197,13 @@ const handleManageMembers = async (row: UserGroup) => {
 const handleManageAdmins = async (row: UserGroup) => {
   currentGroupId.value = row.id
   adminDialogVisible.value = true
-  
+
   try {
     const [membersRes, usersRes] = await Promise.all([
       groupApi.getMembers(row.id),
       userApi.getList({ pageSize: 1000 })
     ])
-    
+
     memberForm.currentMembers = membersRes.members
     memberForm.currentAdmins = membersRes.admins
     memberForm.availableUsers = usersRes.items
@@ -229,7 +219,7 @@ const handleAddMembers = async () => {
     message.warning('请选择要添加的成员')
     return
   }
-  
+
   try {
     await groupApi.addMembers(currentGroupId.value, { userIds: memberForm.selectedUsers })
     message.success('添加成员成功')
@@ -256,7 +246,7 @@ const handleAddAdmins = async () => {
     message.warning('请选择要添加的管理员')
     return
   }
-  
+
   try {
     await groupApi.addAdmins(currentGroupId.value, { userIds: memberForm.selectedUsers })
     message.success('添加管理员成功')
@@ -332,30 +322,30 @@ onMounted(() => {
         { label: '组织', value: stats?.organizationGroups || 0 },
         { label: '根级组', value: stats?.rootGroups || 0 }
       ]" :key="key">
-        <CardContent class="pt-4">
+        <div class="pt-4">
           <div class="text-center">
             <div class="text-3xl font-bold text-primary mb-1">{{ stat.value }}</div>
             <div class="text-sm text-muted-foreground">{{ stat.label }}</div>
           </div>
-        </CardContent>
+        </div>
       </Card>
     </div>
 
     <Card>
-      <CardHeader class="border-b">
+      <div class="border-b">
         <div class="flex justify-between items-center">
           <span class="font-semibold">用户组管理</span>
           <div class="flex items-center gap-3">
             <div class="flex gap-0">
               <Button
-                :variant="viewMode === 'list' ? 'default' : 'outline'"
+                :color="viewMode === 'list' ? 'default' : 'outline'"
                 class="rounded-r-none"
                 @click="viewMode = 'list'"
               >
                 列表视图
               </Button>
               <Button
-                :variant="viewMode === 'tree' ? 'default' : 'outline'"
+                :color="viewMode === 'tree' ? 'default' : 'outline'"
                 class="rounded-l-none"
                 @click="viewMode = 'tree'"
               >
@@ -368,27 +358,27 @@ onMounted(() => {
             </Button>
           </div>
         </div>
-      </CardHeader>
+      </div>
 
-      <CardContent class="pt-4">
+      <div class="pt-4">
         <div v-if="viewMode === 'list'" class="mb-4">
           <div class="flex flex-wrap items-end gap-3">
             <div class="grid gap-1.5">
               <label class="text-sm font-medium">用户组名称</label>
-              <Input v-model="queryForm.name" placeholder="请输入用户组名称" class="w-48" />
+              <Input v-model:value="queryForm.name" placeholder="请输入用户组名称" class="w-48" />
             </div>
             <div class="grid gap-1.5">
               <label class="text-sm font-medium">类型</label>
-              <Select v-model="queryForm.type">
-                <SelectTrigger class="w-40">
-                  <SelectValue placeholder="请选择类型" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="team">团队</SelectItem>
-                  <SelectItem value="department">部门</SelectItem>
-                  <SelectItem value="project">项目</SelectItem>
-                  <SelectItem value="organization">组织</SelectItem>
-                </SelectContent>
+              <Select v-model:value="queryForm.type">
+                <div class="w-40">
+
+                </div>
+
+                  <SelectOption value="team">团队</SelectOption>
+                  <SelectOption value="department">部门</SelectOption>
+                  <SelectOption value="project">项目</SelectOption>
+                  <SelectOption value="organization">组织</SelectOption>
+
               </Select>
             </div>
             <div class="flex gap-2">
@@ -396,79 +386,79 @@ onMounted(() => {
                 <Search class="w-4 h-4 mr-1" />
                 搜索
               </Button>
-              <Button variant="outline" @click="handleReset">重置</Button>
+              <Button  @click="handleReset">重置</Button>
             </div>
           </div>
         </div>
 
         <div v-if="viewMode === 'list'">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead class="w-[200px]">用户组名称</TableHead>
-                <TableHead>描述</TableHead>
-                <TableHead class="w-[100px]">类型</TableHead>
-                <TableHead class="w-[150px]">父级用户组</TableHead>
-                <TableHead class="w-[100px]">成员数</TableHead>
-                <TableHead class="w-[100px]">管理员数</TableHead>
-                <TableHead class="w-[100px]">子组数</TableHead>
-                <TableHead class="w-[180px]">创建时间</TableHead>
-                <TableHead class="w-[280px]">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow v-if="loading">
-                <TableCell colspan="9" class="text-center py-8 text-muted-foreground">
+          <table>
+            <thead>
+              <tr>
+                <th class="w-[200px]">用户组名称</th>
+                <th>描述</th>
+                <th class="w-[100px]">类型</th>
+                <th class="w-[150px]">父级用户组</th>
+                <th class="w-[100px]">成员数</th>
+                <th class="w-[100px]">管理员数</th>
+                <th class="w-[100px]">子组数</th>
+                <th class="w-[180px]">创建时间</th>
+                <th class="w-[280px]">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="loading">
+                <td colspan="9" class="text-center py-8 text-muted-foreground">
                   加载中...
-                </TableCell>
-              </TableRow>
-              <TableRow v-else-if="groups.length === 0">
-                <TableCell colspan="9" class="text-center py-8 text-muted-foreground">
+                </td>
+              </tr>
+              <tr v-else-if="groups.length === 0">
+                <td colspan="9" class="text-center py-8 text-muted-foreground">
                   暂无数据
-                </TableCell>
-              </TableRow>
-              <TableRow v-for="row in groups" :key="row.id">
-                <TableCell class="font-medium">{{ row.name }}</TableCell>
-                <TableCell class="text-muted-foreground">{{ row.description || '-' }}</TableCell>
-                <TableCell>
-                  <Badge :variant="getTypeVariant(row.type)" class="text-xs">
+                </td>
+              </tr>
+              <tr v-for="row in groups" :key="row.id">
+                <td class="font-medium">{{ row.name }}</td>
+                <td class="text-muted-foreground">{{ row.description || '-' }}</td>
+                <td>
+                  <Tag :color="getTypeVariant(row.type)" class="text-xs">
                     {{ getTypeText(row.type) }}
-                  </Badge>
-                </TableCell>
-                <TableCell class="text-muted-foreground">{{ row.parent?.name || '-' }}</TableCell>
-                <TableCell class="text-center">{{ row._count?.members || 0 }}</TableCell>
-                <TableCell class="text-center">{{ row._count?.admins || 0 }}</TableCell>
-                <TableCell class="text-center">{{ row._count?.children || 0 }}</TableCell>
-                <TableCell class="text-muted-foreground">{{ new Date(row.createdAt).toLocaleString() }}</TableCell>
-                <TableCell>
+                  </Tag>
+                </td>
+                <td class="text-muted-foreground">{{ row.parent?.name || '-' }}</td>
+                <td class="text-center">{{ row._count?.members || 0 }}</td>
+                <td class="text-center">{{ row._count?.admins || 0 }}</td>
+                <td class="text-center">{{ row._count?.children || 0 }}</td>
+                <td class="text-muted-foreground">{{ new Date(row.createdAt).toLocaleString() }}</td>
+                <td>
                   <div class="flex gap-2">
-                    <Button size="sm" variant="outline" @click="handleEdit(row)">
+                    <Button size="small"  @click="handleEdit(row)">
                       <Pencil class="w-3 h-3 mr-1" />
                       编辑
                     </Button>
-                    <Button size="sm" variant="outline" @click="handleManageMembers(row)">
+                    <Button size="small"  @click="handleManageMembers(row)">
                       <Users class="w-3 h-3 mr-1" />
                       成员
                     </Button>
-                    <Button size="sm" variant="outline" @click="handleManageAdmins(row)">
+                    <Button size="small"  @click="handleManageAdmins(row)">
                       <UserCog class="w-3 h-3 mr-1" />
                       管理员
                     </Button>
-                    <Button size="sm" variant="destructive" @click="handleDelete(row)">
+                    <Button size="small" color="error" @click="handleDelete(row)">
                       <Trash2 class="w-3 h-3 mr-1" />
                       删除
                     </Button>
                   </div>
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
+                </td>
+              </tr>
+            </tbody>
+          </table>
 
           <div v-if="total > queryForm.pageSize!" class="flex items-center justify-between mt-4">
             <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
             <div class="flex items-center gap-1">
               <Button
-                variant="outline"
+
                 size="sm"
                 :disabled="queryForm.page! <= 1"
                 @click="handlePageChange(queryForm.page! - 1)"
@@ -477,7 +467,7 @@ onMounted(() => {
               </Button>
               <span class="text-sm px-2">{{ queryForm.page! }} / {{ Math.ceil(total / queryForm.pageSize!) }}</span>
               <Button
-                variant="outline"
+
                 size="sm"
                 :disabled="queryForm.page! >= Math.ceil(total / queryForm.pageSize!)"
                 @click="handlePageChange(queryForm.page! + 1)"
@@ -499,21 +489,21 @@ onMounted(() => {
               <div class="flex items-center justify-between w-full pr-3">
                 <div class="flex items-center gap-2">
                   <span class="font-medium">{{ data.name }}</span>
-                  <Badge :variant="getTypeVariant(data.type)" class="text-xs">
+                  <Tag :color="getTypeVariant(data.type)" class="text-xs">
                     {{ getTypeText(data.type) }}
-                  </Badge>
+                  </Tag>
                   <span class="text-xs text-muted-foreground ml-2">
                     成员: {{ data.memberCount }} | 管理员: {{ data.adminCount }}
                   </span>
                 </div>
                 <div class="flex gap-2">
-                  <Button variant="link" size="sm" class="p-0 h-auto" @click.stop="handleEdit({ id: data.id } as UserGroup)">
+                  <Button type="link" size="small" class="p-0 h-auto" @click.stop="handleEdit({ id: data.id } as UserGroup)">
                     编辑
                   </Button>
-                  <Button variant="link" size="sm" class="p-0 h-auto" @click.stop="handleManageMembers({ id: data.id } as UserGroup)">
+                  <Button type="link" size="small" class="p-0 h-auto" @click.stop="handleManageMembers({ id: data.id } as UserGroup)">
                     成员
                   </Button>
-                  <Button variant="link" size="sm" class="p-0 h-auto text-destructive" @click.stop="handleDelete({ id: data.id } as UserGroup)">
+                  <Button type="link" size="small" class="p-0 h-auto text-destructive" @click.stop="handleDelete({ id: data.id } as UserGroup)">
                     删除
                   </Button>
                 </div>
@@ -521,119 +511,119 @@ onMounted(() => {
             </template>
           </Tree>
         </div>
-      </CardContent>
+      </div>
     </Card>
 
-    <Dialog v-model:open="dialogVisible">
-      <DialogContent class="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{{ dialogTitle }}</DialogTitle>
-        </DialogHeader>
+    <Modal v-model:open="dialogVisible" :footer="null">
+      <div class="max-w-lg">
+        <div>
+          <h3>{{ dialogTitle }}</h3>
+        </div>
         <form @submit.prevent="handleSubmit">
           <div class="grid gap-4 py-4">
             <div class="grid gap-2">
               <label class="text-sm font-medium">用户组名称 <span class="text-destructive">*</span></label>
-              <Input v-model="groupForm.name" placeholder="请输入用户组名称" />
+              <Input v-model:value="groupForm.name" placeholder="请输入用户组名称" />
             </div>
             <div class="grid gap-2">
               <label class="text-sm font-medium">描述</label>
-              <Textarea v-model="groupForm.description" :rows="3" placeholder="请输入描述" />
+              <InputTextArea v-model:value="groupForm.description" :rows="3" placeholder="请输入描述" />
             </div>
             <div class="grid gap-2">
               <label class="text-sm font-medium">类型 <span class="text-destructive">*</span></label>
-              <Select v-model="groupForm.type">
-                <SelectTrigger>
-                  <SelectValue placeholder="请选择类型" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="team">团队</SelectItem>
-                  <SelectItem value="department">部门</SelectItem>
-                  <SelectItem value="project">项目</SelectItem>
-                  <SelectItem value="organization">组织</SelectItem>
-                </SelectContent>
+              <Select v-model:value="groupForm.type">
+                <div>
+
+                </div>
+
+                  <SelectOption value="team">团队</SelectOption>
+                  <SelectOption value="department">部门</SelectOption>
+                  <SelectOption value="project">项目</SelectOption>
+                  <SelectOption value="organization">组织</SelectOption>
+
               </Select>
             </div>
             <div class="grid gap-2">
               <label class="text-sm font-medium">父级用户组</label>
-              <Select v-model="groupForm.parentId">
-                <SelectTrigger>
-                  <SelectValue placeholder="请选择父级用户组" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem
+              <Select v-model:value="groupForm.parentId">
+                <div>
+
+                </div>
+
+                  <SelectOption
                     v-for="option in parentOptions"
                     :key="option.value"
                     :value="option.value"
                     :disabled="option.disabled"
                   >
                     {{ option.label }}
-                  </SelectItem>
-                </SelectContent>
+                  </SelectOption>
+
               </Select>
             </div>
           </div>
         </form>
-        <DialogFooter>
-          <Button variant="outline" @click="dialogVisible = false">取消</Button>
+        <div>
+          <Button  @click="dialogVisible = false">取消</Button>
           <Button @click="handleSubmit">确定</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </div>
+    </Modal>
 
-    <Dialog v-model:open="memberDialogVisible">
-      <DialogContent class="max-w-3xl">
-        <DialogHeader>
-          <DialogTitle>成员管理</DialogTitle>
-        </DialogHeader>
+    <Modal v-model:open="memberDialogVisible" :footer="null">
+      <div class="max-w-3xl">
+        <div>
+          <h3>成员管理</h3>
+        </div>
         <div class="min-h-[400px]">
           <div class="grid grid-cols-2 gap-5">
             <Card>
-              <CardHeader class="border-b py-3">
+              <div class="border-b py-3">
                 <span class="font-medium">当前成员 ({{ memberForm.currentMembers.length }})</span>
-              </CardHeader>
-              <CardContent class="pt-4">
+              </div>
+              <div class="pt-4">
                 <div class="max-h-[350px] overflow-y-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>姓名</TableHead>
-                        <TableHead>用户名</TableHead>
-                        <TableHead>邮箱</TableHead>
-                        <TableHead class="w-[80px]">操作</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      <TableRow v-for="member in memberForm.currentMembers" :key="member.id">
-                        <TableCell>{{ member.name }}</TableCell>
-                        <TableCell>{{ member.username }}</TableCell>
-                        <TableCell>{{ member.email }}</TableCell>
-                        <TableCell>
-                          <Button variant="link" size="sm" class="p-0 h-auto text-destructive" @click="handleRemoveMember(member.id)">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>姓名</th>
+                        <th>用户名</th>
+                        <th>邮箱</th>
+                        <th class="w-[80px]">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="member in memberForm.currentMembers" :key="member.id">
+                        <td>{{ member.name }}</td>
+                        <td>{{ member.username }}</td>
+                        <td>{{ member.email }}</td>
+                        <td>
+                          <Button type="link" size="small" class="p-0 h-auto text-destructive" @click="handleRemoveMember(member.id)">
                             移除
                           </Button>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow v-if="memberForm.currentMembers.length === 0">
-                        <TableCell colspan="4" class="text-center py-4 text-muted-foreground">
+                        </td>
+                      </tr>
+                      <tr v-if="memberForm.currentMembers.length === 0">
+                        <td colspan="4" class="text-center py-4 text-muted-foreground">
                           暂无成员
-                        </TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
-              </CardContent>
+              </div>
             </Card>
             <Card>
-              <CardHeader class="border-b py-3">
+              <div class="border-b py-3">
                 <span class="font-medium">添加成员</span>
-              </CardHeader>
-              <CardContent class="pt-4">
-                <Select v-model="memberForm.selectedUsers" multiple>
-                  <SelectTrigger class="mb-3">
-                    <SelectValue placeholder="请选择要添加的成员" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem
+              </div>
+              <div class="pt-4">
+                <Select v-model:value="memberForm.selectedUsers" multiple>
+                  <div class="mb-3">
+
+                  </div>
+
+                    <SelectOption
                       v-for="user in memberForm.availableUsers.filter(
                         u => !memberForm.currentMembers.find(m => m.id === u.id)
                       )"
@@ -641,73 +631,73 @@ onMounted(() => {
                       :value="user.id"
                     >
                       {{ user.name }} ({{ user.username }})
-                    </SelectItem>
-                  </SelectContent>
+                    </SelectOption>
+
                 </Select>
                 <Button class="w-full" @click="handleAddMembers">
                   添加选中成员
                 </Button>
-              </CardContent>
+              </div>
             </Card>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </Modal>
 
-    <Dialog v-model:open="adminDialogVisible">
-      <DialogContent class="max-w-3xl">
-        <DialogHeader>
-          <DialogTitle>管理员管理</DialogTitle>
-        </DialogHeader>
+    <Modal v-model:open="adminDialogVisible" :footer="null">
+      <div class="max-w-3xl">
+        <div>
+          <h3>管理员管理</h3>
+        </div>
         <div class="min-h-[400px]">
           <div class="grid grid-cols-2 gap-5">
             <Card>
-              <CardHeader class="border-b py-3">
+              <div class="border-b py-3">
                 <span class="font-medium">当前管理员 ({{ memberForm.currentAdmins.length }})</span>
-              </CardHeader>
-              <CardContent class="pt-4">
+              </div>
+              <div class="pt-4">
                 <div class="max-h-[350px] overflow-y-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>姓名</TableHead>
-                        <TableHead>用户名</TableHead>
-                        <TableHead>邮箱</TableHead>
-                        <TableHead class="w-[80px]">操作</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      <TableRow v-for="admin in memberForm.currentAdmins" :key="admin.id">
-                        <TableCell>{{ admin.name }}</TableCell>
-                        <TableCell>{{ admin.username }}</TableCell>
-                        <TableCell>{{ admin.email }}</TableCell>
-                        <TableCell>
-                          <Button variant="link" size="sm" class="p-0 h-auto text-destructive" @click="handleRemoveAdmin(admin.id)">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>姓名</th>
+                        <th>用户名</th>
+                        <th>邮箱</th>
+                        <th class="w-[80px]">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="admin in memberForm.currentAdmins" :key="admin.id">
+                        <td>{{ admin.name }}</td>
+                        <td>{{ admin.username }}</td>
+                        <td>{{ admin.email }}</td>
+                        <td>
+                          <Button type="link" size="small" class="p-0 h-auto text-destructive" @click="handleRemoveAdmin(admin.id)">
                             移除
                           </Button>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow v-if="memberForm.currentAdmins.length === 0">
-                        <TableCell colspan="4" class="text-center py-4 text-muted-foreground">
+                        </td>
+                      </tr>
+                      <tr v-if="memberForm.currentAdmins.length === 0">
+                        <td colspan="4" class="text-center py-4 text-muted-foreground">
                           暂无管理员
-                        </TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
-              </CardContent>
+              </div>
             </Card>
             <Card>
-              <CardHeader class="border-b py-3">
+              <div class="border-b py-3">
                 <span class="font-medium">添加管理员</span>
-              </CardHeader>
-              <CardContent class="pt-4">
-                <Select v-model="memberForm.selectedUsers" multiple>
-                  <SelectTrigger class="mb-3">
-                    <SelectValue placeholder="请选择要添加的管理员" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem
+              </div>
+              <div class="pt-4">
+                <Select v-model:value="memberForm.selectedUsers" multiple>
+                  <div class="mb-3">
+
+                  </div>
+
+                    <SelectOption
                       v-for="user in memberForm.availableUsers.filter(
                         u => !memberForm.currentAdmins.find(a => a.id === u.id)
                       )"
@@ -715,18 +705,18 @@ onMounted(() => {
                       :value="user.id"
                     >
                       {{ user.name }} ({{ user.username }})
-                    </SelectItem>
-                  </SelectContent>
+                    </SelectOption>
+
                 </Select>
                 <Button class="w-full" @click="handleAddAdmins">
                   添加选中管理员
                 </Button>
-              </CardContent>
+              </div>
             </Card>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </Modal>
   </div>
 </template>
 

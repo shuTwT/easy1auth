@@ -72,7 +72,7 @@ async function handleCreateTenant() {
         </button>
     </Dropdown>
 
-    <Modal v-model:open="showCreateDialog" title="创建新租户" ok-text="创建" cancel-text="取消" :confirm-loading="loading" @ok="handleCreateTenant">
+    <Modal v-model:open="showCreateDialog" title="创建新租户" ok-text="创建" cancel-text="取消" :confirm-loading="loading" @ok="handleCreateTenant" :footer="null">
       <Form layout="vertical" @finish="handleCreateTenant"><FormItem label="租户名称"><Input v-model:value="newTenantName" placeholder="请输入租户名称" /></FormItem></Form>
     </Modal>
   </div>

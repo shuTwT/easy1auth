@@ -5,10 +5,6 @@ import axios from 'axios'
 import { CircleX, LoaderCircle } from '@lucide/vue'
 import { useAuth } from '@/composables/useAuth'
 import { isSocialProviderType } from '@/types/socialIdentityProvider'
-import { Alert, AlertDescription, AlertTitle } from '@/components/antd-compat'
-import { Button } from '@/components/antd-compat'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/antd-compat'
-
 const route = useRoute()
 const router = useRouter()
 const { handleSocialCallback } = useAuth()
@@ -59,17 +55,17 @@ onMounted(async () => {
 <template>
   <main class="flex min-h-[100dvh] items-center justify-center bg-muted/40 p-4">
     <Card class="w-full max-w-md">
-      <CardHeader class="text-center">
-        <CardTitle>{{ errorMessage ? '授权登录失败' : '正在完成授权' }}</CardTitle>
-        <CardDescription>
+      <div class="text-center">
+        <h3>{{ errorMessage ? '授权登录失败' : '正在完成授权' }}</h3>
+        <p>
           {{ errorMessage ? '请返回登录页重新发起授权' : '正在验证第三方账号信息，请稍候' }}
-        </CardDescription>
-      </CardHeader>
-      <CardContent class="flex flex-col gap-4">
-        <Alert v-if="errorMessage" variant="destructive">
+        </p>
+      </div>
+      <div class="flex flex-col gap-4">
+        <Alert v-if="errorMessage" color="error">
           <CircleX />
-          <AlertTitle>无法完成登录</AlertTitle>
-          <AlertDescription>{{ errorMessage }}</AlertDescription>
+          <h3>无法完成登录</h3>
+          <p>{{ errorMessage }}</p>
         </Alert>
         <div v-else class="flex items-center justify-center gap-3 py-6 text-muted-foreground" aria-live="polite">
           <LoaderCircle class="animate-spin" />
@@ -78,7 +74,7 @@ onMounted(async () => {
         <Button v-if="errorMessage" @click="router.replace('/login')">
           返回登录页
         </Button>
-      </CardContent>
+      </div>
     </Card>
   </main>
 </template>

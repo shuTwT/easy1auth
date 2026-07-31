@@ -3,9 +3,6 @@ import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { message } from 'antdv-next'
 import { User, Lock } from '@lucide/vue'
-import { Button } from '@/components/antd-compat'
-import { Input } from '@/components/antd-compat'
-
 const route = useRoute()
 
 const loading = ref(true)
@@ -190,13 +187,12 @@ onMounted(() => {
             <div class="auth-left">
               <h2 class="section-title">登录您的账号</h2>
               <p class="section-subtitle">登录后自动完成授权</p>
-              
+
               <div class="login-form-compact">
                 <div class="form-item">
                   <div class="relative">
                     <User class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input 
-                      v-model="loginForm.username" 
+                    <Input v-model:value="loginForm.username"
                       placeholder="用户名"
                       class="pl-9"
                     />
@@ -205,9 +201,8 @@ onMounted(() => {
                 <div class="form-item">
                   <div class="relative">
                     <Lock class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input 
-                      v-model="loginForm.password" 
-                      type="password" 
+                    <Input v-model:value="loginForm.password"
+                      type="password"
                       placeholder="密码"
                       class="pl-9"
                       @keyup.enter="handleLoginAndAuthorize"
@@ -266,16 +261,16 @@ onMounted(() => {
 
           <!-- 操作按钮 -->
           <div class="authorize-actions">
-            <Button 
-              variant="outline"
-              @click="handleDeny" 
+            <Button
+
+              @click="handleDeny"
               :disabled="authorizing"
               class="flex-1"
             >
               拒绝
             </Button>
-            <Button 
-              @click="handleLoginAndAuthorize" 
+            <Button
+              @click="handleLoginAndAuthorize"
               :disabled="authorizing || !loginForm.username || !loginForm.password"
               class="flex-1"
             >
@@ -650,7 +645,7 @@ onMounted(() => {
   .shape {
     animation: none;
   }
-  
+
   .loading-spinner {
     animation: none;
   }

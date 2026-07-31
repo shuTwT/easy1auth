@@ -5,18 +5,6 @@ import axios from 'axios'
 import { message } from 'antdv-next'
 import { Plus, Search, Copy, Trash2 } from '@lucide/vue'
 import { applicationApi } from '@/api/application'
-import { Button } from '@/components/antd-compat'
-import { Input } from '@/components/antd-compat'
-import { Textarea } from '@/components/antd-compat'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/antd-compat'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/antd-compat'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/antd-compat'
-import { Badge } from '@/components/antd-compat'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/antd-compat'
-import { Alert, AlertDescription, AlertTitle } from '@/components/antd-compat'
-import { Checkbox } from '@/components/antd-compat'
-import { NumberField, NumberFieldContent, NumberFieldDecrement, NumberFieldIncrement, NumberFieldInput } from '@/components/antd-compat'
-import { Minus, Plus as PlusIcon } from '@lucide/vue'
 import type { Application, CreateApplicationDto, UpdateApplicationDto, ApplicationQueryDto } from '@/types/application'
 
 type ApiErrorResponse = {
@@ -188,7 +176,7 @@ const handleEdit = (row: Application) => {
 const handleDelete = async (row: Application) => {
   const confirmed = window.confirm('确定要删除该应用吗？删除后无法恢复！')
   if (!confirmed) return
-  
+
   try {
     await applicationApi.delete(row.id)
     message.success('删除成功')
@@ -349,45 +337,45 @@ onMounted(() => {
 <template>
   <div class="p-5">
     <Card>
-      <CardHeader>
+      <div>
         <div class="flex justify-between items-center">
-          <CardTitle>应用管理</CardTitle>
+          <h3>应用管理</h3>
           <Button @click="handleAdd">
             <Plus class="w-4 h-4 mr-2" />
             新增应用
           </Button>
         </div>
-      </CardHeader>
-      <CardContent>
+      </div>
+      <div>
         <div class="flex flex-wrap gap-4 items-end mb-5">
           <div class="grid gap-2">
             <label class="text-sm font-medium">应用名称</label>
-            <Input v-model="queryForm.name" placeholder="请输入应用名称" class="w-48" />
+            <Input v-model:value="queryForm.name" placeholder="请输入应用名称" class="w-48" />
           </div>
           <div class="grid gap-2">
             <label class="text-sm font-medium">应用类型</label>
-            <Select v-model="queryForm.type">
-              <SelectTrigger class="w-36">
-                <SelectValue placeholder="请选择应用类型" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="web">Web应用</SelectItem>
-                <SelectItem value="native">原生应用</SelectItem>
-                <SelectItem value="spa">单页应用</SelectItem>
-                <SelectItem value="machine">机器对机器</SelectItem>
-              </SelectContent>
+            <Select v-model:value="queryForm.type">
+              <div class="w-36">
+
+              </div>
+
+                <SelectOption value="web">Web应用</SelectOption>
+                <SelectOption value="native">原生应用</SelectOption>
+                <SelectOption value="spa">单页应用</SelectOption>
+                <SelectOption value="machine">机器对机器</SelectOption>
+
             </Select>
           </div>
           <div class="grid gap-2">
             <label class="text-sm font-medium">状态</label>
-            <Select v-model="queryForm.status">
-              <SelectTrigger class="w-28">
-                <SelectValue placeholder="请选择状态" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="active">正常</SelectItem>
-                <SelectItem value="disabled">禁用</SelectItem>
-              </SelectContent>
+            <Select v-model:value="queryForm.status">
+              <div class="w-28">
+
+              </div>
+
+                <SelectOption value="active">正常</SelectOption>
+                <SelectOption value="disabled">禁用</SelectOption>
+
             </Select>
           </div>
           <div class="flex gap-2">
@@ -395,144 +383,144 @@ onMounted(() => {
               <Search class="w-4 h-4 mr-2" />
               搜索
             </Button>
-            <Button variant="outline" @click="handleReset">重置</Button>
+            <Button  @click="handleReset">重置</Button>
           </div>
         </div>
 
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead class="w-44">应用名称</TableHead>
-              <TableHead class="w-28">应用类型</TableHead>
-              <TableHead class="w-72">Client ID</TableHead>
-              <TableHead class="w-24">状态</TableHead>
-              <TableHead class="w-32">访问令牌有效期</TableHead>
-              <TableHead class="w-32">刷新令牌有效期</TableHead>
-              <TableHead class="w-40">创建时间</TableHead>
-              <TableHead class="w-80">操作</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <TableRow v-if="loading">
-              <TableCell colspan="8" class="text-center py-8 text-muted-foreground">加载中...</TableCell>
-            </TableRow>
-            <TableRow v-else-if="applications.length === 0">
-              <TableCell colspan="8" class="text-center py-8 text-muted-foreground">暂无数据</TableCell>
-            </TableRow>
-            <TableRow v-for="row in applications" :key="row.id">
-              <TableCell>{{ row.name }}</TableCell>
-              <TableCell>{{ getTypeText(row.type) }}</TableCell>
-              <TableCell>
+        <table>
+          <thead>
+            <tr>
+              <th class="w-44">应用名称</th>
+              <th class="w-28">应用类型</th>
+              <th class="w-72">Client ID</th>
+              <th class="w-24">状态</th>
+              <th class="w-32">访问令牌有效期</th>
+              <th class="w-32">刷新令牌有效期</th>
+              <th class="w-40">创建时间</th>
+              <th class="w-80">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="loading">
+              <td colspan="8" class="text-center py-8 text-muted-foreground">加载中...</td>
+            </tr>
+            <tr v-else-if="applications.length === 0">
+              <td colspan="8" class="text-center py-8 text-muted-foreground">暂无数据</td>
+            </tr>
+            <tr v-for="row in applications" :key="row.id">
+              <td>{{ row.name }}</td>
+              <td>{{ getTypeText(row.type) }}</td>
+              <td>
                 <div class="flex items-center gap-2">
                   <span class="font-mono text-xs">{{ row.clientId }}</span>
-                  <Button variant="link" size="sm" class="h-auto p-0" @click="copyToClipboard(row.clientId)">
+                  <Button type="link" size="small" class="h-auto p-0" @click="copyToClipboard(row.clientId)">
                     <Copy class="w-4 h-4" />
                   </Button>
                 </div>
-              </TableCell>
-              <TableCell>
-                <Badge :variant="getStatusVariant(row.status)">
+              </td>
+              <td>
+                <Tag :color="getStatusVariant(row.status)">
                   {{ getStatusText(row.status) }}
-                </Badge>
-              </TableCell>
-              <TableCell>{{ formatLifetime(row.accessTokenLifetime) }}</TableCell>
-              <TableCell>{{ formatLifetime(row.refreshTokenLifetime) }}</TableCell>
-              <TableCell>{{ new Date(row.createdAt).toLocaleString() }}</TableCell>
-              <TableCell>
+                </Tag>
+              </td>
+              <td>{{ formatLifetime(row.accessTokenLifetime) }}</td>
+              <td>{{ formatLifetime(row.refreshTokenLifetime) }}</td>
+              <td>{{ new Date(row.createdAt).toLocaleString() }}</td>
+              <td>
                 <div class="flex gap-1 flex-wrap">
-                  <Button variant="link" size="sm" class="h-auto p-0" @click="handleDetail(row)">详情</Button>
-                  <Button variant="link" size="sm" class="h-auto p-0" @click="handleEdit(row)">编辑</Button>
-                  <Button 
-                    variant="link" 
-                    size="sm" 
+                  <Button type="link" size="small" class="h-auto p-0" @click="handleDetail(row)">详情</Button>
+                  <Button type="link" size="small" class="h-auto p-0" @click="handleEdit(row)">编辑</Button>
+                  <Button
+                    variant="link"
+                    size="sm"
                     class="h-auto p-0"
                     @click="handleStatusChange(row, row.status === 'active' ? 'disabled' : 'active')"
                   >
                     {{ row.status === 'active' ? '禁用' : '启用' }}
                   </Button>
-                  <Button variant="link" size="sm" class="h-auto p-0 text-destructive" @click="handleDelete(row)">删除</Button>
+                  <Button type="link" size="small" class="h-auto p-0 text-destructive" @click="handleDelete(row)">删除</Button>
                 </div>
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
 
         <div class="flex items-center justify-between mt-5">
           <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
           <div class="flex items-center gap-1">
-            <Select v-model="queryForm.pageSize!" @update:model-value="handleSizeChange(Number($event))">
-              <SelectTrigger class="w-20">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem :value="10">10</SelectItem>
-                <SelectItem :value="20">20</SelectItem>
-                <SelectItem :value="50">50</SelectItem>
-                <SelectItem :value="100">100</SelectItem>
-              </SelectContent>
+            <Select v-model:value="queryForm.pageSize!" @update:value="handleSizeChange(Number($event))">
+              <div class="w-20">
+
+              </div>
+
+                <SelectOption :value="10">10</SelectOption>
+                <SelectOption :value="20">20</SelectOption>
+                <SelectOption :value="50">50</SelectOption>
+                <SelectOption :value="100">100</SelectOption>
+
             </Select>
             <span class="text-sm px-2">条/页</span>
-            <Button variant="outline" size="sm" :disabled="queryForm.page! <= 1" @click="handlePageChange(queryForm.page! - 1)">上一页</Button>
+            <Button  size="small" :disabled="queryForm.page! <= 1" @click="handlePageChange(queryForm.page! - 1)">上一页</Button>
             <span class="text-sm px-2">{{ queryForm.page! }} / {{ totalPages() }}</span>
-            <Button variant="outline" size="sm" :disabled="queryForm.page! >= totalPages()" @click="handlePageChange(queryForm.page! + 1)">下一页</Button>
+            <Button  size="small" :disabled="queryForm.page! >= totalPages()" @click="handlePageChange(queryForm.page! + 1)">下一页</Button>
           </div>
         </div>
-      </CardContent>
+      </div>
     </Card>
 
-    <Dialog v-model:open="dialogVisible">
-      <DialogContent class="max-w-xl">
-        <DialogHeader>
-          <DialogTitle>{{ dialogTitle }}</DialogTitle>
-        </DialogHeader>
+    <Modal v-model:open="dialogVisible" :footer="null">
+      <div class="max-w-xl">
+        <div>
+          <h3>{{ dialogTitle }}</h3>
+        </div>
         <form>
           <div class="grid gap-4 py-4">
             <div class="grid gap-2">
               <label class="text-sm font-medium">应用名称</label>
-              <Input v-model="appForm.name" placeholder="请输入应用名称" :aria-invalid="!!formErrors.name" />
+              <Input v-model:value="appForm.name" placeholder="请输入应用名称" :aria-invalid="!!formErrors.name" />
               <p v-if="formErrors.name" class="text-sm text-destructive">{{ formErrors.name }}</p>
             </div>
             <div class="grid gap-2">
               <label class="text-sm font-medium">应用类型</label>
-              <Select v-model="appForm.type">
-                <SelectTrigger :aria-invalid="!!formErrors.type">
-                  <SelectValue placeholder="请选择应用类型" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="web">Web应用</SelectItem>
-                  <SelectItem value="native">原生应用</SelectItem>
-                  <SelectItem value="spa">单页应用</SelectItem>
-                  <SelectItem value="machine">机器对机器</SelectItem>
-                </SelectContent>
+              <Select v-model:value="appForm.type">
+                <div :aria-invalid="!!formErrors.type">
+
+                </div>
+
+                  <SelectOption value="web">Web应用</SelectOption>
+                  <SelectOption value="native">原生应用</SelectOption>
+                  <SelectOption value="spa">单页应用</SelectOption>
+                  <SelectOption value="machine">机器对机器</SelectOption>
+
               </Select>
               <p v-if="formErrors.type" class="text-sm text-destructive">{{ formErrors.type }}</p>
             </div>
             <template v-if="isEditing">
               <div class="grid gap-2">
                 <label class="text-sm font-medium">应用描述</label>
-                <Textarea v-model="appForm.description" :rows="3" placeholder="请输入应用描述" />
+                <InputTextArea v-model:value="appForm.description" :rows="3" placeholder="请输入应用描述" />
               </div>
               <div class="grid gap-2">
                 <label class="text-sm font-medium">应用Logo</label>
-                <Input v-model="appForm.logo" placeholder="请输入Logo URL" />
+                <Input v-model:value="appForm.logo" placeholder="请输入Logo URL" />
               </div>
               <div class="grid gap-2">
                 <label class="text-sm font-medium">重定向URI</label>
                 <div class="flex gap-2 mb-2">
-                  <Input v-model="redirectUriInput" placeholder="请输入重定向URI" class="flex-1" />
+                  <Input v-model:value="redirectUriInput" placeholder="请输入重定向URI" class="flex-1" />
                   <Button type="button" @click="handleAddRedirectUri">添加</Button>
                 </div>
                 <div v-if="appForm.redirectUris && appForm.redirectUris.length > 0" class="flex flex-wrap gap-2">
-                  <Badge
+                  <Tag
                     v-for="(uri, index) in appForm.redirectUris"
                     :key="index"
-                    variant="secondary"
+                    color="blue"
                     class="cursor-pointer"
                     @click="handleRemoveRedirectUri(index)"
                   >
                     {{ uri }}
                     <Trash2 class="w-3 h-3 ml-1" />
-                  </Badge>
+                  </Tag>
                 </div>
               </div>
               <div class="grid gap-2">
@@ -565,21 +553,11 @@ onMounted(() => {
               <div class="grid gap-2">
                 <label class="text-sm font-medium">访问令牌有效期</label>
                 <div class="flex items-center gap-2">
-                  <NumberField
-                    v-model="appForm.accessTokenLifetime"
+                  <InputNumber
+                    v-model:value="appForm.accessTokenLifetime"
                     :min="60"
                     :max="86400"
-                  >
-                    <NumberFieldContent>
-                      <NumberFieldDecrement>
-                        <Minus class="w-4 h-4" />
-                      </NumberFieldDecrement>
-                      <NumberFieldInput />
-                      <NumberFieldIncrement>
-                        <PlusIcon class="w-4 h-4" />
-                      </NumberFieldIncrement>
-                    </NumberFieldContent>
-                  </NumberField>
+                   />
                   <span class="text-sm text-muted-foreground">秒 ({{ formatLifetime(appForm.accessTokenLifetime) }})</span>
                 </div>
                 <p v-if="formErrors.accessTokenLifetime" class="text-sm text-destructive">{{ formErrors.accessTokenLifetime }}</p>
@@ -587,21 +565,11 @@ onMounted(() => {
               <div class="grid gap-2">
                 <label class="text-sm font-medium">刷新令牌有效期</label>
                 <div class="flex items-center gap-2">
-                  <NumberField
-                    v-model="appForm.refreshTokenLifetime"
+                  <InputNumber
+                    v-model:value="appForm.refreshTokenLifetime"
                     :min="3600"
                     :max="31536000"
-                  >
-                    <NumberFieldContent>
-                      <NumberFieldDecrement>
-                        <Minus class="w-4 h-4" />
-                      </NumberFieldDecrement>
-                      <NumberFieldInput />
-                      <NumberFieldIncrement>
-                        <PlusIcon class="w-4 h-4" />
-                      </NumberFieldIncrement>
-                    </NumberFieldContent>
-                  </NumberField>
+                   />
                   <span class="text-sm text-muted-foreground">秒 ({{ formatLifetime(appForm.refreshTokenLifetime) }})</span>
                 </div>
                 <p v-if="formErrors.refreshTokenLifetime" class="text-sm text-destructive">{{ formErrors.refreshTokenLifetime }}</p>
@@ -609,33 +577,33 @@ onMounted(() => {
             </template>
           </div>
         </form>
-        <DialogFooter>
-          <Button variant="outline" @click="dialogVisible = false">取消</Button>
+        <div>
+          <Button  @click="dialogVisible = false">取消</Button>
           <Button @click="handleSubmit">确定</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </div>
+    </Modal>
 
-    <Dialog v-model:open="secretDialogVisible">
-      <DialogContent class="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Client Secret</DialogTitle>
-        </DialogHeader>
+    <Modal v-model:open="secretDialogVisible" :footer="null">
+      <div class="max-w-md">
+        <div>
+          <h3>Client Secret</h3>
+        </div>
         <Alert class="mb-5">
-          <AlertTitle class="font-semibold">请妥善保管您的客户端密钥</AlertTitle>
-          <AlertDescription>
+          <h3 class="font-semibold">请妥善保管您的客户端密钥</h3>
+          <p>
             密钥只会在创建应用或重新生成时显示一次，请立即复制并妥善保管。
-          </AlertDescription>
+          </p>
         </Alert>
         <div class="bg-muted p-3 rounded-md font-mono text-sm break-all">
           {{ newClientSecret }}
         </div>
-        <DialogFooter>
+        <div>
           <Button @click="copyToClipboard(newClientSecret)">复制密钥</Button>
-          <Button variant="outline" @click="secretDialogVisible = false">关闭</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <Button  @click="secretDialogVisible = false">关闭</Button>
+        </div>
+      </div>
+    </Modal>
 
     </div>
 </template>

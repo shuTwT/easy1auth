@@ -4,16 +4,6 @@ import { message } from 'antdv-next'
 import { Search, Plus, List, Share2, RefreshCw, Lock, Menu, Settings2, Database } from '@lucide/vue'
 import { permissionApi } from '@/api/permission'
 import type { Permission, PermissionTree, PermissionStats, CreatePermissionDto, UpdatePermissionDto } from '@/types/permission'
-import { Button } from '@/components/antd-compat'
-import { Input } from '@/components/antd-compat'
-import { Card, CardContent, CardHeader } from '@/components/antd-compat'
-import { Badge } from '@/components/antd-compat'
-import { Tree, TreeSelect } from '@/components/antd-compat'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/antd-compat'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/antd-compat'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/antd-compat'
-import { Textarea } from '@/components/antd-compat'
-
 const loading = ref(false)
 const permissions = ref<Permission[]>([])
 const total = ref(0)
@@ -67,10 +57,10 @@ function getTypeLabel(type: string) {
 }
 
 function getTypeVariant(type: string): 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost' | 'link' {
-  const map: Record<string, 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost' | 'link'> = { 
-    menu: 'default', 
-    operation: 'secondary', 
-    data: 'outline' 
+  const map: Record<string, 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost' | 'link'> = {
+    menu: 'default',
+    operation: 'secondary',
+    data: 'outline'
   }
   return map[type] || 'secondary'
 }
@@ -240,7 +230,7 @@ onMounted(() => {
 
     <div class="grid grid-cols-4 gap-5 mb-6">
       <Card v-for="(stat, index) in statsData" :key="index" class="cursor-pointer transition-all hover:-translate-y-1 hover:shadow-lg">
-        <CardContent class="pt-4">
+        <div class="pt-4">
           <div class="flex items-center gap-4">
             <div
               class="w-14 h-14 rounded-lg flex items-center justify-center text-white shrink-0"
@@ -258,55 +248,54 @@ onMounted(() => {
               <div class="text-sm text-muted-foreground mt-1">{{ stat.label }}</div>
             </div>
           </div>
-        </CardContent>
+        </div>
       </Card>
     </div>
 
     <Card>
-      <CardHeader class="border-b">
+      <div class="border-b">
         <div class="flex justify-between items-center">
           <div class="flex items-center gap-3">
             <div class="relative">
               <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                v-model="searchQuery"
+              <Input v-model:value="searchQuery"
                 placeholder="搜索权限名称、编码、资源"
                 class="w-72 pl-8"
                 @keyup.enter="handleSearch"
               />
             </div>
-            <Select v-model="filterType" @update:model-value="handleSearch">
-              <SelectTrigger class="w-36">
-                <SelectValue placeholder="权限类型" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="menu">菜单权限</SelectItem>
-                <SelectItem value="operation">操作权限</SelectItem>
-                <SelectItem value="data">数据权限</SelectItem>
-              </SelectContent>
+            <Select v-model:value="filterType" @update:value="handleSearch">
+              <div class="w-36">
+
+              </div>
+
+                <SelectOption value="menu">菜单权限</SelectOption>
+                <SelectOption value="operation">操作权限</SelectOption>
+                <SelectOption value="data">数据权限</SelectOption>
+
             </Select>
-            <Select v-model="filterResource" @update:model-value="handleSearch">
-              <SelectTrigger class="w-36">
-                <SelectValue placeholder="资源" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem v-for="r in resourceOptions" :key="r" :value="r">
+            <Select v-model:value="filterResource" @update:value="handleSearch">
+              <div class="w-36">
+
+              </div>
+
+                <SelectOption v-for="r in resourceOptions" :key="r" :value="r">
                   {{ r }}
-                </SelectItem>
-              </SelectContent>
+                </SelectOption>
+
             </Select>
             <Button @click="handleSearch">
               <Search class="w-4 h-4 mr-1" />
               搜索
             </Button>
-            <Button variant="outline" @click="handleReset">
+            <Button  @click="handleReset">
               <RefreshCw class="w-4 h-4 mr-1" />
               重置
             </Button>
           </div>
           <div class="flex gap-0">
             <Button
-              :variant="viewMode === 'list' ? 'default' : 'outline'"
+              :color="viewMode === 'list' ? 'default' : 'outline'"
               class="rounded-r-none"
               @click="viewMode = 'list'"
             >
@@ -314,7 +303,7 @@ onMounted(() => {
               列表
             </Button>
             <Button
-              :variant="viewMode === 'tree' ? 'default' : 'outline'"
+              :color="viewMode === 'tree' ? 'default' : 'outline'"
               class="rounded-l-none"
               @click="viewMode = 'tree'"
             >
@@ -323,72 +312,72 @@ onMounted(() => {
             </Button>
           </div>
         </div>
-      </CardHeader>
+      </div>
 
-      <CardContent class="pt-4">
+      <div class="pt-4">
         <div v-if="viewMode === 'list'">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead class="min-w-[180px]">权限名称</TableHead>
-                <TableHead class="w-[200px]">权限编码</TableHead>
-                <TableHead class="w-[130px]">资源</TableHead>
-                <TableHead class="w-[100px]">操作</TableHead>
-                <TableHead class="w-[150px]">父级权限</TableHead>
-                <TableHead class="min-w-[200px]">描述</TableHead>
-                <TableHead class="w-[150px]">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow v-if="loading">
-                <TableCell colspan="7" class="text-center py-8 text-muted-foreground">
+          <table>
+            <thead>
+              <tr>
+                <th class="min-w-[180px]">权限名称</th>
+                <th class="w-[200px]">权限编码</th>
+                <th class="w-[130px]">资源</th>
+                <th class="w-[100px]">操作</th>
+                <th class="w-[150px]">父级权限</th>
+                <th class="min-w-[200px]">描述</th>
+                <th class="w-[150px]">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="loading">
+                <td colspan="7" class="text-center py-8 text-muted-foreground">
                   加载中...
-                </TableCell>
-              </TableRow>
-              <TableRow v-else-if="permissions.length === 0">
-                <TableCell colspan="7" class="text-center py-8 text-muted-foreground">
+                </td>
+              </tr>
+              <tr v-else-if="permissions.length === 0">
+                <td colspan="7" class="text-center py-8 text-muted-foreground">
                   暂无数据
-                </TableCell>
-              </TableRow>
-              <TableRow v-for="row in permissions" :key="row.id">
-                <TableCell>
+                </td>
+              </tr>
+              <tr v-for="row in permissions" :key="row.id">
+                <td>
                   <div class="flex items-center gap-2">
-                    <Badge :variant="getTypeVariant(row.type)" class="text-xs">
+                    <Tag :color="getTypeVariant(row.type)" class="text-xs">
                       {{ getTypeLabel(row.type) }}
-                    </Badge>
+                    </Tag>
                     <span class="font-medium text-foreground">{{ row.name }}</span>
                   </div>
-                </TableCell>
-                <TableCell>
+                </td>
+                <td>
                   <code class="bg-muted px-2 py-0.5 rounded text-xs text-muted-foreground font-mono">
                     {{ row.code }}
                   </code>
-                </TableCell>
-                <TableCell>{{ row.resource }}</TableCell>
-                <TableCell>{{ row.action }}</TableCell>
-                <TableCell>
+                </td>
+                <td>{{ row.resource }}</td>
+                <td>{{ row.action }}</td>
+                <td>
                   <span v-if="row.parent">{{ row.parent.name }}</span>
                   <span v-else class="text-muted-foreground">-</span>
-                </TableCell>
-                <TableCell class="text-muted-foreground">{{ row.description || '-' }}</TableCell>
-                <TableCell>
+                </td>
+                <td class="text-muted-foreground">{{ row.description || '-' }}</td>
+                <td>
                   <div class="flex gap-2">
-                    <Button variant="link" size="sm" class="p-0 h-auto" @click="handleEdit(row)">
+                    <Button type="link" size="small" class="p-0 h-auto" @click="handleEdit(row)">
                       编辑
                     </Button>
-                    <Button variant="link" size="sm" class="p-0 h-auto text-destructive" @click="handleDelete(row)">
+                    <Button type="link" size="small" class="p-0 h-auto text-destructive" @click="handleDelete(row)">
                       删除
                     </Button>
                   </div>
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
+                </td>
+              </tr>
+            </tbody>
+          </table>
           <div v-if="total > pageSize" class="flex items-center justify-between mt-4">
             <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
             <div class="flex items-center gap-1">
               <Button
-                variant="outline"
+
                 size="sm"
                 :disabled="page <= 1"
                 @click="handlePageChange(page - 1)"
@@ -397,7 +386,7 @@ onMounted(() => {
               </Button>
               <span class="text-sm px-2">{{ page }} / {{ Math.ceil(total / pageSize) }}</span>
               <Button
-                variant="outline"
+
                 size="sm"
                 :disabled="page >= Math.ceil(total / pageSize)"
                 @click="handlePageChange(page + 1)"
@@ -417,53 +406,53 @@ onMounted(() => {
           >
             <template #default="{ data }">
               <div class="flex items-center gap-2">
-                <Badge :variant="getTypeVariant(data.type)" class="text-xs">
+                <Tag :color="getTypeVariant(data.type)" class="text-xs">
                   {{ getTypeLabel(data.type) }}
-                </Badge>
+                </Tag>
                 <span>{{ data.name }}</span>
                 <span class="text-xs text-muted-foreground ml-1">({{ data.code }})</span>
               </div>
             </template>
           </Tree>
         </div>
-      </CardContent>
+      </div>
     </Card>
 
-    <Dialog v-model:open="dialogVisible">
-      <DialogContent class="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{{ dialogTitle }}</DialogTitle>
-        </DialogHeader>
+    <Modal v-model:open="dialogVisible" :footer="null">
+      <div class="max-w-lg">
+        <div>
+          <h3>{{ dialogTitle }}</h3>
+        </div>
         <form @submit.prevent="handleSubmit">
           <div class="grid gap-4 py-4">
             <div class="grid gap-2">
               <label class="text-sm font-medium">权限名称 <span class="text-destructive">*</span></label>
-              <Input v-model="permissionForm.name" placeholder="如: 查看用户" />
+              <Input v-model:value="permissionForm.name" placeholder="如: 查看用户" />
             </div>
             <div class="grid gap-2">
               <label class="text-sm font-medium">权限编码 <span class="text-destructive">*</span></label>
-              <Input v-model="permissionForm.code" placeholder="如: user:read" :disabled="isEdit" />
+              <Input v-model:value="permissionForm.code" placeholder="如: user:read" :disabled="isEdit" />
             </div>
             <div class="grid gap-2">
               <label class="text-sm font-medium">权限类型 <span class="text-destructive">*</span></label>
-              <Select v-model="permissionForm.type">
-                <SelectTrigger>
-                  <SelectValue placeholder="请选择权限类型" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="menu">菜单权限</SelectItem>
-                  <SelectItem value="operation">操作权限</SelectItem>
-                  <SelectItem value="data">数据权限</SelectItem>
-                </SelectContent>
+              <Select v-model:value="permissionForm.type">
+                <div>
+
+                </div>
+
+                  <SelectOption value="menu">菜单权限</SelectOption>
+                  <SelectOption value="operation">操作权限</SelectOption>
+                  <SelectOption value="data">数据权限</SelectOption>
+
               </Select>
             </div>
             <div class="grid gap-2">
               <label class="text-sm font-medium">资源 <span class="text-destructive">*</span></label>
-              <Input v-model="permissionForm.resource" placeholder="如: user" />
+              <Input v-model:value="permissionForm.resource" placeholder="如: user" />
             </div>
             <div class="grid gap-2">
               <label class="text-sm font-medium">操作 <span class="text-destructive">*</span></label>
-              <Input v-model="permissionForm.action" placeholder="如: read" />
+              <Input v-model:value="permissionForm.action" placeholder="如: read" />
             </div>
             <div class="grid gap-2">
               <label class="text-sm font-medium">父级权限</label>
@@ -477,18 +466,18 @@ onMounted(() => {
             </div>
             <div class="grid gap-2">
               <label class="text-sm font-medium">描述</label>
-              <Textarea v-model="permissionForm.description" :rows="2" placeholder="请输入描述" />
+              <InputTextArea v-model:value="permissionForm.description" :rows="2" placeholder="请输入描述" />
             </div>
           </div>
         </form>
-        <DialogFooter>
-          <Button variant="outline" @click="dialogVisible = false">取消</Button>
+        <div>
+          <Button  @click="dialogVisible = false">取消</Button>
           <Button :disabled="submitting" @click="handleSubmit">
             {{ submitting ? '提交中...' : '确定' }}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </div>
+    </Modal>
   </div>
 </template>
 

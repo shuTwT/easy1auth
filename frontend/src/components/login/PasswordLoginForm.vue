@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import { reactive, shallowRef } from 'vue'
 import { useAuth } from '@/composables/useAuth'
-import { Input } from '@/components/antd-compat'
-import { Checkbox } from '@/components/antd-compat'
-import { Label } from '@/components/antd-compat'
-
 const emit = defineEmits<{
   switchToEmail: []
   switchToRegister: []
@@ -69,7 +65,7 @@ function togglePassword() {
   <form @submit.prevent="handleSubmit">
     <div v-if="mfaChallenge" class="grid gap-2">
       <label class="form-label">动态验证码</label>
-      <Input v-model="mfaCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="请输入6位验证码" class="login-input h-11" />
+      <Input v-model:value="mfaCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="请输入6位验证码" class="login-input h-11" />
       <p class="text-xs text-muted-foreground">密码已验证，完成 MFA 后才会签发登录令牌。</p>
     </div>
     <template v-else>
@@ -83,8 +79,7 @@ function togglePassword() {
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
           <circle cx="12" cy="7" r="4"/>
         </svg>
-        <Input
-          v-model="form.username"
+        <Input v-model:value="form.username"
           placeholder="请输入用户名或邮箱"
           class="login-input h-11 pl-10"
           :class="{ 'border-destructive': errors.username }"
@@ -104,8 +99,7 @@ function togglePassword() {
           <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
           <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
         </svg>
-        <Input
-          v-model="form.password"
+        <Input v-model:value="form.password"
           :type="showPassword ? 'text' : 'password'"
           placeholder="请输入密码"
           class="login-input h-11 pl-10 pr-10"
@@ -135,7 +129,7 @@ function togglePassword() {
     <div class="form-options">
       <div class="flex items-center gap-2">
         <Checkbox id="remember-me" v-model:checked="form.rememberMe" />
-        <Label for="remember-me" class="remember-label">记住我</Label>
+        <label for="remember-me" class="remember-label">记住我</label>
       </div>
       <button type="button" class="forgot-password">
         忘记密码？
@@ -304,7 +298,7 @@ function togglePassword() {
   .link-button {
     transition: none;
   }
-  
+
   .loading-spinner {
     animation: none;
   }

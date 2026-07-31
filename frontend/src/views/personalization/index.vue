@@ -6,15 +6,15 @@
     </div>
 
     <Card>
-      <CardContent class="pt-6">
-        <Tabs v-model="activeTab">
-          <TabsList class="mb-6">
-            <TabsTrigger value="domains">自定义域名</TabsTrigger>
-            <TabsTrigger value="loginStyle">登录页面</TabsTrigger>
-            <TabsTrigger value="templates">消息模板</TabsTrigger>
-          </TabsList>
+      <div class="pt-6">
+        <div>
+          <div class="mb-6">
+            <Button :type="activeTab === 'domains' ? 'primary' : 'default'" @click="activeTab = 'domains'">自定义域名</Button>
+            <Button :type="activeTab === 'loginStyle' ? 'primary' : 'default'" @click="activeTab = 'loginStyle'">登录页面</Button>
+            <Button :type="activeTab === 'templates' ? 'primary' : 'default'" @click="activeTab = 'templates'">消息模板</Button>
+          </div>
 
-          <TabsContent value="domains" class="px-2">
+          <div v-show="activeTab === 'domains'" class="px-2">
             <div class="flex justify-between items-center mb-5">
               <h3 class="text-base font-semibold">域名管理</h3>
               <Button @click="showDomainDialog = true">
@@ -24,75 +24,75 @@
             </div>
 
             <div class="rounded-md border mb-6">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead class="min-w-[200px]">域名</TableHead>
-                    <TableHead class="w-[120px]">SSL状态</TableHead>
-                    <TableHead class="w-[100px]">验证方式</TableHead>
-                    <TableHead class="w-[180px]">创建时间</TableHead>
-                    <TableHead class="w-[200px] text-right">操作</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <TableRow v-if="domainsLoading">
-                    <TableCell colspan="5" class="text-center py-8 text-muted-foreground">加载中...</TableCell>
-                  </TableRow>
-                  <TableRow v-else-if="domains.length === 0">
-                    <TableCell colspan="5" class="text-center py-8 text-muted-foreground">暂无数据</TableCell>
-                  </TableRow>
-                  <TableRow v-for="domain in domains" :key="domain.id">
-                    <TableCell>
+              <table>
+                <thead>
+                  <tr>
+                    <th class="min-w-[200px]">域名</th>
+                    <th class="w-[120px]">SSL状态</th>
+                    <th class="w-[100px]">验证方式</th>
+                    <th class="w-[180px]">创建时间</th>
+                    <th class="w-[200px] text-right">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-if="domainsLoading">
+                    <td colspan="5" class="text-center py-8 text-muted-foreground">加载中...</td>
+                  </tr>
+                  <tr v-else-if="domains.length === 0">
+                    <td colspan="5" class="text-center py-8 text-muted-foreground">暂无数据</td>
+                  </tr>
+                  <tr v-for="domain in domains" :key="domain.id">
+                    <td>
                       <div class="flex items-center gap-2">
                         <span class="font-medium">{{ domain.domain }}</span>
-                        <Badge v-if="domain.status === 'verified'" variant="default" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">已验证</Badge>
-                        <Badge v-else-if="domain.status === 'pending'" variant="secondary" class="bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20">待验证</Badge>
-                        <Badge v-else-if="domain.status === 'verifying'" variant="outline">验证中</Badge>
-                        <Badge v-else variant="destructive">验证失败</Badge>
+                        <Tag v-if="domain.status === 'verified'" color="processing" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">已验证</Tag>
+                        <Tag v-else-if="domain.status === 'pending'" color="blue" class="bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20">待验证</Tag>
+                        <Tag v-else-if="domain.status === 'verifying'" >验证中</Tag>
+                        <Tag v-else color="error">验证失败</Tag>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge v-if="domain.sslStatus === 'active'" variant="default" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">已配置</Badge>
-                      <Badge v-else variant="outline">未配置</Badge>
-                    </TableCell>
-                    <TableCell>{{ domain.verificationMethod === 'dns' ? 'DNS记录' : '文件验证' }}</TableCell>
-                    <TableCell>{{ formatDate(domain.createdAt) }}</TableCell>
-                    <TableCell class="text-right">
+                    </td>
+                    <td>
+                      <Tag v-if="domain.sslStatus === 'active'" color="processing" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">已配置</Tag>
+                      <Tag v-else >未配置</Tag>
+                    </td>
+                    <td>{{ domain.verificationMethod === 'dns' ? 'DNS记录' : '文件验证' }}</td>
+                    <td>{{ formatDate(domain.createdAt) }}</td>
+                    <td class="text-right">
                       <div class="flex justify-end gap-2">
-                        <Button v-if="domain.status !== 'verified'" variant="link" size="sm" class="h-auto p-0" disabled title="阶段 6 仅登记域名">验证未启用</Button>
-                        <Button v-if="domain.status === 'verified'" variant="link" size="sm" class="h-auto p-0" disabled title="TLS 由外部网关管理">TLS由网关管理</Button>
-                        <Button variant="link" size="sm" class="h-auto p-0 text-destructive" @click="handleDeleteDomain(domain)">删除</Button>
+                        <Button v-if="domain.status !== 'verified'" type="link" size="small" class="h-auto p-0" disabled title="阶段 6 仅登记域名">验证未启用</Button>
+                        <Button v-if="domain.status === 'verified'" type="link" size="small" class="h-auto p-0" disabled title="TLS 由外部网关管理">TLS由网关管理</Button>
+                        <Button type="link" size="small" class="h-auto p-0 text-destructive" @click="handleDeleteDomain(domain)">删除</Button>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
 
             <Alert class="bg-muted border">
               <Info class="size-4" />
-              <AlertTitle class="flex items-center gap-2 font-semibold">
+              <h3 class="flex items-center gap-2 font-semibold">
                 阶段 6 域名管理说明
-              </AlertTitle>
-              <AlertDescription class="mt-2 space-y-2">
+              </h3>
+              <p class="mt-2 space-y-2">
                 <p>当前仅登记域名和验证令牌，不执行自动所有权验证。</p>
                 <p>TLS 证书由部署网关或证书控制面管理，Easy1Auth 不接收证书私钥。</p>
-              </AlertDescription>
+              </p>
             </Alert>
-          </TabsContent>
+          </div>
 
-          <TabsContent value="loginStyle" class="px-2">
+          <div v-show="activeTab === 'loginStyle'" class="px-2">
             <form class="max-w-[800px]">
               <div class="mb-8 pb-6 border-b">
                 <h3 class="text-base font-semibold mb-5">基础信息</h3>
                 <div class="grid gap-4">
                   <div class="grid gap-2">
                     <label class="text-sm font-medium">页面标题</label>
-                    <Input v-model="loginStyle.title" placeholder="请输入登录页面标题" />
+                    <Input v-model:value="loginStyle.title" placeholder="请输入登录页面标题" />
                   </div>
                   <div class="grid gap-2">
                     <label class="text-sm font-medium">页面副标题</label>
-                    <Input v-model="loginStyle.subtitle" placeholder="请输入登录页面副标题" />
+                    <Input v-model:value="loginStyle.subtitle" placeholder="请输入登录页面副标题" />
                   </div>
                 </div>
               </div>
@@ -115,7 +115,7 @@
                           <span class="text-xs text-muted-foreground">上传Logo</span>
                         </div>
                       </Upload>
-                      <Button v-if="loginStyle.logo" variant="link" class="text-destructive justify-start p-0 h-auto" @click="loginStyle.logo = undefined">
+                      <Button v-if="loginStyle.logo" type="link" class="text-destructive justify-start p-0 h-auto" @click="loginStyle.logo = undefined">
                         删除Logo
                       </Button>
                     </div>
@@ -136,7 +136,7 @@
                           <span class="text-xs text-muted-foreground">上传背景图片</span>
                         </div>
                       </Upload>
-                      <Button v-if="loginStyle.backgroundImage" variant="link" class="text-destructive justify-start p-0 h-auto" @click="loginStyle.backgroundImage = undefined">
+                      <Button v-if="loginStyle.backgroundImage" type="link" class="text-destructive justify-start p-0 h-auto" @click="loginStyle.backgroundImage = undefined">
                         删除背景图片
                       </Button>
                     </div>
@@ -146,7 +146,7 @@
                     <label class="text-sm font-medium">背景颜色</label>
                     <div class="flex items-center gap-3">
                       <ColorPicker v-model="loginStyle.backgroundColor" :presets="colorPresets.map(c => c.value)" />
-                      <Input v-model="loginStyle.backgroundColor" placeholder="#f5f7fa" class="w-[200px]" />
+                      <Input v-model:value="loginStyle.backgroundColor" placeholder="#f5f7fa" class="w-[200px]" />
                     </div>
                   </div>
 
@@ -154,13 +154,13 @@
                     <label class="text-sm font-medium">主题色</label>
                     <div class="flex items-center gap-3">
                       <ColorPicker v-model="loginStyle.primaryColor" :presets="colorPresets.map(c => c.value)" />
-                      <Input v-model="loginStyle.primaryColor" placeholder="#0369A1" class="w-[200px]" />
+                      <Input v-model:value="loginStyle.primaryColor" placeholder="#0369A1" class="w-[200px]" />
                     </div>
                     <div class="flex items-center gap-2 mt-3">
                       <span class="text-sm text-muted-foreground">预设颜色：</span>
-                      <div 
-                        v-for="color in colorPresets" 
-                        :key="color.value" 
+                      <div
+                        v-for="color in colorPresets"
+                        :key="color.value"
                         class="w-7 h-7 rounded flex items-center justify-center cursor-pointer transition-transform hover:scale-110 border-2 border-transparent"
                         :style="{ backgroundColor: color.value }"
                         @click="loginStyle.primaryColor = color.value"
@@ -178,22 +178,22 @@
                   <label class="text-sm font-medium">启用方式</label>
                   <div class="flex flex-wrap gap-4">
                     <label class="flex items-center gap-2 cursor-pointer">
-                      <Checkbox 
-                        :checked="loginStyle.loginMethods?.includes('password')" 
+                      <Checkbox
+                        :checked="loginStyle.loginMethods?.includes('password')"
                         @update:checked="toggleLoginMethod('password')"
                       />
                       <span class="text-sm">账号密码</span>
                     </label>
                     <label class="flex items-center gap-2 cursor-pointer">
-                      <Checkbox 
-                        :checked="loginStyle.loginMethods?.includes('email')" 
+                      <Checkbox
+                        :checked="loginStyle.loginMethods?.includes('email')"
                         @update:checked="toggleLoginMethod('email')"
                       />
                       <span class="text-sm">邮箱验证码</span>
                     </label>
                     <label class="flex items-center gap-2 cursor-pointer">
-                      <Checkbox 
-                        :checked="loginStyle.loginMethods?.includes('passkey')" 
+                      <Checkbox
+                        :checked="loginStyle.loginMethods?.includes('passkey')"
                         @update:checked="toggleLoginMethod('passkey')"
                       />
                       <span class="text-sm">Passkey</span>
@@ -206,8 +206,7 @@
                 <h3 class="text-base font-semibold mb-5">自定义样式</h3>
                 <div class="grid gap-2">
                   <label class="text-sm font-medium">自定义CSS</label>
-                  <Textarea
-                    v-model="loginStyle.customCSS"
+                  <InputTextArea v-model:value="loginStyle.customCSS"
                     :rows="8"
                     placeholder="请输入自定义CSS样式"
                     class="font-mono text-[13px] leading-relaxed bg-muted/50"
@@ -219,13 +218,13 @@
                 保存设置
               </Button>
             </form>
-          </TabsContent>
+          </div>
 
-          <TabsContent value="templates" class="px-2">
+          <div v-show="activeTab === 'templates'" class="px-2">
             <div class="flex justify-between items-center mb-5">
               <h3 class="text-base font-semibold">模板管理</h3>
               <div class="flex gap-3">
-                <Button variant="outline" @click="handleInitTemplates" :disabled="initingTemplates">
+                <Button  @click="handleInitTemplates" :disabled="initingTemplates">
                   初始化默认模板
                 </Button>
                 <Button @click="showTemplateDialog = true">
@@ -235,122 +234,122 @@
               </div>
             </div>
 
-            <Tabs v-model="templateType">
-              <TabsList class="mb-4">
-                <TabsTrigger value="email">邮件模板</TabsTrigger>
-                <TabsTrigger value="sms">短信模板</TabsTrigger>
-              </TabsList>
+            <div>
+              <div class="mb-4">
+                <Button :type="templateType === 'email' ? 'primary' : 'default'" @click="templateType = 'email'">邮件模板</Button>
+                <Button :type="templateType === 'sms' ? 'primary' : 'default'" @click="templateType = 'sms'">短信模板</Button>
+              </div>
 
-              <TabsContent value="email">
+              <div v-show="templateType === 'email'">
                 <div class="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead class="w-[150px]">模板名称</TableHead>
-                        <TableHead class="w-[150px]">模板代码</TableHead>
-                        <TableHead class="min-w-[200px]">邮件主题</TableHead>
-                        <TableHead class="w-[80px]">默认</TableHead>
-                        <TableHead class="w-[80px]">状态</TableHead>
-                        <TableHead class="w-[150px] text-right">操作</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      <TableRow v-if="templatesLoading">
-                        <TableCell colspan="6" class="text-center py-8 text-muted-foreground">加载中...</TableCell>
-                      </TableRow>
-                      <TableRow v-else-if="emailTemplates.length === 0">
-                        <TableCell colspan="6" class="text-center py-8 text-muted-foreground">暂无数据</TableCell>
-                      </TableRow>
-                      <TableRow v-for="template in emailTemplates" :key="template.id">
-                        <TableCell>{{ template.name }}</TableCell>
-                        <TableCell>{{ template.code }}</TableCell>
-                        <TableCell>{{ template.subject }}</TableCell>
-                        <TableCell>
-                          <Badge v-if="template.isDefault" variant="default" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">是</Badge>
-                          <Badge v-else variant="outline">否</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge v-if="template.status === 'active'" variant="default" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">启用</Badge>
-                          <Badge v-else variant="outline">禁用</Badge>
-                        </TableCell>
-                        <TableCell class="text-right">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th class="w-[150px]">模板名称</th>
+                        <th class="w-[150px]">模板代码</th>
+                        <th class="min-w-[200px]">邮件主题</th>
+                        <th class="w-[80px]">默认</th>
+                        <th class="w-[80px]">状态</th>
+                        <th class="w-[150px] text-right">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-if="templatesLoading">
+                        <td colspan="6" class="text-center py-8 text-muted-foreground">加载中...</td>
+                      </tr>
+                      <tr v-else-if="emailTemplates.length === 0">
+                        <td colspan="6" class="text-center py-8 text-muted-foreground">暂无数据</td>
+                      </tr>
+                      <tr v-for="template in emailTemplates" :key="template.id">
+                        <td>{{ template.name }}</td>
+                        <td>{{ template.code }}</td>
+                        <td>{{ template.subject }}</td>
+                        <td>
+                          <Tag v-if="template.isDefault" color="processing" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">是</Tag>
+                          <Tag v-else >否</Tag>
+                        </td>
+                        <td>
+                          <Tag v-if="template.status === 'active'" color="processing" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">启用</Tag>
+                          <Tag v-else >禁用</Tag>
+                        </td>
+                        <td class="text-right">
                           <div class="flex justify-end gap-2">
-                            <Button variant="link" size="sm" class="h-auto p-0" @click="handleEditTemplate(template)">编辑</Button>
-                            <Button variant="link" size="sm" class="h-auto p-0 text-destructive" @click="handleDeleteTemplate(template)">删除</Button>
+                            <Button type="link" size="small" class="h-auto p-0" @click="handleEditTemplate(template)">编辑</Button>
+                            <Button type="link" size="small" class="h-auto p-0 text-destructive" @click="handleDeleteTemplate(template)">删除</Button>
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
-              </TabsContent>
+              </div>
 
-              <TabsContent value="sms">
+              <div v-show="templateType === 'sms'">
                 <div class="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead class="w-[150px]">模板名称</TableHead>
-                        <TableHead class="w-[150px]">模板代码</TableHead>
-                        <TableHead class="min-w-[300px]">模板内容</TableHead>
-                        <TableHead class="w-[80px]">默认</TableHead>
-                        <TableHead class="w-[80px]">状态</TableHead>
-                        <TableHead class="w-[150px] text-right">操作</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      <TableRow v-if="templatesLoading">
-                        <TableCell colspan="6" class="text-center py-8 text-muted-foreground">加载中...</TableCell>
-                      </TableRow>
-                      <TableRow v-else-if="smsTemplates.length === 0">
-                        <TableCell colspan="6" class="text-center py-8 text-muted-foreground">暂无数据</TableCell>
-                      </TableRow>
-                      <TableRow v-for="template in smsTemplates" :key="template.id">
-                        <TableCell>{{ template.name }}</TableCell>
-                        <TableCell>{{ template.code }}</TableCell>
-                        <TableCell class="max-w-[300px] truncate">{{ template.content }}</TableCell>
-                        <TableCell>
-                          <Badge v-if="template.isDefault" variant="default" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">是</Badge>
-                          <Badge v-else variant="outline">否</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge v-if="template.status === 'active'" variant="default" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">启用</Badge>
-                          <Badge v-else variant="outline">禁用</Badge>
-                        </TableCell>
-                        <TableCell class="text-right">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th class="w-[150px]">模板名称</th>
+                        <th class="w-[150px]">模板代码</th>
+                        <th class="min-w-[300px]">模板内容</th>
+                        <th class="w-[80px]">默认</th>
+                        <th class="w-[80px]">状态</th>
+                        <th class="w-[150px] text-right">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-if="templatesLoading">
+                        <td colspan="6" class="text-center py-8 text-muted-foreground">加载中...</td>
+                      </tr>
+                      <tr v-else-if="smsTemplates.length === 0">
+                        <td colspan="6" class="text-center py-8 text-muted-foreground">暂无数据</td>
+                      </tr>
+                      <tr v-for="template in smsTemplates" :key="template.id">
+                        <td>{{ template.name }}</td>
+                        <td>{{ template.code }}</td>
+                        <td class="max-w-[300px] truncate">{{ template.content }}</td>
+                        <td>
+                          <Tag v-if="template.isDefault" color="processing" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">是</Tag>
+                          <Tag v-else >否</Tag>
+                        </td>
+                        <td>
+                          <Tag v-if="template.status === 'active'" color="processing" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">启用</Tag>
+                          <Tag v-else >禁用</Tag>
+                        </td>
+                        <td class="text-right">
                           <div class="flex justify-end gap-2">
-                            <Button variant="link" size="sm" class="h-auto p-0" @click="handleEditTemplate(template)">编辑</Button>
-                            <Button variant="link" size="sm" class="h-auto p-0 text-destructive" @click="handleDeleteTemplate(template)">删除</Button>
+                            <Button type="link" size="small" class="h-auto p-0" @click="handleEditTemplate(template)">编辑</Button>
+                            <Button type="link" size="small" class="h-auto p-0 text-destructive" @click="handleDeleteTemplate(template)">删除</Button>
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
-              </TabsContent>
-            </Tabs>
-          </TabsContent>
-        </Tabs>
-      </CardContent>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </Card>
 
-    <Dialog v-model:open="showDomainDialog">
-      <DialogContent class="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>添加域名</DialogTitle>
-        </DialogHeader>
+    <Modal v-model:open="showDomainDialog" :footer="null">
+      <div class="sm:max-w-[500px]">
+        <div>
+          <h3>添加域名</h3>
+        </div>
         <form>
           <div class="grid gap-4 py-4">
             <div class="grid gap-2">
               <label class="text-sm font-medium">域名</label>
               <div class="flex">
                 <div class="flex items-center px-3 bg-muted border border-r-0 rounded-l-md text-sm text-muted-foreground">https://</div>
-                <Input v-model="domainForm.domain" placeholder="例如：login.yourcompany.com" class="rounded-l-none" />
+                <Input v-model:value="domainForm.domain" placeholder="例如：login.yourcompany.com" class="rounded-l-none" />
               </div>
             </div>
             <div class="grid gap-2">
               <label class="text-sm font-medium">验证方式</label>
-              <RadioGroup v-model="domainForm.verificationMethod">
+              <RadioGroup v-model:value="domainForm.verificationMethod">
                 <div class="flex items-center gap-2">
                   <RadioGroupItem value="dns" />
                   <label class="text-sm cursor-pointer">DNS记录验证</label>
@@ -363,55 +362,53 @@
             </div>
           </div>
         </form>
-        <DialogFooter>
-          <Button variant="outline" @click="showDomainDialog = false">取消</Button>
+        <div>
+          <Button  @click="showDomainDialog = false">取消</Button>
           <Button @click="handleCreateDomain" :disabled="creatingDomain">添加</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </div>
+    </Modal>
 
-    <Dialog v-model:open="showSSLDialog">
-      <DialogContent class="sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle>配置SSL证书</DialogTitle>
-        </DialogHeader>
+    <Modal v-model:open="showSSLDialog" :footer="null">
+      <div class="sm:max-w-[600px]">
+        <div>
+          <h3>配置SSL证书</h3>
+        </div>
         <form>
           <div class="grid gap-4 py-4">
             <div class="grid gap-2">
               <label class="text-sm font-medium">SSL证书</label>
-              <Textarea
-                v-model="sslForm.sslCertificate"
+              <InputTextArea v-model:value="sslForm.sslCertificate"
                 :rows="8"
                 placeholder="请粘贴SSL证书内容（PEM格式）"
               />
             </div>
             <div class="grid gap-2">
               <label class="text-sm font-medium">私钥</label>
-              <Textarea
-                v-model="sslForm.sslPrivateKey"
+              <InputTextArea v-model:value="sslForm.sslPrivateKey"
                 :rows="8"
                 placeholder="请粘贴SSL私钥内容（PEM格式）"
               />
             </div>
           </div>
         </form>
-        <DialogFooter>
-          <Button variant="outline" @click="showSSLDialog = false">取消</Button>
+        <div>
+          <Button  @click="showSSLDialog = false">取消</Button>
           <Button @click="handleSaveSSL" :disabled="savingSSL">保存</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </div>
+    </Modal>
 
-    <Dialog v-model:open="showTemplateDialog">
-      <DialogContent class="sm:max-w-[700px]">
-        <DialogHeader>
-          <DialogTitle>{{ editingTemplate ? '编辑模板' : '新建模板' }}</DialogTitle>
-        </DialogHeader>
+    <Modal v-model:open="showTemplateDialog" :footer="null">
+      <div class="sm:max-w-[700px]">
+        <div>
+          <h3>{{ editingTemplate ? '编辑模板' : '新建模板' }}</h3>
+        </div>
         <form>
           <div class="grid gap-4 py-4">
             <div class="grid gap-2">
               <label class="text-sm font-medium">模板类型</label>
-              <RadioGroup v-model="templateForm.type" :disabled="!!editingTemplate">
+              <RadioGroup v-model:value="templateForm.type" :disabled="!!editingTemplate">
                 <div class="flex items-center gap-2">
                   <RadioGroupItem value="email" />
                   <label class="text-sm cursor-pointer">邮件</label>
@@ -424,20 +421,19 @@
             </div>
             <div class="grid gap-2">
               <label class="text-sm font-medium">模板代码</label>
-              <Input v-model="templateForm.code" placeholder="例如：verification_code" :disabled="!!editingTemplate" />
+              <Input v-model:value="templateForm.code" placeholder="例如：verification_code" :disabled="!!editingTemplate" />
             </div>
             <div class="grid gap-2">
               <label class="text-sm font-medium">模板名称</label>
-              <Input v-model="templateForm.name" placeholder="请输入模板名称" />
+              <Input v-model:value="templateForm.name" placeholder="请输入模板名称" />
             </div>
             <div v-if="templateForm.type === 'email'" class="grid gap-2">
               <label class="text-sm font-medium">邮件主题</label>
-              <Input v-model="templateForm.subject" placeholder="请输入邮件主题，支持变量如 {{appName}}" />
+              <Input v-model:value="templateForm.subject" placeholder="请输入邮件主题，支持变量如 {{appName}}" />
             </div>
             <div class="grid gap-2">
               <label class="text-sm font-medium">模板内容</label>
-              <Textarea
-                v-model="templateForm.content"
+              <InputTextArea v-model:value="templateForm.content"
                 :rows="10"
                 placeholder="请输入模板内容，支持变量如 {{code}}, {{username}} 等"
               />
@@ -448,21 +444,21 @@
             </div>
           </div>
         </form>
-        <DialogFooter>
-          <Button variant="outline" @click="showTemplateDialog = false">取消</Button>
+        <div>
+          <Button  @click="showTemplateDialog = false">取消</Button>
           <Button @click="handleSaveTemplate" :disabled="savingTemplate">保存</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </div>
+    </Modal>
 
-    <Dialog v-model:open="showVerifyDialog">
-      <DialogContent class="sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle>域名验证</DialogTitle>
-        </DialogHeader>
+    <Modal v-model:open="showVerifyDialog" :footer="null">
+      <div class="sm:max-w-[600px]">
+        <div>
+          <h3>域名验证</h3>
+        </div>
         <div class="py-4">
           <Alert class="mb-5">
-            <AlertTitle>请按照以下步骤完成验证</AlertTitle>
+            <h3>请按照以下步骤完成验证</h3>
           </Alert>
           <div v-if="verifyingDomain?.verificationMethod === 'dns'" class="space-y-3">
             <h4 class="font-semibold">DNS记录验证</h4>
@@ -484,12 +480,12 @@
             </div>
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" @click="showVerifyDialog = false">取消</Button>
+        <div>
+          <Button  @click="showVerifyDialog = false">取消</Button>
           <Button @click="handleVerifyDomainConfirm" :disabled="verifying">验证</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </div>
+    </Modal>
   </div>
 </template>
 
@@ -497,20 +493,8 @@
 import { ref, onMounted, computed, reactive } from 'vue'
 import { message } from 'antdv-next'
 import { Plus, Check, Info } from '@lucide/vue'
-import { Button } from '@/components/antd-compat'
-import { Input } from '@/components/antd-compat'
-import { Textarea } from '@/components/antd-compat'
-import { Card, CardContent } from '@/components/antd-compat'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/antd-compat'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/antd-compat'
-import { Badge } from '@/components/antd-compat'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/antd-compat'
-import { Alert, AlertDescription, AlertTitle } from '@/components/antd-compat'
-import { RadioGroup, RadioGroupItem } from '@/components/antd-compat'
-import { Checkbox } from '@/components/antd-compat'
-import { Switch } from '@/components/antd-compat'
-import { ColorPicker } from '@/components/antd-compat'
-import { Upload, type UploadFile } from '@/components/antd-compat'
+
+type UploadFile = { type: string; size: number }
 import { customDomainApi, type CustomDomain, type CreateDomainDto, type UpdateSSLDto } from '@/api/customDomain'
 import { messageTemplateApi, type MessageTemplate, type CreateTemplateDto } from '@/api/messageTemplate'
 import { loginStyleApi, type UpdateLoginStyleDto } from '@/api/loginStyle'
@@ -664,7 +648,7 @@ const handleSaveSSL = async () => {
 
 const handleDeleteDomain = async (domain: CustomDomain) => {
   if (!window.confirm('确定要删除该域名吗？')) return
-  
+
   try {
     await customDomainApi.delete(domain.id)
     message.success('域名删除成功')
@@ -809,7 +793,7 @@ const handleSaveTemplate = async () => {
 
 const handleDeleteTemplate = async (template: MessageTemplate) => {
   if (!window.confirm('确定要删除该模板吗？')) return
-  
+
   try {
     await messageTemplateApi.delete(template.id)
     message.success('模板删除成功')

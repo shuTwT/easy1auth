@@ -4,15 +4,6 @@ import { message } from 'antdv-next'
 import { FileText, CheckCircle, XCircle, Clock, Search, RefreshCw, Download, Trash2 } from '@lucide/vue'
 import { auditApi } from '@/api/audit'
 import type { AuditLog, AuditLogQueryDto, AuditLogStats } from '@/types/audit'
-import { Button } from '@/components/antd-compat'
-import { Input } from '@/components/antd-compat'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/antd-compat'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/antd-compat'
-import { Badge } from '@/components/antd-compat'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/antd-compat'
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/antd-compat'
-import { Label } from '@/components/antd-compat'
-
 const loading = ref(false)
 const logs = ref<AuditLog[]>([])
 const total = ref(0)
@@ -41,7 +32,7 @@ const loadLogs = async () => {
       queryForm.startDate = dateRange.value[0]
       queryForm.endDate = dateRange.value[1]
     }
-    
+
     const res = await auditApi.getList(queryForm)
     logs.value = res.items
     total.value = res.total
@@ -110,7 +101,7 @@ const handleExport = async (format: 'csv' | 'json') => {
 const handleCleanup = async () => {
   const confirmed = window.confirm('确定要清理90天前的审计日志吗？此操作不可恢复！')
   if (!confirmed) return
-  
+
   try {
     await auditApi.cleanup(90)
     message.success('清理成功')
@@ -196,7 +187,7 @@ onMounted(() => {
   <div class="audit-log-management p-5">
     <div class="grid grid-cols-4 gap-5 mb-5">
       <Card>
-        <CardContent class="pt-6">
+        <div class="pt-6">
           <div class="flex items-center">
             <div class="w-15 h-15 rounded-lg flex items-center justify-center mr-4 bg-blue-500">
               <FileText class="w-7 h-7 text-white" />
@@ -206,10 +197,10 @@ onMounted(() => {
               <div class="text-sm text-slate-400">总日志数</div>
             </div>
           </div>
-        </CardContent>
+        </div>
       </Card>
       <Card>
-        <CardContent class="pt-6">
+        <div class="pt-6">
           <div class="flex items-center">
             <div class="w-15 h-15 rounded-lg flex items-center justify-center mr-4 bg-green-500">
               <CheckCircle class="w-7 h-7 text-white" />
@@ -219,10 +210,10 @@ onMounted(() => {
               <div class="text-sm text-slate-400">成功日志</div>
             </div>
           </div>
-        </CardContent>
+        </div>
       </Card>
       <Card>
-        <CardContent class="pt-6">
+        <div class="pt-6">
           <div class="flex items-center">
             <div class="w-15 h-15 rounded-lg flex items-center justify-center mr-4 bg-red-500">
               <XCircle class="w-7 h-7 text-white" />
@@ -232,10 +223,10 @@ onMounted(() => {
               <div class="text-sm text-slate-400">失败日志</div>
             </div>
           </div>
-        </CardContent>
+        </div>
       </Card>
       <Card>
-        <CardContent class="pt-6">
+        <div class="pt-6">
           <div class="flex items-center">
             <div class="w-15 h-15 rounded-lg flex items-center justify-center mr-4 bg-amber-500">
               <Clock class="w-7 h-7 text-white" />
@@ -245,230 +236,230 @@ onMounted(() => {
               <div class="text-sm text-slate-400">今日日志</div>
             </div>
           </div>
-        </CardContent>
+        </div>
       </Card>
     </div>
 
     <Card>
-      <CardHeader class="flex flex-row items-center justify-between">
-        <CardTitle>审计日志</CardTitle>
+      <div class="flex flex-row items-center justify-between">
+        <h3>审计日志</h3>
         <div class="flex gap-2">
-          <Button size="sm" @click="handleExport('json')">
+          <Button size="small" @click="handleExport('json')">
             <Download class="w-4 h-4 mr-2" />
             导出JSON
           </Button>
-          <Button size="sm" variant="outline" @click="handleExport('csv')">
+          <Button size="small"  @click="handleExport('csv')">
             <Download class="w-4 h-4 mr-2" />
             导出CSV
           </Button>
-          <Button size="sm" variant="destructive" @click="handleCleanup">
+          <Button size="small" color="error" @click="handleCleanup">
             <Trash2 class="w-4 h-4 mr-2" />
             清理日志
           </Button>
         </div>
-      </CardHeader>
-      <CardContent>
+      </div>
+      <div>
         <div class="flex flex-wrap items-end gap-4 mb-5">
           <div class="grid gap-1.5">
-            <Label>用户名</Label>
-            <Input v-model="queryForm.username" placeholder="请输入用户名" class="w-[150px]" />
+            <label>用户名</label>
+            <Input v-model:value="queryForm.username" placeholder="请输入用户名" class="w-[150px]" />
           </div>
           <div class="grid gap-1.5">
-            <Label>日志类型</Label>
-            <Select v-model="queryForm.type" class="w-[150px]">
-              <SelectTrigger>
-                <SelectValue placeholder="请选择类型" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="auth">认证</SelectItem>
-                  <SelectItem value="user">用户</SelectItem>
-                  <SelectItem value="application">应用</SelectItem>
-                  <SelectItem value="tenant">租户</SelectItem>
-                  <SelectItem value="role">角色</SelectItem>
-                  <SelectItem value="group">用户组</SelectItem>
-                  <SelectItem value="system">系统</SelectItem>
-                </SelectGroup>
-              </SelectContent>
+            <label>日志类型</label>
+            <Select v-model:value="queryForm.type" class="w-[150px]">
+              <div>
+
+              </div>
+
+                <SelectOptGroup>
+                  <SelectOption value="auth">认证</SelectOption>
+                  <SelectOption value="user">用户</SelectOption>
+                  <SelectOption value="application">应用</SelectOption>
+                  <SelectOption value="tenant">租户</SelectOption>
+                  <SelectOption value="role">角色</SelectOption>
+                  <SelectOption value="group">用户组</SelectOption>
+                  <SelectOption value="system">系统</SelectOption>
+                </SelectOptGroup>
+
             </Select>
           </div>
           <div class="grid gap-1.5">
-            <Label>操作</Label>
-            <Input v-model="queryForm.action" placeholder="请输入操作" class="w-[150px]" />
+            <label>操作</label>
+            <Input v-model:value="queryForm.action" placeholder="请输入操作" class="w-[150px]" />
           </div>
           <div class="grid gap-1.5">
-            <Label>状态</Label>
-            <Select v-model="queryForm.status" class="w-[120px]">
-              <SelectTrigger>
-                <SelectValue placeholder="请选择状态" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="success">成功</SelectItem>
-                  <SelectItem value="failed">失败</SelectItem>
-                </SelectGroup>
-              </SelectContent>
+            <label>状态</label>
+            <Select v-model:value="queryForm.status" class="w-[120px]">
+              <div>
+
+              </div>
+
+                <SelectOptGroup>
+                  <SelectOption value="success">成功</SelectOption>
+                  <SelectOption value="failed">失败</SelectOption>
+                </SelectOptGroup>
+
             </Select>
           </div>
           <div class="grid gap-1.5">
-            <Label>IP地址</Label>
-            <Input v-model="queryForm.ip" placeholder="请输入IP地址" class="w-[150px]" />
+            <label>IP地址</label>
+            <Input v-model:value="queryForm.ip" placeholder="请输入IP地址" class="w-[150px]" />
           </div>
           <div class="grid gap-1.5">
-            <Label>时间范围</Label>
+            <label>时间范围</label>
             <div class="flex items-center gap-2">
-              <Input v-model="queryForm.startDate" type="date" class="w-[140px]" />
+              <Input v-model:value="queryForm.startDate" type="date" class="w-[140px]" />
               <span class="text-muted-foreground">至</span>
-              <Input v-model="queryForm.endDate" type="date" class="w-[140px]" />
+              <Input v-model:value="queryForm.endDate" type="date" class="w-[140px]" />
             </div>
           </div>
           <div class="flex gap-2">
-            <Button size="sm" @click="handleSearch">
+            <Button size="small" @click="handleSearch">
               <Search class="w-4 h-4 mr-2" />
               搜索
             </Button>
-            <Button size="sm" variant="outline" @click="handleReset">
+            <Button size="small"  @click="handleReset">
               <RefreshCw class="w-4 h-4 mr-2" />
               重置
             </Button>
           </div>
         </div>
 
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead class="w-[180px]">时间</TableHead>
-              <TableHead class="w-[120px]">用户</TableHead>
-              <TableHead class="w-[100px]">类型</TableHead>
-              <TableHead class="w-[120px]">操作</TableHead>
-              <TableHead class="w-[120px]">资源</TableHead>
-              <TableHead class="w-[140px]">IP地址</TableHead>
-              <TableHead class="w-[80px]">状态</TableHead>
-              <TableHead class="min-w-[200px]">错误信息</TableHead>
-              <TableHead class="w-[100px]">操作</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <TableRow v-if="loading">
-              <TableCell colspan="9" class="text-center text-muted-foreground">加载中...</TableCell>
-            </TableRow>
-            <TableRow v-else-if="logs.length === 0">
-              <TableCell colspan="9" class="text-center py-8 text-muted-foreground">暂无数据</TableCell>
-            </TableRow>
-            <TableRow v-for="item in logs" :key="item.id">
-              <TableCell>{{ formatDate(item.createdAt) }}</TableCell>
-              <TableCell>{{ item.username || '-' }}</TableCell>
-              <TableCell>
-                <Badge :variant="getTypeVariant(item.type)" size="sm">
+        <table>
+          <thead>
+            <tr>
+              <th class="w-[180px]">时间</th>
+              <th class="w-[120px]">用户</th>
+              <th class="w-[100px]">类型</th>
+              <th class="w-[120px]">操作</th>
+              <th class="w-[120px]">资源</th>
+              <th class="w-[140px]">IP地址</th>
+              <th class="w-[80px]">状态</th>
+              <th class="min-w-[200px]">错误信息</th>
+              <th class="w-[100px]">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="loading">
+              <td colspan="9" class="text-center text-muted-foreground">加载中...</td>
+            </tr>
+            <tr v-else-if="logs.length === 0">
+              <td colspan="9" class="text-center py-8 text-muted-foreground">暂无数据</td>
+            </tr>
+            <tr v-for="item in logs" :key="item.id">
+              <td>{{ formatDate(item.createdAt) }}</td>
+              <td>{{ item.username || '-' }}</td>
+              <td>
+                <Tag :color="getTypeVariant(item.type)" size="sm">
                   {{ getTypeText(item.type) }}
-                </Badge>
-              </TableCell>
-              <TableCell>{{ getActionText(item.action) }}</TableCell>
-              <TableCell>{{ item.resource }}</TableCell>
-              <TableCell>{{ item.ip }}</TableCell>
-              <TableCell>
-                <Badge :variant="getStatusVariant(item.status)" size="sm">
+                </Tag>
+              </td>
+              <td>{{ getActionText(item.action) }}</td>
+              <td>{{ item.resource }}</td>
+              <td>{{ item.ip }}</td>
+              <td>
+                <Tag :color="getStatusVariant(item.status)" size="sm">
                   {{ getStatusText(item.status) }}
-                </Badge>
-              </TableCell>
-              <TableCell class="text-muted-foreground">{{ item.errorMessage || '-' }}</TableCell>
-              <TableCell>
-                <Button variant="link" size="sm" @click="handleViewDetail(item)">详情</Button>
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
+                </Tag>
+              </td>
+              <td class="text-muted-foreground">{{ item.errorMessage || '-' }}</td>
+              <td>
+                <Button type="link" size="small" @click="handleViewDetail(item)">详情</Button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
 
         <div class="flex items-center justify-between mt-5">
           <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
           <div class="flex items-center gap-2">
-            <Button variant="outline" size="sm" :disabled="queryForm.page! <= 1" @click="handlePageChange(queryForm.page! - 1)">上一页</Button>
+            <Button  size="small" :disabled="queryForm.page! <= 1" @click="handlePageChange(queryForm.page! - 1)">上一页</Button>
             <span class="text-sm px-2">{{ queryForm.page! }} / {{ totalPages() }}</span>
-            <Button variant="outline" size="sm" :disabled="queryForm.page! >= totalPages()" @click="handlePageChange(queryForm.page! + 1)">下一页</Button>
+            <Button  size="small" :disabled="queryForm.page! >= totalPages()" @click="handlePageChange(queryForm.page! + 1)">下一页</Button>
           </div>
         </div>
-      </CardContent>
+      </div>
     </Card>
 
-    <Dialog v-model:open="detailDialogVisible">
-      <DialogContent class="sm:max-w-[700px]">
-        <DialogHeader>
-          <DialogTitle>审计日志详情</DialogTitle>
-        </DialogHeader>
+    <Modal v-model:open="detailDialogVisible" :footer="null">
+      <div class="sm:max-w-[700px]">
+        <div>
+          <h3>审计日志详情</h3>
+        </div>
         <div v-if="currentLog" class="grid grid-cols-2 gap-4 py-4">
           <div class="space-y-1">
-            <Label class="text-muted-foreground">日志ID</Label>
+            <label class="text-muted-foreground">日志ID</label>
             <div class="text-sm font-mono">{{ currentLog.id }}</div>
           </div>
           <div class="space-y-1">
-            <Label class="text-muted-foreground">时间</Label>
+            <label class="text-muted-foreground">时间</label>
             <div class="text-sm">{{ formatDate(currentLog.createdAt) }}</div>
           </div>
           <div class="space-y-1">
-            <Label class="text-muted-foreground">用户ID</Label>
+            <label class="text-muted-foreground">用户ID</label>
             <div class="text-sm">{{ currentLog.userId || '-' }}</div>
           </div>
           <div class="space-y-1">
-            <Label class="text-muted-foreground">用户名</Label>
+            <label class="text-muted-foreground">用户名</label>
             <div class="text-sm">{{ currentLog.username || '-' }}</div>
           </div>
           <div class="space-y-1">
-            <Label class="text-muted-foreground">类型</Label>
+            <label class="text-muted-foreground">类型</label>
             <div class="text-sm">
-              <Badge :variant="getTypeVariant(currentLog.type)" size="sm">
+              <Tag :color="getTypeVariant(currentLog.type)" size="sm">
                 {{ getTypeText(currentLog.type) }}
-              </Badge>
+              </Tag>
             </div>
           </div>
           <div class="space-y-1">
-            <Label class="text-muted-foreground">操作</Label>
+            <label class="text-muted-foreground">操作</label>
             <div class="text-sm">{{ getActionText(currentLog.action) }}</div>
           </div>
           <div class="space-y-1">
-            <Label class="text-muted-foreground">资源</Label>
+            <label class="text-muted-foreground">资源</label>
             <div class="text-sm">{{ currentLog.resource }}</div>
           </div>
           <div class="space-y-1">
-            <Label class="text-muted-foreground">资源ID</Label>
+            <label class="text-muted-foreground">资源ID</label>
             <div class="text-sm">{{ currentLog.resourceId || '-' }}</div>
           </div>
           <div class="space-y-1">
-            <Label class="text-muted-foreground">请求方法</Label>
+            <label class="text-muted-foreground">请求方法</label>
             <div class="text-sm">{{ currentLog.method || '-' }}</div>
           </div>
           <div class="space-y-1">
-            <Label class="text-muted-foreground">IP地址</Label>
+            <label class="text-muted-foreground">IP地址</label>
             <div class="text-sm">{{ currentLog.ip }}</div>
           </div>
           <div class="col-span-2 space-y-1">
-            <Label class="text-muted-foreground">User Agent</Label>
+            <label class="text-muted-foreground">User Agent</label>
             <div class="text-sm text-muted-foreground">{{ currentLog.userAgent || '-' }}</div>
           </div>
           <div class="space-y-1">
-            <Label class="text-muted-foreground">位置</Label>
+            <label class="text-muted-foreground">位置</label>
             <div class="text-sm">{{ currentLog.location || '-' }}</div>
           </div>
           <div class="space-y-1">
-            <Label class="text-muted-foreground">状态</Label>
+            <label class="text-muted-foreground">状态</label>
             <div class="text-sm">
-              <Badge :variant="getStatusVariant(currentLog.status)" size="sm">
+              <Tag :color="getStatusVariant(currentLog.status)" size="sm">
                 {{ getStatusText(currentLog.status) }}
-              </Badge>
+              </Tag>
             </div>
           </div>
           <div v-if="currentLog.errorMessage" class="col-span-2 space-y-1">
-            <Label class="text-muted-foreground">错误信息</Label>
+            <label class="text-muted-foreground">错误信息</label>
             <div class="text-sm text-destructive">{{ currentLog.errorMessage }}</div>
           </div>
           <div v-if="currentLog.changes" class="col-span-2 space-y-1">
-            <Label class="text-muted-foreground">变更内容</Label>
+            <label class="text-muted-foreground">变更内容</label>
             <pre class="text-sm bg-muted p-3 rounded-md overflow-auto max-h-75">{{ JSON.stringify(currentLog.changes, null, 2) }}</pre>
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" @click="detailDialogVisible = false">关闭</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        <div>
+          <Button  @click="detailDialogVisible = false">关闭</Button>
+        </div>
+      </div>
+    </Modal>
   </div>
 </template>

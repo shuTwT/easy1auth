@@ -32,29 +32,6 @@ import type {
   CreateAdminRoleDto,
   UpdateAdminRoleDto,
 } from '@/types/adminRole'
-import { Button } from '@/components/antd-compat'
-import { Input } from '@/components/antd-compat'
-import { Label } from '@/components/antd-compat'
-import { Card, CardContent } from '@/components/antd-compat'
-import { Badge } from '@/components/antd-compat'
-import { Checkbox } from '@/components/antd-compat'
-import { Textarea } from '@/components/antd-compat'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/antd-compat'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/antd-compat'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/antd-compat'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/antd-compat'
-import { Avatar, AvatarFallback } from '@/components/antd-compat'
-import { Separator } from '@/components/antd-compat'
-
 type ApiErrorResponse = {
   readonly msg?: string
 }
@@ -683,18 +660,18 @@ onMounted(() => {
       <p class="text-sm text-muted-foreground">管理员账号为全局账号；管理员角色归属于当前选中的租户</p>
     </div>
 
-    <Tabs v-model="activeTab">
-      <TabsList class="mb-4">
-        <TabsTrigger value="admins">管理员</TabsTrigger>
-        <TabsTrigger value="roles">管理员角色</TabsTrigger>
-      </TabsList>
+    <div>
+      <div class="mb-4">
+        <Button :type="activeTab === 'admins' ? 'primary' : 'default'" @click="activeTab = 'admins'">管理员</Button>
+        <Button :type="activeTab === 'roles' ? 'primary' : 'default'" @click="activeTab = 'roles'">管理员角色</Button>
+      </div>
 
       <!-- ===================== 管理员 Tab ===================== -->
-      <TabsContent value="admins">
+      <div v-show="activeTab === 'admins'">
         <!-- stats -->
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
           <Card v-for="(stat, index) in adminStatsCards" :key="index" class="transition-all hover:shadow-md">
-            <CardContent class="pt-4">
+            <div class="pt-4">
               <div class="flex items-center gap-3">
                 <div
                   class="size-11 rounded-lg flex items-center justify-center text-white shrink-0"
@@ -713,49 +690,49 @@ onMounted(() => {
                   <div class="text-xs text-muted-foreground mt-0.5">{{ stat.label }}</div>
                 </div>
               </div>
-            </CardContent>
+            </div>
           </Card>
         </div>
 
         <!-- search -->
         <Card class="mb-4">
-          <CardContent class="pt-6">
+          <div class="pt-6">
             <div class="flex flex-wrap gap-4 items-end">
               <div class="grid gap-2">
-                <Label>用户名</Label>
-                <Input v-model="adminQuery.username" placeholder="请输入用户名" class="w-40" />
+                <label>用户名</label>
+                <Input v-model:value="adminQuery.username" placeholder="请输入用户名" class="w-40" />
               </div>
               <div class="grid gap-2">
-                <Label>邮箱</Label>
-                <Input v-model="adminQuery.email" placeholder="请输入邮箱" class="w-40" />
+                <label>邮箱</label>
+                <Input v-model:value="adminQuery.email" placeholder="请输入邮箱" class="w-40" />
               </div>
               <div class="grid gap-2">
-                <Label>手机号</Label>
-                <Input v-model="adminQuery.phone" placeholder="请输入手机号" class="w-40" />
+                <label>手机号</label>
+                <Input v-model:value="adminQuery.phone" placeholder="请输入手机号" class="w-40" />
               </div>
               <div class="grid gap-2">
-                <Label>状态</Label>
-                <Select v-model="adminQuery.status">
-                  <SelectTrigger class="w-32">
-                    <SelectValue placeholder="全部状态" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">正常</SelectItem>
-                    <SelectItem value="disabled">禁用</SelectItem>
-                  </SelectContent>
+                <label>状态</label>
+                <Select v-model:value="adminQuery.status">
+                  <div class="w-32">
+
+                  </div>
+
+                    <SelectOption value="active">正常</SelectOption>
+                    <SelectOption value="disabled">禁用</SelectOption>
+
                 </Select>
               </div>
               <div class="grid gap-2">
-                <Label>管理员角色</Label>
-                <Select v-model="adminQuery.roleId">
-                  <SelectTrigger class="w-44">
-                    <SelectValue placeholder="全部角色" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem v-for="role in adminRolesForFilter" :key="role.id" :value="role.id">
+                <label>管理员角色</label>
+                <Select v-model:value="adminQuery.roleId">
+                  <div class="w-44">
+
+                  </div>
+
+                    <SelectOption v-for="role in adminRolesForFilter" :key="role.id" :value="role.id">
                       {{ role.name }}
-                    </SelectItem>
-                  </SelectContent>
+                    </SelectOption>
+
                 </Select>
               </div>
               <div class="flex gap-2">
@@ -763,18 +740,18 @@ onMounted(() => {
                   <Search class="size-4 mr-1" />
                   搜索
                 </Button>
-                <Button variant="outline" @click="handleAdminReset">
+                <Button  @click="handleAdminReset">
                   <RefreshCw class="size-4 mr-1" />
                   重置
                 </Button>
               </div>
             </div>
-          </CardContent>
+          </div>
         </Card>
 
         <!-- table -->
         <Card>
-          <CardContent class="pt-6">
+          <div class="pt-6">
             <ATable
               :columns="adminColumns"
               :data-source="admins"
@@ -787,9 +764,9 @@ onMounted(() => {
                 <template v-if="column.key === 'username'">
                     <div class="flex items-center gap-2">
                       <Avatar class="size-8 bg-gradient-to-br from-primary to-primary/60">
-                        <AvatarFallback class="bg-transparent text-white text-xs font-semibold">
+                        <span class="bg-transparent text-white text-xs font-semibold">
                           {{ row.username.charAt(0).toUpperCase() }}
-                        </AvatarFallback>
+                        </span>
                       </Avatar>
                       <div class="flex flex-col">
                         <span class="font-medium">{{ row.username }}</span>
@@ -800,20 +777,20 @@ onMounted(() => {
                 <template v-else-if="column.key === 'email'">{{ row.email }}</template>
                 <template v-else-if="column.key === 'phone'">{{ row.phone || '-' }}</template>
                 <template v-else-if="column.key === 'tenantRole'">
-                    <Badge v-if="currentTenantRole(row)" :variant="tenantRoleVariant(currentTenantRole(row))" class="text-xs">
+                    <Tag v-if="currentTenantRole(row)" :color="tenantRoleVariant(currentTenantRole(row))" class="text-xs">
                       {{ tenantRoleText(currentTenantRole(row)) }}
-                    </Badge>
+                    </Tag>
                     <span v-else class="text-muted-foreground">-</span>
                 </template>
                 <template v-else-if="column.key === 'status'">
-                    <Badge :variant="adminStatusVariant(row.status)" class="text-xs">
+                    <Tag :color="adminStatusVariant(row.status)" class="text-xs">
                       {{ adminStatusText(row.status) }}
-                    </Badge>
+                    </Tag>
                 </template>
                 <template v-else-if="column.key === 'mfa'">
-                    <Badge :variant="row.mfaEnabled ? 'default' : 'outline'" class="text-xs">
+                    <Tag :color="row.mfaEnabled ? 'default' : 'outline'" class="text-xs">
                       {{ row.mfaEnabled ? '已启用' : '未启用' }}
-                    </Badge>
+                    </Tag>
                 </template>
                 <span v-else-if="column.key === 'lastLoginAt'" class="text-muted-foreground">{{ formatDate(row.lastLoginAt) }}</span>
                 <span v-else-if="column.key === 'createdAt'" class="text-muted-foreground">{{ formatDate(row.createdAt) }}</span>
@@ -881,36 +858,36 @@ onMounted(() => {
             <div class="flex items-center justify-between mt-4 pt-4 border-t">
               <span class="text-sm text-muted-foreground">共 {{ adminTotal }} 条</span>
               <div class="flex items-center gap-1">
-                <Select :model-value="String(adminQuery.pageSize)" @update:model-value="handleAdminPageSizeChange(Number($event))">
-                  <SelectTrigger class="w-20">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="20">20</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                  </SelectContent>
+                <Select :value="String(adminQuery.pageSize)" @update:value="handleAdminPageSizeChange(Number($event))">
+                  <div class="w-20">
+
+                  </div>
+
+                    <SelectOption value="10">10</SelectOption>
+                    <SelectOption value="20">20</SelectOption>
+                    <SelectOption value="50">50</SelectOption>
+
                 </Select>
                 <span class="text-sm px-2">条/页</span>
-                <Button variant="outline" size="sm" :disabled="adminQuery.page! <= 1" @click="handleAdminPageChange(adminQuery.page! - 1)">
+                <Button  size="small" :disabled="adminQuery.page! <= 1" @click="handleAdminPageChange(adminQuery.page! - 1)">
                   上一页
                 </Button>
                 <span class="text-sm px-2">{{ adminQuery.page }} / {{ adminTotalPages }}</span>
-                <Button variant="outline" size="sm" :disabled="adminQuery.page! >= adminTotalPages" @click="handleAdminPageChange(adminQuery.page! + 1)">
+                <Button  size="small" :disabled="adminQuery.page! >= adminTotalPages" @click="handleAdminPageChange(adminQuery.page! + 1)">
                   下一页
                 </Button>
               </div>
             </div>
-          </CardContent>
+          </div>
         </Card>
-      </TabsContent>
+      </div>
 
       <!-- ===================== 管理员角色 Tab ===================== -->
-      <TabsContent value="roles">
+      <div v-show="activeTab === 'roles'">
         <!-- stats -->
         <div class="grid grid-cols-3 gap-4 mb-6">
           <Card v-for="(stat, index) in roleStatsCards" :key="index" class="transition-all hover:shadow-md">
-            <CardContent class="pt-4">
+            <div class="pt-4">
               <div class="flex items-center gap-3">
                 <div
                   class="size-11 rounded-lg flex items-center justify-center text-white shrink-0"
@@ -927,13 +904,13 @@ onMounted(() => {
                   <div class="text-xs text-muted-foreground mt-0.5">{{ stat.label }}</div>
                 </div>
               </div>
-            </CardContent>
+            </div>
           </Card>
         </div>
 
         <!-- permission catalog display -->
         <Card class="mb-4">
-          <CardContent class="pt-6">
+          <div class="pt-6">
             <div class="flex items-center gap-2 mb-4">
               <Shield class="size-4 text-primary" />
               <h3 class="text-sm font-semibold">权限目录</h3>
@@ -947,29 +924,28 @@ onMounted(() => {
               >
                 <div class="text-sm font-medium mb-2">{{ category.name }}</div>
                 <div class="flex flex-wrap gap-1.5">
-                  <Badge
+                  <Tag
                     v-for="item in category.items"
                     :key="item.code"
-                    variant="outline"
+
                     class="text-xs"
                   >
                     {{ item.name }}
-                  </Badge>
+                  </Tag>
                 </div>
               </div>
             </div>
-          </CardContent>
+          </div>
         </Card>
 
         <!-- role list -->
         <Card>
-          <CardContent class="pt-6">
+          <div class="pt-6">
             <div class="flex justify-between items-center mb-4">
               <div class="flex items-center gap-2">
                 <div class="relative">
                   <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                  <Input
-                    v-model="roleSearch"
+                  <Input v-model:value="roleSearch"
                     placeholder="搜索角色名称"
                     class="w-64 pl-8"
                     @keyup.enter="handleRoleSearch"
@@ -979,7 +955,7 @@ onMounted(() => {
                   <Search class="size-4 mr-1" />
                   搜索
                 </Button>
-                <Button variant="outline" @click="handleRoleReset">
+                <Button  @click="handleRoleReset">
                   <RefreshCw class="size-4 mr-1" />
                   重置
                 </Button>
@@ -1001,21 +977,21 @@ onMounted(() => {
               <template #bodyCell="{ column, record: row }">
                 <template v-if="column.key === 'name'">
                     <div class="flex items-center gap-2">
-                      <Badge :variant="roleTypeVariant(row.isSystem)" class="text-xs">
+                      <Tag :color="roleTypeVariant(row.isSystem)" class="text-xs">
                         {{ row.isSystem ? '系统' : '自定义' }}
-                      </Badge>
+                      </Tag>
                       <span class="font-medium">{{ row.name }}</span>
                     </div>
                 </template>
                 <span v-else-if="column.key === 'description'" class="text-muted-foreground">{{ row.description || '-' }}</span>
                 <template v-else-if="column.key === 'permissions'">
-                    <Badge variant="outline" class="text-xs">{{ permissionsSummary(row.permissions) }}</Badge>
+                    <Tag  class="text-xs">{{ permissionsSummary(row.permissions) }}</Tag>
                 </template>
                 <template v-else-if="column.key === 'adminCount'">{{ row.adminCount || 0 }}</template>
                 <template v-else-if="column.key === 'type'">
-                    <Badge :variant="row.isSystem ? 'destructive' : 'default'" class="text-xs">
+                    <Tag :color="row.isSystem ? 'destructive' : 'default'" class="text-xs">
                       {{ row.isSystem ? '系统' : '自定义' }}
-                    </Badge>
+                    </Tag>
                 </template>
                 <span v-else-if="column.key === 'createdAt'" class="text-muted-foreground">{{ formatDate(row.createdAt) }}</span>
                 <template v-else-if="column.key === 'actions'">
@@ -1046,120 +1022,120 @@ onMounted(() => {
             <div class="flex items-center justify-between mt-4 pt-4 border-t">
               <span class="text-sm text-muted-foreground">共 {{ roleTotal }} 条</span>
               <div class="flex items-center gap-1">
-                <Button variant="outline" size="sm" :disabled="rolePage <= 1" @click="handleRolePageChange(rolePage - 1)">
+                <Button  size="small" :disabled="rolePage <= 1" @click="handleRolePageChange(rolePage - 1)">
                   上一页
                 </Button>
                 <span class="text-sm px-2">{{ rolePage }} / {{ roleTotalPages }}</span>
-                <Button variant="outline" size="sm" :disabled="rolePage >= roleTotalPages" @click="handleRolePageChange(rolePage + 1)">
+                <Button  size="small" :disabled="rolePage >= roleTotalPages" @click="handleRolePageChange(rolePage + 1)">
                   下一页
                 </Button>
               </div>
             </div>
-          </CardContent>
+          </div>
         </Card>
-      </TabsContent>
-    </Tabs>
+      </div>
+    </div>
 
     <!-- ===================== Edit admin dialog ===================== -->
-    <Dialog v-model:open="editDialogVisible">
-      <DialogContent class="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>编辑管理员</DialogTitle>
-        </DialogHeader>
+    <Modal v-model:open="editDialogVisible" :footer="null">
+      <div class="max-w-lg">
+        <div>
+          <h3>编辑管理员</h3>
+        </div>
         <form @submit.prevent="handleEditSubmit">
           <div class="grid gap-4 py-4">
             <div class="grid gap-2">
-              <Label>用户名</Label>
-              <Input v-model="editForm.username" placeholder="请输入用户名" />
+              <label>用户名</label>
+              <Input v-model:value="editForm.username" placeholder="请输入用户名" />
             </div>
             <div class="grid gap-2">
-              <Label>邮箱</Label>
-              <Input v-model="editForm.email" placeholder="请输入邮箱" />
+              <label>邮箱</label>
+              <Input v-model:value="editForm.email" placeholder="请输入邮箱" />
             </div>
             <div class="grid gap-2">
-              <Label>手机号</Label>
-              <Input v-model="editForm.phone" placeholder="请输入手机号" />
+              <label>手机号</label>
+              <Input v-model:value="editForm.phone" placeholder="请输入手机号" />
             </div>
           </div>
         </form>
-        <DialogFooter>
-          <Button variant="outline" @click="editDialogVisible = false">取消</Button>
+        <div>
+          <Button  @click="editDialogVisible = false">取消</Button>
           <Button :disabled="editSubmitting" @click="handleEditSubmit">
             {{ editSubmitting ? '提交中...' : '确定' }}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </div>
+    </Modal>
 
     <!-- ===================== Reset password dialog ===================== -->
-    <Dialog v-model:open="resetPwdDialogVisible">
-      <DialogContent class="max-w-md">
-        <DialogHeader>
-          <DialogTitle>重置管理员密码</DialogTitle>
-        </DialogHeader>
+    <Modal v-model:open="resetPwdDialogVisible" :footer="null">
+      <div class="max-w-md">
+        <div>
+          <h3>重置管理员密码</h3>
+        </div>
         <form @submit.prevent="handleResetPwdSubmit">
           <div class="grid gap-4 py-4">
             <div class="grid gap-2">
-              <Label>新密码</Label>
-              <Input v-model="resetPwdForm.newPassword" type="password" placeholder="请输入新密码" />
+              <label>新密码</label>
+              <Input v-model:value="resetPwdForm.newPassword" type="password" placeholder="请输入新密码" />
             </div>
             <div class="grid gap-2">
-              <Label>确认密码</Label>
-              <Input v-model="resetPwdForm.confirmPassword" type="password" placeholder="请确认新密码" />
+              <label>确认密码</label>
+              <Input v-model:value="resetPwdForm.confirmPassword" type="password" placeholder="请确认新密码" />
             </div>
           </div>
         </form>
-        <DialogFooter>
-          <Button variant="outline" @click="resetPwdDialogVisible = false">取消</Button>
+        <div>
+          <Button  @click="resetPwdDialogVisible = false">取消</Button>
           <Button :disabled="resetPwdSubmitting" @click="handleResetPwdSubmit">
             {{ resetPwdSubmitting ? '提交中...' : '确定' }}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </div>
+    </Modal>
 
     <!-- ===================== Reset MFA confirmation ===================== -->
-    <AlertDialog v-model:open="resetMfaDialogVisible">
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>重置管理员 MFA</AlertDialogTitle>
-          <AlertDialogDescription>
+    <Modal v-model:open="resetMfaDialogVisible" :footer="null">
+      <div>
+        <div>
+          <h3>重置管理员 MFA</h3>
+          <p>
             确定要重置管理员 <span class="font-medium">{{ resetMfaTarget?.username }}</span> 的多因素认证配置吗？重置后该管理员需要重新配置 MFA。
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel :disabled="resetMfaSubmitting">取消</AlertDialogCancel>
-          <AlertDialogAction :disabled="resetMfaSubmitting" @click="handleResetMfaConfirm">
+          </p>
+        </div>
+        <div>
+          <Button :disabled="resetMfaSubmitting">取消</Button>
+          <Button :disabled="resetMfaSubmitting" @click="handleResetMfaConfirm">
             {{ resetMfaSubmitting ? '处理中...' : '确认重置' }}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+          </Button>
+        </div>
+      </div>
+    </Modal>
 
     <!-- ===================== Assign roles dialog ===================== -->
-    <Dialog v-model:open="assignRolesDialogVisible">
-      <DialogContent class="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>分配管理员角色</DialogTitle>
-        </DialogHeader>
+    <Modal v-model:open="assignRolesDialogVisible" :footer="null">
+      <div class="max-w-lg">
+        <div>
+          <h3>分配管理员角色</h3>
+        </div>
         <div class="py-4">
           <div class="grid gap-2 mb-4">
-            <Label>当前角色</Label>
+            <label>当前角色</label>
             <div v-if="assignRolesMembership && assignRolesMembership.roles.length > 0" class="flex flex-wrap gap-2">
-              <Badge
+              <Tag
                 v-for="role in assignRolesMembership.roles"
                 :key="role.id"
-                variant="secondary"
+                color="blue"
                 class="text-xs"
               >
                 {{ role.name }}
-              </Badge>
+              </Tag>
             </div>
             <div v-else class="text-muted-foreground text-sm">暂未分配角色</div>
           </div>
-          <Separator class="my-2" />
+          <Divider class="my-2" />
           <div class="grid gap-2">
-            <Label>选择角色</Label>
+            <label>选择角色</label>
             <div class="border rounded-lg p-3 max-h-72 overflow-y-auto">
               <div v-if="adminRolesForFilter.length === 0" class="text-muted-foreground text-sm text-center py-4">
                 暂无可分配角色
@@ -1173,64 +1149,64 @@ onMounted(() => {
                   :checked="assignRolesSelected.includes(role.id)"
                   @update:checked="toggleRoleSelection(role.id)"
                 />
-                <Badge :variant="roleTypeVariant(role.isSystem)" class="text-xs">
+                <Tag :color="roleTypeVariant(role.isSystem)" class="text-xs">
                   {{ role.isSystem ? '系统' : '自定义' }}
-                </Badge>
+                </Tag>
                 <span class="font-medium text-sm">{{ role.name }}</span>
                 <span class="text-xs text-muted-foreground">{{ permissionsSummary(role.permissions) }}</span>
               </div>
             </div>
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" @click="assignRolesDialogVisible = false">取消</Button>
+        <div>
+          <Button  @click="assignRolesDialogVisible = false">取消</Button>
           <Button :disabled="assignRolesSubmitting" @click="handleAssignRolesSubmit">
             {{ assignRolesSubmitting ? '提交中...' : '确定' }}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </div>
+    </Modal>
 
     <!-- ===================== Remove from tenant confirmation ===================== -->
-    <AlertDialog v-model:open="removeDialogVisible">
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>移出租户</AlertDialogTitle>
-          <AlertDialogDescription>
+    <Modal v-model:open="removeDialogVisible" :footer="null">
+      <div>
+        <div>
+          <h3>移出租户</h3>
+          <p>
             确定要将管理员 <span class="font-medium">{{ removeTarget?.username }}</span> 移出当前租户吗？此操作只解除该管理员与当前租户的关联，不会删除管理员账号。
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel :disabled="removeSubmitting">取消</AlertDialogCancel>
-          <AlertDialogAction
+          </p>
+        </div>
+        <div>
+          <Button :disabled="removeSubmitting">取消</Button>
+          <Button
             :disabled="removeSubmitting"
             class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             @click="handleRemoveConfirm"
           >
             {{ removeSubmitting ? '处理中...' : '确认移除' }}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+          </Button>
+        </div>
+      </div>
+    </Modal>
 
     <!-- ===================== Create / edit role dialog ===================== -->
-    <Dialog v-model:open="roleDialogVisible">
-      <DialogContent class="max-w-xl">
-        <DialogHeader>
-          <DialogTitle>{{ roleDialogTitle }}</DialogTitle>
-        </DialogHeader>
+    <Modal v-model:open="roleDialogVisible" :footer="null">
+      <div class="max-w-xl">
+        <div>
+          <h3>{{ roleDialogTitle }}</h3>
+        </div>
         <form @submit.prevent="handleRoleSubmit">
           <div class="grid gap-4 py-4">
             <div class="grid gap-2">
-              <Label>角色名称 <span class="text-destructive">*</span></Label>
-              <Input v-model="roleForm.name" placeholder="请输入角色名称" />
+              <label>角色名称 <span class="text-destructive">*</span></label>
+              <Input v-model:value="roleForm.name" placeholder="请输入角色名称" />
             </div>
             <div class="grid gap-2">
-              <Label>描述</Label>
-              <Textarea v-model="roleForm.description" :rows="2" placeholder="请输入角色描述" />
+              <label>描述</label>
+              <InputTextArea v-model:value="roleForm.description" :rows="2" placeholder="请输入角色描述" />
             </div>
             <div class="grid gap-2">
-              <Label>权限配置</Label>
+              <label>权限配置</label>
               <div class="border rounded-lg p-3 max-h-80 overflow-y-auto">
                 <div
                   v-for="category in permissionCategories"
@@ -1257,35 +1233,35 @@ onMounted(() => {
             </div>
           </div>
         </form>
-        <DialogFooter>
-          <Button variant="outline" @click="roleDialogVisible = false">取消</Button>
+        <div>
+          <Button  @click="roleDialogVisible = false">取消</Button>
           <Button :disabled="roleDialogSubmitting" @click="handleRoleSubmit">
             {{ roleDialogSubmitting ? '提交中...' : '确定' }}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </div>
+    </Modal>
 
     <!-- ===================== Delete role confirmation ===================== -->
-    <AlertDialog v-model:open="deleteRoleDialogVisible">
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>删除管理员角色</AlertDialogTitle>
-          <AlertDialogDescription>
+    <Modal v-model:open="deleteRoleDialogVisible" :footer="null">
+      <div>
+        <div>
+          <h3>删除管理员角色</h3>
+          <p>
             确定要删除角色 <span class="font-medium">{{ deleteRoleTarget?.name }}</span> 吗？已分配该角色的管理员将失去对应权限。此操作不可恢复。
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel :disabled="deleteRoleSubmitting">取消</AlertDialogCancel>
-          <AlertDialogAction
+          </p>
+        </div>
+        <div>
+          <Button :disabled="deleteRoleSubmitting">取消</Button>
+          <Button
             :disabled="deleteRoleSubmitting"
             class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             @click="handleDeleteRoleConfirm"
           >
             {{ deleteRoleSubmitting ? '处理中...' : '确认删除' }}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+          </Button>
+        </div>
+      </div>
+    </Modal>
   </div>
 </template>

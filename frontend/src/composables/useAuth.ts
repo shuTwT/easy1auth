@@ -29,9 +29,9 @@ export function useAuth() {
         message.info('请输入身份验证器中的动态验证码')
         return response
       }
-      if (!response.token || !response.user) throw new Error('登录响应无效')
+      if (!response.token || !response.refreshToken || !response.user) throw new Error('登录响应无效')
       const user = response.user
-      userStore.setToken(response.token)
+      userStore.setSession(response.token, response.refreshToken)
       userStore.setUserInfo(response.user)
       if (response.tenants && response.tenants.length > 0) {
         userStore.setTenants(response.tenants)
@@ -59,9 +59,9 @@ export function useAuth() {
     loading.value = true
     try {
       const response = await authApi.verifyMfa(mfaChallenge.value, code)
-      if (!response.token || !response.user) throw new Error('MFA 登录响应无效')
+      if (!response.token || !response.refreshToken || !response.user) throw new Error('MFA 登录响应无效')
       mfaChallenge.value = null
-      userStore.setToken(response.token)
+      userStore.setSession(response.token, response.refreshToken)
       userStore.setUserInfo(response.user)
       if (response.tenants?.length) {
         userStore.setTenants(response.tenants)
@@ -101,7 +101,7 @@ export function useAuth() {
     loading.value = true
     try {
       const response = await authApi.register(data)
-      userStore.setToken(response.token)
+      userStore.setSession(response.token, response.refreshToken)
       userStore.setUserInfo(response.user)
       if (response.tenants && response.tenants.length > 0) {
         userStore.setTenants(response.tenants)
@@ -163,8 +163,8 @@ export function useAuth() {
       }
 
       const loginResponse = await authApi.passkeyLoginFinish(finishData)
-      if (!loginResponse.token || !loginResponse.user) throw new Error('Passkey 登录响应无效')
-      userStore.setToken(loginResponse.token)
+      if (!loginResponse.token || !loginResponse.refreshToken || !loginResponse.user) throw new Error('Passkey 登录响应无效')
+      userStore.setSession(loginResponse.token, loginResponse.refreshToken)
       userStore.setUserInfo(loginResponse.user)
       message.success('登录成功')
       await router.push('/dashboard')
@@ -193,7 +193,7 @@ export function useAuth() {
     loading.value = true
     try {
       const response = await authApi.socialLogin({ provider, code, state })
-      userStore.setToken(response.token)
+      userStore.setSession(response.token, response.refreshToken)
       userStore.setUserInfo(response.user)
       
       if (response.isNewUser) {

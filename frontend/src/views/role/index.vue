@@ -17,17 +17,6 @@ import { userApi } from '@/api/user'
 import { permissionApi } from '@/api/permission'
 import type { PermissionTree } from '@/types/permission'
 import type { Role, RoleTree, RoleStats, CreateRoleDto, RoleUser } from '@/types/role'
-import { Button } from '@/components/antd-compat'
-import { Input } from '@/components/antd-compat'
-import { Card, CardContent, CardHeader } from '@/components/antd-compat'
-import { Badge } from '@/components/antd-compat'
-import { Tree } from '@/components/antd-compat'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/antd-compat'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/antd-compat'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/antd-compat'
-import { Textarea } from '@/components/antd-compat'
-import { Avatar, AvatarFallback } from '@/components/antd-compat'
-
 const loading = ref(false)
 const roles = ref<Role[]>([])
 const total = ref(0)
@@ -377,7 +366,7 @@ onMounted(() => {
 
     <div class="grid grid-cols-4 gap-5 mb-6">
       <Card v-for="(stat, index) in statsData" :key="index" class="cursor-pointer transition-all hover:-translate-y-1 hover:shadow-lg">
-        <CardContent class="pt-4">
+        <div class="pt-4">
           <div class="flex items-center gap-4">
             <div
               class="w-14 h-14 rounded-lg flex items-center justify-center text-white shrink-0"
@@ -395,44 +384,43 @@ onMounted(() => {
               <div class="text-sm text-muted-foreground mt-1">{{ stat.label }}</div>
             </div>
           </div>
-        </CardContent>
+        </div>
       </Card>
     </div>
 
     <Card>
-      <CardHeader class="border-b">
+      <div class="border-b">
         <div class="flex justify-between items-center">
           <div class="flex items-center gap-3">
             <div class="relative">
               <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                v-model="searchQuery"
+              <Input v-model:value="searchQuery"
                 placeholder="搜索角色名称、编码"
                 class="w-72 pl-8"
                 @keyup.enter="loadRoles"
               />
             </div>
-            <Select v-model="filterType" @update:model-value="loadRoles">
-              <SelectTrigger class="w-36">
-                <SelectValue placeholder="角色类型" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="system">系统角色</SelectItem>
-                <SelectItem value="custom">自定义角色</SelectItem>
-              </SelectContent>
+            <Select v-model:value="filterType" @update:value="loadRoles">
+              <div class="w-36">
+
+              </div>
+
+                <SelectOption value="system">系统角色</SelectOption>
+                <SelectOption value="custom">自定义角色</SelectOption>
+
             </Select>
             <Button @click="handleSearch">
               <Search class="w-4 h-4 mr-1" />
               搜索
             </Button>
-            <Button variant="outline" @click="handleReset">
+            <Button  @click="handleReset">
               <RefreshCw class="w-4 h-4 mr-1" />
               重置
             </Button>
           </div>
           <div class="flex gap-0">
             <Button
-              :variant="viewMode === 'list' ? 'default' : 'outline'"
+              :color="viewMode === 'list' ? 'default' : 'outline'"
               class="rounded-r-none"
               @click="viewMode = 'list'"
             >
@@ -440,7 +428,7 @@ onMounted(() => {
               列表
             </Button>
             <Button
-              :variant="viewMode === 'tree' ? 'default' : 'outline'"
+              :color="viewMode === 'tree' ? 'default' : 'outline'"
               class="rounded-l-none"
               @click="viewMode = 'tree'"
             >
@@ -449,62 +437,62 @@ onMounted(() => {
             </Button>
           </div>
         </div>
-      </CardHeader>
+      </div>
 
-      <CardContent class="pt-4">
+      <div class="pt-4">
         <div v-if="viewMode === 'list'">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead class="w-[200px]">角色名称</TableHead>
-                <TableHead class="w-[180px]">角色编码</TableHead>
-                <TableHead class="min-w-[200px]">描述</TableHead>
-                <TableHead class="w-[140px]">数据范围</TableHead>
-                <TableHead class="w-[100px]">用户数</TableHead>
-                <TableHead class="w-[180px]">创建时间</TableHead>
-                <TableHead class="w-[180px]">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow v-if="loading">
-                <TableCell colspan="7" class="text-center py-8 text-muted-foreground">
+          <table>
+            <thead>
+              <tr>
+                <th class="w-[200px]">角色名称</th>
+                <th class="w-[180px]">角色编码</th>
+                <th class="min-w-[200px]">描述</th>
+                <th class="w-[140px]">数据范围</th>
+                <th class="w-[100px]">用户数</th>
+                <th class="w-[180px]">创建时间</th>
+                <th class="w-[180px]">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="loading">
+                <td colspan="7" class="text-center py-8 text-muted-foreground">
                   加载中...
-                </TableCell>
-              </TableRow>
-              <TableRow v-else-if="roles.length === 0">
-                <TableCell colspan="7" class="text-center py-8 text-muted-foreground">
+                </td>
+              </tr>
+              <tr v-else-if="roles.length === 0">
+                <td colspan="7" class="text-center py-8 text-muted-foreground">
                   暂无数据
-                </TableCell>
-              </TableRow>
-              <TableRow v-for="row in roles" :key="row.id">
-                <TableCell>
+                </td>
+              </tr>
+              <tr v-for="row in roles" :key="row.id">
+                <td>
                   <div class="flex items-center gap-2">
-                    <Badge :variant="getTypeVariant(row.type)" class="text-xs">
+                    <Tag :color="getTypeVariant(row.type)" class="text-xs">
                       {{ row.type === 'system' ? '系统' : '自定义' }}
-                    </Badge>
+                    </Tag>
                     <span class="font-medium text-foreground">{{ row.name }}</span>
                   </div>
-                </TableCell>
-                <TableCell>
+                </td>
+                <td>
                   <code class="bg-muted px-2 py-0.5 rounded text-xs text-muted-foreground font-mono">
                     {{ row.code }}
                   </code>
-                </TableCell>
-                <TableCell class="text-muted-foreground">{{ row.description || '-' }}</TableCell>
-                <TableCell>
-                  <Badge variant="outline" class="text-xs">
+                </td>
+                <td class="text-muted-foreground">{{ row.description || '-' }}</td>
+                <td>
+                  <Tag  class="text-xs">
                     {{ getDataScopeLabel(row.dataScope) }}
-                  </Badge>
-                </TableCell>
-                <TableCell class="text-center">
-                  <Button variant="link" size="sm" class="p-0 h-auto font-semibold" @click="handleViewUsers(row)">
+                  </Tag>
+                </td>
+                <td class="text-center">
+                  <Button type="link" size="small" class="p-0 h-auto font-semibold" @click="handleViewUsers(row)">
                     {{ row.userCount || 0 }}
                   </Button>
-                </TableCell>
-                <TableCell class="text-muted-foreground">{{ formatDate(row.createdAt) }}</TableCell>
-                <TableCell>
+                </td>
+                <td class="text-muted-foreground">{{ formatDate(row.createdAt) }}</td>
+                <td>
                   <div class="flex gap-2">
-                    <Button variant="link" size="sm" class="p-0 h-auto" @click="handleViewUsers(row)">
+                    <Button type="link" size="small" class="p-0 h-auto" @click="handleViewUsers(row)">
                       查看用户
                     </Button>
                     <Button
@@ -526,19 +514,19 @@ onMounted(() => {
                       删除
                     </Button>
                   </div>
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
+                </td>
+              </tr>
+            </tbody>
+          </table>
 
           <div class="flex items-center justify-between mt-5">
             <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
             <div class="flex items-center gap-1">
-              <Button variant="outline" size="sm" :disabled="page <= 1" @click="handlePageChange(page - 1)">
+              <Button  size="small" :disabled="page <= 1" @click="handlePageChange(page - 1)">
                 上一页
               </Button>
               <span class="text-sm px-2">{{ page }} / {{ totalPages || 1 }}</span>
-              <Button variant="outline" size="sm" :disabled="page >= totalPages" @click="handlePageChange(page + 1)">
+              <Button  size="small" :disabled="page >= totalPages" @click="handlePageChange(page + 1)">
                 下一页
               </Button>
             </div>
@@ -555,74 +543,74 @@ onMounted(() => {
             <template #default="{ data }">
               <div class="flex items-center justify-between w-full pr-5">
                 <div class="flex items-center gap-2">
-                  <Badge :variant="getTypeVariant(data.type)" class="text-xs">
+                  <Tag :color="getTypeVariant(data.type)" class="text-xs">
                     {{ data.type === 'system' ? '系统' : '自定义' }}
-                  </Badge>
+                  </Tag>
                   <span>{{ data.name }}</span>
                   <span class="text-xs text-muted-foreground ml-1">({{ data.code }})</span>
                 </div>
-                <Button variant="link" size="sm" class="p-0 h-auto" @click.stop="handleViewUsers(data)">
+                <Button type="link" size="small" class="p-0 h-auto" @click.stop="handleViewUsers(data)">
                   {{ data.userCount || 0 }} 用户
                 </Button>
               </div>
             </template>
           </Tree>
         </div>
-      </CardContent>
+      </div>
     </Card>
 
-    <Dialog v-model:open="dialogVisible">
-      <DialogContent class="max-w-xl">
-        <DialogHeader>
-          <DialogTitle>{{ dialogTitle }}</DialogTitle>
-        </DialogHeader>
+    <Modal v-model:open="dialogVisible" :footer="null">
+      <div class="max-w-xl">
+        <div>
+          <h3>{{ dialogTitle }}</h3>
+        </div>
         <form @submit.prevent="handleSubmit">
           <div class="grid gap-4 py-4">
             <div class="grid gap-2">
               <label class="text-sm font-medium">角色名称 <span class="text-destructive">*</span></label>
-              <Input v-model="roleForm.name" placeholder="请输入角色名称" />
+              <Input v-model:value="roleForm.name" placeholder="请输入角色名称" />
             </div>
             <div class="grid gap-2">
               <label class="text-sm font-medium">角色编码 <span class="text-destructive">*</span></label>
-              <Input v-model="roleForm.code" placeholder="请输入角色编码" :disabled="isEdit" />
+              <Input v-model:value="roleForm.code" placeholder="请输入角色编码" :disabled="isEdit" />
             </div>
             <div class="grid gap-2">
               <label class="text-sm font-medium">角色类型 <span class="text-destructive">*</span></label>
-              <Select v-model="roleForm.type" :disabled="isEdit">
-                <SelectTrigger>
-                  <SelectValue placeholder="请选择角色类型" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="custom">自定义角色</SelectItem>
-                  <SelectItem value="system">系统角色</SelectItem>
-                </SelectContent>
+              <Select v-model:value="roleForm.type" :disabled="isEdit">
+                <div>
+
+                </div>
+
+                  <SelectOption value="custom">自定义角色</SelectOption>
+                  <SelectOption value="system">系统角色</SelectOption>
+
               </Select>
             </div>
             <div class="grid gap-2">
               <label class="text-sm font-medium">数据范围 <span class="text-destructive">*</span></label>
-              <Select v-model="roleForm.dataScope">
-                <SelectTrigger>
-                  <SelectValue placeholder="请选择数据范围" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="self">仅本人数据</SelectItem>
-                  <SelectItem value="department">本部门数据</SelectItem>
-                  <SelectItem value="department_and_sub">本部门及下级部门数据</SelectItem>
-                  <SelectItem value="all">全部数据</SelectItem>
-                </SelectContent>
+              <Select v-model:value="roleForm.dataScope">
+                <div>
+
+                </div>
+
+                  <SelectOption value="self">仅本人数据</SelectOption>
+                  <SelectOption value="department">本部门数据</SelectOption>
+                  <SelectOption value="department_and_sub">本部门及下级部门数据</SelectOption>
+                  <SelectOption value="all">全部数据</SelectOption>
+
               </Select>
             </div>
             <div class="grid gap-2">
               <label class="text-sm font-medium">父级角色</label>
-              <Select v-model="roleForm.parentId">
-                <SelectTrigger>
-                  <SelectValue placeholder="请选择父级角色" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem v-for="role in availableParentRoles" :key="role.id" :value="role.id">
+              <Select v-model:value="roleForm.parentId">
+                <div>
+
+                </div>
+
+                  <SelectOption v-for="role in availableParentRoles" :key="role.id" :value="role.id">
                     {{ role.name }}
-                  </SelectItem>
-                </SelectContent>
+                  </SelectOption>
+
               </Select>
             </div>
             <div class="grid gap-2">
@@ -650,30 +638,29 @@ onMounted(() => {
             </div>
             <div class="grid gap-2">
               <label class="text-sm font-medium">描述</label>
-              <Textarea v-model="roleForm.description" :rows="3" placeholder="请输入描述" />
+              <InputTextArea v-model:value="roleForm.description" :rows="3" placeholder="请输入描述" />
             </div>
           </div>
         </form>
-        <DialogFooter>
-          <Button variant="outline" @click="dialogVisible = false">取消</Button>
+        <div>
+          <Button  @click="dialogVisible = false">取消</Button>
           <Button :disabled="submitting" @click="handleSubmit">
             {{ submitting ? '提交中...' : '确定' }}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </div>
+    </Modal>
 
-    <Dialog v-model:open="usersDialogVisible">
-      <DialogContent class="max-w-3xl">
-        <DialogHeader>
-          <DialogTitle>角色用户</DialogTitle>
-        </DialogHeader>
+    <Modal v-model:open="usersDialogVisible" :footer="null">
+      <div class="max-w-3xl">
+        <div>
+          <h3>角色用户</h3>
+        </div>
         <div class="min-h-[400px]">
           <div class="flex justify-between mb-5">
             <div class="relative">
               <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                v-model="userSearchQuery"
+              <Input v-model:value="userSearchQuery"
                 placeholder="搜索用户名、邮箱、姓名"
                 class="w-72 pl-8"
                 @keyup.enter="loadRoleUsers"
@@ -684,66 +671,66 @@ onMounted(() => {
               分配用户
             </Button>
           </div>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead class="w-[150px]">用户名</TableHead>
-                <TableHead class="w-[120px]">姓名</TableHead>
-                <TableHead class="w-[200px]">邮箱</TableHead>
-                <TableHead class="w-[150px]">部门</TableHead>
-                <TableHead class="w-[150px]">岗位</TableHead>
-                <TableHead class="w-[100px]">状态</TableHead>
-                <TableHead class="w-[100px]">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow v-if="usersLoading">
-                <TableCell colspan="7" class="text-center py-8 text-muted-foreground">
+          <table>
+            <thead>
+              <tr>
+                <th class="w-[150px]">用户名</th>
+                <th class="w-[120px]">姓名</th>
+                <th class="w-[200px]">邮箱</th>
+                <th class="w-[150px]">部门</th>
+                <th class="w-[150px]">岗位</th>
+                <th class="w-[100px]">状态</th>
+                <th class="w-[100px]">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="usersLoading">
+                <td colspan="7" class="text-center py-8 text-muted-foreground">
                   加载中...
-                </TableCell>
-              </TableRow>
-              <TableRow v-else-if="roleUsers.length === 0">
-                <TableCell colspan="7" class="text-center py-8 text-muted-foreground">
+                </td>
+              </tr>
+              <tr v-else-if="roleUsers.length === 0">
+                <td colspan="7" class="text-center py-8 text-muted-foreground">
                   暂无数据
-                </TableCell>
-              </TableRow>
-              <TableRow v-for="row in roleUsers" :key="row.id">
-                <TableCell>
+                </td>
+              </tr>
+              <tr v-for="row in roleUsers" :key="row.id">
+                <td>
                   <div class="flex items-center gap-2">
                     <Avatar class="w-7 h-7">
-                      <AvatarFallback class="bg-gradient-to-br from-primary to-primary/60 text-white text-xs font-semibold">
+                      <span class="bg-gradient-to-br from-primary to-primary/60 text-white text-xs font-semibold">
                         {{ row.name?.charAt(0) || row.username.charAt(0).toUpperCase() }}
-                      </AvatarFallback>
+                      </span>
                     </Avatar>
                     <span>{{ row.username }}</span>
                   </div>
-                </TableCell>
-                <TableCell>{{ row.name }}</TableCell>
-                <TableCell>{{ row.email }}</TableCell>
-                <TableCell>{{ row.department }}</TableCell>
-                <TableCell>{{ row.position }}</TableCell>
-                <TableCell>
-                  <Badge :variant="row.status === 'active' ? 'default' : 'destructive'" class="text-xs">
+                </td>
+                <td>{{ row.name }}</td>
+                <td>{{ row.email }}</td>
+                <td>{{ row.department }}</td>
+                <td>{{ row.position }}</td>
+                <td>
+                  <Tag :color="row.status === 'active' ? 'default' : 'destructive'" class="text-xs">
                     {{ row.status === 'active' ? '正常' : '禁用' }}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Button variant="link" size="sm" class="p-0 h-auto text-destructive" @click="handleRemoveUser(row)">
+                  </Tag>
+                </td>
+                <td>
+                  <Button type="link" size="small" class="p-0 h-auto text-destructive" @click="handleRemoveUser(row)">
                     移除
                   </Button>
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </Modal>
 
-    <Dialog v-model:open="assignUsersDialogVisible">
-      <DialogContent class="max-w-3xl">
-        <DialogHeader>
-          <DialogTitle>分配用户</DialogTitle>
-        </DialogHeader>
+    <Modal v-model:open="assignUsersDialogVisible" :footer="null">
+      <div class="max-w-3xl">
+        <div>
+          <h3>分配用户</h3>
+        </div>
         <div class="min-h-[400px]">
           <div class="flex gap-4">
             <div class="flex-1">
@@ -783,14 +770,14 @@ onMounted(() => {
             </div>
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" @click="assignUsersDialogVisible = false">取消</Button>
+        <div>
+          <Button  @click="assignUsersDialogVisible = false">取消</Button>
           <Button :disabled="assigning" @click="handleSubmitAssignUsers">
             {{ assigning ? '提交中...' : '确定' }}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </div>
+    </Modal>
   </div>
 </template>
 

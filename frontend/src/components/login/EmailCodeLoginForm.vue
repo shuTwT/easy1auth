@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { reactive } from 'vue'
 import { useAuth } from '@/composables/useAuth'
-import { Input } from '@/components/antd-compat'
-
 const emit = defineEmits<{
   switchToPassword: []
   switchToRegister: []
@@ -77,8 +75,7 @@ async function handleSubmit() {
           <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
           <polyline points="22,6 12,13 2,6"/>
         </svg>
-        <Input
-          v-model="form.email"
+        <Input v-model:value="form.email"
           placeholder="请输入邮箱地址"
           class="login-input h-11 pl-10"
           :class="{ 'border-destructive': errors.email }"
@@ -99,8 +96,7 @@ async function handleSubmit() {
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
             <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
           </svg>
-          <Input
-            v-model="form.code"
+          <Input v-model:value="form.code"
             placeholder="请输入6位验证码"
             maxlength="6"
             class="login-input h-11 pl-10"
@@ -276,7 +272,7 @@ async function handleSubmit() {
   .link-button {
     transition: none;
   }
-  
+
   .loading-spinner {
     animation: none;
   }

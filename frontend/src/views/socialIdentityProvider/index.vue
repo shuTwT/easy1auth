@@ -3,17 +3,6 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { message } from 'antdv-next'
 import { Link, CheckCircle, XCircle, Grid3X3, Plus, Search, RefreshCw } from '@lucide/vue'
 import { socialIdentityProviderApi } from '@/api/socialIdentityProvider'
-import { Button } from '@/components/antd-compat'
-import { Input } from '@/components/antd-compat'
-import { Textarea } from '@/components/antd-compat'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/antd-compat'
-import { Card, CardContent, CardHeader } from '@/components/antd-compat'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/antd-compat'
-import { Badge } from '@/components/antd-compat'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/antd-compat'
-import { Alert, AlertTitle } from '@/components/antd-compat'
-import { Separator } from '@/components/antd-compat'
-import { Label } from '@/components/antd-compat'
 import type {
   SocialIdentityProvider,
   SocialIdentityProviderStats,
@@ -268,7 +257,7 @@ onMounted(() => {
   <div class="p-5">
     <div class="grid grid-cols-4 gap-5 mb-5">
       <Card>
-        <CardContent class="pt-6">
+        <div class="pt-6">
           <div class="flex items-center gap-4">
             <div class="w-14 h-14 rounded-lg flex items-center justify-center text-white text-xl bg-gradient-to-br from-indigo-500 to-purple-600">
               <Link class="w-7 h-7" />
@@ -278,10 +267,10 @@ onMounted(() => {
               <div class="text-sm text-muted-foreground">总身份源</div>
             </div>
           </div>
-        </CardContent>
+        </div>
       </Card>
       <Card>
-        <CardContent class="pt-6">
+        <div class="pt-6">
           <div class="flex items-center gap-4">
             <div class="w-14 h-14 rounded-lg flex items-center justify-center text-white text-xl bg-gradient-to-br from-emerald-400 to-teal-400">
               <CheckCircle class="w-7 h-7" />
@@ -291,10 +280,10 @@ onMounted(() => {
               <div class="text-sm text-muted-foreground">已启用</div>
             </div>
           </div>
-        </CardContent>
+        </div>
       </Card>
       <Card>
-        <CardContent class="pt-6">
+        <div class="pt-6">
           <div class="flex items-center gap-4">
             <div class="w-14 h-14 rounded-lg flex items-center justify-center text-white text-xl bg-gradient-to-br from-pink-400 to-rose-500">
               <XCircle class="w-7 h-7" />
@@ -304,10 +293,10 @@ onMounted(() => {
               <div class="text-sm text-muted-foreground">已禁用</div>
             </div>
           </div>
-        </CardContent>
+        </div>
       </Card>
       <Card>
-        <CardContent class="pt-6">
+        <div class="pt-6">
           <div class="flex items-center gap-4">
             <div class="w-14 h-14 rounded-lg flex items-center justify-center text-white text-xl bg-gradient-to-br from-blue-400 to-cyan-400">
               <Grid3X3 class="w-7 h-7" />
@@ -317,16 +306,15 @@ onMounted(() => {
               <div class="text-sm text-muted-foreground">类型数量</div>
             </div>
           </div>
-        </CardContent>
+        </div>
       </Card>
     </div>
 
     <Card>
-      <CardHeader>
+      <div>
         <div class="flex justify-between items-center">
           <div class="flex items-center gap-3">
-            <Input
-              v-model="searchQuery"
+            <Input v-model:value="searchQuery"
               placeholder="搜索身份源名称"
               class="w-52"
             >
@@ -334,30 +322,30 @@ onMounted(() => {
                 <Search class="w-4 h-4 text-muted-foreground" />
               </template>
             </Input>
-            <Select v-model="filterType" @update:model-value="loadProviders">
-              <SelectTrigger class="w-36">
-                <SelectValue placeholder="身份源类型" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem v-for="(config, key) in PROVIDER_CONFIGS" :key="key" :value="key">
+            <Select v-model:value="filterType" @update:value="loadProviders">
+              <div class="w-36">
+
+              </div>
+
+                <SelectOption v-for="(config, key) in PROVIDER_CONFIGS" :key="key" :value="key">
                   {{ config.name }}
-                </SelectItem>
-              </SelectContent>
+                </SelectOption>
+
             </Select>
-            <Select v-model="filterStatus" @update:model-value="loadProviders">
-              <SelectTrigger class="w-28">
-                <SelectValue placeholder="状态" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="active">已启用</SelectItem>
-                <SelectItem value="inactive">已禁用</SelectItem>
-              </SelectContent>
+            <Select v-model:value="filterStatus" @update:value="loadProviders">
+              <div class="w-28">
+
+              </div>
+
+                <SelectOption value="active">已启用</SelectOption>
+                <SelectOption value="inactive">已禁用</SelectOption>
+
             </Select>
             <Button @click="handleSearch">
               <Search class="w-4 h-4 mr-2" />
               搜索
             </Button>
-            <Button variant="outline" @click="handleReset">
+            <Button  @click="handleReset">
               <RefreshCw class="w-4 h-4 mr-2" />
               重置
             </Button>
@@ -367,128 +355,128 @@ onMounted(() => {
             添加身份源
           </Button>
         </div>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead class="w-48">名称</TableHead>
-              <TableHead class="w-36">类型</TableHead>
-              <TableHead class="w-64">Client ID</TableHead>
-              <TableHead class="w-24">状态</TableHead>
-              <TableHead class="w-48">Scope</TableHead>
-              <TableHead class="w-40">创建时间</TableHead>
-              <TableHead class="w-60">操作</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <TableRow v-if="loading">
-              <TableCell colspan="7" class="text-center py-8 text-muted-foreground">加载中...</TableCell>
-            </TableRow>
-            <TableRow v-else-if="providers.length === 0">
-              <TableCell colspan="7" class="text-center py-8 text-muted-foreground">暂无数据</TableCell>
-            </TableRow>
-            <TableRow v-for="row in providers" :key="row.id">
-              <TableCell>{{ row.name }}</TableCell>
-              <TableCell>
+      </div>
+      <div>
+        <table>
+          <thead>
+            <tr>
+              <th class="w-48">名称</th>
+              <th class="w-36">类型</th>
+              <th class="w-64">Client ID</th>
+              <th class="w-24">状态</th>
+              <th class="w-48">Scope</th>
+              <th class="w-40">创建时间</th>
+              <th class="w-60">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="loading">
+              <td colspan="7" class="text-center py-8 text-muted-foreground">加载中...</td>
+            </tr>
+            <tr v-else-if="providers.length === 0">
+              <td colspan="7" class="text-center py-8 text-muted-foreground">暂无数据</td>
+            </tr>
+            <tr v-for="row in providers" :key="row.id">
+              <td>{{ row.name }}</td>
+              <td>
                 <div class="flex items-center gap-2">
                   <Link :style="{ color: PROVIDER_CONFIGS[row.type as SocialProviderType]?.color }" class="w-4 h-4" />
                   <span>{{ PROVIDER_CONFIGS[row.type as SocialProviderType]?.name || row.type }}</span>
                 </div>
-              </TableCell>
-              <TableCell>{{ row.clientId }}</TableCell>
-              <TableCell>
-                <Badge :variant="row.status === 'active' ? 'default' : 'destructive'">
+              </td>
+              <td>{{ row.clientId }}</td>
+              <td>
+                <Tag :color="row.status === 'active' ? 'default' : 'destructive'">
                   {{ row.status === 'active' ? '已启用' : '已禁用' }}
-                </Badge>
-              </TableCell>
-              <TableCell>
+                </Tag>
+              </td>
+              <td>
                 <div class="flex flex-wrap gap-1">
-                  <Badge v-for="scope in row.scope.slice(0, 2)" :key="scope" variant="secondary" class="text-xs">
+                  <Tag v-for="scope in row.scope.slice(0, 2)" :key="scope" color="blue" class="text-xs">
                     {{ scope }}
-                  </Badge>
-                  <Badge v-if="row.scope.length > 2" variant="outline" class="text-xs">
+                  </Tag>
+                  <Tag v-if="row.scope.length > 2"  class="text-xs">
                     +{{ row.scope.length - 2 }}
-                  </Badge>
+                  </Tag>
                 </div>
-              </TableCell>
-              <TableCell>{{ formatDate(row.createdAt) }}</TableCell>
-              <TableCell>
+              </td>
+              <td>{{ formatDate(row.createdAt) }}</td>
+              <td>
                 <div class="flex gap-1 flex-wrap">
-                  <Button variant="link" size="sm" class="h-auto p-0" @click="handleEdit(row)">编辑</Button>
-                  <Button 
-                    variant="link" 
-                    size="sm" 
+                  <Button type="link" size="small" class="h-auto p-0" @click="handleEdit(row)">编辑</Button>
+                  <Button
+                    variant="link"
+                    size="sm"
                     class="h-auto p-0"
                     @click="handleToggleStatus(row)"
                   >
                     {{ row.status === 'active' ? '禁用' : '启用' }}
                   </Button>
-                  <Button variant="link" size="sm" class="h-auto p-0" @click="handleViewGuide(row)">配置指南</Button>
-                  <Button variant="link" size="sm" class="h-auto p-0 text-destructive" @click="handleDelete(row)">删除</Button>
+                  <Button type="link" size="small" class="h-auto p-0" @click="handleViewGuide(row)">配置指南</Button>
+                  <Button type="link" size="small" class="h-auto p-0 text-destructive" @click="handleDelete(row)">删除</Button>
                 </div>
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
 
         <div class="flex items-center justify-between mt-5">
           <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
           <div class="flex items-center gap-1">
-            <Button variant="outline" size="sm" :disabled="page <= 1" @click="handlePageChange(page - 1)">
+            <Button  size="small" :disabled="page <= 1" @click="handlePageChange(page - 1)">
               上一页
             </Button>
             <span class="text-sm px-2">{{ page }} / {{ totalPages || 1 }}</span>
-            <Button variant="outline" size="sm" :disabled="page >= totalPages" @click="handlePageChange(page + 1)">
+            <Button  size="small" :disabled="page >= totalPages" @click="handlePageChange(page + 1)">
               下一页
             </Button>
           </div>
         </div>
-      </CardContent>
+      </div>
     </Card>
 
-    <Dialog v-model:open="dialogVisible">
-      <DialogContent class="max-w-xl">
-        <DialogHeader>
-          <DialogTitle>{{ dialogTitle }}</DialogTitle>
-          <DialogDescription>配置支持 Discovery 的标准 OpenID Connect 身份源。</DialogDescription>
-        </DialogHeader>
+    <Modal v-model:open="dialogVisible" :footer="null">
+      <div class="max-w-xl">
+        <div>
+          <h3>{{ dialogTitle }}</h3>
+          <p>配置支持 Discovery 的标准 OpenID Connect 身份源。</p>
+        </div>
         <form>
           <div class="grid gap-4 py-4">
             <div class="grid gap-2">
-              <Label for="provider-issuer">Issuer</Label>
+              <label for="provider-issuer">Issuer</label>
               <Input id="provider-issuer" v-model="providerForm.issuer" placeholder="https://idp.example.com" />
             </div>
             <div class="grid gap-2">
-              <Label for="provider-name">身份源名称</Label>
+              <label for="provider-name">身份源名称</label>
               <Input id="provider-name" v-model="providerForm.name" placeholder="请输入身份源名称" />
             </div>
             <div class="grid gap-2">
-              <Label for="provider-type">身份源类型</Label>
-              <Select v-model="providerForm.type" :disabled="isEdit" @update:model-value="handleTypeChange($event as SocialProviderType)">
-                <SelectTrigger id="provider-type">
-                  <SelectValue placeholder="请选择身份源类型" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem v-for="(config, key) in PROVIDER_CONFIGS" :key="key" :value="key">
+              <label for="provider-type">身份源类型</label>
+              <Select v-model:value="providerForm.type" :disabled="isEdit" @update:value="handleTypeChange($event as SocialProviderType)">
+                <div id="provider-type">
+
+                </div>
+
+                  <SelectOption v-for="(config, key) in PROVIDER_CONFIGS" :key="key" :value="key">
                     <div class="flex items-center gap-2">
                       <Link :style="{ color: config.color }" class="w-4 h-4" />
                       <span>{{ config.name }}</span>
                     </div>
-                  </SelectItem>
-                </SelectContent>
+                  </SelectOption>
+
               </Select>
             </div>
             <div class="grid gap-2">
-              <Label for="provider-client-id">Client ID</Label>
+              <label for="provider-client-id">Client ID</label>
               <Input id="provider-client-id" v-model="providerForm.clientId" placeholder="请输入Client ID" />
             </div>
             <div class="grid gap-2">
-              <Label for="provider-client-secret">Client Secret</Label>
+              <label for="provider-client-secret">Client Secret</label>
               <Input id="provider-client-secret" v-model="providerForm.clientSecret" type="password" placeholder="请输入Client Secret" />
             </div>
             <div class="grid gap-2">
-              <Label id="provider-scope-label">Scope</Label>
+              <label id="provider-scope-label">Scope</label>
               <div class="flex flex-wrap gap-2" role="group" aria-labelledby="provider-scope-label">
                 <button
                   v-for="scope in getAvailableScopes()"
@@ -498,15 +486,15 @@ onMounted(() => {
                   class="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   @click="toggleScope(scope)"
                 >
-                  <Badge :variant="providerForm.scope.includes(scope) ? 'default' : 'outline'">
+                  <Tag :color="providerForm.scope.includes(scope) ? 'default' : 'outline'">
                     {{ scope }}
-                  </Badge>
+                  </Tag>
                 </button>
               </div>
             </div>
             <div class="grid gap-2">
-              <Label for="provider-attribute-mapping">属性映射</Label>
-              <Textarea
+              <label for="provider-attribute-mapping">属性映射</label>
+              <InputTextArea
                 id="provider-attribute-mapping"
                 v-model="attributeMappingStr"
                 :rows="4"
@@ -515,30 +503,30 @@ onMounted(() => {
             </div>
           </div>
         </form>
-        <DialogFooter>
-          <Button variant="outline" @click="dialogVisible = false">取消</Button>
+        <div>
+          <Button  @click="dialogVisible = false">取消</Button>
           <Button @click="handleSubmit" :disabled="submitting">确定</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </div>
+    </Modal>
 
-    <Dialog v-model:open="guideDialogVisible">
-      <DialogContent class="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>配置指南</DialogTitle>
-          <DialogDescription>按照第三方开放平台要求完成应用和回调地址配置。</DialogDescription>
-        </DialogHeader>
+    <Modal v-model:open="guideDialogVisible" :footer="null">
+      <div class="max-w-2xl">
+        <div>
+          <h3>配置指南</h3>
+          <p>按照第三方开放平台要求完成应用和回调地址配置。</p>
+        </div>
         <div class="py-5" v-if="currentProvider">
           <Alert class="mb-5">
-            <AlertTitle class="font-semibold">
+            <h3 class="font-semibold">
               {{ PROVIDER_CONFIGS[currentProvider.type]?.name }} 身份源配置指南
-            </AlertTitle>
+            </h3>
           </Alert>
 
           <div class="flex flex-col gap-4">
             <div class="border rounded-lg p-4">
               <div class="flex items-center gap-2 mb-2">
-                <Badge variant="default">步骤 1</Badge>
+                <Tag color="processing">步骤 1</Tag>
                 <span class="font-semibold">创建应用</span>
               </div>
               <div class="text-sm space-y-1">
@@ -549,7 +537,7 @@ onMounted(() => {
             </div>
             <div class="border rounded-lg p-4">
               <div class="flex items-center gap-2 mb-2">
-                <Badge variant="default">步骤 2</Badge>
+                <Tag color="processing">步骤 2</Tag>
                 <span class="font-semibold">配置回调地址</span>
               </div>
               <div class="text-sm space-y-1">
@@ -566,7 +554,7 @@ onMounted(() => {
             </div>
             <div class="border rounded-lg p-4">
               <div class="flex items-center gap-2 mb-2">
-                <Badge variant="default">步骤 3</Badge>
+                <Tag color="processing">步骤 3</Tag>
                 <span class="font-semibold">填写配置信息</span>
               </div>
               <div class="text-sm space-y-1">
@@ -575,7 +563,7 @@ onMounted(() => {
             </div>
             <div class="border rounded-lg p-4">
               <div class="flex items-center gap-2 mb-2">
-                <Badge variant="default">步骤 4</Badge>
+                <Tag color="processing">步骤 4</Tag>
                 <span class="font-semibold">测试连接</span>
               </div>
               <div class="text-sm space-y-1">
@@ -584,7 +572,7 @@ onMounted(() => {
             </div>
           </div>
 
-          <Separator class="my-4" />
+          <Divider class="my-4" />
 
           <div class="mt-4">
             <h4 class="font-semibold mb-3">当前配置信息</h4>
@@ -604,7 +592,7 @@ onMounted(() => {
             </div>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </Modal>
   </div>
 </template>

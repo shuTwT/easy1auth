@@ -44,7 +44,7 @@ export const authApi = {
     return request.get(`/auth/social/${provider}/url`)
   },
 
-  refreshToken(refreshToken: string): Promise<{ token: string }> {
+  refreshToken(refreshToken: string): Promise<{ token: string; refreshToken: string }> {
     return request.post('/auth/refresh', { refreshToken })
   },
 

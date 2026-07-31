@@ -4,17 +4,6 @@ import { message } from 'antdv-next'
 import { Plus, Search, RefreshCw } from '@lucide/vue'
 import { positionApi } from '@/api/position'
 import type { Position, CreatePositionDto, UpdatePositionDto, PositionQueryDto, PositionStats } from '@/types/position'
-import { Button } from '@/components/antd-compat'
-import { Input } from '@/components/antd-compat'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/antd-compat'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/antd-compat'
-import { Badge } from '@/components/antd-compat'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/antd-compat'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/antd-compat'
-import { Slider } from '@/components/antd-compat'
-import { NumberField, NumberFieldContent, NumberFieldDecrement, NumberFieldIncrement, NumberFieldInput } from '@/components/antd-compat'
-import { Textarea } from '@/components/antd-compat'
-
 const loading = ref(false)
 const positions = ref<Position[]>([])
 const total = ref(0)
@@ -182,206 +171,197 @@ onMounted(() => {
   <div class="position-management">
     <div class="grid grid-cols-4 gap-5 mb-5">
       <Card>
-        <CardContent class="pt-6">
+        <div class="pt-6">
           <div class="stat-card">
             <div class="stat-value">{{ stats?.totalPositions || 0 }}</div>
             <div class="stat-label">岗位总数</div>
           </div>
-        </CardContent>
+        </div>
       </Card>
       <Card>
-        <CardContent class="pt-6">
+        <div class="pt-6">
           <div class="stat-card">
             <div class="stat-value">{{ stats?.filledPositions || 0 }}</div>
             <div class="stat-label">已分配岗位</div>
           </div>
-        </CardContent>
+        </div>
       </Card>
       <Card>
-        <CardContent class="pt-6">
+        <div class="pt-6">
           <div class="stat-card">
             <div class="stat-value">{{ stats?.vacantPositions || 0 }}</div>
             <div class="stat-label">空缺岗位</div>
           </div>
-        </CardContent>
+        </div>
       </Card>
       <Card>
-        <CardContent class="pt-6">
+        <div class="pt-6">
           <div class="stat-card">
             <div class="stat-value">{{ stats?.averageLevel || 0 }}</div>
             <div class="stat-label">平均级别</div>
           </div>
-        </CardContent>
+        </div>
       </Card>
     </div>
 
     <Card>
-      <CardHeader>
+      <div>
         <div class="flex justify-between items-center">
-          <CardTitle>岗位管理</CardTitle>
+          <h3>岗位管理</h3>
           <Button @click="handleAdd">
             <Plus class="w-4 h-4 mr-2" />
             新增岗位
           </Button>
         </div>
-      </CardHeader>
-      <CardContent>
+      </div>
+      <div>
         <div class="flex flex-wrap gap-4 mb-5">
           <div class="grid gap-2">
-            <Input v-model="queryForm.name" placeholder="请输入岗位名称" class="w-48" />
+            <Input v-model:value="queryForm.name" placeholder="请输入岗位名称" class="w-48" />
           </div>
           <div class="grid gap-2">
-            <Input v-model="queryForm.code" placeholder="请输入岗位编码" class="w-48" />
+            <Input v-model:value="queryForm.code" placeholder="请输入岗位编码" class="w-48" />
           </div>
           <div class="grid gap-2">
-            <Select v-model="queryForm.level" placeholder="请选择级别">
-              <SelectTrigger class="w-40">
-                <SelectValue placeholder="请选择级别" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem :value="1">员工 (1-2级)</SelectItem>
-                <SelectItem :value="3">主管 (3-4级)</SelectItem>
-                <SelectItem :value="5">经理 (5-6级)</SelectItem>
-                <SelectItem :value="7">总监 (7-8级)</SelectItem>
-                <SelectItem :value="9">高管 (9-10级)</SelectItem>
-              </SelectContent>
+            <Select v-model:value="queryForm.level" placeholder="请选择级别">
+              <div class="w-40">
+
+              </div>
+
+                <SelectOption :value="1">员工 (1-2级)</SelectOption>
+                <SelectOption :value="3">主管 (3-4级)</SelectOption>
+                <SelectOption :value="5">经理 (5-6级)</SelectOption>
+                <SelectOption :value="7">总监 (7-8级)</SelectOption>
+                <SelectOption :value="9">高管 (9-10级)</SelectOption>
+
             </Select>
           </div>
           <Button @click="handleSearch">
             <Search class="w-4 h-4 mr-2" />
             搜索
           </Button>
-          <Button variant="outline" @click="handleReset">
+          <Button  @click="handleReset">
             <RefreshCw class="w-4 h-4 mr-2" />
             重置
           </Button>
         </div>
 
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead class="w-44">岗位名称</TableHead>
-              <TableHead class="w-36">岗位编码</TableHead>
-              <TableHead>描述</TableHead>
-              <TableHead class="w-28 text-center">岗位级别</TableHead>
-              <TableHead class="w-24 text-center">在职人数</TableHead>
-              <TableHead class="w-44">创建时间</TableHead>
-              <TableHead class="w-36 text-right">操作</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <TableRow v-if="loading">
-              <TableCell colspan="7" class="text-center py-8 text-muted-foreground">
+        <table>
+          <thead>
+            <tr>
+              <th class="w-44">岗位名称</th>
+              <th class="w-36">岗位编码</th>
+              <th>描述</th>
+              <th class="w-28 text-center">岗位级别</th>
+              <th class="w-24 text-center">在职人数</th>
+              <th class="w-44">创建时间</th>
+              <th class="w-36 text-right">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="loading">
+              <td colspan="7" class="text-center py-8 text-muted-foreground">
                 加载中...
-              </TableCell>
-            </TableRow>
-            <TableRow v-else-if="positions.length === 0">
-              <TableCell colspan="7" class="text-center py-8 text-muted-foreground">
+              </td>
+            </tr>
+            <tr v-else-if="positions.length === 0">
+              <td colspan="7" class="text-center py-8 text-muted-foreground">
                 暂无数据
-              </TableCell>
-            </TableRow>
-            <TableRow v-for="position in positions" :key="position.id">
-              <TableCell>{{ position.name }}</TableCell>
-              <TableCell>
+              </td>
+            </tr>
+            <tr v-for="position in positions" :key="position.id">
+              <td>{{ position.name }}</td>
+              <td>
                 <span style="font-family: monospace;">{{ position.code }}</span>
-              </TableCell>
-              <TableCell>{{ position.description || '-' }}</TableCell>
-              <TableCell class="text-center">
-                <Badge :variant="getLevelColor(position.level)">
+              </td>
+              <td>{{ position.description || '-' }}</td>
+              <td class="text-center">
+                <Tag :color="getLevelColor(position.level)">
                   {{ position.level }} - {{ getLevelText(position.level) }}
-                </Badge>
-              </TableCell>
-              <TableCell class="text-center">
+                </Tag>
+              </td>
+              <td class="text-center">
                 {{ position.userCount }}{{ position.maxCount ? ` / ${position.maxCount}` : '' }}
-              </TableCell>
-              <TableCell>{{ new Date(position.createdAt).toLocaleString() }}</TableCell>
-              <TableCell class="text-right">
+              </td>
+              <td>{{ new Date(position.createdAt).toLocaleString() }}</td>
+              <td class="text-right">
                 <div class="flex justify-end gap-2">
-                  <Button size="sm" variant="outline" @click="handleEdit(position)">编辑</Button>
-                  <Button size="sm" variant="destructive" @click="handleDelete(position)">删除</Button>
+                  <Button size="small"  @click="handleEdit(position)">编辑</Button>
+                  <Button size="small" color="error" @click="handleDelete(position)">删除</Button>
                 </div>
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
 
         <div class="flex items-center justify-between mt-5">
           <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
           <div class="flex items-center gap-1">
-            <Button variant="outline" size="sm" :disabled="queryForm.page! <= 1" @click="handlePageChange(queryForm.page! - 1)">
+            <Button  size="small" :disabled="queryForm.page! <= 1" @click="handlePageChange(queryForm.page! - 1)">
               上一页
             </Button>
             <span class="text-sm px-2">{{ queryForm.page! }} / {{ totalPages || 1 }}</span>
-            <Button variant="outline" size="sm" :disabled="queryForm.page! >= totalPages" @click="handlePageChange(queryForm.page! + 1)">
+            <Button  size="small" :disabled="queryForm.page! >= totalPages" @click="handlePageChange(queryForm.page! + 1)">
               下一页
             </Button>
           </div>
         </div>
-      </CardContent>
+      </div>
     </Card>
 
-    <Dialog v-model:open="dialogVisible">
-      <DialogContent class="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{{ dialogTitle }}</DialogTitle>
-        </DialogHeader>
+    <Modal v-model:open="dialogVisible" :footer="null">
+      <div class="sm:max-w-lg">
+        <div>
+          <h3>{{ dialogTitle }}</h3>
+        </div>
         <form class="grid gap-4">
           <div class="grid gap-2">
             <label class="text-sm font-medium">岗位名称 <span class="text-destructive">*</span></label>
-            <Input v-model="positionForm.name" placeholder="请输入岗位名称" />
+            <Input v-model:value="positionForm.name" placeholder="请输入岗位名称" />
           </div>
           <div class="grid gap-2">
             <label class="text-sm font-medium">岗位编码 <span class="text-destructive">*</span></label>
-            <Input 
-              v-model="positionForm.code" 
+            <Input v-model:value="positionForm.code"
               placeholder="请输入岗位编码（大写字母和下划线）"
               :disabled="!!currentPosition.id"
             />
           </div>
           <div class="grid gap-2">
             <label class="text-sm font-medium">描述</label>
-            <Textarea
-              v-model="positionForm.description"
+            <InputTextArea v-model:value="positionForm.description"
               placeholder="请输入岗位描述"
               :rows="3"
             />
           </div>
           <div class="grid gap-2">
             <label class="text-sm font-medium">岗位级别 <span class="text-destructive">*</span></label>
-            <Slider 
-              v-model="levelSliderValue"
-              :min="1" 
-              :max="10" 
+            <Slider v-model:value="levelSliderValue"
+              :min="1"
+              :max="10"
               :step="1"
-              @update:model-value="positionForm.level = levelSliderValue[0]"
+              @update:value="positionForm.level = levelSliderValue[0]"
             />
             <div class="text-center mt-2">
-              <Badge :variant="getLevelColor(positionForm.level)">
+              <Tag :color="getLevelColor(positionForm.level)">
                 {{ positionForm.level }} - {{ getLevelText(positionForm.level) }}
-              </Badge>
+              </Tag>
             </div>
           </div>
           <div class="grid gap-2">
             <label class="text-sm font-medium">最大人数</label>
-            <NumberField v-model="positionForm.maxCount" :min="1" :max="999">
-              <NumberFieldContent>
-                <NumberFieldDecrement />
-                <NumberFieldInput />
-                <NumberFieldIncrement />
-              </NumberFieldContent>
-            </NumberField>
+            <InputNumber v-model:value="positionForm.maxCount" :min="1" :max="999" />
           </div>
           <div class="grid gap-2">
             <label class="text-sm font-medium">排序</label>
-            <Input v-model="positionForm.sequence" placeholder="请输入排序标识" />
+            <Input v-model:value="positionForm.sequence" placeholder="请输入排序标识" />
           </div>
         </form>
-        <DialogFooter>
-          <Button variant="outline" @click="dialogVisible = false">取消</Button>
+        <div>
+          <Button  @click="dialogVisible = false">取消</Button>
           <Button @click="handleSubmit">确定</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </div>
+    </Modal>
   </div>
 </template>
 

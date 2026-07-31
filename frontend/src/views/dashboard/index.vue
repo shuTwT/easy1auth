@@ -7,11 +7,6 @@ import type { DashboardStats, RecentLogin } from '@/api/dashboard'
 import { message } from 'antdv-next'
 import { Dropdown, Table as AntTable, Tag } from 'antdv-next'
 import { Building2, TrendingUp, User, Monitor, Link, MoreHorizontal, RefreshCw, ArrowRight, Library, FileText, Loader2 } from '@lucide/vue'
-import { Button } from '@/components/antd-compat'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/antd-compat'
-import { Avatar, AvatarFallback } from '@/components/antd-compat'
-import { Progress } from '@/components/antd-compat'
-
 const router = useRouter()
 const userStore = useUserStore()
 
@@ -133,7 +128,7 @@ onMounted(() => {
 
     <div class="stats-grid">
       <Card v-for="stat in statCards" :key="stat.key" class="stat-card">
-        <CardContent class="pt-6">
+        <div class="pt-6">
           <div class="stat-content">
             <div class="stat-icon" :class="stat.color">
               <component :is="stat.icon" class="w-6 h-6" />
@@ -146,23 +141,23 @@ onMounted(() => {
               <div class="stat-title">{{ stat.title }}</div>
             </div>
           </div>
-          </CardContent>
+          </div>
         </Card>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div class="lg:col-span-2 space-y-6">
         <Card>
-          <CardHeader>
+          <div>
             <div class="card-header">
-              <CardTitle>最近登录</CardTitle>
-              <Button variant="link" size="sm" @click="navigateTo('/audit')">
+              <h3>最近登录</h3>
+              <Button type="link" size="small" @click="navigateTo('/audit')">
                 查看全部
                 <ArrowRight class="w-4 h-4 ml-1" />
               </Button>
             </div>
-          </CardHeader>
-          <CardContent>
+          </div>
+          <div>
             <div v-if="loading" class="flex justify-center py-12">
               <Loader2 class="w-6 h-6 animate-spin text-muted-foreground" />
             </div>
@@ -174,41 +169,41 @@ onMounted(() => {
             <AntTable v-else :columns="recentLoginColumns" :data-source="recentLogins" :pagination="false" :row-key="login => `${login.username}-${login.time}`" size="small">
               <template #bodyCell="{ column, record }">
                 <template v-if="column.key === 'username'">
-                  <div class="user-cell"><Avatar class="h-7 w-7"><AvatarFallback class="text-xs">{{ record.username.charAt(0).toUpperCase() }}</AvatarFallback></Avatar><span>{{ record.username }}</span></div>
+                  <div class="user-cell"><Avatar class="h-7 w-7"><span class="text-xs">{{ record.username.charAt(0).toUpperCase() }}</span></Avatar><span>{{ record.username }}</span></div>
                 </template>
                 <template v-else-if="column.key === 'email'">{{ record.email || '-' }}</template>
                 <template v-else-if="column.key === 'time'">{{ formatTime(record.time) }}</template>
                 <Tag v-else-if="column.key === 'status'" :color="record.status === 'success' ? 'success' : 'error'">{{ getStatusText(record.status) }}</Tag>
               </template>
             </AntTable>
-          </CardContent>
+          </div>
         </Card>
 
         <Card>
-          <CardHeader>
+          <div>
             <div class="card-header">
-              <CardTitle>登录趋势</CardTitle>
+              <h3>登录趋势</h3>
               <Dropdown :menu="{ items: trendRangeItems }" :trigger="['click']" placement="bottomRight">
-                <Button variant="ghost" size="sm" aria-label="选择登录趋势时间范围"><MoreHorizontal class="w-4 h-4" /></Button>
+                <Button type="text" size="small" aria-label="选择登录趋势时间范围"><MoreHorizontal class="w-4 h-4" /></Button>
               </Dropdown>
             </div>
-          </CardHeader>
-          <CardContent>
+          </div>
+          <div>
             <div class="chart-placeholder">
               <TrendingUp class="w-12 h-12 text-slate-300" />
               <p>登录趋势图表</p>
               <p class="chart-hint">集成图表库后显示数据可视化</p>
             </div>
-          </CardContent>
+          </div>
         </Card>
       </div>
 
       <div class="space-y-6">
         <Card>
-          <CardHeader>
-            <CardTitle>快捷操作</CardTitle>
-          </CardHeader>
-          <CardContent>
+          <div>
+            <h3>快捷操作</h3>
+          </div>
+          <div>
             <div class="quick-actions">
               <div
                 v-for="action in quickActions"
@@ -223,14 +218,14 @@ onMounted(() => {
                 <span class="action-title">{{ action.title }}</span>
               </div>
             </div>
-          </CardContent>
+          </div>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>系统公告</CardTitle>
-          </CardHeader>
-          <CardContent>
+          <div>
+            <h3>系统公告</h3>
+          </div>
+          <div>
             <div class="announcement-list">
               <div v-for="item in announcements" :key="item.title" class="announcement-item">
                 <div class="announcement-dot"></div>
@@ -241,14 +236,14 @@ onMounted(() => {
                 </div>
               </div>
             </div>
-          </CardContent>
+          </div>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>系统信息</CardTitle>
-          </CardHeader>
-          <CardContent>
+          <div>
+            <h3>系统信息</h3>
+          </div>
+          <div>
             <div class="system-info">
               <div class="info-item">
                 <span class="info-label">系统版本</span>
@@ -280,7 +275,7 @@ onMounted(() => {
                 <Progress :model-value="systemInfo.diskUsage" class="h-1.5" />
               </div>
             </div>
-          </CardContent>
+          </div>
         </Card>
       </div>
     </div>

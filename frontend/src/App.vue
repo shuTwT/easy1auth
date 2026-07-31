@@ -8,7 +8,7 @@ import { antdLocale, antdTheme } from '@/config/antd'
 const userStore = useUserStore()
 
 onMounted(async () => {
-  if (userStore.token) {
+  if (userStore.accessToken) {
     try {
       if (userStore.tenants.length === 0) {
         const response = await tenantApi.getTenants()
@@ -16,18 +16,18 @@ onMounted(async () => {
       }
 
       console.log(userStore.currentTenant , userStore.tenants)
-      
+
       if (!userStore.currentTenant && userStore.tenants.length > 0) {
         const savedTenantId = localStorage.getItem('currentTenantId')
-        let tenant = savedTenantId 
+        let tenant = savedTenantId
           ? userStore.tenants.find(t => t.id === savedTenantId)
           : null
 
-        
+
         if (!tenant) {
           tenant = userStore.tenants[0]
         }
-        
+
         if (tenant) {
           userStore.setCurrentTenant(tenant)
         }

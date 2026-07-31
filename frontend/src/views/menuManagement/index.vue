@@ -5,11 +5,6 @@ import { AppWindow, FolderTree, LockKeyhole, RefreshCw, Search, ShieldCheck } fr
 import { authorizationApi } from '@/api/authorization'
 import type { ManagementMenu } from '@/types/authorization'
 import { Tree as AntTree } from 'antdv-next'
-import { Badge } from '@/components/antd-compat'
-import { Button } from '@/components/antd-compat'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/antd-compat'
-import { Input } from '@/components/antd-compat'
-
 interface MenuTreeNode {
   id: string
   label: string
@@ -109,24 +104,24 @@ onMounted(loadCatalog)
         <p class="mt-1 text-sm text-muted-foreground">查看管理端菜单权限、层级和关联操作；菜单的可见范围由租户套餐授权决定。</p>
       </div>
       <div class="flex gap-2">
-        <Button variant="outline" :disabled="loading" @click="loadCatalog"><RefreshCw data-icon="inline-start" :class="loading ? 'animate-spin' : ''" />刷新</Button>
+        <Button  :disabled="loading" @click="loadCatalog"><RefreshCw data-icon="inline-start" :class="loading ? 'animate-spin' : ''" />刷新</Button>
         <Button @click="router.push('/tenant-package')"><ShieldCheck data-icon="inline-start" />配置套餐权限</Button>
       </div>
     </div>
 
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <Card><CardHeader class="pb-3"><CardDescription>目录</CardDescription><CardTitle class="text-2xl">{{ directoryCount }}</CardTitle></CardHeader><CardContent class="flex items-center gap-2 text-xs text-muted-foreground"><FolderTree /> 仅承载层级，不对应路由</CardContent></Card>
-      <Card><CardHeader class="pb-3"><CardDescription>菜单</CardDescription><CardTitle class="text-2xl">{{ menuCount }}</CardTitle></CardHeader><CardContent class="flex items-center gap-2 text-xs text-muted-foreground"><AppWindow /> 对应一个管理端路由</CardContent></Card>
-      <Card><CardHeader class="pb-3"><CardDescription>权限目录</CardDescription><CardTitle class="text-2xl">{{ menus.length }}</CardTitle></CardHeader><CardContent class="flex items-center gap-2 text-xs text-muted-foreground"><ShieldCheck /> 平台和租户菜单节点</CardContent></Card>
-      <Card><CardHeader class="pb-3"><CardDescription>关联操作</CardDescription><CardTitle class="text-2xl">{{ assignedActionCount }}</CardTitle></CardHeader><CardContent class="flex items-center gap-2 text-xs text-muted-foreground"><LockKeyhole /> 菜单下的操作权限</CardContent></Card>
+      <Card><div class="pb-3"><p>目录</p><h3 class="text-2xl">{{ directoryCount }}</h3></div><div class="flex items-center gap-2 text-xs text-muted-foreground"><FolderTree /> 仅承载层级，不对应路由</div></Card>
+      <Card><div class="pb-3"><p>菜单</p><h3 class="text-2xl">{{ menuCount }}</h3></div><div class="flex items-center gap-2 text-xs text-muted-foreground"><AppWindow /> 对应一个管理端路由</div></Card>
+      <Card><div class="pb-3"><p>权限目录</p><h3 class="text-2xl">{{ menus.length }}</h3></div><div class="flex items-center gap-2 text-xs text-muted-foreground"><ShieldCheck /> 平台和租户菜单节点</div></Card>
+      <Card><div class="pb-3"><p>关联操作</p><h3 class="text-2xl">{{ assignedActionCount }}</h3></div><div class="flex items-center gap-2 text-xs text-muted-foreground"><LockKeyhole /> 菜单下的操作权限</div></Card>
     </div>
 
     <Card>
-      <CardHeader class="gap-4 md:flex-row md:items-center md:justify-between">
-        <div><CardTitle>菜单权限树</CardTitle><CardDescription>平台菜单仅在系统租户中出现；租户菜单按套餐的菜单权限动态显示。</CardDescription></div>
-        <div class="relative w-full md:w-80"><Search class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" /><Input v-model="search" class="pl-9" placeholder="搜索菜单名称、编码或资源" /></div>
-      </CardHeader>
-      <CardContent>
+      <div class="gap-4 md:flex-row md:items-center md:justify-between">
+        <div><h3>菜单权限树</h3><p>平台菜单仅在系统租户中出现；租户菜单按套餐的菜单权限动态显示。</p></div>
+        <div class="relative w-full md:w-80"><Search class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" /><Input v-model:value="search" class="pl-9" placeholder="搜索菜单名称、编码或资源" /></div>
+      </div>
+      <div>
         <div v-if="loading" class="flex min-h-48 items-center justify-center text-sm text-muted-foreground">加载中...</div>
         <div v-else-if="filteredTree.length === 0" class="flex min-h-48 items-center justify-center text-sm text-muted-foreground">暂无匹配菜单</div>
         <AntTree v-else :tree-data="filteredTree" :field-names="{ key: 'id', title: 'label', children: 'children' }" :default-expand-all="true" :selectable="false" class="rounded-md border p-3">
@@ -136,13 +131,13 @@ onMounted(loadCatalog)
               <AppWindow v-else-if="data.type === 'menu'" class="shrink-0 text-primary" />
               <LockKeyhole v-else class="shrink-0 text-muted-foreground" />
               <span class="truncate text-sm font-medium">{{ data.label }}</span>
-              <Badge :variant="data.type === 'menu' ? 'default' : data.type === 'directory' ? 'secondary' : 'outline'">{{ data.type === 'directory' ? '目录' : data.type === 'menu' ? '菜单' : '按钮' }}</Badge>
-              <Badge v-if="data.type !== 'action'" variant="outline">{{ scopeLabel(data.scope) }}</Badge>
+              <Tag :color="data.type === 'menu' ? 'default' : data.type === 'directory' ? 'secondary' : 'outline'">{{ data.type === 'directory' ? '目录' : data.type === 'menu' ? '菜单' : '按钮' }}</Tag>
+              <Tag v-if="data.type !== 'action'" >{{ scopeLabel(data.scope) }}</Tag>
               <code class="ml-auto hidden truncate text-xs text-muted-foreground md:block">{{ data.code }}</code>
             </div>
           </template>
         </AntTree>
-      </CardContent>
+      </div>
     </Card>
   </div>
 </template>

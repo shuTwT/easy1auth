@@ -12,27 +12,27 @@
     </div>
 
     <Card>
-      <CardContent class="pt-6">
-        <Tabs v-model="activeTab">
-          <TabsList class="mb-6">
-            <TabsTrigger value="loginPage">登录页面</TabsTrigger>
-            <TabsTrigger value="adminPanel">管理面板</TabsTrigger>
-            <TabsTrigger value="legalDocuments">法律文档</TabsTrigger>
-            <TabsTrigger value="customDomain">自定义域名</TabsTrigger>
-          </TabsList>
+      <div class="pt-6">
+        <div>
+          <div class="mb-6">
+            <Button :type="activeTab === 'loginPage' ? 'primary' : 'default'" @click="activeTab = 'loginPage'">登录页面</Button>
+            <Button :type="activeTab === 'adminPanel' ? 'primary' : 'default'" @click="activeTab = 'adminPanel'">管理面板</Button>
+            <Button :type="activeTab === 'legalDocuments' ? 'primary' : 'default'" @click="activeTab = 'legalDocuments'">法律文档</Button>
+            <Button :type="activeTab === 'customDomain' ? 'primary' : 'default'" @click="activeTab = 'customDomain'">自定义域名</Button>
+          </div>
 
-          <TabsContent value="loginPage" class="px-2">
+          <div v-show="activeTab === 'loginPage'" class="px-2">
             <form class="max-w-[800px]">
               <div class="mb-8 pb-6 border-b">
                 <h3 class="text-base font-semibold mb-5">基础信息</h3>
                 <div class="grid gap-4">
                   <div class="grid gap-2">
                     <label class="text-sm font-medium">页面标题</label>
-                    <Input v-model="settings.loginPage.title" placeholder="请输入登录页面标题" />
+                    <Input v-model:value="settings.loginPage.title" placeholder="请输入登录页面标题" />
                   </div>
                   <div class="grid gap-2">
                     <label class="text-sm font-medium">页面副标题</label>
-                    <Input v-model="settings.loginPage.subtitle" placeholder="请输入登录页面副标题" />
+                    <Input v-model:value="settings.loginPage.subtitle" placeholder="请输入登录页面副标题" />
                   </div>
                 </div>
               </div>
@@ -55,7 +55,7 @@
                           <span class="text-xs text-muted-foreground">上传Logo</span>
                         </div>
                       </Upload>
-                      <Button v-if="settings.loginPage.logo" variant="link" class="text-destructive justify-start p-0 h-auto" @click="settings.loginPage.logo = ''">
+                      <Button v-if="settings.loginPage.logo" type="link" class="text-destructive justify-start p-0 h-auto" @click="settings.loginPage.logo = ''">
                         删除Logo
                       </Button>
                     </div>
@@ -76,7 +76,7 @@
                           <span class="text-xs text-muted-foreground">上传背景图片</span>
                         </div>
                       </Upload>
-                      <Button v-if="settings.loginPage.backgroundImage" variant="link" class="text-destructive justify-start p-0 h-auto" @click="settings.loginPage.backgroundImage = ''">
+                      <Button v-if="settings.loginPage.backgroundImage" type="link" class="text-destructive justify-start p-0 h-auto" @click="settings.loginPage.backgroundImage = ''">
                         删除背景图片
                       </Button>
                     </div>
@@ -86,7 +86,7 @@
                     <label class="text-sm font-medium">背景颜色</label>
                     <div class="flex items-center gap-3">
                       <ColorPicker v-model="settings.loginPage.backgroundColor" :presets="colorPresets.map(c => c.value)" />
-                      <Input v-model="settings.loginPage.backgroundColor" placeholder="#f5f7fa" class="w-[200px]" />
+                      <Input v-model:value="settings.loginPage.backgroundColor" placeholder="#f5f7fa" class="w-[200px]" />
                     </div>
                   </div>
                 </div>
@@ -96,8 +96,7 @@
                 <h3 class="text-base font-semibold mb-5">自定义样式</h3>
                 <div class="grid gap-2">
                   <label class="text-sm font-medium">自定义CSS</label>
-                  <Textarea
-                    v-model="settings.loginPage.customCSS"
+                  <InputTextArea v-model:value="settings.loginPage.customCSS"
                     :rows="10"
                     placeholder="请输入自定义CSS样式"
                     class="font-mono text-[13px] leading-relaxed bg-muted/50"
@@ -105,9 +104,9 @@
                 </div>
               </div>
             </form>
-          </TabsContent>
+          </div>
 
-          <TabsContent value="adminPanel" class="px-2">
+          <div v-show="activeTab === 'adminPanel'" class="px-2">
             <form class="max-w-[800px]">
               <div class="mb-8 pb-6 border-b">
                 <h3 class="text-base font-semibold mb-5">品牌元素</h3>
@@ -127,7 +126,7 @@
                           <span class="text-xs text-muted-foreground">上传Logo</span>
                         </div>
                       </Upload>
-                      <Button v-if="settings.adminPanel.logo" variant="link" class="text-destructive justify-start p-0 h-auto" @click="settings.adminPanel.logo = ''">
+                      <Button v-if="settings.adminPanel.logo" type="link" class="text-destructive justify-start p-0 h-auto" @click="settings.adminPanel.logo = ''">
                         删除Logo
                       </Button>
                     </div>
@@ -148,7 +147,7 @@
                           <span class="text-xs text-muted-foreground">上传Favicon</span>
                         </div>
                       </Upload>
-                      <Button v-if="settings.adminPanel.favicon" variant="link" class="text-destructive justify-start p-0 h-auto" @click="settings.adminPanel.favicon = ''">
+                      <Button v-if="settings.adminPanel.favicon" type="link" class="text-destructive justify-start p-0 h-auto" @click="settings.adminPanel.favicon = ''">
                         删除Favicon
                       </Button>
                     </div>
@@ -163,13 +162,13 @@
                     <label class="text-sm font-medium">主题色</label>
                     <div class="flex items-center gap-3">
                       <ColorPicker v-model="settings.adminPanel.primaryColor" :presets="colorPresets.map(c => c.value)" />
-                      <Input v-model="settings.adminPanel.primaryColor" placeholder="#0369A1" class="w-[200px]" />
+                      <Input v-model:value="settings.adminPanel.primaryColor" placeholder="#0369A1" class="w-[200px]" />
                     </div>
                     <div class="flex items-center gap-2 mt-3">
                       <span class="text-sm text-muted-foreground">预设颜色：</span>
-                      <div 
-                        v-for="color in colorPresets" 
-                        :key="color.value" 
+                      <div
+                        v-for="color in colorPresets"
+                        :key="color.value"
                         class="w-7 h-7 rounded flex items-center justify-center cursor-pointer transition-transform hover:scale-110 border-2 border-transparent"
                         :style="{ backgroundColor: color.value }"
                         @click="settings.adminPanel.primaryColor = color.value"
@@ -183,7 +182,7 @@
                     <label class="text-sm font-medium">头部颜色</label>
                     <div class="flex items-center gap-3">
                       <ColorPicker v-model="settings.adminPanel.headerColor" :presets="colorPresets.map(c => c.value)" />
-                      <Input v-model="settings.adminPanel.headerColor" placeholder="#ffffff" class="w-[200px]" />
+                      <Input v-model:value="settings.adminPanel.headerColor" placeholder="#ffffff" class="w-[200px]" />
                     </div>
                   </div>
 
@@ -191,7 +190,7 @@
                     <label class="text-sm font-medium">侧边栏颜色</label>
                     <div class="flex items-center gap-3">
                       <ColorPicker v-model="settings.adminPanel.sidebarColor" :presets="colorPresets.map(c => c.value)" />
-                      <Input v-model="settings.adminPanel.sidebarColor" placeholder="#0F172A" class="w-[200px]" />
+                      <Input v-model:value="settings.adminPanel.sidebarColor" placeholder="#0F172A" class="w-[200px]" />
                     </div>
                   </div>
                 </div>
@@ -201,8 +200,7 @@
                 <h3 class="text-base font-semibold mb-5">自定义样式</h3>
                 <div class="grid gap-2">
                   <label class="text-sm font-medium">自定义CSS</label>
-                  <Textarea
-                    v-model="settings.adminPanel.customCSS"
+                  <InputTextArea v-model:value="settings.adminPanel.customCSS"
                     :rows="10"
                     placeholder="请输入自定义CSS样式"
                     class="font-mono text-[13px] leading-relaxed bg-muted/50"
@@ -210,16 +208,15 @@
                 </div>
               </div>
             </form>
-          </TabsContent>
+          </div>
 
-          <TabsContent value="legalDocuments" class="px-2">
+          <div v-show="activeTab === 'legalDocuments'" class="px-2">
             <form class="max-w-[800px]">
               <div class="mb-8 pb-6 border-b">
                 <h3 class="text-base font-semibold mb-5">服务条款</h3>
                 <div class="grid gap-2">
                   <label class="text-sm font-medium">服务条款</label>
-                  <Textarea
-                    v-model="settings.legalDocuments.termsOfService"
+                  <InputTextArea v-model:value="settings.legalDocuments.termsOfService"
                     :rows="15"
                     placeholder="请输入服务条款内容"
                     class="font-mono text-[13px] leading-relaxed bg-muted/50"
@@ -231,8 +228,7 @@
                 <h3 class="text-base font-semibold mb-5">隐私政策</h3>
                 <div class="grid gap-2">
                   <label class="text-sm font-medium">隐私政策</label>
-                  <Textarea
-                    v-model="settings.legalDocuments.privacyPolicy"
+                  <InputTextArea v-model:value="settings.legalDocuments.privacyPolicy"
                     :rows="15"
                     placeholder="请输入隐私政策内容"
                     class="font-mono text-[13px] leading-relaxed bg-muted/50"
@@ -240,9 +236,9 @@
                 </div>
               </div>
             </form>
-          </TabsContent>
+          </div>
 
-          <TabsContent value="customDomain" class="px-2">
+          <div v-show="activeTab === 'customDomain'" class="px-2">
             <form class="max-w-[800px]">
               <div class="mb-8 pb-6 border-b">
                 <h3 class="text-base font-semibold mb-5">域名配置</h3>
@@ -250,7 +246,7 @@
                   <label class="text-sm font-medium">自定义域名</label>
                   <div class="flex">
                     <div class="flex items-center px-3 bg-muted border border-r-0 rounded-l-md text-sm text-muted-foreground">https://</div>
-                    <Input v-model="settings.customDomain" placeholder="请输入自定义域名，例如：login.yourcompany.com" class="rounded-l-none" />
+                    <Input v-model:value="settings.customDomain" placeholder="请输入自定义域名，例如：login.yourcompany.com" class="rounded-l-none" />
                   </div>
                 </div>
               </div>
@@ -276,9 +272,9 @@
                 </div>
               </div>
             </form>
-          </TabsContent>
-        </Tabs>
-      </CardContent>
+          </div>
+        </div>
+      </div>
     </Card>
   </div>
 </template>
@@ -287,13 +283,8 @@
 import { ref, onMounted, reactive } from 'vue'
 import { message } from 'antdv-next'
 import { Check, Plus, Info } from '@lucide/vue'
-import { Button } from '@/components/antd-compat'
-import { Input } from '@/components/antd-compat'
-import { Textarea } from '@/components/antd-compat'
-import { Card, CardContent } from '@/components/antd-compat'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/antd-compat'
-import { ColorPicker } from '@/components/antd-compat'
-import { Upload, type UploadFile } from '@/components/antd-compat'
+
+type UploadFile = { type: string; size: number }
 import { brandSettingsApi } from '@/api/brandSettings'
 import type { BrandSettings } from '@/types/brandSettings'
 
@@ -338,7 +329,7 @@ const handleSave = async () => {
   try {
     await brandSettingsApi.update(settings)
     message.success('保存成功')
-    
+
     applyAdminPanelStyles()
   } catch (error: any) {
     console.error('保存品牌设置失败:', error)
@@ -424,19 +415,19 @@ const handleFaviconUpload = async (options: { file: { raw: File } }) => {
 
 const applyAdminPanelStyles = () => {
   const root = document.documentElement
-  
+
   if (settings.adminPanel.primaryColor) {
         root.style.setProperty('--primary-color', settings.adminPanel.primaryColor)
   }
-  
+
   if (settings.adminPanel.headerColor) {
     root.style.setProperty('--header-bg', settings.adminPanel.headerColor)
   }
-  
+
   if (settings.adminPanel.sidebarColor) {
     root.style.setProperty('--sidebar-bg', settings.adminPanel.sidebarColor)
   }
-  
+
   if (settings.adminPanel.customCSS) {
     let styleElement = document.getElementById('custom-admin-styles')
     if (!styleElement) {

@@ -142,12 +142,12 @@ const router = createRouter({
 })
 
 router.beforeEach((to, _from, next) => {
-  const token = localStorage.getItem('token')
+  const accessToken = localStorage.getItem('accessToken')
   
   const title = to.meta.title as string | undefined
   document.title = title ? `${title} | Easy1Auth` : 'Easy1Auth'
   
-  if (to.meta.requiresAuth && !token) {
+  if (to.meta.requiresAuth && !accessToken) {
     next('/login')
   } else if (to.path === '/login') {
     next()
