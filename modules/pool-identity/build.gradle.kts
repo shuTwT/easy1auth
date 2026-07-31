@@ -1,10 +1,10 @@
 plugins { id("easy1auth.java-library") }
+
 dependencies {
     api(project(":modules:infrastructure"))
-    implementation(project(":modules:application"))
     implementation(project(":modules:tenant"))
-    implementation(libs.spring.oauth.authorization.server)
-    implementation(libs.spring.jdbc)
+    implementation(project(":modules:security-policy"))
+    implementation(libs.spring.security)
     annotationProcessor(libs.jimmer.apt)
     testImplementation(libs.spring.test)
 }

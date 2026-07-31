@@ -182,10 +182,40 @@ public class PoolUserService {
         return stats(TenantContextHolder.requireTenantId());
     }
 
+    /**
+     * The identity model does not retain the source IP of a successful login,
+     * so callers must render that field as unavailable.
+     */
+    @Transactional(readOnly = true)
+    public List<RecentLogin> recentLogins(int limit) {
+        int size = Math.min(20, Math.max(1, limit));
+        return sql.createQuery(USER)
+                .where(USER.lastLoginAt().isNotNull())
+                .orderBy(USER.lastLoginAt().desc())
+                .select(USER)
+                .limit(size)
+                .execute()
+                .stream()
+                .map(user -> new RecentLogin(user.username(), user.email(), user.lastLoginAt()))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public long successfulLoginCountSince(Instant start) {
+        return sql.createQuery(USER)
+                .where(USER.lastLoginAt().ge(start))
+                .select(USER.id())
+                .execute()
+                .size();
+    }
+
     public record Input(String username, String email, String password, String phone, String name, String avatar,
                         String status, String department, String position, Map<String, Object> customAttributes) {
     }
 
     public record Page(List<PoolUserView> users, long total, int page, int pageSize) {
+    }
+
+    public record RecentLogin(String username, String email, Instant time) {
     }
 }

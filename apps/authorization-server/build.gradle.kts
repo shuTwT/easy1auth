@@ -1,14 +1,12 @@
 plugins { id("easy1auth.spring-application") }
 
 dependencies {
-    implementation(project(":modules:foundation"))
-    implementation(project(":modules:persistence"))
+    implementation(project(":modules:infrastructure"))
     implementation(project(":modules:oauth2-core"))
     implementation(project(":modules:tenant"))
     implementation(project(":modules:admin-access"))
     implementation(project(":modules:application"))
-    implementation(project(":modules:directory"))
-    implementation(project(":modules:user-access"))
+    implementation(project(":modules:pool-identity"))
     implementation(project(":modules:security-policy"))
     implementation(project(":modules:federation"))
     implementation(project(":modules:customization"))

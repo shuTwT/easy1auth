@@ -93,7 +93,8 @@ public final class ManagementRouteInventory implements SmartInitializingSingleto
 
     private static void validateTenant(HandlerMethod handler, TenantManagementPermission requirement) {
         ManagementPermissionCode code = requirement.value();
-        if (code.scope() != ManagementPermissionScope.TENANT || code.type() != ManagementPermissionType.ACTION) {
+        if (code.scope() != ManagementPermissionScope.TENANT
+                || (code.type() != ManagementPermissionType.ACTION && code.type() != ManagementPermissionType.MENU)) {
             throw invalid(handler, "has an invalid tenant permission");
         }
     }
