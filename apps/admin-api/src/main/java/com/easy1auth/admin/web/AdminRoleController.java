@@ -5,7 +5,6 @@ import com.easy1auth.adminaccess.*;
 import com.easy1auth.foundation.web.ApiResponse;
 import com.easy1auth.foundation.web.PageData;
 import com.easy1auth.tenant.TenantContext;
-import com.easy1auth.tenant.TenantContextHolder;
 import com.easy1auth.tenant.WebFramework;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,7 +22,7 @@ public class AdminRoleController {
     @TenantManagementPermission(value = ManagementPermissionCode.ADMIN_ROLE_STATS)
     @GetMapping("/stats")
     public ApiResponse<?> stats() {
-        return ApiResponse.ok(access.roleStats(TenantContextHolder.requireTenantId()));
+        return ApiResponse.ok(access.roleStats());
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.ADMIN_ROLE_PERMISSIONS_CATALOG)
@@ -35,14 +34,14 @@ public class AdminRoleController {
     @TenantManagementPermission(value = ManagementPermissionCode.ADMIN_ROLE_LIST)
     @GetMapping
     public ApiResponse<?> list(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, @RequestParam(required = false) String name, @RequestParam(required = false) Boolean isSystem) {
-        var p = access.roles(TenantContextHolder.requireTenantId(), page, pageSize, name, isSystem);
+        var p = access.roles(page, pageSize, name, isSystem);
         return ApiResponse.ok(PageData.of(p.roles(), p.page(), p.pageSize(), p.total()));
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.ADMIN_ROLE_READ)
     @GetMapping("/{id}")
     public ApiResponse<?> get(@PathVariable UUID id) {
-        return ApiResponse.ok(access.role(TenantContextHolder.requireTenantId(), id));
+        return ApiResponse.ok(access.role(id));
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.ADMIN_ROLE_CREATE)
@@ -60,7 +59,7 @@ public class AdminRoleController {
     @TenantManagementPermission(value = ManagementPermissionCode.ADMIN_ROLE_DELETE)
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable UUID id) {
-        access.delete(TenantContextHolder.requireTenantId(), id);
+        access.delete(id);
         return ApiResponse.ok(null, "管理员角色删除成功");
     }
 

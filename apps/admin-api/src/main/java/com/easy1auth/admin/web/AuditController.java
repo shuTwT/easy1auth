@@ -1,7 +1,5 @@
 package com.easy1auth.admin.web;
 
-import com.easy1auth.tenant.TenantContextHolder;
-
 import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.ManagementPermissionCode;
 import com.easy1auth.audit.*;
@@ -25,27 +23,27 @@ public class AuditController {
     @TenantManagementPermission(value = ManagementPermissionCode.AUDIT_LIST)
     @GetMapping
     ApiResponse<?> list(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int pageSize, @RequestParam(required = false) String username, @RequestParam(required = false) String type, @RequestParam(required = false) String action, @RequestParam(required = false) String status, @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startDate, @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endDate) {
-        var p = service.list(TenantContextHolder.requireTenantId(), page, pageSize, new AuditService.Query(username, type, action, "failed".equals(status) ? "failure" : status, startDate, endDate));
+        var p = service.list(page, pageSize, new AuditService.Query(username, type, action, "failed".equals(status) ? "failure" : status, startDate, endDate));
         return ApiResponse.ok(PageData.of(p.logs().stream().map(AuditController::legacy).toList(), p.page(), p.pageSize(), p.total()));
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.AUDIT_STATS)
     @GetMapping("/stats")
     ApiResponse<?> stats() {
-        var s = service.stats(TenantContextHolder.requireTenantId());
+        var s = service.stats();
         return ApiResponse.ok(Map.of("totalLogs", s.totalLogs(), "successLogs", s.successLogs(), "failedLogs", s.failedLogs(), "todayLogs", s.todayLogs(), "weekLogs", 0, "monthLogs", 0, "topActions", List.of(), "topUsers", List.of(), "topIps", List.of()));
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.AUDIT_READ)
     @GetMapping("/{id}")
     ApiResponse<?> get(@PathVariable UUID id) {
-        return ApiResponse.ok(legacy(service.get(TenantContextHolder.requireTenantId(), id)));
+        return ApiResponse.ok(legacy(service.get(id)));
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.AUDIT_CLEANUP)
     @DeleteMapping("/cleanup")
     ApiResponse<?> cleanup(@RequestParam(defaultValue = "90") int days) {
-        return ApiResponse.ok(Map.of("deletedCount", service.cleanup(TenantContextHolder.requireTenantId(), days)), "审计日志清理完成");
+        return ApiResponse.ok(Map.of("deletedCount", service.cleanup(days)), "审计日志清理完成");
     }
 
     private static Map<String, Object> legacy(com.easy1auth.audit.model.AuditEventEntity e) {

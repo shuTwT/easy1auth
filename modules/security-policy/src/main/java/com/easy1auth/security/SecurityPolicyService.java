@@ -37,15 +37,20 @@ public class SecurityPolicyService {
     }
 
     @Transactional
+    public Policy policy() {
+        return view(policyEntity());
+    }
+
+    @Transactional
     public Policy policy(UUID tenant) {
         return view(policyEntity(tenant));
     }
 
     @Transactional
-    public Policy update(UUID tenant, Policy p) {
+    public Policy update(Policy p) {
         validate(p);
-        var old = policyEntity(tenant);
-        var e = SecurityPolicyEntityDraft.$.produce(d -> d.setId(old.id()).setTenantId(tenant).setPasswordMinLength(p.minLength()).setPasswordRequireUpper(p.requireUpper()).setPasswordRequireLower(p.requireLower()).setPasswordRequireNumber(p.requireNumber()).setPasswordRequireSpecial(p.requireSpecial()).setPasswordMaxAgeDays(p.maxAgeDays()).setPasswordHistoryCount(p.historyCount()).setMfaRequired(p.mfaRequired()).setLoginAttemptLimit(p.loginAttemptLimit()).setLockoutDurationSeconds(p.lockoutSeconds()).setUpdatedAt(Instant.now()));
+        var old = policyEntity();
+        var e = SecurityPolicyEntityDraft.$.produce(d -> d.setId(old.id()).setPasswordMinLength(p.minLength()).setPasswordRequireUpper(p.requireUpper()).setPasswordRequireLower(p.requireLower()).setPasswordRequireNumber(p.requireNumber()).setPasswordRequireSpecial(p.requireSpecial()).setPasswordMaxAgeDays(p.maxAgeDays()).setPasswordHistoryCount(p.historyCount()).setMfaRequired(p.mfaRequired()).setLoginAttemptLimit(p.loginAttemptLimit()).setLockoutDurationSeconds(p.lockoutSeconds()).setUpdatedAt(Instant.now()));
         sql.saveCommand(e).setMode(SaveMode.UPSERT).execute();
         return p;
     }
@@ -188,6 +193,15 @@ public class SecurityPolicyService {
         var f = findFactor(type, subject, factor);
         if (f == null) throw new DomainException("MFA_NOT_CONFIGURED", "MFA 尚未配置", 404);
         return f;
+    }
+
+    private SecurityPolicyEntity policyEntity() {
+        var found = sql.createQuery(POLICY).select(POLICY).fetchOneOrNull();
+        if (found == null) {
+            found = SecurityPolicyEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setPasswordMinLength(8).setPasswordRequireUpper(true).setPasswordRequireLower(true).setPasswordRequireNumber(true).setPasswordRequireSpecial(true).setPasswordMaxAgeDays(90).setPasswordHistoryCount(5).setMfaRequired(false).setLoginAttemptLimit(5).setLockoutDurationSeconds(1800).setUpdatedAt(Instant.now()));
+            sql.saveCommand(found).setMode(SaveMode.INSERT_IF_ABSENT).execute();
+        }
+        return found;
     }
 
     private SecurityPolicyEntity policyEntity(UUID tenant) {

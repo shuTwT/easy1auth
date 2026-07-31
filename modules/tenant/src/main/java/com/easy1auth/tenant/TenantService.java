@@ -5,6 +5,7 @@ import com.easy1auth.foundation.security.ActiveAdminAccountLocker;
 import com.easy1auth.tenant.model.TenantEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -15,14 +16,28 @@ public class TenantService {
     private final TenantAuthorizationProvider authorization;
     private final TenantPackageService packages;
     private final ActiveAdminAccountLocker administratorAccounts;
-    TenantService(TenantRepository repository, TenantAuthorizationProvider authorization, TenantPackageService packages,
-                  ActiveAdminAccountLocker administratorAccounts) { this.repository = repository; this.authorization = authorization; this.packages = packages; this.administratorAccounts = administratorAccounts; }
 
-    @Transactional(readOnly = true) public List<TenantSummary> list(UUID accountId) { return repository.listForAccount(accountId).stream().map(this::summary).toList(); }
-    @Transactional(readOnly = true) public List<TenantControlView> listManaged() { return repository.listOrdinaryTenants().stream().map(this::controlView).toList(); }
+    TenantService(TenantRepository repository, TenantAuthorizationProvider authorization, TenantPackageService packages,
+                  ActiveAdminAccountLocker administratorAccounts) {
+        this.repository = repository;
+        this.authorization = authorization;
+        this.packages = packages;
+        this.administratorAccounts = administratorAccounts;
+    }
+
+    @Transactional(readOnly = true)
+    public List<TenantSummary> list(UUID accountId) {
+        return repository.listForAccount(accountId).stream().map(this::summary).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<TenantControlView> listManaged() {
+        return repository.listOrdinaryTenants().stream().map(this::controlView).toList();
+    }
+
     @Transactional(readOnly = true)
     public TenantContext resolve(UUID accountId, UUID tenantId, String traceId) {
-        var membership=repository.activeMembership(accountId,tenantId).filter(it->authorization.isActiveAccount(accountId)).orElseThrow(() -> new DomainException("TENANT_ACCESS_DENIED", "无权访问所选租户", 403));
+        var membership = repository.activeMembership(accountId, tenantId).filter(it -> authorization.isActiveAccount(accountId)).orElseThrow(() -> new DomainException("TENANT_ACCESS_DENIED", "无权访问所选租户", 403));
         validateMembershipRole(membership.system(), membership.role());
         var effective = authorization.resolve(new TenantAuthorizationRequest(
                 accountId, tenantId, membership.id(), membership.role(), membership.system(), membership.packageId()));
@@ -30,18 +45,21 @@ public class TenantService {
                 accountId, tenantId, membership.id(), membership.role(), effective.permissions(),
                 effective.tenantPackage(), traceId);
     }
+
     @Transactional
     public TenantSummary createOrdinary(String name, long packageId, UUID administratorAccountId) {
         var tenantPackage = packages.lockActiveAssignable(packageId);
         administratorAccounts.lockActive(administratorAccountId);
         return createOrdinary(name, tenantPackage, administratorAccountId);
     }
+
     @Transactional
     public TenantSummary createOrdinaryWithDefaultPackage(String name, UUID administratorAccountId) {
         var tenantPackage = packages.lockActiveDefaultAssignable();
         administratorAccounts.lockActive(administratorAccountId);
         return createOrdinary(name, tenantPackage, administratorAccountId);
     }
+
     @Transactional
     public TenantControlView updateOrdinary(UUID tenantId, String name, Long packageId) {
         TenantEntity existing = requiredOrdinaryTenant(tenantId);
@@ -52,6 +70,7 @@ public class TenantService {
         repository.updateOrdinaryTenant(existing.id(), normalizedName, assignedPackageId);
         return controlView(requiredOrdinaryTenant(existing.id()));
     }
+
     @Transactional
     public TenantControlView updateOrdinaryStatus(UUID tenantId, String status) {
         TenantEntity tenant = requiredOrdinaryTenant(tenantId);
@@ -65,12 +84,14 @@ public class TenantService {
         repository.updateTenantStatus(tenant.id(), normalized);
         return controlView(requiredOrdinaryTenant(tenant.id()));
     }
+
     @Transactional
     public void deleteOrdinary(UUID tenantId) {
         TenantEntity tenant = requiredOrdinaryTenant(tenantId);
         repository.updateTenantStatus(tenant.id(), "deleted");
         repository.suspendAllMemberships(tenant.id());
     }
+
     @Transactional
     public TenantControlView transferAdministrator(UUID tenantId, UUID targetAccountId) {
         if (targetAccountId == null) {
@@ -100,9 +121,21 @@ public class TenantService {
         repository.suspendMembership(current.id());
         return controlView(requiredOrdinaryTenant(tenant.id()));
     }
-    @Transactional public int lockForUserQuota(UUID tenantId){return repository.lockAndGetMaxUsers(tenantId);}
-    @Transactional public int lockForAppQuota(UUID tenantId){return repository.lockAndGetMaxApps(tenantId);}
-    @Transactional public void lockForSecurityMaterial(UUID tenantId){repository.lockActiveTenant(tenantId).orElseThrow(() -> new DomainException("TENANT_NOT_FOUND", "租户不存在或未启用", 404));}
+
+    @Transactional
+    public int lockForUserQuota(UUID tenantId) {
+        return repository.lockAndGetMaxUsers(tenantId);
+    }
+
+    @Transactional
+    public int lockForAppQuota(UUID tenantId) {
+        return repository.lockAndGetMaxApps(tenantId);
+    }
+
+    @Transactional
+    public void lockForSecurityMaterial(UUID tenantId) {
+        repository.lockActiveTenant(tenantId).orElseThrow(() -> new DomainException("TENANT_NOT_FOUND", "租户不存在或未启用", 404));
+    }
 
     private TenantSummary summary(TenantRepository.TenantState state) {
         var tenant = state.tenant();

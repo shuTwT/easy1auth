@@ -32,16 +32,16 @@ public class AdminAccessService {
     }
 
     @Transactional(readOnly = true)
-    public Page<AdminRoleView> roles(UUID tenantId, int page, int pageSize, String name, Boolean system) {
+    public Page<AdminRoleView> roles(int page, int pageSize, String name, Boolean system) {
         int p = Math.max(1, page), size = Math.min(100, Math.max(1, pageSize));
-        var query = sql.createQuery(ROLE).where(ROLE.tenantId().eq(tenantId)).whereIf(name != null, () -> ROLE.name().ilike(name, LikeMode.ANYWHERE)).whereIf(system != null, () -> ROLE.systemRole().eq(system)).orderBy(ROLE.createdAt().desc()).select(ROLE.fetch(AdminRoleEntityFetcher.$.allScalarFields().permissions().memberships()));
+        var query = sql.createQuery(ROLE).whereIf(name != null, () -> ROLE.name().ilike(name, LikeMode.ANYWHERE)).whereIf(system != null, () -> ROLE.systemRole().eq(system)).orderBy(ROLE.createdAt().desc()).select(ROLE.fetch(AdminRoleEntityFetcher.$.allScalarFields().permissions().memberships()));
         long total = query.fetchUnlimitedCount();
         return new Page<>(query.limit(size, (long) (p - 1) * size).execute().stream().map(this::view).toList(), total, p, size);
     }
 
     @Transactional(readOnly = true)
-    public AdminRoleView role(UUID tenantId, UUID id) {
-        return find(tenantId, id);
+    public AdminRoleView role(UUID id) {
+        return view(findEntityFetched(id));
     }
 
     @Transactional
@@ -71,8 +71,8 @@ public class AdminAccessService {
     }
 
     @Transactional
-    public void delete(UUID tenantId, UUID id) {
-        if (findEntity(tenantId, id).systemRole()) throw immutable();
+    public void delete(UUID id) {
+        if (findEntity(id).systemRole()) throw immutable();
         sql.deleteById(AdminRoleEntity.class, id);
     }
 
@@ -127,8 +127,8 @@ public class AdminAccessService {
     }
 
     @Transactional(readOnly = true)
-    public Map<String, Long> roleStats(UUID tenantId) {
-        var roles = sql.createQuery(ROLE).where(ROLE.tenantId().eq(tenantId)).select(ROLE.fetch(AdminRoleEntityFetcher.$.allScalarFields().memberships())).execute();
+    public Map<String, Long> roleStats() {
+        var roles = sql.createQuery(ROLE).select(ROLE.fetch(AdminRoleEntityFetcher.$.allScalarFields().memberships())).execute();
         return Map.of("totalRoles", (long) roles.size(), "systemRoles", roles.stream().filter(AdminRoleEntity::systemRole).count(), "customRoles", roles.stream().filter(r -> !r.systemRole()).count(), "totalAdmins", roles.stream().flatMap(r -> r.memberships().stream()).map(TenantMembershipEntity::id).distinct().count());
     }
 
@@ -146,6 +146,14 @@ public class AdminAccessService {
 
     private AdminRoleView find(UUID tenant, UUID id) {
         return view(findEntityFetched(tenant, id));
+    }
+
+    private AdminRoleEntity findEntity(UUID id) {
+        return sql.createQuery(ROLE).where(ROLE.id().eq(id)).select(ROLE).fetchOptional().orElseThrow(() -> new DomainException("ADMIN_ROLE_NOT_FOUND", "管理员角色不存在", 404));
+    }
+
+    private AdminRoleEntity findEntityFetched(UUID id) {
+        return sql.createQuery(ROLE).where(ROLE.id().eq(id)).select(ROLE.fetch(AdminRoleEntityFetcher.$.allScalarFields().permissions().memberships())).fetchOptional().orElseThrow(() -> new DomainException("ADMIN_ROLE_NOT_FOUND", "管理员角色不存在", 404));
     }
 
     private AdminRoleEntity findEntity(UUID tenant, UUID id) {

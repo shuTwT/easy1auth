@@ -1,18 +1,191 @@
 package com.easy1auth.directory;
+
+import com.easy1auth.tenant.TenantContextHolder;
 import com.easy1auth.security.SecurityPolicyService;
-import com.easy1auth.directory.model.*; import com.easy1auth.foundation.error.DomainException; import com.easy1auth.foundation.id.UuidV7; import com.easy1auth.tenant.TenantService; import org.babyfish.jimmer.sql.JSqlClient; import org.babyfish.jimmer.sql.ast.LikeMode; import org.babyfish.jimmer.sql.ast.mutation.SaveMode; import org.springframework.security.crypto.password.PasswordEncoder; import org.springframework.stereotype.Service; import org.springframework.transaction.annotation.Transactional; import java.time.Instant; import java.util.*;
-@Service public class PoolUserService{
- private static final PoolUserEntityTable USER=PoolUserEntityTable.$; private final JSqlClient sql; private final TenantService tenants; private final PasswordEncoder passwords; private final SecurityPolicyService security;
- public PoolUserService(JSqlClient sql,TenantService tenants,PasswordEncoder passwords,SecurityPolicyService security){this.sql=sql;this.tenants=tenants;this.passwords=passwords;this.security=security;}
- @Transactional(readOnly=true) public Page list(UUID tenant,int page,int pageSize,String username,String email,String phone,String name,String status,String department){int p=Math.max(1,page),size=Math.min(100,Math.max(1,pageSize));var q=sql.createQuery(USER).where(USER.tenantId().eq(tenant)).whereIf(username!=null,()->USER.username().ilike(username,LikeMode.ANYWHERE)).whereIf(email!=null,()->USER.email().ilike(email,LikeMode.ANYWHERE)).whereIf(phone!=null,()->USER.phone().ilike(phone,LikeMode.ANYWHERE)).whereIf(name!=null,()->USER.name().ilike(name,LikeMode.ANYWHERE)).whereIf(status!=null,()->USER.status().eq(status)).whereIf(department!=null,()->USER.department().eq(department)).orderBy(USER.createdAt().desc()).select(USER);long total=q.fetchUnlimitedCount();return new Page(q.limit(size,(long)(p-1)*size).execute().stream().map(this::view).toList(),total,p,size);}
- @Transactional(readOnly=true) public PoolUserView get(UUID tenant,UUID id){return view(entity(tenant,id));}
- @Transactional public PoolUserView create(UUID tenant,Input in){validate(in.username(),in.email(),in.name());int limit=tenants.lockForUserQuota(tenant);long count=sql.createQuery(USER).where(USER.tenantId().eq(tenant)).select(USER.id()).fetchUnlimitedCount();if(count>=limit)throw new DomainException("TENANT_USER_LIMIT","已达到用户数量上限",403);Instant now=Instant.now();var e=PoolUserEntityDraft.$.produce(d->d.setId(UuidV7.randomUuid()).setTenantId(tenant).setUsername(in.username().strip()).setEmail(in.email().strip().toLowerCase()).setPhone(in.phone()).setPasswordHash(in.password()==null?null:passwords.encode(in.password())).setName(in.name().strip()).setAvatar(in.avatar()).setStatus("active").setEmailVerified(false).setPhoneVerified(false).setDepartment(in.department()).setPosition(in.position()).setCustomAttributes(in.customAttributes()).setLastLoginAt(null).setCreatedAt(now).setUpdatedAt(now));sql.saveCommand(e).setMode(SaveMode.INSERT_ONLY).execute();return view(e);}
- @Transactional public PoolUserView update(UUID tenant,UUID id,Input in){entity(tenant,id);var u=sql.createUpdate(USER).set(USER.updatedAt(),Instant.now()).where(USER.id().eq(id),USER.tenantId().eq(tenant));if(in.username()!=null)u.set(USER.username(),in.username());if(in.email()!=null)u.set(USER.email(),in.email().toLowerCase());if(in.phone()!=null)u.set(USER.phone(),in.phone());if(in.name()!=null)u.set(USER.name(),in.name());if(in.avatar()!=null)u.set(USER.avatar(),in.avatar());if(in.status()!=null)u.set(USER.status(),in.status());if(in.department()!=null)u.set(USER.department(),in.department());if(in.position()!=null)u.set(USER.position(),in.position());if(in.customAttributes()!=null)u.set(USER.customAttributes(),in.customAttributes());u.execute();return get(tenant,id);}
- @Transactional public void delete(UUID tenant,UUID id){int changed=sql.createDelete(USER).where(USER.id().eq(id),USER.tenantId().eq(tenant)).execute();if(changed!=1)throw missing();}
- @Transactional public PoolUserView status(UUID tenant,UUID id,String status){if(!Set.of("active","disabled","locked").contains(status))throw new DomainException("USER_STATUS_INVALID","用户状态无效",400);entity(tenant,id);sql.createUpdate(USER).set(USER.status(),status).set(USER.updatedAt(),Instant.now()).where(USER.id().eq(id),USER.tenantId().eq(tenant)).execute();return get(tenant,id);}
- @Transactional public void resetPassword(UUID tenant,UUID id,String password){var user=entity(tenant,id);var policy=security.policy(tenant);security.validatePassword(password,policy);security.rejectReusedPassword("pool_user",id,password,user.passwordHash(),passwords,policy.historyCount());sql.createUpdate(USER).set(USER.passwordHash(),passwords.encode(password)).set(USER.updatedAt(),Instant.now()).where(USER.id().eq(id),USER.tenantId().eq(tenant)).execute();security.rememberPassword("pool_user",id,user.passwordHash(),policy.historyCount());}
- @Transactional public void changePassword(UUID tenant,UUID id,String oldPassword,String newPassword){var user=entity(tenant,id);if(user.passwordHash()==null||!passwords.matches(oldPassword,user.passwordHash()))throw new DomainException("CURRENT_PASSWORD_INVALID","原密码错误",400);var policy=security.policy(tenant);security.validatePassword(newPassword,policy);security.rejectReusedPassword("pool_user",id,newPassword,user.passwordHash(),passwords,policy.historyCount());sql.createUpdate(USER).set(USER.passwordHash(),passwords.encode(newPassword)).set(USER.updatedAt(),Instant.now()).where(USER.id().eq(id),USER.tenantId().eq(tenant)).execute();security.rememberPassword("pool_user",id,user.passwordHash(),policy.historyCount());}
- @Transactional(readOnly=true) public Map<String,Long> stats(UUID tenant){var rows=sql.createQuery(USER).where(USER.tenantId().eq(tenant)).select(USER.status()).execute();return Map.of("totalUsers",(long)rows.size(),"activeUsers",rows.stream().filter("active"::equals).count(),"disabledUsers",rows.stream().filter("disabled"::equals).count(),"lockedUsers",rows.stream().filter("locked"::equals).count());}
- private PoolUserEntity entity(UUID tenant,UUID id){return sql.createQuery(USER).where(USER.id().eq(id),USER.tenantId().eq(tenant)).select(USER).fetchOptional().orElseThrow(this::missing);} private DomainException missing(){return new DomainException("POOL_USER_NOT_FOUND","用户不存在",404);} private void validate(String u,String e,String n){if(u==null||u.isBlank()||e==null||!e.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")||n==null||n.isBlank())throw new DomainException("POOL_USER_INVALID","用户名、邮箱和姓名为必填项",400);} private void validatePassword(String p){if(p==null||p.length()<8)throw new DomainException("PASSWORD_WEAK","密码至少8位",400);} private PoolUserView view(PoolUserEntity e){return new PoolUserView(e.id(),e.tenantId(),e.username(),e.email(),e.phone(),e.name(),e.avatar(),e.status(),e.emailVerified(),e.phoneVerified(),e.department(),e.position(),e.customAttributes(),e.lastLoginAt(),e.createdAt(),e.updatedAt());}
- public record Input(String username,String email,String password,String phone,String name,String avatar,String status,String department,String position,Map<String,Object> customAttributes){} public record Page(List<PoolUserView> users,long total,int page,int pageSize){}
+import com.easy1auth.directory.model.*;
+import com.easy1auth.foundation.error.DomainException;
+import com.easy1auth.foundation.id.UuidV7;
+import com.easy1auth.tenant.TenantService;
+import org.babyfish.jimmer.sql.JSqlClient;
+import org.babyfish.jimmer.sql.ast.LikeMode;
+import org.babyfish.jimmer.sql.ast.mutation.SaveMode;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+import java.util.*;
+
+@Service
+public class PoolUserService {
+    private static final PoolUserEntityTable USER = PoolUserEntityTable.$;
+    private final JSqlClient sql;
+    private final TenantService tenants;
+    private final PasswordEncoder passwords;
+    private final SecurityPolicyService security;
+
+    public PoolUserService(JSqlClient sql, TenantService tenants, PasswordEncoder passwords, SecurityPolicyService security) {
+        this.sql = sql;
+        this.tenants = tenants;
+        this.passwords = passwords;
+        this.security = security;
+    }
+
+    @Transactional(readOnly = true)
+    public Page list(UUID tenant, int page, int pageSize, String username, String email, String phone, String name, String status, String department) {
+        int p = Math.max(1, page), size = Math.min(100, Math.max(1, pageSize));
+        var q = sql.createQuery(USER).where(USER.tenantId().eq(tenant)).whereIf(username != null, () -> USER.username().ilike(username, LikeMode.ANYWHERE)).whereIf(email != null, () -> USER.email().ilike(email, LikeMode.ANYWHERE)).whereIf(phone != null, () -> USER.phone().ilike(phone, LikeMode.ANYWHERE)).whereIf(name != null, () -> USER.name().ilike(name, LikeMode.ANYWHERE)).whereIf(status != null, () -> USER.status().eq(status)).whereIf(department != null, () -> USER.department().eq(department)).orderBy(USER.createdAt().desc()).select(USER);
+        long total = q.fetchUnlimitedCount();
+        return new Page(q.limit(size, (long) (p - 1) * size).execute().stream().map(this::view).toList(), total, p, size);
+    }
+
+    @Transactional(readOnly = true)
+    public PoolUserView get(UUID tenant, UUID id) {
+        return view(entity(tenant, id));
+    }
+
+    @Transactional
+    public PoolUserView create(UUID tenant, Input in) {
+        validate(in.username(), in.email(), in.name());
+        int limit = tenants.lockForUserQuota(tenant);
+        long count = sql.createQuery(USER).where(USER.tenantId().eq(tenant)).select(USER.id()).fetchUnlimitedCount();
+        if (count >= limit) throw new DomainException("TENANT_USER_LIMIT", "已达到用户数量上限", 403);
+        Instant now = Instant.now();
+        var e = PoolUserEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTenantId(tenant).setUsername(in.username().strip()).setEmail(in.email().strip().toLowerCase()).setPhone(in.phone()).setPasswordHash(in.password() == null ? null : passwords.encode(in.password())).setName(in.name().strip()).setAvatar(in.avatar()).setStatus("active").setEmailVerified(false).setPhoneVerified(false).setDepartment(in.department()).setPosition(in.position()).setCustomAttributes(in.customAttributes()).setLastLoginAt(null).setCreatedAt(now).setUpdatedAt(now));
+        sql.saveCommand(e).setMode(SaveMode.INSERT_ONLY).execute();
+        return view(e);
+    }
+
+    @Transactional
+    public PoolUserView update(UUID tenant, UUID id, Input in) {
+        entity(tenant, id);
+        var u = sql.createUpdate(USER).set(USER.updatedAt(), Instant.now()).where(USER.id().eq(id), USER.tenantId().eq(tenant));
+        if (in.username() != null) u.set(USER.username(), in.username());
+        if (in.email() != null) u.set(USER.email(), in.email().toLowerCase());
+        if (in.phone() != null) u.set(USER.phone(), in.phone());
+        if (in.name() != null) u.set(USER.name(), in.name());
+        if (in.avatar() != null) u.set(USER.avatar(), in.avatar());
+        if (in.status() != null) u.set(USER.status(), in.status());
+        if (in.department() != null) u.set(USER.department(), in.department());
+        if (in.position() != null) u.set(USER.position(), in.position());
+        if (in.customAttributes() != null) u.set(USER.customAttributes(), in.customAttributes());
+        u.execute();
+        return get(tenant, id);
+    }
+
+    @Transactional
+    public void delete(UUID tenant, UUID id) {
+        int changed = sql.createDelete(USER).where(USER.id().eq(id), USER.tenantId().eq(tenant)).execute();
+        if (changed != 1) throw missing();
+    }
+
+    @Transactional
+    public PoolUserView status(UUID tenant, UUID id, String status) {
+        if (!Set.of("active", "disabled", "locked").contains(status))
+            throw new DomainException("USER_STATUS_INVALID", "用户状态无效", 400);
+        entity(tenant, id);
+        sql.createUpdate(USER).set(USER.status(), status).set(USER.updatedAt(), Instant.now()).where(USER.id().eq(id), USER.tenantId().eq(tenant)).execute();
+        return get(tenant, id);
+    }
+
+    @Transactional
+    public void resetPassword(UUID tenant, UUID id, String password) {
+        var user = entity(tenant, id);
+        var policy = security.policy(tenant);
+        security.validatePassword(password, policy);
+        security.rejectReusedPassword("pool_user", id, password, user.passwordHash(), passwords, policy.historyCount());
+        sql.createUpdate(USER).set(USER.passwordHash(), passwords.encode(password)).set(USER.updatedAt(), Instant.now()).where(USER.id().eq(id), USER.tenantId().eq(tenant)).execute();
+        security.rememberPassword("pool_user", id, user.passwordHash(), policy.historyCount());
+    }
+
+    @Transactional
+    public void changePassword(UUID tenant, UUID id, String oldPassword, String newPassword) {
+        var user = entity(tenant, id);
+        if (user.passwordHash() == null || !passwords.matches(oldPassword, user.passwordHash()))
+            throw new DomainException("CURRENT_PASSWORD_INVALID", "原密码错误", 400);
+        var policy = security.policy(tenant);
+        security.validatePassword(newPassword, policy);
+        security.rejectReusedPassword("pool_user", id, newPassword, user.passwordHash(), passwords, policy.historyCount());
+        sql.createUpdate(USER).set(USER.passwordHash(), passwords.encode(newPassword)).set(USER.updatedAt(), Instant.now()).where(USER.id().eq(id), USER.tenantId().eq(tenant)).execute();
+        security.rememberPassword("pool_user", id, user.passwordHash(), policy.historyCount());
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Long> stats(UUID tenant) {
+        var rows = sql.createQuery(USER).where(USER.tenantId().eq(tenant)).select(USER.status()).execute();
+        return Map.of("totalUsers", (long) rows.size(), "activeUsers", rows.stream().filter("active"::equals).count(), "disabledUsers", rows.stream().filter("disabled"::equals).count(), "lockedUsers", rows.stream().filter("locked"::equals).count());
+    }
+
+    private PoolUserEntity entity(UUID tenant, UUID id) {
+        return sql.createQuery(USER).where(USER.id().eq(id), USER.tenantId().eq(tenant)).select(USER).fetchOptional().orElseThrow(this::missing);
+    }
+
+    private DomainException missing() {
+        return new DomainException("POOL_USER_NOT_FOUND", "用户不存在", 404);
+    }
+
+    private void validate(String u, String e, String n) {
+        if (u == null || u.isBlank() || e == null || !e.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$") || n == null || n.isBlank())
+            throw new DomainException("POOL_USER_INVALID", "用户名、邮箱和姓名为必填项", 400);
+    }
+
+    private void validatePassword(String p) {
+        if (p == null || p.length() < 8) throw new DomainException("PASSWORD_WEAK", "密码至少8位", 400);
+    }
+
+    private PoolUserView view(PoolUserEntity e) {
+        return new PoolUserView(e.id(), e.tenantId(), e.username(), e.email(), e.phone(), e.name(), e.avatar(), e.status(), e.emailVerified(), e.phoneVerified(), e.department(), e.position(), e.customAttributes(), e.lastLoginAt(), e.createdAt(), e.updatedAt());
+    }
+
+    @Transactional(readOnly = true)
+    public Page list(int page, int pageSize, String username, String email, String phone, String name, String status, String department) {
+        return list(TenantContextHolder.requireTenantId(), page, pageSize, username, email, phone, name, status, department);
+    }
+
+    @Transactional(readOnly = true)
+    public PoolUserView get(UUID id) {
+        return get(TenantContextHolder.requireTenantId(), id);
+    }
+
+    @Transactional
+    public PoolUserView create(Input in) {
+        return create(TenantContextHolder.requireTenantId(), in);
+    }
+
+    @Transactional
+    public PoolUserView update(UUID id, Input in) {
+        return update(TenantContextHolder.requireTenantId(), id, in);
+    }
+
+    @Transactional
+    public void delete(UUID id) {
+        delete(TenantContextHolder.requireTenantId(), id);
+    }
+
+    @Transactional
+    public PoolUserView status(UUID id, String status) {
+        return status(TenantContextHolder.requireTenantId(), id, status);
+    }
+
+    @Transactional
+    public void resetPassword(UUID id, String password) {
+        resetPassword(TenantContextHolder.requireTenantId(), id, password);
+    }
+
+    @Transactional
+    public void changePassword(UUID id, String oldPassword, String newPassword) {
+        changePassword(TenantContextHolder.requireTenantId(), id, oldPassword, newPassword);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Long> stats() {
+        return stats(TenantContextHolder.requireTenantId());
+    }
+
+    public record Input(String username, String email, String password, String phone, String name, String avatar,
+                        String status, String department, String position, Map<String, Object> customAttributes) {
+    }
+
+    public record Page(List<PoolUserView> users, long total, int page, int pageSize) {
+    }
 }

@@ -1,7 +1,5 @@
 package com.easy1auth.admin.web;
 
-import com.easy1auth.tenant.TenantContextHolder;
-
 import com.easy1auth.admin.security.ManagementRouteClassification;
 import com.easy1auth.admin.security.ManagementRouteKind;
 import com.easy1auth.admin.security.TenantManagementPermission;
@@ -23,7 +21,7 @@ public class CustomizationController {
     @TenantManagementPermission(value = ManagementPermissionCode.BRAND_READ)
     @GetMapping("/api/brand-settings")
     ApiResponse<?> brand() {
-        var e = service.brand(TenantContextHolder.requireTenantId());
+        var e = service.brand();
         return ApiResponse.ok(Map.of("tenantId", e.tenantId(), "brandSettings", e.settings(), "updatedAt", e.updatedAt()));
     }
 
@@ -31,38 +29,38 @@ public class CustomizationController {
     @PutMapping("/api/brand-settings")
     ApiResponse<?> brandUpdate(@RequestBody Map<String, Object> in) {
         var settings = in.containsKey("brandSettings") ? (Map<String, Object>) in.get("brandSettings") : in;
-        var e = service.updateBrand(TenantContextHolder.requireTenantId(), settings);
+        var e = service.updateBrand(settings);
         return ApiResponse.ok(Map.of("tenantId", e.tenantId(), "brandSettings", e.settings(), "updatedAt", e.updatedAt()), "品牌设置更新成功");
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.LOGIN_STYLE_READ)
     @GetMapping("/api/login-style")
     ApiResponse<?> style() {
-        return ApiResponse.ok(service.style(TenantContextHolder.requireTenantId()));
+        return ApiResponse.ok(service.style());
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.LOGIN_STYLE_UPDATE)
     @PutMapping("/api/login-style")
     ApiResponse<?> styleUpdate(@RequestBody CustomizationService.StyleInput in) {
-        return ApiResponse.ok(service.updateStyle(TenantContextHolder.requireTenantId(), in), "登录样式更新成功");
+        return ApiResponse.ok(service.updateStyle(in), "登录样式更新成功");
     }
 
     @ManagementRouteClassification(ManagementRouteKind.PUBLIC)
     @GetMapping("/api/login-style/public")
     ApiResponse<?> publicStyle(@RequestParam(required = false) UUID tenantId) {
-        return ApiResponse.ok(tenantId == null ? Map.of("backgroundColor", "#f5f7fa", "primaryColor", "#0369A1", "title", "Easy1Auth", "subtitle", "企业级身份管理平台", "loginMethods", List.of("password"), "socialProviders", List.of()) : service.style(tenantId));
+        return ApiResponse.ok(tenantId == null ? Map.of("backgroundColor", "#f5f7fa", "primaryColor", "#0369A1", "title", "Easy1Auth", "subtitle", "企业级身份管理平台", "loginMethods", List.of("password"), "socialProviders", List.of()) : service.publicStyle(tenantId));
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.CUSTOM_DOMAIN_LIST)
     @GetMapping("/api/custom-domains")
     ApiResponse<?> domains() {
-        return ApiResponse.ok(service.domains(TenantContextHolder.requireTenantId()));
+        return ApiResponse.ok(service.domains());
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.CUSTOM_DOMAIN_CREATE)
     @PostMapping("/api/custom-domains")
     ApiResponse<?> addDomain(@RequestBody DomainInput in) {
-        return ApiResponse.ok(service.addDomain(TenantContextHolder.requireTenantId(), in.domain(), in.verificationMethod()), "域名已登记，所有权验证将在后续阶段启用");
+        return ApiResponse.ok(service.addDomain(in.domain(), in.verificationMethod()), "域名已登记，所有权验证将在后续阶段启用");
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.CUSTOM_DOMAIN_VERIFY)
@@ -82,32 +80,32 @@ public class CustomizationController {
     @TenantManagementPermission(value = ManagementPermissionCode.CUSTOM_DOMAIN_DELETE)
     @DeleteMapping("/api/custom-domains/{id}")
     ApiResponse<Void> deleteDomain(@PathVariable UUID id) {
-        service.deleteDomain(TenantContextHolder.requireTenantId(), id);
+        service.deleteDomain(id);
         return ApiResponse.ok(null, "域名删除成功");
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.MESSAGE_TEMPLATE_LIST)
     @GetMapping("/api/message-templates")
     ApiResponse<?> templates(@RequestParam(required = false) String type) {
-        return ApiResponse.ok(service.templates(TenantContextHolder.requireTenantId(), type));
+        return ApiResponse.ok(service.templates(type));
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.MESSAGE_TEMPLATE_CREATE)
     @PostMapping("/api/message-templates")
     ApiResponse<?> addTemplate(@RequestBody CustomizationService.TemplateInput in) {
-        return ApiResponse.ok(service.saveTemplate(TenantContextHolder.requireTenantId(), null, in), "模板创建成功");
+        return ApiResponse.ok(service.saveTemplate(null, in), "模板创建成功");
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.MESSAGE_TEMPLATE_UPDATE)
     @PutMapping("/api/message-templates/{id}")
     ApiResponse<?> updateTemplate(@PathVariable UUID id, @RequestBody CustomizationService.TemplateInput in) {
-        return ApiResponse.ok(service.saveTemplate(TenantContextHolder.requireTenantId(), id, in), "模板更新成功");
+        return ApiResponse.ok(service.saveTemplate(id, in), "模板更新成功");
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.MESSAGE_TEMPLATE_DELETE)
     @DeleteMapping("/api/message-templates/{id}")
     ApiResponse<Void> deleteTemplate(@PathVariable UUID id) {
-        service.deleteTemplate(TenantContextHolder.requireTenantId(), id);
+        service.deleteTemplate(id);
         return ApiResponse.ok(null, "模板删除成功");
     }
 

@@ -1,7 +1,5 @@
 package com.easy1auth.admin.web;
 
-import com.easy1auth.tenant.TenantContextHolder;
-
 import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.ManagementPermissionCode;
 import com.easy1auth.directory.PoolUserService;
@@ -48,7 +46,6 @@ public class PoolUserImportController {
     ApiResponse<?> upload(@RequestParam("file") MultipartFile file) throws IOException {
         if (file.isEmpty() || file.getSize() > MAX_FILE_SIZE)
             throw new DomainException("IMPORT_FILE_INVALID", "导入文件为空或超过5MB", 400);
-        UUID tenant = TenantContextHolder.requireTenantId();
         List<Map<String, Object>> errors = new ArrayList<>();
         List<Map<String, Object>> imported = new ArrayList<>();
         int total = 0;
@@ -62,7 +59,7 @@ public class PoolUserImportController {
                 if (StreamSupport.empty(username, email, name)) continue;
                 total++;
                 try {
-                    var user = users.create(tenant, new PoolUserService.Input(username, email, blank(password), blank(phone), name, null, null, blank(department), blank(position), null));
+                    var user = users.create(new PoolUserService.Input(username, email, blank(password), blank(phone), name, null, null, blank(department), blank(position), null));
                     imported.add(Map.of("username", user.username(), "email", user.email(), "name", user.name()));
                 } catch (RuntimeException ex) {
                     var error = new LinkedHashMap<String, Object>();

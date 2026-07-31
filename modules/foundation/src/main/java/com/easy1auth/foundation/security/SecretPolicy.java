@@ -4,14 +4,17 @@ import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.Set;
 
-/** Production-only validation for operator supplied secret material. */
+/**
+ * Production-only validation for operator supplied secret material.
+ */
 public final class SecretPolicy {
     private static final Set<String> PLACEHOLDERS = Set.of(
             "changeme", "change-me", "change_me", "replace-me", "replace_me",
             "example", "example-secret", "secret", "password", "easy1auth"
     );
 
-    private SecretPolicy() {}
+    private SecretPolicy() {
+    }
 
     public static String require(String name, String value, int minimumBytes) {
         if (value == null || value.isBlank()) {

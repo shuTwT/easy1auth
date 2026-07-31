@@ -3,6 +3,7 @@ package com.easy1auth.application;
 import com.easy1auth.application.model.*;
 import com.easy1auth.foundation.error.DomainException;
 import com.easy1auth.foundation.id.UuidV7;
+import com.easy1auth.tenant.TenantContextHolder;
 import com.easy1auth.tenant.TenantService;
 import org.babyfish.jimmer.sql.JSqlClient;
 import org.babyfish.jimmer.sql.ast.LikeMode;
@@ -33,26 +34,27 @@ public class ApplicationService {
     }
 
     @Transactional
-    public ApplicationView create(UUID tenant, ApplicationInput input) {
+    public ApplicationView create(ApplicationInput input) {
+        UUID tenant = TenantContextHolder.requireTenantId();
         var normalized = normalize(input, true);
         int limit = tenants.lockForAppQuota(tenant);
-        long count = sql.createQuery(APP).where(APP.tenantId().eq(tenant)).select(APP.id()).fetchUnlimitedCount();
+        long count = sql.createQuery(APP).select(APP.id()).fetchUnlimitedCount();
         if (count >= limit) throw new DomainException("TENANT_APP_LIMIT", "已达到租户应用数量上限", 403);
-        if (sql.createQuery(APP).where(APP.tenantId().eq(tenant), APP.name().eq(normalized.name())).select(APP.id()).exists())
+        if (sql.createQuery(APP).where(APP.name().eq(normalized.name())).select(APP.id()).exists())
             throw new DomainException("APPLICATION_NAME_EXISTS", "应用名称已存在", 409);
         UUID id = UuidV7.randomUuid();
         String clientId = "app_" + id.toString().replace("-", "");
         String secret = isPublic(normalized.type()) ? null : secret();
         Instant now = Instant.now();
-        var entity = OAuthApplicationEntityDraft.$.produce(d -> d.setId(id).setTenantId(tenant).setName(normalized.name()).setLogo(normalized.logo()).setDescription(normalized.description()).setType(normalized.type()).setClientId(clientId).setClientSecretHash(secret == null ? null : passwords.encode(secret)).setRedirectUris(normalized.redirectUris()).setPostLogoutRedirectUris(normalized.postLogoutRedirectUris()).setAllowedGrantTypes(normalized.allowedGrantTypes()).setScopes(normalized.scopes()).setRequirePkce(normalized.requirePkce()).setRequireConsent(normalized.requireConsent()).setAccessTokenLifetime(normalized.accessTokenLifetime()).setRefreshTokenLifetime(normalized.refreshTokenLifetime()).setStatus("active").setCreatedAt(now).setUpdatedAt(now));
+        var entity = OAuthApplicationEntityDraft.$.produce(d -> d.setId(id).setName(normalized.name()).setLogo(normalized.logo()).setDescription(normalized.description()).setType(normalized.type()).setClientId(clientId).setClientSecretHash(secret == null ? null : passwords.encode(secret)).setRedirectUris(normalized.redirectUris()).setPostLogoutRedirectUris(normalized.postLogoutRedirectUris()).setAllowedGrantTypes(normalized.allowedGrantTypes()).setScopes(normalized.scopes()).setRequirePkce(normalized.requirePkce()).setRequireConsent(normalized.requireConsent()).setAccessTokenLifetime(normalized.accessTokenLifetime()).setRefreshTokenLifetime(normalized.refreshTokenLifetime()).setStatus("active").setCreatedAt(now).setUpdatedAt(now));
         sql.saveCommand(entity).setMode(SaveMode.INSERT_ONLY).execute();
         return view(entity, secret);
     }
 
     @Transactional(readOnly = true)
-    public ApplicationPage list(UUID tenant, int page, int pageSize, String name, String type, String status) {
+    public ApplicationPage list(int page, int pageSize, String name, String type, String status) {
         int p = Math.max(1, page), size = Math.min(100, Math.max(1, pageSize));
-        var query = sql.createQuery(APP).where(APP.tenantId().eq(tenant))
+        var query = sql.createQuery(APP)
                 .whereIf(name != null && !name.isBlank(), () -> APP.name().ilike(name, LikeMode.ANYWHERE))
                 .whereIf(type != null && !type.isBlank(), () -> APP.type().eq(type))
                 .whereIf(status != null && !status.isBlank(), () -> APP.status().eq(status))
@@ -62,8 +64,8 @@ public class ApplicationService {
     }
 
     @Transactional(readOnly = true)
-    public ApplicationView get(UUID tenant, UUID id) {
-        return view(entity(tenant, id), null);
+    public ApplicationView get(UUID id) {
+        return view(entity(id), null);
     }
 
     @Transactional(readOnly = true)
@@ -77,10 +79,11 @@ public class ApplicationService {
     }
 
     @Transactional
-    public ApplicationView update(UUID tenant, UUID id, ApplicationInput input) {
-        var old = entity(tenant, id);
+    public ApplicationView update(UUID id, ApplicationInput input) {
+        UUID tenant = TenantContextHolder.requireTenantId();
+        var old = entity(id);
         var normalized = normalizeForUpdate(old, input);
-        if (!old.name().equals(normalized.name()) && sql.createQuery(APP).where(APP.tenantId().eq(tenant), APP.name().eq(normalized.name()), APP.id().ne(id)).select(APP.id()).exists())
+        if (!old.name().equals(normalized.name()) && sql.createQuery(APP).where(APP.name().eq(normalized.name()), APP.id().ne(id)).select(APP.id()).exists())
             throw new DomainException("APPLICATION_NAME_EXISTS", "应用名称已存在", 409);
         String oneTimeSecret = null;
         var update = sql.createUpdate(APP).set(APP.name(), normalized.name()).set(APP.logo(), normalized.logo()).set(APP.description(), normalized.description()).set(APP.type(), normalized.type()).set(APP.redirectUris(), normalized.redirectUris()).set(APP.postLogoutRedirectUris(), normalized.postLogoutRedirectUris()).set(APP.allowedGrantTypes(), normalized.allowedGrantTypes()).set(APP.scopes(), normalized.scopes()).set(APP.requirePkce(), normalized.requirePkce()).set(APP.requireConsent(), normalized.requireConsent()).set(APP.accessTokenLifetime(), normalized.accessTokenLifetime()).set(APP.refreshTokenLifetime(), normalized.refreshTokenLifetime()).set(APP.updatedAt(), Instant.now()).where(APP.id().eq(id), APP.tenantId().eq(tenant));
@@ -90,26 +93,29 @@ public class ApplicationService {
         } else if (!isPublic(old.type()) && isPublic(normalized.type()))
             update.set(APP.clientSecretHash(), (String) null);
         update.execute();
-        return view(entity(tenant, id), oneTimeSecret);
+        return view(entity(id), oneTimeSecret);
     }
 
     @Transactional
-    public void delete(UUID tenant, UUID id) {
+    public void delete(UUID id) {
+        UUID tenant = TenantContextHolder.requireTenantId();
         if (sql.createDelete(APP).where(APP.id().eq(id), APP.tenantId().eq(tenant)).execute() != 1) throw missing();
     }
 
     @Transactional
-    public ApplicationView status(UUID tenant, UUID id, String status) {
+    public ApplicationView status(UUID id, String status) {
+        UUID tenant = TenantContextHolder.requireTenantId();
         if (!Set.of("active", "disabled").contains(status))
             throw new DomainException("APPLICATION_STATUS_INVALID", "应用状态无效", 400);
-        entity(tenant, id);
+        entity(id);
         sql.createUpdate(APP).set(APP.status(), status).set(APP.updatedAt(), Instant.now()).where(APP.id().eq(id), APP.tenantId().eq(tenant)).execute();
-        return get(tenant, id);
+        return get(id);
     }
 
     @Transactional
-    public SecretView regenerateSecret(UUID tenant, UUID id) {
-        var app = entity(tenant, id);
+    public SecretView regenerateSecret(UUID id) {
+        UUID tenant = TenantContextHolder.requireTenantId();
+        var app = entity(id);
         if (isPublic(app.type()))
             throw new DomainException("PUBLIC_CLIENT_HAS_NO_SECRET", "公共客户端不使用客户端密钥", 400);
         String secret = secret();
@@ -118,13 +124,13 @@ public class ApplicationService {
     }
 
     @Transactional(readOnly = true)
-    public Map<String, Long> stats(UUID tenant) {
-        var rows = sql.createQuery(APP).where(APP.tenantId().eq(tenant)).select(APP.status()).execute();
+    public Map<String, Long> stats() {
+        var rows = sql.createQuery(APP).select(APP.status()).execute();
         return Map.of("totalApplications", (long) rows.size(), "activeApplications", rows.stream().filter("active"::equals).count(), "disabledApplications", rows.stream().filter("disabled"::equals).count());
     }
 
-    private OAuthApplicationEntity entity(UUID tenant, UUID id) {
-        return sql.createQuery(APP).where(APP.id().eq(id), APP.tenantId().eq(tenant)).select(APP).fetchOptional().orElseThrow(this::missing);
+    private OAuthApplicationEntity entity(UUID id) {
+        return sql.createQuery(APP).where(APP.id().eq(id)).select(APP).fetchOptional().orElseThrow(this::missing);
     }
 
     private DomainException missing() {

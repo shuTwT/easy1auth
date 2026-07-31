@@ -4,6 +4,7 @@ import com.easy1auth.audit.model.*;
 import com.easy1auth.foundation.error.DomainException;
 import com.easy1auth.foundation.id.UuidV7;
 import com.easy1auth.security.SecurityDataCipher;
+import com.easy1auth.tenant.TenantContextHolder;
 import org.babyfish.jimmer.sql.JSqlClient;
 import org.babyfish.jimmer.sql.ast.Predicate;
 import org.babyfish.jimmer.sql.ast.mutation.SaveMode;
@@ -30,40 +31,43 @@ public class DeliveryService {
     }
 
     @Transactional
-    public SubscriptionView create(UUID tenant, SubscriptionInput in) {
+    public SubscriptionView create(SubscriptionInput in) {
+        UUID tenant = TenantContextHolder.requireTenantId();
         validate(in);
         UUID id = UuidV7.randomUuid();
         String secret = token(32);
         Instant now = Instant.now();
-        var e = WebhookSubscriptionEntityDraft.$.produce(d -> d.setId(id).setTenantId(tenant).setName(in.name().strip()).setUrl(in.url()).setEvents(in.events().stream().distinct().toList()).setSecretHash(hash(secret)).setEncryptedSecret(cipher.encrypt("webhook:" + tenant + ":" + id, secret)).setStatus("active").setMaxRetries(in.maxRetries() == null ? 5 : in.maxRetries()).setCreatedAt(now).setUpdatedAt(now));
+        var e = WebhookSubscriptionEntityDraft.$.produce(d -> d.setId(id).setName(in.name().strip()).setUrl(in.url()).setEvents(in.events().stream().distinct().toList()).setSecretHash(hash(secret)).setEncryptedSecret(cipher.encrypt("webhook:" + tenant + ":" + id, secret)).setStatus("active").setMaxRetries(in.maxRetries() == null ? 5 : in.maxRetries()).setCreatedAt(now).setUpdatedAt(now));
         sql.saveCommand(e).setMode(SaveMode.INSERT_ONLY).execute();
         return view(e, secret);
     }
 
     @Transactional(readOnly = true)
-    public List<SubscriptionView> list(UUID tenant) {
-        return sql.createQuery(HOOK).where(HOOK.tenantId().eq(tenant)).orderBy(HOOK.createdAt().desc()).select(HOOK).execute().stream().map(e -> view(e, null)).toList();
+    public List<SubscriptionView> list() {
+        return sql.createQuery(HOOK).orderBy(HOOK.createdAt().desc()).select(HOOK).execute().stream().map(e -> view(e, null)).toList();
     }
 
     @Transactional
-    public SubscriptionView update(UUID tenant, UUID id, SubscriptionInput in) {
-        var old = entity(tenant, id);
+    public SubscriptionView update(UUID id, SubscriptionInput in) {
+        var old = entity(id);
         validate(in);
-        sql.createUpdate(HOOK).set(HOOK.name(), in.name()).set(HOOK.url(), in.url()).set(HOOK.events(), in.events()).set(HOOK.maxRetries(), in.maxRetries() == null ? old.maxRetries() : in.maxRetries()).set(HOOK.status(), in.status() == null ? old.status() : status(in.status())).set(HOOK.updatedAt(), Instant.now()).where(HOOK.tenantId().eq(tenant), HOOK.id().eq(id)).execute();
-        return view(entity(tenant, id), null);
+        sql.createUpdate(HOOK).set(HOOK.name(), in.name()).set(HOOK.url(), in.url()).set(HOOK.events(), in.events()).set(HOOK.maxRetries(), in.maxRetries() == null ? old.maxRetries() : in.maxRetries()).set(HOOK.status(), in.status() == null ? old.status() : status(in.status())).set(HOOK.updatedAt(), Instant.now()).where(HOOK.tenantId().eq(old.tenantId()), HOOK.id().eq(id)).execute();
+        return view(entity(id), null);
     }
 
     @Transactional
-    public SubscriptionView rotate(UUID tenant, UUID id) {
-        entity(tenant, id);
+    public SubscriptionView rotate(UUID id) {
+        var old = entity(id);
         String secret = token(32);
-        sql.createUpdate(HOOK).set(HOOK.secretHash(), hash(secret)).set(HOOK.encryptedSecret(), cipher.encrypt("webhook:" + tenant + ":" + id, secret)).set(HOOK.updatedAt(), Instant.now()).where(HOOK.id().eq(id), HOOK.tenantId().eq(tenant)).execute();
-        return view(entity(tenant, id), secret);
+        sql.createUpdate(HOOK).set(HOOK.secretHash(), hash(secret)).set(HOOK.encryptedSecret(), cipher.encrypt("webhook:" + old.tenantId() + ":" + id, secret)).set(HOOK.updatedAt(), Instant.now()).where(HOOK.id().eq(id), HOOK.tenantId().eq(old.tenantId())).execute();
+        return view(entity(id), secret);
     }
 
     @Transactional
-    public void delete(UUID tenant, UUID id) {
-        if (sql.createDelete(HOOK).where(HOOK.id().eq(id), HOOK.tenantId().eq(tenant)).execute() != 1) throw missing();
+    public void delete(UUID id) {
+        var old = entity(id);
+        if (sql.createDelete(HOOK).where(HOOK.id().eq(id), HOOK.tenantId().eq(old.tenantId())).execute() != 1)
+            throw missing();
     }
 
     @Transactional
@@ -115,6 +119,10 @@ public class DeliveryService {
 
     private WebhookSubscriptionEntity entity(UUID tenant, UUID id) {
         return sql.createQuery(HOOK).where(HOOK.tenantId().eq(tenant), HOOK.id().eq(id)).select(HOOK).fetchOptional().orElseThrow(this::missing);
+    }
+
+    private WebhookSubscriptionEntity entity(UUID id) {
+        return sql.createQuery(HOOK).where(HOOK.id().eq(id)).select(HOOK).fetchOptional().orElseThrow(this::missing);
     }
 
     private DomainException missing() {
