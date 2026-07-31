@@ -7,10 +7,7 @@ import com.easy1auth.adminaccess.ManagementPermissionCode;
 import com.easy1auth.adminaccess.PlatformAuthorizationResolver;
 import com.easy1auth.foundation.web.ApiResponse;
 import com.easy1auth.foundation.web.PageData;
-import com.easy1auth.foundation.trace.TraceIdFilter;
-import com.easy1auth.tenant.WebFramework;
 import com.easy1auth.tenant.*;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
@@ -99,19 +96,14 @@ public class TenantController {
 
     @ManagementRouteClassification(ManagementRouteKind.DEFERRED_TODO_7)
     @GetMapping("/current")
-    public ApiResponse<?> current(Principal principal, @RequestHeader(WebFramework.TENANT_ID_HEADER) UUID tenantId,
-                                  HttpServletRequest request) {
-        var context = tenants.resolve(accountId(principal), tenantId, traceId(request));
-        var tenant = tenants.list(context.accountId()).stream().filter(it -> it.id().equals(tenantId)).findFirst().orElseThrow();
+    public ApiResponse<?> current(Principal principal) {
+        UUID tenantId = TenantContextHolder.requireTenantId();
+        var tenant = tenants.list(accountId(principal)).stream().filter(it -> it.id().equals(tenantId)).findFirst().orElseThrow();
         return ApiResponse.ok(tenant);
     }
 
     private static UUID accountId(Principal principal) {
         return UUID.fromString(principal.getName());
-    }
-
-    private static String traceId(HttpServletRequest request) {
-        return request.getHeader(TraceIdFilter.HEADER);
     }
 
     public record CreateTenant(String name, long packageId, UUID administratorAccountId) {

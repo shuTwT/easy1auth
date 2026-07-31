@@ -1,14 +1,12 @@
 package com.easy1auth.admin.web;
 
-import com.easy1auth.tenant.WebFramework;
+import com.easy1auth.tenant.TenantContextHolder;
 
 import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.ManagementPermissionCode;
 import com.easy1auth.directory.PoolUserService;
 import com.easy1auth.foundation.error.DomainException;
 import com.easy1auth.foundation.web.ApiResponse;
-import com.easy1auth.tenant.TenantContext;
-import jakarta.servlet.http.HttpServletRequest;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.http.*;
@@ -47,10 +45,10 @@ public class PoolUserImportController {
 
     @TenantManagementPermission(value = ManagementPermissionCode.USER_IMPORT)
     @PostMapping
-    ApiResponse<?> upload(HttpServletRequest request, @RequestParam("file") MultipartFile file) throws IOException {
+    ApiResponse<?> upload(@RequestParam("file") MultipartFile file) throws IOException {
         if (file.isEmpty() || file.getSize() > MAX_FILE_SIZE)
             throw new DomainException("IMPORT_FILE_INVALID", "导入文件为空或超过5MB", 400);
-        UUID tenant = context(request).tenantId();
+        UUID tenant = TenantContextHolder.requireTenantId();
         List<Map<String, Object>> errors = new ArrayList<>();
         List<Map<String, Object>> imported = new ArrayList<>();
         int total = 0;
@@ -85,10 +83,6 @@ public class PoolUserImportController {
 
     private static String blank(String value) {
         return value == null || value.isBlank() ? null : value;
-    }
-
-    private static TenantContext context(HttpServletRequest r) {
-        return WebFramework.requireTenantContext(r);
     }
 
     private static final class StreamSupport {

@@ -14,6 +14,16 @@ class TenantUtilsTest {
     }
 
     @Test
+    void requiresCurrentTenant() {
+        assertThrows(NullPointerException.class, TenantContextHolder::requireTenantId);
+
+        UUID tenantId = UUID.randomUUID();
+        TenantContextHolder.setTenantId(tenantId);
+
+        assertEquals(tenantId, TenantContextHolder.requireTenantId());
+    }
+
+    @Test
     void executesWithSpecifiedTenantAndRestoresPreviousScope() {
         UUID outerTenant = UUID.randomUUID();
         UUID innerTenant = UUID.randomUUID();

@@ -1,5 +1,8 @@
 package com.easy1auth.audit.model;
 
+import com.easy1auth.persistence.model.BaseEntity;
+import com.easy1auth.persistence.model.BaseTenantEntity;
+
 import org.babyfish.jimmer.sql.*;
 
 import java.time.Instant;
@@ -7,12 +10,7 @@ import java.util.*;
 
 @Entity
 @Table(name = "webhook_subscription")
-public interface WebhookSubscriptionEntity {
-    @Id
-    UUID id();
-
-    @Column(name = "tenant_id")
-    UUID tenantId();
+public interface WebhookSubscriptionEntity extends BaseEntity, BaseTenantEntity {
 
     String name();
 

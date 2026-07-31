@@ -1,5 +1,7 @@
 package com.easy1auth.customization.model;
 
+import com.easy1auth.persistence.model.BaseEntity;
+import com.easy1auth.persistence.model.BaseTenantEntity;
 import org.babyfish.jimmer.sql.*;
 import org.jspecify.annotations.Nullable;
 
@@ -8,10 +10,7 @@ import java.util.*;
 
 @Entity
 @Table(name = "login_style")
-public interface LoginStyleEntity {
-    @Id
-    @Column(name = "tenant_id")
-    UUID tenantId();
+public interface LoginStyleEntity extends BaseEntity, BaseTenantEntity {
 
     @Nullable String logo();
 

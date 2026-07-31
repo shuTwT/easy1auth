@@ -1,5 +1,6 @@
 package com.easy1auth.tenant;
 
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -17,6 +18,10 @@ public final class TenantContextHolder {
 
     public static UUID getTenantId() {
         return TENANT_ID.get();
+    }
+
+    public static UUID requireTenantId() {
+        return Objects.requireNonNull(TENANT_ID.get(), "Tenant context is unavailable");
     }
 
     public static void setTenantId(UUID tenantId) {

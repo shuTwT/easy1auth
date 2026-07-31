@@ -1,14 +1,12 @@
 package com.easy1auth.admin.web;
 
-import com.easy1auth.tenant.WebFramework;
+import com.easy1auth.tenant.TenantContextHolder;
 
 import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.ManagementPermissionCode;
 import com.easy1auth.federation.FederationService;
 import com.easy1auth.foundation.web.ApiResponse;
 import com.easy1auth.foundation.web.PageData;
-import com.easy1auth.tenant.TenantContext;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -24,45 +22,41 @@ public class FederationController {
 
     @TenantManagementPermission(value = ManagementPermissionCode.SOCIAL_IDENTITY_PROVIDER_LIST)
     @GetMapping
-    ApiResponse<?> list(HttpServletRequest r, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, @RequestParam(required = false) String search, @RequestParam(required = false) String status) {
-        var p = service.list(c(r).tenantId(), page, pageSize, search, status);
+    ApiResponse<?> list(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, @RequestParam(required = false) String search, @RequestParam(required = false) String status) {
+        var p = service.list(TenantContextHolder.requireTenantId(), page, pageSize, search, status);
         return ApiResponse.ok(PageData.of(p.providers(), p.page(), p.pageSize(), p.total()));
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.SOCIAL_IDENTITY_PROVIDER_STATS)
     @GetMapping("/stats")
-    ApiResponse<?> stats(HttpServletRequest r) {
-        var p = service.list(c(r).tenantId(), 1, 100, null, null);
+    ApiResponse<?> stats() {
+        var p = service.list(TenantContextHolder.requireTenantId(), 1, 100, null, null);
         long active = p.providers().stream().filter(x -> "active".equals(x.status())).count();
         return ApiResponse.ok(Map.of("totalProviders", p.total(), "activeProviders", active, "inactiveProviders", p.total() - active, "byType", Map.of("oidc", p.total())));
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.SOCIAL_IDENTITY_PROVIDER_READ)
     @GetMapping("/{id}")
-    ApiResponse<?> get(HttpServletRequest r, @PathVariable UUID id) {
-        return ApiResponse.ok(service.get(c(r).tenantId(), id));
+    ApiResponse<?> get(@PathVariable UUID id) {
+        return ApiResponse.ok(service.get(TenantContextHolder.requireTenantId(), id));
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.SOCIAL_IDENTITY_PROVIDER_CREATE)
     @PostMapping
-    ApiResponse<?> create(HttpServletRequest r, @RequestBody FederationService.Input in) {
-        return ApiResponse.ok(service.create(c(r).tenantId(), in), "OIDC 身份源创建成功；Client Secret 仅显示一次");
+    ApiResponse<?> create(@RequestBody FederationService.Input in) {
+        return ApiResponse.ok(service.create(TenantContextHolder.requireTenantId(), in), "OIDC 身份源创建成功；Client Secret 仅显示一次");
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.SOCIAL_IDENTITY_PROVIDER_UPDATE)
     @PutMapping("/{id}")
-    ApiResponse<?> update(HttpServletRequest r, @PathVariable UUID id, @RequestBody FederationService.Input in) {
-        return ApiResponse.ok(service.update(c(r).tenantId(), id, in), "OIDC 身份源更新成功");
+    ApiResponse<?> update(@PathVariable UUID id, @RequestBody FederationService.Input in) {
+        return ApiResponse.ok(service.update(TenantContextHolder.requireTenantId(), id, in), "OIDC 身份源更新成功");
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.SOCIAL_IDENTITY_PROVIDER_DELETE)
     @DeleteMapping("/{id}")
-    ApiResponse<Void> delete(HttpServletRequest r, @PathVariable UUID id) {
-        service.delete(c(r).tenantId(), id);
+    ApiResponse<Void> delete(@PathVariable UUID id) {
+        service.delete(TenantContextHolder.requireTenantId(), id);
         return ApiResponse.ok(null, "OIDC 身份源删除成功");
-    }
-
-    private static TenantContext c(HttpServletRequest r) {
-        return WebFramework.requireTenantContext(r);
     }
 }

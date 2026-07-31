@@ -1,5 +1,8 @@
 package com.easy1auth.application.model;
 
+import com.easy1auth.persistence.model.BaseEntity;
+import com.easy1auth.persistence.model.BaseTenantEntity;
+
 import org.babyfish.jimmer.sql.*;
 import org.jspecify.annotations.Nullable;
 
@@ -9,12 +12,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "oauth_application")
-public interface OAuthApplicationEntity {
-    @Id
-    UUID id();
-
-    @Column(name = "tenant_id")
-    UUID tenantId();
+public interface OAuthApplicationEntity extends BaseEntity, BaseTenantEntity {
 
     String name();
 

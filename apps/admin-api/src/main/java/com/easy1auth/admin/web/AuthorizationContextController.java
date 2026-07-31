@@ -10,8 +10,8 @@ import com.easy1auth.adminaccess.ManagementPermissionView;
 import com.easy1auth.foundation.web.ApiResponse;
 import com.easy1auth.tenant.TenantContext;
 import com.easy1auth.tenant.TenantPackageView;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -30,8 +30,8 @@ public class AuthorizationContextController {
 
     @ManagementRouteClassification(ManagementRouteKind.AUTHORIZATION_CONTEXT)
     @GetMapping("/context")
-    public ApiResponse<AuthorizationContextResponse> context(HttpServletRequest request) {
-        TenantContext context = WebFramework.requireTenantContext(request);
+    public ApiResponse<AuthorizationContextResponse> context(
+            @RequestAttribute(WebFramework.TENANT_CONTEXT_ATTRIBUTE) TenantContext context) {
         return ApiResponse.ok(new AuthorizationContextResponse(
                 context.tenantId(),
                 context.membershipRole(),

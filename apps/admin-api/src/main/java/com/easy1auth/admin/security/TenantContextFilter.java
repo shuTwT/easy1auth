@@ -38,25 +38,24 @@ public final class TenantContextFilter extends OncePerRequestFilter {
             chain.doFilter(request, response);
             return;
         }
-        UUID tenantId = WebFramework.getTenantId(request);
-        TenantContext context;
-        try {
-            if (tenantId == null) throw new DomainException("TENANT_CONTEXT_REQUIRED", "租户上下文不可用", 403);
-            context = tenants.resolve(UUID.fromString(jwt.getSubject()), tenantId,
-                    response.getHeader(TraceIdFilter.HEADER));
-            WebFramework.setTenantContext(request, context);
-        } catch (IllegalArgumentException ex) {
-            writeError(response, new DomainException("TENANT_INVALID", "租户标识无效", 400));
-            return;
-        } catch (DomainException ex) {
-            writeError(response, ex);
-            return;
-        }
         UUID previousTenantId = TenantContextHolder.getTenantId();
         boolean previousIgnore = TenantContextHolder.isIgnore();
-        TenantContextHolder.setTenantId(context.tenantId());
-        TenantContextHolder.setIgnore(false);
         try {
+            try {
+                UUID tenantId = WebFramework.getTenantId(request);
+                if (tenantId == null) throw new DomainException("TENANT_CONTEXT_REQUIRED", "租户上下文不可用", 403);
+                TenantContextHolder.setTenantId(tenantId);
+                TenantContextHolder.setIgnore(false);
+                TenantContext context = tenants.resolve(UUID.fromString(jwt.getSubject()), tenantId,
+                        response.getHeader(TraceIdFilter.HEADER));
+                WebFramework.setTenantContext(request, context);
+            } catch (IllegalArgumentException ex) {
+                writeError(response, new DomainException("TENANT_INVALID", "租户标识无效", 400));
+                return;
+            } catch (DomainException ex) {
+                writeError(response, ex);
+                return;
+            }
             chain.doFilter(request, response);
         } finally {
             TenantContextHolder.setTenantId(previousTenantId);

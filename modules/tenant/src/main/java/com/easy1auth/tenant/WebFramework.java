@@ -8,7 +8,7 @@ import java.util.UUID;
 public final class WebFramework {
     public static final String TENANT_ID_HEADER = "tenant-id";
     public static final String USER_AGENT_HEADER = "User-Agent";
-    public static final String TENANT_CONTEXT_ATTRIBUTE = WebFramework.class.getName() + ".tenantContext";
+    public static final String TENANT_CONTEXT_ATTRIBUTE = "com.easy1auth.tenant.WebFramework.tenantContext";
 
     private WebFramework() {
     }

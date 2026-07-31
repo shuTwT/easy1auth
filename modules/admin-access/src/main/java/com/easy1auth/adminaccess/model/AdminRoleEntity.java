@@ -1,5 +1,7 @@
 package com.easy1auth.adminaccess.model;
 
+import com.easy1auth.persistence.model.BaseEntity;
+import com.easy1auth.persistence.model.BaseTenantEntity;
 import com.easy1auth.tenant.model.TenantMembershipEntity;
 import org.babyfish.jimmer.sql.Column;
 import org.babyfish.jimmer.sql.Entity;
@@ -15,12 +17,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "admin_role")
-public interface AdminRoleEntity {
-    @Id
-    UUID id();
-
-    @Column(name = "tenant_id")
-    UUID tenantId();
+public interface AdminRoleEntity extends BaseEntity, BaseTenantEntity {
 
     String name();
 

@@ -1,13 +1,11 @@
 package com.easy1auth.admin.web;
 
-import com.easy1auth.tenant.WebFramework;
+import com.easy1auth.tenant.TenantContextHolder;
 
 import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.ManagementPermissionCode;
 import com.easy1auth.foundation.web.ApiResponse;
 import com.easy1auth.security.SecurityPolicyService;
-import com.easy1auth.tenant.TenantContext;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Objects;
@@ -23,17 +21,13 @@ public class SecurityPolicyController {
 
     @TenantManagementPermission(value = ManagementPermissionCode.SECURITY_POLICY_READ)
     @GetMapping
-    ApiResponse<?> get(HttpServletRequest r) {
-        return ApiResponse.ok(service.policy(c(r).tenantId()));
+    ApiResponse<?> get() {
+        return ApiResponse.ok(service.policy(TenantContextHolder.requireTenantId()));
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.SECURITY_POLICY_UPDATE)
     @PutMapping
-    ApiResponse<?> update(HttpServletRequest r, @RequestBody SecurityPolicyService.Policy input) {
-        return ApiResponse.ok(service.update(c(r).tenantId(), input), "安全策略更新成功");
-    }
-
-    private static TenantContext c(HttpServletRequest r) {
-        return WebFramework.requireTenantContext(r);
+    ApiResponse<?> update(@RequestBody SecurityPolicyService.Policy input) {
+        return ApiResponse.ok(service.update(TenantContextHolder.requireTenantId(), input), "安全策略更新成功");
     }
 }
