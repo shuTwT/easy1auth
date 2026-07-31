@@ -6,8 +6,7 @@ import java.util.Optional;
 public enum ManagementPermissionType {
     DIRECTORY("directory"),
     MENU("menu"),
-    ACTION("action"),
-    DATA("data");
+    ACTION("action");
 
     private final String databaseValue;
 

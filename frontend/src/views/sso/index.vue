@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { toast } from 'vue-sonner'
+import { message } from 'antdv-next'
 import { Copy } from '@lucide/vue'
 import { applicationApi } from '@/api/application'
 import type { Application } from '@/types/application'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Button } from '@/components/antd-compat'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/antd-compat'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/antd-compat'
+import { Badge } from '@/components/antd-compat'
+import { Alert, AlertDescription, AlertTitle } from '@/components/antd-compat'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/antd-compat'
 
 const loading = ref(false)
 const applications = ref<Application[]>([])
@@ -39,7 +39,7 @@ const loadApplications = async () => {
     }
   } catch (error) {
     console.error('加载应用列表失败:', error)
-    toast.error('加载应用列表失败')
+    message.error('加载应用列表失败')
   } finally {
     loading.value = false
   }
@@ -85,9 +85,9 @@ const getStatusVariant = (status: string) => {
 
 const copyToClipboard = (text: string) => {
   navigator.clipboard.writeText(text).then(() => {
-    toast.success('已复制到剪贴板')
+    message.success('已复制到剪贴板')
   }).catch(() => {
-    toast.error('复制失败')
+    message.error('复制失败')
   })
 }
 

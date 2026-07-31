@@ -1,27 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { toast } from 'vue-sonner'
+import { ref, computed } from 'vue'
+import { message } from 'antdv-next'
+import { Dropdown, Form, FormItem, Input, Modal } from 'antdv-next'
 import { useUserStore } from '@/stores/user'
 import { tenantApi } from '@/api/tenant'
 import type { TenantInfo } from '@/types/auth'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Building2, ChevronDown, Check, Plus } from '@lucide/vue'
+import { Building2, ChevronDown } from '@lucide/vue'
 
 const userStore = useUserStore()
 const loading = ref(false)
@@ -30,6 +14,21 @@ const newTenantName = ref('')
 
 const currentTenant = computed(() => userStore.currentTenant)
 const tenants = computed(() => userStore.tenants)
+const tenantMenu = computed(() => ({
+  items: [
+    ...tenants.value.map(tenant => ({ key: tenant.id, label: tenant.name })),
+    { type: 'divider' as const },
+    { key: 'create', label: '创建新租户' },
+  ],
+  onClick: ({ key }: { key: string }) => {
+    if (key === 'create') {
+      showCreateDialog.value = true
+      return
+    }
+    const tenant = tenants.value.find(item => item.id === key)
+    if (tenant) handleSwitchTenant(tenant)
+  },
+}))
 
 async function handleSwitchTenant(tenant: TenantInfo) {
   if (tenant.id === currentTenant.value?.id) {
@@ -37,12 +36,12 @@ async function handleSwitchTenant(tenant: TenantInfo) {
   }
 
   userStore.setCurrentTenant(tenant)
-  toast.success(`已切换到租户: ${tenant.name}`)
+  message.success(`已切换到租户: ${tenant.name}`)
 }
 
 async function handleCreateTenant() {
   if (!newTenantName.value.trim()) {
-    toast.warning('请输入租户名称')
+    message.warning('请输入租户名称')
     return
   }
 
@@ -51,77 +50,31 @@ async function handleCreateTenant() {
     const response = await tenantApi.createTenant({ name: newTenantName.value })
     userStore.setTenants([...tenants.value, response])
     userStore.setCurrentTenant(response)
-    toast.success('租户创建成功')
+    message.success('租户创建成功')
     showCreateDialog.value = false
     newTenantName.value = ''
   } catch (error: any) {
-    toast.error(error.response?.data?.msg || '创建租户失败')
+    message.error(error.response?.data?.msg || '创建租户失败')
   } finally {
     loading.value = false
   }
 }
 
-onMounted(async () => {
-  // 租户初始化逻辑已移至 App.vue
-})
 </script>
 
 <template>
   <div class="tenant-switcher">
-    <DropdownMenu>
-      <DropdownMenuTrigger as-child>
+    <Dropdown :menu="tenantMenu" :trigger="['click']">
         <button class="tenant-selector">
           <Building2 class="size-4" />
           <span class="tenant-name">{{ currentTenant?.name || '选择租户' }}</span>
           <ChevronDown class="size-3 text-muted-foreground" />
         </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" class="w-56">
-        <DropdownMenuItem
-          v-for="tenant in tenants"
-          :key="tenant.id"
-          @click="handleSwitchTenant(tenant)"
-        >
-          <div class="tenant-item">
-            <span>{{ tenant.name }}</span>
-            <div class="flex items-center gap-1">
-              <Badge v-if="tenant.role === 'owner'" variant="outline" class="text-xs">所有者</Badge>
-              <Check v-if="tenant.id === currentTenant?.id" class="size-3.5 text-primary" />
-            </div>
-          </div>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem @click="showCreateDialog = true">
-          <div class="create-tenant-item">
-            <Plus class="size-4" />
-            <span>创建新租户</span>
-          </div>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    </Dropdown>
 
-    <Dialog v-model:open="showCreateDialog">
-      <DialogContent class="sm:max-w-[400px]">
-        <DialogHeader>
-          <DialogTitle>创建新租户</DialogTitle>
-        </DialogHeader>
-        <form @submit.prevent="handleCreateTenant">
-          <div class="grid gap-4 py-4">
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">租户名称</label>
-              <Input
-                v-model="newTenantName"
-                placeholder="请输入租户名称"
-              />
-            </div>
-          </div>
-        </form>
-        <DialogFooter>
-          <Button variant="outline" @click="showCreateDialog = false">取消</Button>
-          <Button :disabled="loading" @click="handleCreateTenant">{{ loading ? '创建中...' : '创建' }}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <Modal v-model:open="showCreateDialog" title="创建新租户" ok-text="创建" cancel-text="取消" :confirm-loading="loading" @ok="handleCreateTenant">
+      <Form layout="vertical" @finish="handleCreateTenant"><FormItem label="租户名称"><Input v-model:value="newTenantName" placeholder="请输入租户名称" /></FormItem></Form>
+    </Modal>
   </div>
 </template>
 

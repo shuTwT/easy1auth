@@ -1,6 +1,6 @@
 import { shallowRef, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { toast } from 'vue-sonner'
+import { message } from 'antdv-next'
 import { authApi } from '@/api/auth'
 import { useUserStore } from '@/stores/user'
 import type {
@@ -26,7 +26,7 @@ export function useAuth() {
       const response = await authApi.login(data)
       if (response.status === 'mfa_required' && response.challengeToken) {
         mfaChallenge.value = response.challengeToken
-        toast.info('请输入身份验证器中的动态验证码')
+        message.info('请输入身份验证器中的动态验证码')
         return response
       }
       if (!response.token || !response.user) throw new Error('登录响应无效')
@@ -46,7 +46,7 @@ export function useAuth() {
           userStore.setCurrentTenant(currentTenant)
         }
       }
-      toast.success('登录成功')
+      message.success('登录成功')
       await router.push('/dashboard')
       return response
     } finally {
@@ -67,7 +67,7 @@ export function useAuth() {
         userStore.setTenants(response.tenants)
         userStore.setCurrentTenant(response.tenants.find(t => t.id === response.user?.currentTenantId) || response.tenants[0] || null)
       }
-      toast.success('登录成功')
+      message.success('登录成功')
       await router.push('/dashboard')
       return response
     } finally { loading.value = false }
@@ -79,7 +79,7 @@ export function useAuth() {
     sendingCode.value = true
     try {
       const response = await authApi.sendCode(data)
-      toast.success('验证码已发送')
+      message.success('验证码已发送')
       startCountdown(60)
       return response
     } finally {
@@ -116,7 +116,7 @@ export function useAuth() {
           userStore.setCurrentTenant(currentTenant)
         }
       }
-      toast.success('注册成功')
+      message.success('注册成功')
       await router.push('/dashboard')
       return response
     } finally {
@@ -166,12 +166,12 @@ export function useAuth() {
       if (!loginResponse.token || !loginResponse.user) throw new Error('Passkey 登录响应无效')
       userStore.setToken(loginResponse.token)
       userStore.setUserInfo(loginResponse.user)
-      toast.success('登录成功')
+      message.success('登录成功')
       await router.push('/dashboard')
       return loginResponse
     } catch (error: any) {
       if (error.name === 'NotAllowedError') {
-        toast.error('用户取消或认证超时')
+        message.error('用户取消或认证超时')
       }
       throw error
     } finally {
@@ -197,9 +197,9 @@ export function useAuth() {
       userStore.setUserInfo(response.user)
       
       if (response.isNewUser) {
-        toast.success('注册成功，欢迎使用')
+        message.success('注册成功，欢迎使用')
       } else {
-        toast.success('登录成功')
+        message.success('登录成功')
       }
       
       await router.push('/dashboard')

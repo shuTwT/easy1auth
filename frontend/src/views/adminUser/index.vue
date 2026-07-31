@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import axios from 'axios'
-import { toast } from 'vue-sonner'
+import { message, Table as ATable } from 'antdv-next'
 import {
   Search,
   RefreshCw,
@@ -32,17 +32,16 @@ import type {
   CreateAdminRoleDto,
   UpdateAdminRoleDto,
 } from '@/types/adminRole'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Textarea } from '@/components/ui/textarea'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Button } from '@/components/antd-compat'
+import { Input } from '@/components/antd-compat'
+import { Label } from '@/components/antd-compat'
+import { Card, CardContent } from '@/components/antd-compat'
+import { Badge } from '@/components/antd-compat'
+import { Checkbox } from '@/components/antd-compat'
+import { Textarea } from '@/components/antd-compat'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/antd-compat'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/antd-compat'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/antd-compat'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,9 +51,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Separator } from '@/components/ui/separator'
+} from '@/components/antd-compat'
+import { Avatar, AvatarFallback } from '@/components/antd-compat'
+import { Separator } from '@/components/antd-compat'
 
 type ApiErrorResponse = {
   readonly msg?: string
@@ -218,6 +217,17 @@ const adminStatsCards = computed(() => [
 ])
 
 const adminTotalPages = computed(() => Math.max(1, Math.ceil(adminTotal.value / adminQuery.pageSize!)))
+const adminColumns = [
+  { title: '用户名', key: 'username', width: 190 },
+  { title: '邮箱', key: 'email', width: 210 },
+  { title: '手机号', key: 'phone', width: 140 },
+  { title: '当前租户角色', key: 'tenantRole', width: 140 },
+  { title: '状态', key: 'status', width: 90 },
+  { title: 'MFA', key: 'mfa', width: 100 },
+  { title: '最后登录', key: 'lastLoginAt', width: 180 },
+  { title: '创建时间', key: 'createdAt', width: 180 },
+  { title: '操作', key: 'actions', width: 310, fixed: 'end' as const },
+]
 
 function isSelf(row: AdminUser): boolean {
   return !!currentAdminId.value && row.id === currentAdminId.value
@@ -355,11 +365,11 @@ const handleEditSubmit = async () => {
       email: editForm.email,
       phone: editForm.phone || undefined,
     })
-    toast.success('管理员信息更新成功')
+    message.success('管理员信息更新成功')
     editDialogVisible.value = false
     loadAdmins()
   } catch (error: unknown) {
-    toast.error(getApiErrorMessage(error, '更新管理员失败'))
+    message.error(getApiErrorMessage(error, '更新管理员失败'))
   } finally {
     editSubmitting.value = false
   }
@@ -370,11 +380,11 @@ const handleStatusToggle = async (row: AdminUser) => {
   const next: AdminStatus = row.status === 'active' ? 'disabled' : 'active'
   try {
     await adminUserApi.updateStatus(row.id, { status: next })
-    toast.success(next === 'active' ? '已启用管理员' : '已禁用管理员')
+    message.success(next === 'active' ? '已启用管理员' : '已禁用管理员')
     loadAdmins()
     loadAdminStats()
   } catch (error: unknown) {
-    toast.error(getApiErrorMessage(error, '状态更新失败'))
+    message.error(getApiErrorMessage(error, '状态更新失败'))
   }
 }
 
@@ -389,20 +399,20 @@ const openResetPwdDialog = (row: AdminUser) => {
 const handleResetPwdSubmit = async () => {
   if (!resetPwdTarget.value) return
   if (!resetPwdForm.newPassword) {
-    toast.warning('请输入新密码')
+    message.warning('请输入新密码')
     return
   }
   if (resetPwdForm.newPassword !== resetPwdForm.confirmPassword) {
-    toast.error('两次输入的密码不一致')
+    message.error('两次输入的密码不一致')
     return
   }
   resetPwdSubmitting.value = true
   try {
     await adminUserApi.resetPassword(resetPwdTarget.value.id, { newPassword: resetPwdForm.newPassword })
-    toast.success('密码重置成功')
+    message.success('密码重置成功')
     resetPwdDialogVisible.value = false
   } catch (error: unknown) {
-    toast.error(getApiErrorMessage(error, '重置密码失败'))
+    message.error(getApiErrorMessage(error, '重置密码失败'))
   } finally {
     resetPwdSubmitting.value = false
   }
@@ -419,12 +429,12 @@ const handleResetMfaConfirm = async () => {
   resetMfaSubmitting.value = true
   try {
     await adminUserApi.resetMfa(resetMfaTarget.value.id)
-    toast.success('MFA 已重置')
+    message.success('MFA 已重置')
     resetMfaDialogVisible.value = false
     loadAdmins()
     loadAdminStats()
   } catch (error: unknown) {
-    toast.error(getApiErrorMessage(error, '重置 MFA 失败'))
+    message.error(getApiErrorMessage(error, '重置 MFA 失败'))
   } finally {
     resetMfaSubmitting.value = false
   }
@@ -458,11 +468,11 @@ const handleAssignRolesSubmit = async () => {
       tenantId: membership.tenantId,
       roleIds: assignRolesSelected.value,
     })
-    toast.success('角色分配成功')
+    message.success('角色分配成功')
     assignRolesDialogVisible.value = false
     loadAdmins()
   } catch (error: unknown) {
-    toast.error(getApiErrorMessage(error, '分配角色失败'))
+    message.error(getApiErrorMessage(error, '分配角色失败'))
   } finally {
     assignRolesSubmitting.value = false
   }
@@ -481,12 +491,12 @@ const handleRemoveConfirm = async () => {
   removeSubmitting.value = true
   try {
     await adminUserApi.removeFromTenant(target.id, membership.tenantId)
-    toast.success('已将管理员移出租户')
+    message.success('已将管理员移出租户')
     removeDialogVisible.value = false
     loadAdmins()
     loadAdminStats()
   } catch (error: unknown) {
-    toast.error(getApiErrorMessage(error, '移出租户失败'))
+    message.error(getApiErrorMessage(error, '移出租户失败'))
   } finally {
     removeSubmitting.value = false
   }
@@ -502,6 +512,15 @@ const roleStatsCards = computed(() => [
 ])
 
 const roleTotalPages = computed(() => Math.max(1, Math.ceil(roleTotal.value / rolePageSize.value)))
+const roleColumns = [
+  { title: '角色名称', key: 'name', width: 220 },
+  { title: '描述', key: 'description', minWidth: 220 },
+  { title: '权限', key: 'permissions', width: 140 },
+  { title: '管理员数', key: 'adminCount', width: 110, align: 'center' as const },
+  { title: '类型', key: 'type', width: 110 },
+  { title: '创建时间', key: 'createdAt', width: 180 },
+  { title: '操作', key: 'actions', width: 150, fixed: 'end' as const },
+]
 
 const loadRoleStats = async () => {
   try {
@@ -583,7 +602,7 @@ const toggleRolePermission = (code: string) => {
 
 const handleRoleSubmit = async () => {
   if (!roleForm.name.trim()) {
-    toast.warning('请填写角色名称')
+    message.warning('请填写角色名称')
     return
   }
   roleDialogSubmitting.value = true
@@ -595,7 +614,7 @@ const handleRoleSubmit = async () => {
         permissions: roleForm.permissions,
       }
       await adminRoleApi.update(roleForm.id, payload)
-      toast.success('角色更新成功')
+      message.success('角色更新成功')
     } else {
       const payload: CreateAdminRoleDto = {
         name: roleForm.name,
@@ -603,13 +622,13 @@ const handleRoleSubmit = async () => {
         permissions: roleForm.permissions,
       }
       await adminRoleApi.create(payload)
-      toast.success('角色创建成功')
+      message.success('角色创建成功')
     }
     roleDialogVisible.value = false
     loadRoles()
     loadRoleStats()
   } catch (error: unknown) {
-    toast.error(getApiErrorMessage(error, '操作失败'))
+    message.error(getApiErrorMessage(error, '操作失败'))
   } finally {
     roleDialogSubmitting.value = false
   }
@@ -625,12 +644,12 @@ const handleDeleteRoleConfirm = async () => {
   deleteRoleSubmitting.value = true
   try {
     await adminRoleApi.delete(deleteRoleTarget.value.id)
-    toast.success('角色删除成功')
+    message.success('角色删除成功')
     deleteRoleDialogVisible.value = false
     loadRoles()
     loadRoleStats()
   } catch (error: unknown) {
-    toast.error(getApiErrorMessage(error, '删除角色失败'))
+    message.error(getApiErrorMessage(error, '删除角色失败'))
   } finally {
     deleteRoleSubmitting.value = false
   }
@@ -756,29 +775,16 @@ onMounted(() => {
         <!-- table -->
         <Card>
           <CardContent class="pt-6">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead class="w-44">用户名</TableHead>
-                  <TableHead class="w-48">邮箱</TableHead>
-                  <TableHead class="w-32">手机号</TableHead>
-                  <TableHead class="w-28">当前租户角色</TableHead>
-                  <TableHead class="w-20">状态</TableHead>
-                  <TableHead class="w-20">MFA</TableHead>
-                  <TableHead class="w-40">最后登录</TableHead>
-                  <TableHead class="w-40">创建时间</TableHead>
-                  <TableHead class="w-72">操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow v-if="adminLoading">
-                  <TableCell colspan="9" class="text-center py-8 text-muted-foreground">加载中...</TableCell>
-                </TableRow>
-                <TableRow v-else-if="admins.length === 0">
-                  <TableCell colspan="9" class="text-center py-8 text-muted-foreground">暂无数据</TableCell>
-                </TableRow>
-                <TableRow v-for="row in admins" :key="row.id">
-                  <TableCell>
+            <ATable
+              :columns="adminColumns"
+              :data-source="admins"
+              :loading="adminLoading"
+              :pagination="false"
+              row-key="id"
+              :scroll="{ x: 1540 }"
+            >
+              <template #bodyCell="{ column, record: row }">
+                <template v-if="column.key === 'username'">
                     <div class="flex items-center gap-2">
                       <Avatar class="size-8 bg-gradient-to-br from-primary to-primary/60">
                         <AvatarFallback class="bg-transparent text-white text-xs font-semibold">
@@ -790,28 +796,28 @@ onMounted(() => {
                         <span v-if="isSelf(row)" class="text-xs text-primary">（我）</span>
                       </div>
                     </div>
-                  </TableCell>
-                  <TableCell>{{ row.email }}</TableCell>
-                  <TableCell>{{ row.phone || '-' }}</TableCell>
-                  <TableCell>
+                </template>
+                <template v-else-if="column.key === 'email'">{{ row.email }}</template>
+                <template v-else-if="column.key === 'phone'">{{ row.phone || '-' }}</template>
+                <template v-else-if="column.key === 'tenantRole'">
                     <Badge v-if="currentTenantRole(row)" :variant="tenantRoleVariant(currentTenantRole(row))" class="text-xs">
                       {{ tenantRoleText(currentTenantRole(row)) }}
                     </Badge>
                     <span v-else class="text-muted-foreground">-</span>
-                  </TableCell>
-                  <TableCell>
+                </template>
+                <template v-else-if="column.key === 'status'">
                     <Badge :variant="adminStatusVariant(row.status)" class="text-xs">
                       {{ adminStatusText(row.status) }}
                     </Badge>
-                  </TableCell>
-                  <TableCell>
+                </template>
+                <template v-else-if="column.key === 'mfa'">
                     <Badge :variant="row.mfaEnabled ? 'default' : 'outline'" class="text-xs">
                       {{ row.mfaEnabled ? '已启用' : '未启用' }}
                     </Badge>
-                  </TableCell>
-                  <TableCell class="text-muted-foreground">{{ formatDate(row.lastLoginAt) }}</TableCell>
-                  <TableCell class="text-muted-foreground">{{ formatDate(row.createdAt) }}</TableCell>
-                  <TableCell>
+                </template>
+                <span v-else-if="column.key === 'lastLoginAt'" class="text-muted-foreground">{{ formatDate(row.lastLoginAt) }}</span>
+                <span v-else-if="column.key === 'createdAt'" class="text-muted-foreground">{{ formatDate(row.createdAt) }}</span>
+                <template v-else-if="column.key === 'actions'">
                     <div class="flex gap-1 flex-wrap">
                       <Button
                         variant="link"
@@ -868,10 +874,9 @@ onMounted(() => {
                         移出租户
                       </Button>
                     </div>
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
+                </template>
+              </template>
+            </ATable>
 
             <div class="flex items-center justify-between mt-4 pt-4 border-t">
               <span class="text-sm text-muted-foreground">共 {{ adminTotal }} 条</span>
@@ -985,46 +990,35 @@ onMounted(() => {
               </Button>
             </div>
 
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead class="w-48">角色名称</TableHead>
-                  <TableHead class="min-w-[200px]">描述</TableHead>
-                  <TableHead class="w-32">权限</TableHead>
-                  <TableHead class="w-24">管理员数</TableHead>
-                  <TableHead class="w-24">类型</TableHead>
-                  <TableHead class="w-40">创建时间</TableHead>
-                  <TableHead class="w-40">操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow v-if="roleLoading">
-                  <TableCell colspan="7" class="text-center py-8 text-muted-foreground">加载中...</TableCell>
-                </TableRow>
-                <TableRow v-else-if="roles.length === 0">
-                  <TableCell colspan="7" class="text-center py-8 text-muted-foreground">暂无数据</TableCell>
-                </TableRow>
-                <TableRow v-for="row in roles" :key="row.id">
-                  <TableCell>
+            <ATable
+              :columns="roleColumns"
+              :data-source="roles"
+              :loading="roleLoading"
+              :pagination="false"
+              row-key="id"
+              :scroll="{ x: 1110 }"
+            >
+              <template #bodyCell="{ column, record: row }">
+                <template v-if="column.key === 'name'">
                     <div class="flex items-center gap-2">
                       <Badge :variant="roleTypeVariant(row.isSystem)" class="text-xs">
                         {{ row.isSystem ? '系统' : '自定义' }}
                       </Badge>
                       <span class="font-medium">{{ row.name }}</span>
                     </div>
-                  </TableCell>
-                  <TableCell class="text-muted-foreground">{{ row.description || '-' }}</TableCell>
-                  <TableCell>
+                </template>
+                <span v-else-if="column.key === 'description'" class="text-muted-foreground">{{ row.description || '-' }}</span>
+                <template v-else-if="column.key === 'permissions'">
                     <Badge variant="outline" class="text-xs">{{ permissionsSummary(row.permissions) }}</Badge>
-                  </TableCell>
-                  <TableCell class="text-center">{{ row.adminCount || 0 }}</TableCell>
-                  <TableCell>
+                </template>
+                <template v-else-if="column.key === 'adminCount'">{{ row.adminCount || 0 }}</template>
+                <template v-else-if="column.key === 'type'">
                     <Badge :variant="row.isSystem ? 'destructive' : 'default'" class="text-xs">
                       {{ row.isSystem ? '系统' : '自定义' }}
                     </Badge>
-                  </TableCell>
-                  <TableCell class="text-muted-foreground">{{ formatDate(row.createdAt) }}</TableCell>
-                  <TableCell>
+                </template>
+                <span v-else-if="column.key === 'createdAt'" class="text-muted-foreground">{{ formatDate(row.createdAt) }}</span>
+                <template v-else-if="column.key === 'actions'">
                     <div class="flex gap-2">
                       <Button
                         variant="link"
@@ -1045,10 +1039,9 @@ onMounted(() => {
                         删除
                       </Button>
                     </div>
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
+                </template>
+              </template>
+            </ATable>
 
             <div class="flex items-center justify-between mt-4 pt-4 border-t">
               <span class="text-sm text-muted-foreground">共 {{ roleTotal }} 条</span>

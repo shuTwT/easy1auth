@@ -1,18 +1,18 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { toast } from 'vue-sonner'
+import { message } from 'antdv-next'
 import { Search, Plus, List, Share2, RefreshCw, Lock, Menu, Settings2, Database } from '@lucide/vue'
 import { permissionApi } from '@/api/permission'
 import type { Permission, PermissionTree, PermissionStats, CreatePermissionDto, UpdatePermissionDto } from '@/types/permission'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Tree, TreeSelect } from '@/components/ui/tree'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Textarea } from '@/components/ui/textarea'
+import { Button } from '@/components/antd-compat'
+import { Input } from '@/components/antd-compat'
+import { Card, CardContent, CardHeader } from '@/components/antd-compat'
+import { Badge } from '@/components/antd-compat'
+import { Tree, TreeSelect } from '@/components/antd-compat'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/antd-compat'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/antd-compat'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/antd-compat'
+import { Textarea } from '@/components/antd-compat'
 
 const loading = ref(false)
 const permissions = ref<Permission[]>([])
@@ -97,7 +97,7 @@ async function loadPermissions() {
     permissions.value = res.items
     total.value = res.total
   } catch (error) {
-    toast.error('加载权限列表失败')
+    message.error('加载权限列表失败')
   } finally {
     loading.value = false
   }
@@ -167,10 +167,10 @@ async function handleSubmit() {
         action: permissionForm.action,
         parentId: permissionForm.parentId,
       })
-      toast.success('更新成功')
+      message.success('更新成功')
     } else {
       if (!permissionForm.code || !permissionForm.resource || !permissionForm.action) {
-        toast.error('请填写必填字段')
+        message.error('请填写必填字段')
         submitting.value = false
         return
       }
@@ -183,14 +183,14 @@ async function handleSubmit() {
         action: permissionForm.action!,
         parentId: permissionForm.parentId,
       })
-      toast.success('创建成功')
+      message.success('创建成功')
     }
     dialogVisible.value = false
     loadPermissions()
     loadTree()
     loadStats()
   } catch (error: any) {
-    toast.error(error.response?.data?.msg || '操作失败')
+    message.error(error.response?.data?.msg || '操作失败')
   } finally {
     submitting.value = false
   }
@@ -202,12 +202,12 @@ async function handleDelete(row: Permission) {
   }
   try {
     await permissionApi.delete(row.id)
-    toast.success('删除成功')
+    message.success('删除成功')
     loadPermissions()
     loadTree()
     loadStats()
   } catch (error: any) {
-    toast.error(error.response?.data?.msg || '删除失败')
+    message.error(error.response?.data?.msg || '删除失败')
   }
 }
 

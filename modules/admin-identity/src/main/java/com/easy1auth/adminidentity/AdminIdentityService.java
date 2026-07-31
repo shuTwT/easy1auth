@@ -112,7 +112,13 @@ public class AdminIdentityService implements ActiveAdminAccountLocker {
     private static void validatePassword(String password){if(password==null||password.length()<8||password.length()>128||!password.matches(".*[a-z].*")||!password.matches(".*[A-Z].*")||!password.matches(".*\\d.*"))throw new DomainException("PASSWORD_WEAK","密码至少8位且必须包含大小写字母和数字",400);}
     private static void assertNotActor(UUID actor, UUID account, String code, String message) { if (actor != null && actor.equals(account)) throw new DomainException(code, message, 409); }
     private static DomainException adminExists() { return new DomainException("ADMIN_EXISTS", "用户名或邮箱已被注册", 409); }
-    private static DomainException invalidCredentials() { return new DomainException("INVALID_CREDENTIALS", "用户名或密码错误", 401); }
+    /**
+     * A failed interactive login is a business validation failure, not an expired
+     * authentication session.  Reserve HTTP 401 for invalid bearer/refresh tokens
+     * so clients do not clear their local session and redirect while handling a
+     * bad password.
+     */
+    private static DomainException invalidCredentials() { return new DomainException("INVALID_CREDENTIALS", "用户名或密码错误", 400); }
     private static DomainException invalidRefresh() { return new DomainException("INVALID_REFRESH_TOKEN", "刷新令牌无效或已失效", 401); }
     private static String trim(String value, int max) { return value == null ? null : value.substring(0, Math.min(value.length(), max)); }
     private record IssuedRefresh(UUID id, String token) {}

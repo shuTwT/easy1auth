@@ -28,7 +28,7 @@ public class TenantService {
                 accountId, tenantId, membership.id(), membership.role(), membership.system(), membership.packageId()));
         return new TenantContext(
                 accountId, tenantId, membership.id(), membership.role(), effective.permissions(),
-                effective.dataBoundary(), effective.tenantPackage(), traceId);
+                effective.tenantPackage(), traceId);
     }
     @Transactional
     public TenantSummary createOrdinary(String name, long packageId, UUID administratorAccountId) {

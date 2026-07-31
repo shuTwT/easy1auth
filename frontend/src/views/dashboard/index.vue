@@ -4,15 +4,13 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { dashboardApi } from '@/api/dashboard'
 import type { DashboardStats, RecentLogin } from '@/api/dashboard'
-import { toast } from 'vue-sonner'
+import { message } from 'antdv-next'
+import { Dropdown, Table as AntTable, Tag } from 'antdv-next'
 import { Building2, TrendingUp, User, Monitor, Link, MoreHorizontal, RefreshCw, ArrowRight, Library, FileText, Loader2 } from '@lucide/vue'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Button } from '@/components/antd-compat'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/antd-compat'
+import { Avatar, AvatarFallback } from '@/components/antd-compat'
+import { Progress } from '@/components/antd-compat'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -27,13 +25,17 @@ const stats = ref<DashboardStats>({
 const recentLogins = ref<RecentLogin[]>([])
 const loading = ref(false)
 
-const getStatusVariant = (status: string) => {
-  return status === 'success' ? 'default' : 'destructive'
-}
-
 const getStatusText = (status: string) => {
   return status === 'success' ? '成功' : '失败'
 }
+
+const recentLoginColumns = [
+  { title: '用户名', key: 'username' },
+  { title: '邮箱', dataIndex: 'email', key: 'email' },
+  { title: 'IP地址', dataIndex: 'ip', key: 'ip' },
+  { title: '登录时间', key: 'time' },
+  { title: '状态', key: 'status' },
+]
 
 const formatNumber = (num: number) => {
   if (num === 0) return '--'
@@ -66,6 +68,12 @@ const quickActions = [
   { title: '审计日志', icon: FileText, route: '/audit', color: 'info' }
 ]
 
+const trendRangeItems = [
+  { key: '7d', label: '最近7天' },
+  { key: '30d', label: '最近30天' },
+  { key: '90d', label: '最近90天' },
+]
+
 const announcements = [
   { title: '系统升级通知', desc: '系统将于本周六凌晨进行升级维护', time: '2024-01-15' },
   { title: '新功能上线', desc: '支持微信、QQ等社会化登录', time: '2024-01-10' },
@@ -88,7 +96,7 @@ const fetchDashboardData = async () => {
     stats.value = data.stats
     recentLogins.value = data.recentLogins
   } catch {
-    toast.error('获取控制台数据失败')
+    message.error('获取控制台数据失败')
   } finally {
     loading.value = false
   }
@@ -163,39 +171,16 @@ onMounted(() => {
               暂无登录记录
             </div>
 
-            <Table v-else>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>用户名</TableHead>
-                  <TableHead>邮箱</TableHead>
-                  <TableHead>IP地址</TableHead>
-                  <TableHead>登录时间</TableHead>
-                  <TableHead>状态</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow v-for="login in recentLogins" :key="login.username + login.time">
-                  <TableCell>
-                    <div class="user-cell">
-                      <Avatar class="h-7 w-7">
-                        <AvatarFallback class="text-xs">
-                          {{ login.username.charAt(0).toUpperCase() }}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span>{{ login.username }}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>{{ login.email || '-' }}</TableCell>
-                  <TableCell>{{ login.ip }}</TableCell>
-                  <TableCell>{{ formatTime(login.time) }}</TableCell>
-                  <TableCell>
-                    <Badge :variant="getStatusVariant(login.status)">
-                      {{ getStatusText(login.status) }}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
+            <AntTable v-else :columns="recentLoginColumns" :data-source="recentLogins" :pagination="false" :row-key="login => `${login.username}-${login.time}`" size="small">
+              <template #bodyCell="{ column, record }">
+                <template v-if="column.key === 'username'">
+                  <div class="user-cell"><Avatar class="h-7 w-7"><AvatarFallback class="text-xs">{{ record.username.charAt(0).toUpperCase() }}</AvatarFallback></Avatar><span>{{ record.username }}</span></div>
+                </template>
+                <template v-else-if="column.key === 'email'">{{ record.email || '-' }}</template>
+                <template v-else-if="column.key === 'time'">{{ formatTime(record.time) }}</template>
+                <Tag v-else-if="column.key === 'status'" :color="record.status === 'success' ? 'success' : 'error'">{{ getStatusText(record.status) }}</Tag>
+              </template>
+            </AntTable>
           </CardContent>
         </Card>
 
@@ -203,18 +188,9 @@ onMounted(() => {
           <CardHeader>
             <div class="card-header">
               <CardTitle>登录趋势</CardTitle>
-              <DropdownMenu>
-                <DropdownMenuTrigger as-child>
-                  <Button variant="ghost" size="sm">
-                    <MoreHorizontal class="w-4 h-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem>最近7天</DropdownMenuItem>
-                  <DropdownMenuItem>最近30天</DropdownMenuItem>
-                  <DropdownMenuItem>最近90天</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <Dropdown :menu="{ items: trendRangeItems }" :trigger="['click']" placement="bottomRight">
+                <Button variant="ghost" size="sm" aria-label="选择登录趋势时间范围"><MoreHorizontal class="w-4 h-4" /></Button>
+              </Dropdown>
             </div>
           </CardHeader>
           <CardContent>

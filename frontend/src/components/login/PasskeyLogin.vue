@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import { useAuth } from '@/composables/useAuth'
-import { toast } from 'vue-sonner'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Info } from '@lucide/vue'
+import { message } from 'antdv-next'
+import { Alert } from 'antdv-next'
 
 const { loading, passkeyLogin } = useAuth()
 
 async function handlePasskeyLogin() {
   if (!window.PublicKeyCredential) {
-    toast.error('您的浏览器不支持 Passkey，请使用现代浏览器')
+    message.error('您的浏览器不支持 Passkey，请使用现代浏览器')
     return
   }
   await passkeyLogin()
@@ -41,11 +40,7 @@ async function handlePasskeyLogin() {
     </button>
 
     <div class="passkey-tips">
-      <Alert>
-        <Info class="size-4" />
-        <AlertTitle>Passkey 是一种更安全、更便捷的登录方式</AlertTitle>
-        <AlertDescription>支持指纹、面部识别或安全密钥</AlertDescription>
-      </Alert>
+      <Alert type="info" show-icon message="Passkey 是一种更安全、更便捷的登录方式" description="支持指纹、面部识别或安全密钥" />
     </div>
   </div>
 </template>

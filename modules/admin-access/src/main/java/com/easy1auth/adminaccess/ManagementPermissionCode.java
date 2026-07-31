@@ -155,9 +155,7 @@ public enum ManagementPermissionCode {
     MESSAGE_TEMPLATE_CREATE("message-template:create", ManagementPermissionScope.TENANT, ManagementPermissionType.ACTION),
     MESSAGE_TEMPLATE_UPDATE("message-template:update", ManagementPermissionScope.TENANT, ManagementPermissionType.ACTION),
     MESSAGE_TEMPLATE_DELETE("message-template:delete", ManagementPermissionScope.TENANT, ManagementPermissionType.ACTION),
-    MESSAGE_TEMPLATE_INIT("message-template:init", ManagementPermissionScope.TENANT, ManagementPermissionType.ACTION),
-    DATA_PLATFORM_ALL("data:platform:all", ManagementPermissionScope.PLATFORM, ManagementPermissionType.DATA),
-    DATA_TENANT_ALL("data:tenant:all", ManagementPermissionScope.TENANT, ManagementPermissionType.DATA);
+    MESSAGE_TEMPLATE_INIT("message-template:init", ManagementPermissionScope.TENANT, ManagementPermissionType.ACTION);
 
     private final String value;
     private final ManagementPermissionScope scope;

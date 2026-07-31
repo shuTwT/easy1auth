@@ -8,7 +8,6 @@ import com.easy1auth.foundation.web.ApiResponse;
 import com.easy1auth.tenant.TenantPackageMutation;
 import com.easy1auth.tenant.TenantPackageService;
 import com.easy1auth.tenant.TenantPackageView;
-import com.easy1auth.tenant.TenantDataBoundary;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -34,52 +33,52 @@ public class TenantPackageController {
         this.packages = packages;
     }
 
-    @PlatformManagementPermission(value = ManagementPermissionCode.TENANT_PACKAGE_LIST, boundary = TenantDataBoundary.PLATFORM_ALL)
+    @PlatformManagementPermission(value = ManagementPermissionCode.TENANT_PACKAGE_LIST)
     @GetMapping
     public ApiResponse<List<TenantPackageView>> list(@AuthenticationPrincipal Jwt actor) {
         require(actor, ManagementPermissionCode.TENANT_PACKAGE_LIST);
         return ApiResponse.ok(packages.list());
     }
 
-    @PlatformManagementPermission(value = ManagementPermissionCode.TENANT_PACKAGE_READ, boundary = TenantDataBoundary.PLATFORM_ALL)
+    @PlatformManagementPermission(value = ManagementPermissionCode.TENANT_PACKAGE_READ)
     @GetMapping("/{packageId}")
     public ApiResponse<TenantPackageView> get(@AuthenticationPrincipal Jwt actor, @PathVariable long packageId) {
         require(actor, ManagementPermissionCode.TENANT_PACKAGE_READ);
         return ApiResponse.ok(packages.get(packageId));
     }
 
-    @PlatformManagementPermission(value = ManagementPermissionCode.TENANT_PACKAGE_CREATE, boundary = TenantDataBoundary.PLATFORM_ALL)
+    @PlatformManagementPermission(value = ManagementPermissionCode.TENANT_PACKAGE_CREATE)
     @PostMapping
     public ApiResponse<TenantPackageView> create(@AuthenticationPrincipal Jwt actor, @RequestBody TenantPackageInput input) {
         require(actor, ManagementPermissionCode.TENANT_PACKAGE_CREATE);
         return ApiResponse.ok(packages.create(mutation(input)), "租户套餐创建成功");
     }
 
-    @PlatformManagementPermission(value = ManagementPermissionCode.TENANT_PACKAGE_UPDATE, boundary = TenantDataBoundary.PLATFORM_ALL)
+    @PlatformManagementPermission(value = ManagementPermissionCode.TENANT_PACKAGE_UPDATE)
     @PutMapping("/{packageId}")
     public ApiResponse<TenantPackageView> update(@AuthenticationPrincipal Jwt actor, @PathVariable long packageId,
-                                                  @RequestBody TenantPackageInput input) {
+                                                 @RequestBody TenantPackageInput input) {
         require(actor, ManagementPermissionCode.TENANT_PACKAGE_UPDATE);
         return ApiResponse.ok(packages.update(packageId, mutation(input)), "租户套餐更新成功");
     }
 
-    @PlatformManagementPermission(value = ManagementPermissionCode.TENANT_PACKAGE_STATUS, boundary = TenantDataBoundary.PLATFORM_ALL)
+    @PlatformManagementPermission(value = ManagementPermissionCode.TENANT_PACKAGE_STATUS)
     @PutMapping("/{packageId}/status")
     public ApiResponse<TenantPackageView> updateStatus(@AuthenticationPrincipal Jwt actor, @PathVariable long packageId,
-                                                        @RequestBody TenantPackageStatusInput input) {
+                                                       @RequestBody TenantPackageStatusInput input) {
         require(actor, ManagementPermissionCode.TENANT_PACKAGE_STATUS);
         return ApiResponse.ok(packages.updateStatus(packageId, input == null ? null : input.status()), "租户套餐状态更新成功");
     }
 
-    @PlatformManagementPermission(value = ManagementPermissionCode.TENANT_PACKAGE_PERMISSION_REPLACE, boundary = TenantDataBoundary.PLATFORM_ALL)
+    @PlatformManagementPermission(value = ManagementPermissionCode.TENANT_PACKAGE_PERMISSION_REPLACE)
     @PutMapping("/{packageId}/permissions")
     public ApiResponse<TenantPackageView> replacePermissions(@AuthenticationPrincipal Jwt actor, @PathVariable long packageId,
-                                                              @RequestBody TenantPackagePermissionsInput input) {
+                                                             @RequestBody TenantPackagePermissionsInput input) {
         require(actor, ManagementPermissionCode.TENANT_PACKAGE_PERMISSION_REPLACE);
         return ApiResponse.ok(packages.replacePermissions(packageId, input == null ? null : input.permissionCodes()), "租户套餐权限更新成功");
     }
 
-    @PlatformManagementPermission(value = ManagementPermissionCode.TENANT_PACKAGE_DELETE, boundary = TenantDataBoundary.PLATFORM_ALL)
+    @PlatformManagementPermission(value = ManagementPermissionCode.TENANT_PACKAGE_DELETE)
     @DeleteMapping("/{packageId}")
     public ApiResponse<Void> delete(@AuthenticationPrincipal Jwt actor, @PathVariable long packageId) {
         require(actor, ManagementPermissionCode.TENANT_PACKAGE_DELETE);

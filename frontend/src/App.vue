@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
+import { App as AntApp, ConfigProvider } from 'antdv-next'
 import { useUserStore } from '@/stores/user'
 import { tenantApi } from '@/api/tenant'
-import { Toaster } from '@/components/ui/sonner'
+import { antdLocale, antdTheme } from '@/config/antd'
 
 const userStore = useUserStore()
 
@@ -39,6 +40,9 @@ onMounted(async () => {
 </script>
 
 <template>
-  <router-view />
-  <Toaster rich-colors />
+  <ConfigProvider :locale="antdLocale" :theme="antdTheme" component-size="middle">
+    <AntApp>
+      <router-view />
+    </AntApp>
+  </ConfigProvider>
 </template>

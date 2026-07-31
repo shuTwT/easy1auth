@@ -16,7 +16,6 @@ export interface AuthorizationContext {
   tenantId: string
   membershipRole: string
   permissions: string[]
-  dataBoundary: string
   tenantPackage: TenantPackage | null
   menus: ManagementMenu[]
 }

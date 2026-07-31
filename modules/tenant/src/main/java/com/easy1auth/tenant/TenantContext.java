@@ -5,7 +5,7 @@ import java.util.UUID;
 
 public record TenantContext(
         UUID accountId, UUID tenantId, UUID membershipId, String membershipRole,
-        Set<String> permissions, TenantDataBoundary dataBoundary, TenantPackageView tenantPackage,
+        Set<String> permissions, TenantPackageView tenantPackage,
         String traceId) {
     public TenantContext {
         permissions = Set.copyOf(permissions);

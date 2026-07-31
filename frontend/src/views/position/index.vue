@@ -1,19 +1,19 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue'
-import { toast } from 'vue-sonner'
+import { message } from 'antdv-next'
 import { Plus, Search, RefreshCw } from '@lucide/vue'
 import { positionApi } from '@/api/position'
 import type { Position, CreatePositionDto, UpdatePositionDto, PositionQueryDto, PositionStats } from '@/types/position'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Slider } from '@/components/ui/slider'
-import { NumberField, NumberFieldContent, NumberFieldDecrement, NumberFieldIncrement, NumberFieldInput } from '@/components/ui/number-field'
-import { Textarea } from '@/components/ui/textarea'
+import { Button } from '@/components/antd-compat'
+import { Input } from '@/components/antd-compat'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/antd-compat'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/antd-compat'
+import { Badge } from '@/components/antd-compat'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/antd-compat'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/antd-compat'
+import { Slider } from '@/components/antd-compat'
+import { NumberField, NumberFieldContent, NumberFieldDecrement, NumberFieldIncrement, NumberFieldInput } from '@/components/antd-compat'
+import { Textarea } from '@/components/antd-compat'
 
 const loading = ref(false)
 const positions = ref<Position[]>([])
@@ -52,7 +52,7 @@ const loadPositions = async () => {
     total.value = res.total
   } catch (error) {
     console.error('加载岗位列表失败:', error)
-    toast.error('加载岗位列表失败')
+    message.error('加载岗位列表失败')
   } finally {
     loading.value = false
   }
@@ -119,12 +119,12 @@ const handleDelete = async (row: Position) => {
 
   try {
     await positionApi.delete(row.id)
-    toast.success('删除成功')
+    message.success('删除成功')
     loadPositions()
     loadStats()
   } catch (error: any) {
     console.error('删除岗位失败:', error)
-    toast.error(error.response?.data?.msg || '删除岗位失败')
+    message.error(error.response?.data?.msg || '删除岗位失败')
   }
 }
 
@@ -132,17 +132,17 @@ const handleSubmit = async () => {
   try {
     if (currentPosition.value.id) {
       await positionApi.update(currentPosition.value.id, positionForm)
-      toast.success('更新成功')
+      message.success('更新成功')
     } else {
       await positionApi.create(positionForm as CreatePositionDto)
-      toast.success('创建成功')
+      message.success('创建成功')
     }
     dialogVisible.value = false
     loadPositions()
     loadStats()
   } catch (error: any) {
     console.error('保存岗位失败:', error)
-    toast.error(error.response?.data?.msg || '保存岗位失败')
+    message.error(error.response?.data?.msg || '保存岗位失败')
   }
 }
 

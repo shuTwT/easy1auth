@@ -1,12 +1,58 @@
 package com.easy1auth.admin.web;
-import com.easy1auth.admin.security.TenantContextFilter; import com.easy1auth.admin.security.TenantManagementPermission; import com.easy1auth.adminaccess.ManagementPermissionCode; import com.easy1auth.audit.DeliveryService; import com.easy1auth.foundation.web.ApiResponse; import com.easy1auth.tenant.TenantContext; import com.easy1auth.tenant.TenantDataBoundary;
-import jakarta.servlet.http.HttpServletRequest; import org.springframework.web.bind.annotation.*; import java.util.*;
-@RestController @RequestMapping("/api/webhooks") public class WebhookController {
- private final DeliveryService service; WebhookController(DeliveryService service){this.service=service;}
- @TenantManagementPermission(value=ManagementPermissionCode.WEBHOOK_LIST,boundary=TenantDataBoundary.TENANT_ALL) @GetMapping ApiResponse<?> list(HttpServletRequest r){return ApiResponse.ok(service.list(c(r).tenantId()));}
- @TenantManagementPermission(value=ManagementPermissionCode.WEBHOOK_CREATE,boundary=TenantDataBoundary.TENANT_ALL) @PostMapping ApiResponse<?> create(HttpServletRequest r,@RequestBody DeliveryService.SubscriptionInput in){return ApiResponse.ok(service.create(c(r).tenantId(),in),"Webhook 创建成功；Secret 仅显示一次");}
- @TenantManagementPermission(value=ManagementPermissionCode.WEBHOOK_UPDATE,boundary=TenantDataBoundary.TENANT_ALL) @PutMapping("/{id}") ApiResponse<?> update(HttpServletRequest r,@PathVariable UUID id,@RequestBody DeliveryService.SubscriptionInput in){return ApiResponse.ok(service.update(c(r).tenantId(),id,in),"Webhook 更新成功");}
- @TenantManagementPermission(value=ManagementPermissionCode.WEBHOOK_ROTATE_SECRET,boundary=TenantDataBoundary.TENANT_ALL) @PostMapping("/{id}/rotate-secret") ApiResponse<?> rotate(HttpServletRequest r,@PathVariable UUID id){return ApiResponse.ok(service.rotate(c(r).tenantId(),id),"Webhook Secret 已轮换且仅显示一次");}
- @TenantManagementPermission(value=ManagementPermissionCode.WEBHOOK_DELETE,boundary=TenantDataBoundary.TENANT_ALL) @DeleteMapping("/{id}") ApiResponse<Void> delete(HttpServletRequest r,@PathVariable UUID id){service.delete(c(r).tenantId(),id);return ApiResponse.ok(null,"Webhook 删除成功");}
- private static TenantContext c(HttpServletRequest r){return (TenantContext)Objects.requireNonNull(r.getAttribute(TenantContextFilter.ATTRIBUTE));}
+
+import com.easy1auth.tenant.WebFramework;
+
+import com.easy1auth.admin.security.TenantManagementPermission;
+import com.easy1auth.adminaccess.ManagementPermissionCode;
+import com.easy1auth.audit.DeliveryService;
+import com.easy1auth.foundation.web.ApiResponse;
+import com.easy1auth.tenant.TenantContext;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.*;
+
+@RestController
+@RequestMapping("/api/webhooks")
+public class WebhookController {
+    private final DeliveryService service;
+
+    WebhookController(DeliveryService service) {
+        this.service = service;
+    }
+
+    @TenantManagementPermission(value = ManagementPermissionCode.WEBHOOK_LIST)
+    @GetMapping
+    ApiResponse<?> list(HttpServletRequest r) {
+        return ApiResponse.ok(service.list(c(r).tenantId()));
+    }
+
+    @TenantManagementPermission(value = ManagementPermissionCode.WEBHOOK_CREATE)
+    @PostMapping
+    ApiResponse<?> create(HttpServletRequest r, @RequestBody DeliveryService.SubscriptionInput in) {
+        return ApiResponse.ok(service.create(c(r).tenantId(), in), "Webhook 创建成功；Secret 仅显示一次");
+    }
+
+    @TenantManagementPermission(value = ManagementPermissionCode.WEBHOOK_UPDATE)
+    @PutMapping("/{id}")
+    ApiResponse<?> update(HttpServletRequest r, @PathVariable UUID id, @RequestBody DeliveryService.SubscriptionInput in) {
+        return ApiResponse.ok(service.update(c(r).tenantId(), id, in), "Webhook 更新成功");
+    }
+
+    @TenantManagementPermission(value = ManagementPermissionCode.WEBHOOK_ROTATE_SECRET)
+    @PostMapping("/{id}/rotate-secret")
+    ApiResponse<?> rotate(HttpServletRequest r, @PathVariable UUID id) {
+        return ApiResponse.ok(service.rotate(c(r).tenantId(), id), "Webhook Secret 已轮换且仅显示一次");
+    }
+
+    @TenantManagementPermission(value = ManagementPermissionCode.WEBHOOK_DELETE)
+    @DeleteMapping("/{id}")
+    ApiResponse<Void> delete(HttpServletRequest r, @PathVariable UUID id) {
+        service.delete(c(r).tenantId(), id);
+        return ApiResponse.ok(null, "Webhook 删除成功");
+    }
+
+    private static TenantContext c(HttpServletRequest r) {
+        return WebFramework.requireTenantContext(r);
+    }
 }

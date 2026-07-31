@@ -196,21 +196,11 @@ public class TenantPackageService {
         if (permissionCodes == null || permissionCodes.stream().anyMatch(java.util.Objects::isNull)) {
             throw new DomainException("TENANT_PACKAGE_PERMISSION_CODES_INVALID", "租户套餐权限编码无效", 400);
         }
-        var validated = permissionCatalog.validateActiveTenantPermissionCodes(permissionCodes);
-        requireTenantDataBoundary(validated, 400);
-        return validated;
+        return permissionCatalog.validateActiveTenantPermissionCodes(permissionCodes);
     }
 
     private TenantPackageView activeOrdinaryView(TenantPackageEntity entity) {
-        var view = view(entity);
-        requireTenantDataBoundary(view.permissionCodes(), 409);
-        return view;
-    }
-
-    private static void requireTenantDataBoundary(List<String> permissionCodes, int status) {
-        if (!permissionCodes.contains(TenantDataBoundary.TENANT_ALL.code())) {
-            throw new DomainException("TENANT_PACKAGE_DATA_BOUNDARY_REQUIRED", "普通租户套餐必须包含当前租户全部数据范围", status);
-        }
+        return view(entity);
     }
 
     private static String requiredText(String value, int maxLength, String code, String message) {

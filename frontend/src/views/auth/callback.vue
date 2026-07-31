@@ -5,9 +5,9 @@ import axios from 'axios'
 import { CircleX, LoaderCircle } from '@lucide/vue'
 import { useAuth } from '@/composables/useAuth'
 import { isSocialProviderType } from '@/types/socialIdentityProvider'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription, AlertTitle } from '@/components/antd-compat'
+import { Button } from '@/components/antd-compat'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/antd-compat'
 
 const route = useRoute()
 const router = useRouter()

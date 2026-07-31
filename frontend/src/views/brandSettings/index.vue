@@ -285,15 +285,15 @@
 
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue'
-import { toast } from 'vue-sonner'
+import { message } from 'antdv-next'
 import { Check, Plus, Info } from '@lucide/vue'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Card, CardContent } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ColorPicker } from '@/components/ui/color-picker'
-import { Upload, type UploadFile } from '@/components/ui/upload'
+import { Button } from '@/components/antd-compat'
+import { Input } from '@/components/antd-compat'
+import { Textarea } from '@/components/antd-compat'
+import { Card, CardContent } from '@/components/antd-compat'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/antd-compat'
+import { ColorPicker } from '@/components/antd-compat'
+import { Upload, type UploadFile } from '@/components/antd-compat'
 import { brandSettingsApi } from '@/api/brandSettings'
 import type { BrandSettings } from '@/types/brandSettings'
 
@@ -329,7 +329,7 @@ const loadSettings = async () => {
     Object.assign(settings, response.brandSettings)
   } catch (error) {
     console.error('加载品牌设置失败:', error)
-    toast.error('加载品牌设置失败')
+    message.error('加载品牌设置失败')
   }
 }
 
@@ -337,12 +337,12 @@ const handleSave = async () => {
   saving.value = true
   try {
     await brandSettingsApi.update(settings)
-    toast.success('保存成功')
+    message.success('保存成功')
     
     applyAdminPanelStyles()
   } catch (error: any) {
     console.error('保存品牌设置失败:', error)
-    toast.error(error.response?.data?.msg || '保存失败')
+    message.error(error.response?.data?.msg || '保存失败')
   } finally {
     saving.value = false
   }
@@ -353,11 +353,11 @@ const beforeLogoUpload = (file: UploadFile) => {
   const isLt2M = file.size / 1024 / 1024 < 2
 
   if (!isImage) {
-    toast.error('只能上传图片文件!')
+    message.error('只能上传图片文件!')
     return false
   }
   if (!isLt2M) {
-    toast.error('图片大小不能超过 2MB!')
+    message.error('图片大小不能超过 2MB!')
     return false
   }
   return true
@@ -368,11 +368,11 @@ const beforeBgUpload = (file: UploadFile) => {
   const isLt5M = file.size / 1024 / 1024 < 5
 
   if (!isImage) {
-    toast.error('只能上传图片文件!')
+    message.error('只能上传图片文件!')
     return false
   }
   if (!isLt5M) {
-    toast.error('图片大小不能超过 5MB!')
+    message.error('图片大小不能超过 5MB!')
     return false
   }
   return true

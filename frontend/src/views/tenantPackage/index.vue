@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { toast } from 'vue-sonner'
+import { message, Table as ATable } from 'antdv-next'
 import {
   AppWindow,
   Check,
@@ -22,26 +22,25 @@ import type {
   TenantPackageMutation,
   TenantPackageStatus,
 } from '@/types/tenantPackage'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { NumberField, NumberFieldContent, NumberFieldDecrement, NumberFieldIncrement, NumberFieldInput } from '@/components/ui/number-field'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Tree } from '@/components/ui/tree'
-import type { TreeNodeData } from '@/components/ui/tree'
+import { Alert, AlertDescription, AlertTitle } from '@/components/antd-compat'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/antd-compat'
+import { Badge } from '@/components/antd-compat'
+import { Button } from '@/components/antd-compat'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/antd-compat'
+import { Checkbox } from '@/components/antd-compat'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/antd-compat'
+import { Input } from '@/components/antd-compat'
+import { Label } from '@/components/antd-compat'
+import { NumberField, NumberFieldContent, NumberFieldDecrement, NumberFieldIncrement, NumberFieldInput } from '@/components/antd-compat'
+import { ScrollArea } from '@/components/antd-compat'
+import { Tree } from '@/components/antd-compat'
+import type { TreeNodeData } from '@/components/antd-compat'
 
 interface PermissionTreeNode extends TreeNodeData {
   id: string
   label: string
   code?: string
-  type: 'group' | 'directory' | 'menu' | 'action' | 'data'
+  type: 'group' | 'directory' | 'menu' | 'action'
   children: PermissionTreeNode[]
   ancestorCodes: string[]
 }
@@ -77,7 +76,6 @@ const permissionTree = computed<PermissionTreeNode[]>(() => {
   const menuNodes = new Map<string, PermissionTreeNode>()
   const rootMenus: PermissionTreeNode[] = []
   const otherActions: PermissionTreeNode[] = []
-  const dataPermissions: PermissionTreeNode[] = []
 
   tenantPermissions.value
     .filter((permission) => ['DIRECTORY', 'MENU'].includes(permission.type.toUpperCase()))
@@ -119,21 +117,9 @@ const permissionTree = computed<PermissionTreeNode[]>(() => {
       else otherActions.push(node)
     })
 
-  tenantPermissions.value
-    .filter((permission) => permission.type.toUpperCase() === 'DATA')
-    .forEach((permission) => dataPermissions.push({
-      id: permission.code,
-      label: permission.name,
-      code: permission.code,
-      type: 'data',
-      children: [],
-      ancestorCodes: [],
-    }))
-
   const groups: PermissionTreeNode[] = []
   if (rootMenus.length > 0) groups.push({ id: 'group:menus', label: '菜单权限', type: 'group', children: rootMenus, ancestorCodes: [] })
   if (otherActions.length > 0) groups.push({ id: 'group:actions', label: '其他操作权限', type: 'group', children: otherActions, ancestorCodes: [] })
-  if (dataPermissions.length > 0) groups.push({ id: 'group:data', label: '数据权限', type: 'group', children: dataPermissions, ancestorCodes: [] })
   return groups
 })
 
@@ -153,6 +139,16 @@ const activeCount = computed(() => packages.value.filter((item) => item.status =
 const defaultPackage = computed(() => packages.value.find((item) => item.defaultPackage))
 const totalPermissionCount = computed(() => new Set(packages.value.flatMap((item) => item.permissionCodes)).size)
 const packageDialogTitle = computed(() => editingPackage.value ? '编辑租户套餐' : '创建租户套餐')
+const filteredPackages = computed(() => packages.value.filter((item) => !search.value
+  || `${item.name} ${item.code}`.toLowerCase().includes(search.value.toLowerCase())))
+const packageColumns = [
+  { title: '套餐', key: 'package', width: 250 },
+  { title: '状态', key: 'status', width: 110 },
+  { title: '资源配额', key: 'quota', width: 280 },
+  { title: '权限', key: 'permissions', width: 120 },
+  { title: '更新时间', key: 'updatedAt', width: 190 },
+  { title: '操作', key: 'actions', width: 300, fixed: 'end' as const },
+]
 
 function resetPackageForm() {
   Object.assign(packageForm, {
@@ -165,11 +161,11 @@ function resetPackageForm() {
 }
 
 function permissionTypeLabel(type: string) {
-  return ({ DIRECTORY: '目录', MENU: '菜单', ACTION: '按钮', DATA: '数据' } as Record<string, string>)[type.toUpperCase()] || type
+  return ({ DIRECTORY: '目录', MENU: '菜单', ACTION: '按钮' } as Record<string, string>)[type.toUpperCase()] || type
 }
 
 function permissionTypeVariant(type: string): 'default' | 'secondary' | 'outline' {
-  return type.toUpperCase() === 'MENU' ? 'default' : type.toUpperCase() === 'DATA' ? 'outline' : 'secondary'
+  return type.toUpperCase() === 'MENU' ? 'default' : 'secondary'
 }
 
 function statusVariant(status: TenantPackageStatus): 'default' | 'secondary' | 'outline' {
@@ -195,7 +191,7 @@ async function loadData() {
     permissionCatalog.value = permissions
   } catch (error) {
     console.error('加载租户套餐失败:', error)
-    toast.error('加载租户套餐失败')
+    message.error('加载租户套餐失败')
   } finally {
     loading.value = false
   }
@@ -221,11 +217,11 @@ function openEditDialog(item: TenantPackage) {
 
 async function submitPackage() {
   if (!packageForm.code.trim() || !packageForm.name.trim()) {
-    toast.error('请填写套餐编码和套餐名称')
+    message.error('请填写套餐编码和套餐名称')
     return
   }
   if (packageForm.permissionCodes.length === 0) {
-    toast.error('请至少选择一项租户权限')
+    message.error('请至少选择一项租户权限')
     return
   }
 
@@ -233,16 +229,16 @@ async function submitPackage() {
   try {
     if (editingPackage.value) {
       await tenantPackageApi.update(editingPackage.value.id, packageForm)
-      toast.success('套餐更新成功')
+      message.success('套餐更新成功')
     } else {
       await tenantPackageApi.create(packageForm)
-      toast.success('套餐创建成功')
+      message.success('套餐创建成功')
     }
     packageDialogVisible.value = false
     await loadData()
   } catch (error) {
     console.error('保存租户套餐失败:', error)
-    toast.error('保存租户套餐失败')
+    message.error('保存租户套餐失败')
   } finally {
     submitting.value = false
   }
@@ -272,7 +268,7 @@ function toggleTreePermission(node: PermissionTreeNode) {
 
 async function submitPermissions() {
   if (selectedPermissions.value.length === 0) {
-    toast.error('请至少选择一项租户权限')
+    message.error('请至少选择一项租户权限')
     return
   }
   if (permissionReturnsToPackageForm.value) {
@@ -285,12 +281,12 @@ async function submitPermissions() {
   permissionSubmitting.value = true
   try {
     await tenantPackageApi.replacePermissions(permissionTarget.value.id, selectedPermissions.value)
-    toast.success('套餐权限更新成功')
+    message.success('套餐权限更新成功')
     permissionDialogVisible.value = false
     await loadData()
   } catch (error) {
     console.error('更新套餐权限失败:', error)
-    toast.error('更新套餐权限失败')
+    message.error('更新套餐权限失败')
   } finally {
     permissionSubmitting.value = false
   }
@@ -308,11 +304,11 @@ async function toggleStatus(item: TenantPackage) {
   const nextStatus: TenantPackageStatus = item.status === 'active' ? 'inactive' : 'active'
   try {
     await tenantPackageApi.updateStatus(item.id, nextStatus)
-    toast.success(nextStatus === 'active' ? '套餐已启用' : '套餐已停用')
+    message.success(nextStatus === 'active' ? '套餐已启用' : '套餐已停用')
     await loadData()
   } catch (error) {
     console.error('更新套餐状态失败:', error)
-    toast.error('更新套餐状态失败')
+    message.error('更新套餐状态失败')
   }
 }
 
@@ -325,12 +321,12 @@ async function confirmDelete() {
   if (!deletingPackage.value) return
   try {
     await tenantPackageApi.remove(deletingPackage.value.id)
-    toast.success('套餐已删除')
+    message.success('套餐已删除')
     deleteDialogVisible.value = false
     await loadData()
   } catch (error) {
     console.error('删除租户套餐失败:', error)
-    toast.error('删除租户套餐失败')
+    message.error('删除租户套餐失败')
   }
 }
 
@@ -397,21 +393,17 @@ onMounted(loadData)
       </CardHeader>
       <CardContent>
         <div v-if="loading" class="flex min-h-40 items-center justify-center text-sm text-muted-foreground">加载中...</div>
-        <div v-else-if="packages.filter((item) => !search || `${item.name} ${item.code}`.toLowerCase().includes(search.toLowerCase())).length === 0" class="flex min-h-40 items-center justify-center text-sm text-muted-foreground">暂无匹配套餐</div>
-        <Table v-else>
-          <TableHeader>
-            <TableRow>
-              <TableHead>套餐</TableHead>
-              <TableHead>状态</TableHead>
-              <TableHead>资源配额</TableHead>
-              <TableHead>权限</TableHead>
-              <TableHead>更新时间</TableHead>
-              <TableHead class="text-right">操作</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <TableRow v-for="item in packages.filter((row) => !search || `${row.name} ${row.code}`.toLowerCase().includes(search.toLowerCase()))" :key="item.id" class="transition-colors hover:bg-muted/50">
-              <TableCell>
+        <div v-else-if="filteredPackages.length === 0" class="flex min-h-40 items-center justify-center text-sm text-muted-foreground">暂无匹配套餐</div>
+        <ATable
+          v-else
+          :columns="packageColumns"
+          :data-source="filteredPackages"
+          :pagination="false"
+          row-key="id"
+          :scroll="{ x: 1250 }"
+        >
+          <template #bodyCell="{ column, record: item }">
+            <template v-if="column.key === 'package'">
                 <div class="flex items-center gap-3">
                   <div class="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary"><Package /></div>
                   <div>
@@ -419,27 +411,32 @@ onMounted(loadData)
                     <code class="text-xs text-muted-foreground">{{ item.code }}</code>
                   </div>
                 </div>
-              </TableCell>
-              <TableCell><Badge :variant="statusVariant(item.status)">{{ item.status === 'active' ? '启用中' : '已停用' }}</Badge></TableCell>
-              <TableCell>
+            </template>
+            <template v-else-if="column.key === 'status'">
+              <Badge :variant="statusVariant(item.status)">{{ item.status === 'active' ? '启用中' : '已停用' }}</Badge>
+            </template>
+            <template v-else-if="column.key === 'quota'">
                 <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                   <span class="inline-flex items-center gap-1"><Users /> {{ formatLimit(item.maxUsers) }} 用户</span>
                   <span class="inline-flex items-center gap-1"><AppWindow /> {{ formatLimit(item.maxApps) }} 应用</span>
                 </div>
-              </TableCell>
-              <TableCell><button class="cursor-pointer text-left text-sm text-primary underline-offset-4 transition-colors hover:underline" @click="openPermissionDialog(item)">{{ item.permissionCodes.length }} 项权限</button></TableCell>
-              <TableCell class="text-sm text-muted-foreground">{{ formatDate(item.updatedAt) }}</TableCell>
-              <TableCell>
-                <div class="flex justify-end gap-1">
+            </template>
+            <template v-else-if="column.key === 'permissions'">
+              <button class="cursor-pointer text-left text-sm text-primary underline-offset-4 transition-colors hover:underline" @click="openPermissionDialog(item)">{{ item.permissionCodes.length }} 项权限</button>
+            </template>
+            <template v-else-if="column.key === 'updatedAt'">
+              <span class="text-sm text-muted-foreground">{{ formatDate(item.updatedAt) }}</span>
+            </template>
+            <template v-else-if="column.key === 'actions'">
+                <div class="flex flex-wrap justify-end gap-1">
                   <Button variant="ghost" size="sm" @click="openPermissionDialog(item)"><ShieldCheck data-icon="inline-start" />权限</Button>
                   <Button variant="ghost" size="sm" @click="openEditDialog(item)"><Pencil data-icon="inline-start" />编辑</Button>
                   <Button variant="ghost" size="sm" :disabled="item.defaultPackage" @click="toggleStatus(item)">{{ item.status === 'active' ? '停用' : '启用' }}</Button>
                   <Button variant="ghost" size="sm" class="text-destructive hover:text-destructive" :disabled="item.defaultPackage" @click="openDeleteDialog(item)"><Trash2 data-icon="inline-start" />删除</Button>
                 </div>
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
+            </template>
+          </template>
+        </ATable>
       </CardContent>
     </Card>
 

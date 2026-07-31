@@ -1,19 +1,19 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { toast } from 'vue-sonner'
+import { message } from 'antdv-next'
 import { Link, CheckCircle, XCircle, Grid3X3, Plus, Search, RefreshCw } from '@lucide/vue'
 import { socialIdentityProviderApi } from '@/api/socialIdentityProvider'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Alert, AlertTitle } from '@/components/ui/alert'
-import { Separator } from '@/components/ui/separator'
-import { Label } from '@/components/ui/label'
+import { Button } from '@/components/antd-compat'
+import { Input } from '@/components/antd-compat'
+import { Textarea } from '@/components/antd-compat'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/antd-compat'
+import { Card, CardContent, CardHeader } from '@/components/antd-compat'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/antd-compat'
+import { Badge } from '@/components/antd-compat'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/antd-compat'
+import { Alert, AlertTitle } from '@/components/antd-compat'
+import { Separator } from '@/components/antd-compat'
+import { Label } from '@/components/antd-compat'
 import type {
   SocialIdentityProvider,
   SocialIdentityProviderStats,
@@ -115,7 +115,7 @@ const loadProviders = async () => {
     providers.value = data.items
     total.value = data.total
   } catch (error) {
-    toast.error('加载身份源列表失败')
+    message.error('加载身份源列表失败')
   } finally {
     loading.value = false
   }
@@ -175,7 +175,7 @@ const handleSubmit = async () => {
         scope: providerForm.scope,
         attributeMapping: providerForm.attributeMapping,
       })
-      toast.success('更新成功')
+      message.success('更新成功')
     } else {
       await socialIdentityProviderApi.create({
         name: providerForm.name,
@@ -186,13 +186,13 @@ const handleSubmit = async () => {
         scope: providerForm.scope,
         attributeMapping: providerForm.attributeMapping,
       })
-      toast.success('创建成功')
+      message.success('创建成功')
     }
     dialogVisible.value = false
     loadProviders()
     loadStats()
   } catch (error: any) {
-    toast.error(error.response?.data?.msg || '操作失败')
+    message.error(error.response?.data?.msg || '操作失败')
   } finally {
     submitting.value = false
   }
@@ -202,11 +202,11 @@ const handleToggleStatus = async (row: SocialIdentityProvider) => {
   try {
     const newStatus = row.status === 'active' ? 'disabled' : 'active'
     await socialIdentityProviderApi.update(row.id, { status: newStatus })
-    toast.success('状态更新成功')
+    message.success('状态更新成功')
     loadProviders()
     loadStats()
   } catch (error: any) {
-    toast.error(error.response?.data?.msg || '状态更新失败')
+    message.error(error.response?.data?.msg || '状态更新失败')
   }
 }
 
@@ -216,11 +216,11 @@ const handleDelete = async (row: SocialIdentityProvider) => {
 
   try {
     await socialIdentityProviderApi.delete(row.id)
-    toast.success('删除成功')
+    message.success('删除成功')
     loadProviders()
     loadStats()
   } catch (error: any) {
-    toast.error(error.response?.data?.msg || '删除失败')
+    message.error(error.response?.data?.msg || '删除失败')
   }
 }
 
@@ -233,7 +233,7 @@ const copyCallbackUrl = () => {
   if (currentProvider.value) {
     const url = `${baseUrl.value}/t/{tenantId}/federation/${currentProvider.value.id}/callback`
     navigator.clipboard.writeText(url)
-    toast.success('回调地址已复制到剪贴板')
+    message.success('回调地址已复制到剪贴板')
   }
 }
 

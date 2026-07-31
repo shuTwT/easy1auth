@@ -44,9 +44,6 @@ public class PlatformAuthorizationResolver {
             throw accessDenied();
         }
         Set<ManagementPermissionCode> permissions = Set.copyOf(catalog.activeCodes(ManagementPermissionScope.PLATFORM));
-        if (!permissions.contains(ManagementPermissionCode.DATA_PLATFORM_ALL)) {
-            throw new DomainException("PLATFORM_DATA_BOUNDARY_MISSING", "平台数据边界权限不可用", 409);
-        }
         return new PlatformAuthorization(systemTenant.id(), permissions);
     }
 

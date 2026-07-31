@@ -1,6 +1,5 @@
 package com.easy1auth.admin.web;
 
-import com.easy1auth.foundation.trace.TraceIdFilter;
 import com.easy1auth.admin.security.ManagementRouteClassification;
 import com.easy1auth.admin.security.ManagementRouteKind;
 import com.easy1auth.admin.security.PlatformManagementPermission;
@@ -8,9 +7,12 @@ import com.easy1auth.adminaccess.ManagementPermissionCode;
 import com.easy1auth.adminaccess.PlatformAuthorizationResolver;
 import com.easy1auth.foundation.web.ApiResponse;
 import com.easy1auth.foundation.web.PageData;
+import com.easy1auth.foundation.trace.TraceIdFilter;
+import com.easy1auth.tenant.WebFramework;
 import com.easy1auth.tenant.*;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
+
 import java.security.Principal;
 import java.util.List;
 import java.util.UUID;
@@ -20,6 +22,7 @@ import java.util.UUID;
 public class TenantController {
     private final TenantService tenants;
     private final PlatformAuthorizationResolver platformAuthorization;
+
     TenantController(TenantService tenants, PlatformAuthorizationResolver platformAuthorization) {
         this.tenants = tenants;
         this.platformAuthorization = platformAuthorization;
@@ -46,7 +49,7 @@ public class TenantController {
                 List.copyOf(filtered.subList(fromIndex, toIndex)), normalizedPage, normalizedPageSize, filtered.size()));
     }
 
-    @PlatformManagementPermission(value = ManagementPermissionCode.TENANT_LIST, boundary = TenantDataBoundary.PLATFORM_ALL)
+    @PlatformManagementPermission(value = ManagementPermissionCode.TENANT_LIST)
     @GetMapping("/managed")
     public ApiResponse<PageData<TenantControlView>> managed(Principal principal) {
         platformAuthorization.require(accountId(principal), ManagementPermissionCode.TENANT_LIST);
@@ -54,7 +57,7 @@ public class TenantController {
         return ApiResponse.ok(PageData.of(rows, 1, rows.size(), rows.size()));
     }
 
-    @PlatformManagementPermission(value = ManagementPermissionCode.TENANT_CREATE, boundary = TenantDataBoundary.PLATFORM_ALL)
+    @PlatformManagementPermission(value = ManagementPermissionCode.TENANT_CREATE)
     @PostMapping("/create")
     public ApiResponse<?> create(Principal principal, @RequestBody CreateTenant request) {
         platformAuthorization.require(accountId(principal), ManagementPermissionCode.TENANT_CREATE);
@@ -62,31 +65,31 @@ public class TenantController {
         return ApiResponse.ok(tenant, "租户创建成功");
     }
 
-    @PlatformManagementPermission(value = ManagementPermissionCode.TENANT_UPDATE, boundary = TenantDataBoundary.PLATFORM_ALL)
+    @PlatformManagementPermission(value = ManagementPermissionCode.TENANT_UPDATE)
     @PutMapping("/{tenantId}")
     public ApiResponse<TenantControlView> update(Principal principal, @PathVariable UUID tenantId,
-                                                   @RequestBody TenantUpdateInput request) {
+                                                 @RequestBody TenantUpdateInput request) {
         platformAuthorization.require(accountId(principal), ManagementPermissionCode.TENANT_UPDATE);
         return ApiResponse.ok(tenants.updateOrdinary(tenantId, request == null ? null : request.name(), request == null ? null : request.packageId()), "租户更新成功");
     }
 
-    @PlatformManagementPermission(value = ManagementPermissionCode.TENANT_STATUS, boundary = TenantDataBoundary.PLATFORM_ALL)
+    @PlatformManagementPermission(value = ManagementPermissionCode.TENANT_STATUS)
     @PutMapping("/{tenantId}/status")
     public ApiResponse<TenantControlView> updateStatus(Principal principal, @PathVariable UUID tenantId,
-                                                         @RequestBody TenantStatusInput request) {
+                                                       @RequestBody TenantStatusInput request) {
         platformAuthorization.require(accountId(principal), ManagementPermissionCode.TENANT_STATUS);
         return ApiResponse.ok(tenants.updateOrdinaryStatus(tenantId, request == null ? null : request.status()), "租户状态更新成功");
     }
 
-    @PlatformManagementPermission(value = ManagementPermissionCode.TENANT_OWNER_TRANSFER, boundary = TenantDataBoundary.PLATFORM_ALL)
+    @PlatformManagementPermission(value = ManagementPermissionCode.TENANT_OWNER_TRANSFER)
     @PutMapping("/{tenantId}/administrator")
     public ApiResponse<TenantControlView> transferAdministrator(Principal principal, @PathVariable UUID tenantId,
-                                                                 @RequestBody TenantAdministratorTransferInput request) {
+                                                                @RequestBody TenantAdministratorTransferInput request) {
         platformAuthorization.require(accountId(principal), ManagementPermissionCode.TENANT_OWNER_TRANSFER);
         return ApiResponse.ok(tenants.transferAdministrator(tenantId, request == null ? null : request.administratorAccountId()), "租户管理员转移成功");
     }
 
-    @PlatformManagementPermission(value = ManagementPermissionCode.TENANT_DELETE, boundary = TenantDataBoundary.PLATFORM_ALL)
+    @PlatformManagementPermission(value = ManagementPermissionCode.TENANT_DELETE)
     @DeleteMapping("/{tenantId}")
     public ApiResponse<Void> delete(Principal principal, @PathVariable UUID tenantId) {
         platformAuthorization.require(accountId(principal), ManagementPermissionCode.TENANT_DELETE);
@@ -96,17 +99,30 @@ public class TenantController {
 
     @ManagementRouteClassification(ManagementRouteKind.DEFERRED_TODO_7)
     @GetMapping("/current")
-    public ApiResponse<?> current(Principal principal, @RequestHeader("tenant-id") UUID tenantId,
-                                       HttpServletRequest request) {
+    public ApiResponse<?> current(Principal principal, @RequestHeader(WebFramework.TENANT_ID_HEADER) UUID tenantId,
+                                  HttpServletRequest request) {
         var context = tenants.resolve(accountId(principal), tenantId, traceId(request));
         var tenant = tenants.list(context.accountId()).stream().filter(it -> it.id().equals(tenantId)).findFirst().orElseThrow();
         return ApiResponse.ok(tenant);
     }
 
-    private static UUID accountId(Principal principal) { return UUID.fromString(principal.getName()); }
-    private static String traceId(HttpServletRequest request) { return request.getHeader(TraceIdFilter.HEADER); }
-    public record CreateTenant(String name, long packageId, UUID administratorAccountId) {}
-    public record TenantUpdateInput(String name, Long packageId) {}
-    public record TenantStatusInput(String status) {}
-    public record TenantAdministratorTransferInput(UUID administratorAccountId) {}
+    private static UUID accountId(Principal principal) {
+        return UUID.fromString(principal.getName());
+    }
+
+    private static String traceId(HttpServletRequest request) {
+        return request.getHeader(TraceIdFilter.HEADER);
+    }
+
+    public record CreateTenant(String name, long packageId, UUID administratorAccountId) {
+    }
+
+    public record TenantUpdateInput(String name, Long packageId) {
+    }
+
+    public record TenantStatusInput(String status) {
+    }
+
+    public record TenantAdministratorTransferInput(UUID administratorAccountId) {
+    }
 }

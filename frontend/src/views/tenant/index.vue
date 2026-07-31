@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { toast } from 'vue-sonner'
-import { Building2, Check, Pencil, Package, Plus, RefreshCw, Search, Trash2, UserRoundCog, Users } from '@lucide/vue'
+import { Pagination as AntPagination, Table as AntTable, message } from 'antdv-next'
+import { Building2, Pencil, Plus, RefreshCw, Search, Trash2, UserRoundCog, Users } from '@lucide/vue'
 import { adminUserApi } from '@/api/adminUser'
 import { tenantApi } from '@/api/tenant'
 import { tenantPackageApi } from '@/api/tenantPackage'
@@ -9,16 +9,14 @@ import { useUserStore } from '@/stores/user'
 import type { AdminUser } from '@/types/adminUser'
 import type { Tenant, TenantQueryDto } from '@/types/tenant'
 import type { TenantPackage } from '@/types/tenantPackage'
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationNext, PaginationPrevious } from '@/components/ui/pagination'
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/antd-compat'
+import { Badge } from '@/components/antd-compat'
+import { Button } from '@/components/antd-compat'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/antd-compat'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/antd-compat'
+import { Input } from '@/components/antd-compat'
+import { Label } from '@/components/antd-compat'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/antd-compat'
 
 const userStore = useUserStore()
 const loading = ref(false)
@@ -40,6 +38,15 @@ const queryForm = reactive<TenantQueryDto>({ page: 1, pageSize: 20, name: '', st
 const tenantForm = reactive({ name: '', packageId: undefined as number | undefined })
 const dialogTitle = computed(() => editingTenant.value ? '编辑租户' : '新增租户')
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / (queryForm.pageSize || 20))))
+
+const tenantColumns = [
+  { title: '租户', key: 'tenant' },
+  { title: '套餐', key: 'package' },
+  { title: '状态', key: 'status' },
+  { title: '配额', key: 'quota' },
+  { title: '租户管理员', key: 'administrator' },
+  { title: '操作', key: 'actions', align: 'right' as const },
+]
 
 function formatLimit(value?: number) {
   if (value === undefined) return '-'
@@ -68,7 +75,7 @@ async function loadData() {
     administrators.value = administratorPage.items
   } catch (error) {
     console.error('加载租户数据失败:', error)
-    toast.error('加载租户数据失败')
+    message.error('加载租户数据失败')
   } finally {
     loading.value = false
   }
@@ -89,32 +96,32 @@ function openEditDialog(tenant: Tenant) {
 
 async function submitTenant() {
   if (!tenantForm.name.trim()) {
-    toast.error('请输入租户名称')
+    message.error('请输入租户名称')
     return
   }
   if (!tenantForm.packageId) {
-    toast.error('请选择租户套餐')
+    message.error('请选择租户套餐')
     return
   }
   submitting.value = true
   try {
     if (editingTenant.value) {
       await tenantApi.update(editingTenant.value.id, { name: tenantForm.name.trim(), packageId: tenantForm.packageId })
-      toast.success('租户更新成功')
+      message.success('租户更新成功')
     } else {
       const administratorAccountId = userStore.userInfo?.id
       if (!administratorAccountId) {
-        toast.error('未获取到当前管理员信息')
+        message.error('未获取到当前管理员信息')
         return
       }
       await tenantApi.create({ name: tenantForm.name.trim(), packageId: tenantForm.packageId, administratorAccountId })
-      toast.success('租户创建成功')
+      message.success('租户创建成功')
     }
     tenantDialogVisible.value = false
     await loadData()
   } catch (error) {
     console.error('保存租户失败:', error)
-    toast.error('保存租户失败')
+    message.error('保存租户失败')
   } finally {
     submitting.value = false
   }
@@ -124,11 +131,11 @@ async function toggleStatus(tenant: Tenant) {
   try {
     const status = tenant.status === 'active' ? 'suspended' : 'active'
     await tenantApi.updateStatus(tenant.id, status)
-    toast.success(status === 'active' ? '租户已启用' : '租户已停用')
+    message.success(status === 'active' ? '租户已启用' : '租户已停用')
     await loadData()
   } catch (error) {
     console.error('更新租户状态失败:', error)
-    toast.error('更新租户状态失败')
+    message.error('更新租户状态失败')
   }
 }
 
@@ -140,18 +147,18 @@ function openTransferDialog(tenant: Tenant) {
 
 async function submitTransfer() {
   if (!transferTarget.value || !transferAdministratorId.value) {
-    toast.error('请选择目标管理员')
+    message.error('请选择目标管理员')
     return
   }
   transferSubmitting.value = true
   try {
     await tenantApi.transferAdministrator(transferTarget.value.id, transferAdministratorId.value)
-    toast.success('租户管理员转移成功')
+    message.success('租户管理员转移成功')
     transferDialogVisible.value = false
     await loadData()
   } catch (error) {
     console.error('转移租户管理员失败:', error)
-    toast.error('转移租户管理员失败')
+    message.error('转移租户管理员失败')
   } finally {
     transferSubmitting.value = false
   }
@@ -166,12 +173,12 @@ async function confirmDelete() {
   if (!deleteTarget.value) return
   try {
     await tenantApi.delete(deleteTarget.value.id)
-    toast.success('租户已删除')
+    message.success('租户已删除')
     deleteDialogVisible.value = false
     await loadData()
   } catch (error) {
     console.error('删除租户失败:', error)
-    toast.error('删除租户失败')
+    message.error('删除租户失败')
   }
 }
 
@@ -217,30 +224,18 @@ onMounted(loadData)
       <CardContent>
         <div v-if="loading" class="flex min-h-40 items-center justify-center text-sm text-muted-foreground">加载中...</div>
         <div v-else-if="tenants.length === 0" class="flex min-h-40 items-center justify-center text-sm text-muted-foreground">暂无租户</div>
-        <Table v-else>
-          <TableHeader><TableRow><TableHead>租户</TableHead><TableHead>套餐</TableHead><TableHead>状态</TableHead><TableHead>配额</TableHead><TableHead>租户管理员</TableHead><TableHead class="text-right">操作</TableHead></TableRow></TableHeader>
-          <TableBody>
-            <TableRow v-for="tenant in tenants" :key="tenant.id" class="transition-colors hover:bg-muted/50">
-              <TableCell><div class="flex items-center gap-3"><div class="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary"><Building2 /></div><div><div class="font-medium">{{ tenant.name }}</div><code class="text-xs text-muted-foreground">{{ tenant.id }}</code></div></div></TableCell>
-              <TableCell><Badge variant="secondary"><Package data-icon="inline-start" />{{ tenant.tenantPackage?.name || '未配置套餐' }}</Badge></TableCell>
-              <TableCell><Badge :variant="tenant.status === 'active' ? 'default' : 'outline'"><Check data-icon="inline-start" />{{ statusLabel(tenant.status) }}</Badge></TableCell>
-              <TableCell><div class="flex gap-4 text-sm text-muted-foreground"><span class="inline-flex items-center gap-1"><Users />{{ formatLimit(tenant.tenantPackage?.maxUsers) }} 用户</span><span>{{ formatLimit(tenant.tenantPackage?.maxApps) }} 应用</span></div></TableCell>
-              <TableCell><Badge variant="outline">{{ roleLabel(tenant.role) }}</Badge></TableCell>
-              <TableCell><div v-if="!tenant.system" class="flex justify-end gap-1"><Button variant="ghost" size="sm" :disabled="tenant.status === 'deleted' || !tenant.tenantPackage" @click="openEditDialog(tenant)"><Pencil data-icon="inline-start" />编辑</Button><Button variant="ghost" size="sm" :disabled="tenant.status === 'deleted'" @click="toggleStatus(tenant)">{{ tenant.status === 'active' ? '停用' : '启用' }}</Button><Button variant="ghost" size="sm" :disabled="tenant.status !== 'active'" @click="openTransferDialog(tenant)"><UserRoundCog data-icon="inline-start" />转移管理员</Button><Button variant="ghost" size="sm" class="text-destructive hover:text-destructive" :disabled="tenant.status === 'deleted'" @click="openDeleteDialog(tenant)"><Trash2 data-icon="inline-start" />删除</Button></div><span v-else class="text-sm text-muted-foreground">系统内置</span></TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
+        <AntTable v-else :columns="tenantColumns" :data-source="tenants" :pagination="false" row-key="id" :scroll="{ x: 1120 }" size="middle">
+          <template #bodyCell="{ column, record: tenant }">
+            <template v-if="column.key === 'tenant'"><div class="flex items-center gap-3"><div class="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary"><Building2 /></div><div><div class="font-medium">{{ tenant.name }}</div><code class="text-xs text-muted-foreground">{{ tenant.id }}</code></div></div></template>
+            <Badge v-else-if="column.key === 'package'" variant="secondary">{{ tenant.tenantPackage?.name || '未配置套餐' }}</Badge>
+            <Badge v-else-if="column.key === 'status'" :variant="tenant.status === 'active' ? 'default' : 'outline'">{{ statusLabel(tenant.status) }}</Badge>
+            <div v-else-if="column.key === 'quota'" class="flex gap-4 text-sm text-muted-foreground"><span class="inline-flex items-center gap-1"><Users />{{ formatLimit(tenant.tenantPackage?.maxUsers) }} 用户</span><span>{{ formatLimit(tenant.tenantPackage?.maxApps) }} 应用</span></div>
+            <Badge v-else-if="column.key === 'administrator'" variant="outline">{{ roleLabel(tenant.role) }}</Badge>
+            <div v-else-if="column.key === 'actions'" class="flex justify-end gap-1"><template v-if="!tenant.system"><Button variant="ghost" size="sm" :disabled="tenant.status === 'deleted' || !tenant.tenantPackage" @click="openEditDialog(tenant)"><Pencil data-icon="inline-start" />编辑</Button><Button variant="ghost" size="sm" :disabled="tenant.status === 'deleted'" @click="toggleStatus(tenant)">{{ tenant.status === 'active' ? '停用' : '启用' }}</Button><Button variant="ghost" size="sm" :disabled="tenant.status !== 'active'" @click="openTransferDialog(tenant)"><UserRoundCog data-icon="inline-start" />转移管理员</Button><Button variant="ghost" size="sm" class="text-destructive hover:text-destructive" :disabled="tenant.status === 'deleted'" @click="openDeleteDialog(tenant)"><Trash2 data-icon="inline-start" />删除</Button></template><span v-else class="text-sm text-muted-foreground">系统内置</span></div>
+          </template>
+        </AntTable>
         <div v-if="total > (queryForm.pageSize || 20)" class="mt-4 flex justify-end">
-          <Pagination :page="queryForm.page" :items-per-page="queryForm.pageSize || 20" :total="total" @update:page="handlePageChange">
-            <PaginationContent v-slot="{ items }">
-              <PaginationPrevious>上一页</PaginationPrevious>
-              <template v-for="(item, index) in items" :key="index">
-                <PaginationItem v-if="item.type === 'page'" :value="item.value" :is-active="item.value === queryForm.page" @click="handlePageChange(item.value)">{{ item.value }}</PaginationItem>
-                <PaginationEllipsis v-else :index="index" />
-              </template>
-              <PaginationNext>下一页</PaginationNext>
-            </PaginationContent>
-          </Pagination>
+          <AntPagination :current="queryForm.page" :page-size="queryForm.pageSize || 20" :total="total" :show-size-changer="false" @change="handlePageChange" />
         </div>
       </CardContent>
     </Card>

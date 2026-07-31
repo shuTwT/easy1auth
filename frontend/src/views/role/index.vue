@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { toast } from 'vue-sonner'
+import { message } from 'antdv-next'
 import {
   Search,
   Plus,
@@ -17,16 +17,16 @@ import { userApi } from '@/api/user'
 import { permissionApi } from '@/api/permission'
 import type { PermissionTree } from '@/types/permission'
 import type { Role, RoleTree, RoleStats, CreateRoleDto, RoleUser } from '@/types/role'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Tree } from '@/components/ui/tree'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Textarea } from '@/components/ui/textarea'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Button } from '@/components/antd-compat'
+import { Input } from '@/components/antd-compat'
+import { Card, CardContent, CardHeader } from '@/components/antd-compat'
+import { Badge } from '@/components/antd-compat'
+import { Tree } from '@/components/antd-compat'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/antd-compat'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/antd-compat'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/antd-compat'
+import { Textarea } from '@/components/antd-compat'
+import { Avatar, AvatarFallback } from '@/components/antd-compat'
 
 const loading = ref(false)
 const roles = ref<Role[]>([])
@@ -149,7 +149,7 @@ const loadRoles = async () => {
     roles.value = data.items
     total.value = data.total
   } catch (error) {
-    toast.error('加载角色列表失败')
+    message.error('加载角色列表失败')
   } finally {
     loading.value = false
   }
@@ -207,10 +207,10 @@ const handleSubmit = async () => {
         dataScope: roleForm.dataScope,
         parentId: roleForm.parentId,
       })
-      toast.success('更新成功')
+      message.success('更新成功')
     } else {
       if (!roleForm.code) {
-        toast.error('请填写角色编码')
+        message.error('请填写角色编码')
         submitting.value = false
         return
       }
@@ -218,14 +218,14 @@ const handleSubmit = async () => {
         ...roleForm,
         permissions: permissionsPayload,
       })
-      toast.success('创建成功')
+      message.success('创建成功')
     }
     dialogVisible.value = false
     loadRoles()
     loadRoleTree()
     loadStats()
   } catch (error: any) {
-    toast.error(error.response?.data?.msg || '操作失败')
+    message.error(error.response?.data?.msg || '操作失败')
   } finally {
     submitting.value = false
   }
@@ -238,12 +238,12 @@ const handleDelete = async (row: Role) => {
 
   try {
     await roleApi.delete(row.id)
-    toast.success('删除成功')
+    message.success('删除成功')
     loadRoles()
     loadRoleTree()
     loadStats()
   } catch (error: any) {
-    toast.error(error.response?.data?.msg || '删除失败')
+    message.error(error.response?.data?.msg || '删除失败')
   }
 }
 
@@ -263,7 +263,7 @@ const loadRoleUsers = async () => {
     })
     roleUsers.value = data.users
   } catch (error) {
-    toast.error('加载角色用户失败')
+    message.error('加载角色用户失败')
   } finally {
     usersLoading.value = false
   }
@@ -280,13 +280,13 @@ const handleAssignUsers = async () => {
     selectedUserIds.value = []
     assignUsersDialogVisible.value = true
   } catch (error) {
-    toast.error('加载用户列表失败')
+    message.error('加载用户列表失败')
   }
 }
 
 const handleSubmitAssignUsers = async () => {
   if (selectedUserIds.value.length === 0) {
-    toast.warning('请选择要分配的用户')
+    message.warning('请选择要分配的用户')
     return
   }
 
@@ -297,12 +297,12 @@ const handleSubmitAssignUsers = async () => {
     await roleApi.assignUsers(currentRole.value.id, {
       userIds: selectedUserIds.value,
     })
-    toast.success('分配用户成功')
+    message.success('分配用户成功')
     assignUsersDialogVisible.value = false
     loadRoleUsers()
     loadStats()
   } catch (error: any) {
-    toast.error(error.response?.data?.msg || '分配用户失败')
+    message.error(error.response?.data?.msg || '分配用户失败')
   } finally {
     assigning.value = false
   }
@@ -319,11 +319,11 @@ const handleRemoveUser = async (user: RoleUser) => {
     await roleApi.removeUsers(currentRole.value.id, {
       userIds: [user.id],
     })
-    toast.success('移除成功')
+    message.success('移除成功')
     loadRoleUsers()
     loadStats()
   } catch (error: any) {
-    toast.error(error.response?.data?.msg || '移除失败')
+    message.error(error.response?.data?.msg || '移除失败')
   }
 }
 

@@ -2,7 +2,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
-import { toast } from 'vue-sonner'
+import { message } from 'antdv-next'
 import {
   ArrowLeft,
   Check,
@@ -21,17 +21,17 @@ import type {
   ApplicationType,
   UpdateApplicationDto
 } from '@/types/application'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Input } from '@/components/ui/input'
-import { NumberField, NumberFieldContent, NumberFieldDecrement, NumberFieldIncrement, NumberFieldInput } from '@/components/ui/number-field'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Textarea } from '@/components/ui/textarea'
+import { Alert, AlertDescription, AlertTitle } from '@/components/antd-compat'
+import { Badge } from '@/components/antd-compat'
+import { Button } from '@/components/antd-compat'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/antd-compat'
+import { Checkbox } from '@/components/antd-compat'
+import { Input } from '@/components/antd-compat'
+import { NumberField, NumberFieldContent, NumberFieldDecrement, NumberFieldIncrement, NumberFieldInput } from '@/components/antd-compat'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/antd-compat'
+import { Skeleton } from '@/components/antd-compat'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/antd-compat'
+import { Textarea } from '@/components/antd-compat'
 
 type ApiErrorResponse = {
   msg?: string
@@ -231,10 +231,10 @@ const goBack = () => {
 const copyToClipboard = async (text: string) => {
   try {
     await navigator.clipboard.writeText(text)
-    toast.success('已复制到剪贴板')
+    message.success('已复制到剪贴板')
   } catch (error: unknown) {
     console.error('复制失败:', error)
-    toast.error('复制失败')
+    message.error('复制失败')
   }
 }
 
@@ -242,7 +242,7 @@ const addRedirectUri = () => {
   const uri = redirectUriInput.value.trim()
   if (!uri) return
   if (loginForm.redirectUris.includes(uri)) {
-    toast.warning('该回调地址已存在')
+    message.warning('该回调地址已存在')
     return
   }
   loginForm.redirectUris.push(uri)
@@ -265,7 +265,7 @@ const toggleGrantType = (grantType: string) => {
 const saveConfig = async () => {
   if (!application.value) return
   if (!configForm.name.trim()) {
-    toast.error('请输入应用名称')
+    message.error('请输入应用名称')
     return
   }
 
@@ -283,10 +283,10 @@ const saveConfig = async () => {
     application.value = response
     if (response.clientSecret) secretVisible.value = true
     document.title = `${response.name} - 应用详情`
-    toast.success('应用配置已保存')
+    message.success('应用配置已保存')
   } catch (error: unknown) {
     console.error('保存应用配置失败:', error)
-    toast.error(getApiErrorMessage(error, '保存应用配置失败'))
+    message.error(getApiErrorMessage(error, '保存应用配置失败'))
   } finally {
     configSaving.value = false
   }
@@ -295,15 +295,15 @@ const saveConfig = async () => {
 const saveLoginControl = async () => {
   if (!application.value) return
   if (loginForm.allowedGrantTypes.length === 0) {
-    toast.error('请至少选择一种授权类型')
+    message.error('请至少选择一种授权类型')
     return
   }
   if (loginForm.accessTokenLifetime < 60) {
-    toast.error('访问令牌有效期不能小于 60 秒')
+    message.error('访问令牌有效期不能小于 60 秒')
     return
   }
   if (loginForm.refreshTokenLifetime < 3600) {
-    toast.error('刷新令牌有效期不能小于 3600 秒')
+    message.error('刷新令牌有效期不能小于 3600 秒')
     return
   }
 
@@ -318,10 +318,10 @@ const saveLoginControl = async () => {
   try {
     const response = await applicationApi.update(applicationId.value, payload)
     application.value = response
-    toast.success('登录控制已保存')
+    message.success('登录控制已保存')
   } catch (error: unknown) {
     console.error('保存登录控制失败:', error)
-    toast.error(getApiErrorMessage(error, '保存登录控制失败'))
+    message.error(getApiErrorMessage(error, '保存登录控制失败'))
   } finally {
     loginSaving.value = false
   }
@@ -335,10 +335,10 @@ const regenerateSecret = async () => {
     const response = await applicationApi.regenerateSecret(applicationId.value)
     application.value = { ...application.value, clientSecret: response.clientSecret }
     secretVisible.value = true
-    toast.success('密钥重新生成成功，请立即复制并妥善保管')
+    message.success('密钥重新生成成功，请立即复制并妥善保管')
   } catch (error: unknown) {
     console.error('重新生成密钥失败:', error)
-    toast.error(getApiErrorMessage(error, '重新生成密钥失败'))
+    message.error(getApiErrorMessage(error, '重新生成密钥失败'))
   }
 }
 

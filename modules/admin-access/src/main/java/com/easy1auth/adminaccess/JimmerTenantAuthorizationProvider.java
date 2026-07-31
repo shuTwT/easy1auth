@@ -5,7 +5,6 @@ import com.easy1auth.foundation.error.DomainException;
 import com.easy1auth.tenant.TenantAuthorization;
 import com.easy1auth.tenant.TenantAuthorizationProvider;
 import com.easy1auth.tenant.TenantAuthorizationRequest;
-import com.easy1auth.tenant.TenantDataBoundary;
 import com.easy1auth.tenant.TenantPackageService;
 import com.easy1auth.tenant.TenantPackageView;
 import org.babyfish.jimmer.sql.JSqlClient;
@@ -13,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 @Component
 final class JimmerTenantAuthorizationProvider implements TenantAuthorizationProvider {
@@ -50,7 +50,7 @@ final class JimmerTenantAuthorizationProvider implements TenantAuthorizationProv
     private TenantAuthorization resolveSystem(TenantAuthorizationRequest request) {
         return switch (request.membershipRole()) {
             case "super_admin" -> resolveSuperAdmin(request);
-            case "common" -> new TenantAuthorization(Set.of(), TenantDataBoundary.NONE, packages.systemPackage());
+            case "common" -> new TenantAuthorization(Set.of(), packages.systemPackage());
             default -> throw invalidMembershipRole();
         };
     }
@@ -60,18 +60,19 @@ final class JimmerTenantAuthorizationProvider implements TenantAuthorizationProv
         if (!request.tenantId().equals(platform.tenantId())) {
             throw new DomainException("SYSTEM_TENANT_CONTEXT_INVALID", "系统租户上下文无效", 409);
         }
-        return new TenantAuthorization(
-                platform.permissionCodes().stream().map(ManagementPermissionCode::value).collect(java.util.stream.Collectors.toUnmodifiableSet()),
-                TenantDataBoundary.PLATFORM_ALL,
-                packages.systemPackage());
+        Set<String> permissions = Stream.concat(
+                        catalog.activeCodes(ManagementPermissionScope.PLATFORM).stream(),
+                        catalog.activeCodes(ManagementPermissionScope.TENANT).stream())
+                .map(ManagementPermissionCode::value)
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+        return new TenantAuthorization(permissions, packages.systemPackage());
     }
 
     private TenantAuthorization resolveOrdinary(TenantAuthorizationRequest request) {
         TenantPackageView tenantPackage = activeOrdinaryPackage(request);
         return switch (request.membershipRole()) {
-            case "tenant_admin" -> new TenantAuthorization(
-                    packagePermissions(tenantPackage), dataBoundary(tenantPackage), tenantPackage);
-            case "common" -> new TenantAuthorization(Set.of(), TenantDataBoundary.NONE, tenantPackage);
+            case "tenant_admin" -> new TenantAuthorization(packagePermissions(tenantPackage), tenantPackage);
+            case "common" -> new TenantAuthorization(Set.of(), tenantPackage);
             default -> throw invalidMembershipRole();
         };
     }
@@ -87,13 +88,6 @@ final class JimmerTenantAuthorizationProvider implements TenantAuthorizationProv
         return catalog.validate(tenantPackage.permissionCodes(), ManagementPermissionScope.TENANT).stream()
                 .map(ManagementPermissionCode::value)
                 .collect(java.util.stream.Collectors.toUnmodifiableSet());
-    }
-
-    private TenantDataBoundary dataBoundary(TenantPackageView tenantPackage) {
-        if (tenantPackage.permissionCodes().contains(TenantDataBoundary.TENANT_ALL.code())) {
-            return TenantDataBoundary.TENANT_ALL;
-        }
-        throw new DomainException("TENANT_PACKAGE_DATA_BOUNDARY_MISSING", "普通租户套餐缺少数据范围", 409);
     }
 
     private static DomainException invalidMembershipRole() {

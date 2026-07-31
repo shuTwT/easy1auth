@@ -495,22 +495,22 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, reactive } from 'vue'
-import { toast } from 'vue-sonner'
+import { message } from 'antdv-next'
 import { Plus, Check, Info } from '@lucide/vue'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Card, CardContent } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Switch } from '@/components/ui/switch'
-import { ColorPicker } from '@/components/ui/color-picker'
-import { Upload, type UploadFile } from '@/components/ui/upload'
+import { Button } from '@/components/antd-compat'
+import { Input } from '@/components/antd-compat'
+import { Textarea } from '@/components/antd-compat'
+import { Card, CardContent } from '@/components/antd-compat'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/antd-compat'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/antd-compat'
+import { Badge } from '@/components/antd-compat'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/antd-compat'
+import { Alert, AlertDescription, AlertTitle } from '@/components/antd-compat'
+import { RadioGroup, RadioGroupItem } from '@/components/antd-compat'
+import { Checkbox } from '@/components/antd-compat'
+import { Switch } from '@/components/antd-compat'
+import { ColorPicker } from '@/components/antd-compat'
+import { Upload, type UploadFile } from '@/components/antd-compat'
 import { customDomainApi, type CustomDomain, type CreateDomainDto, type UpdateSSLDto } from '@/api/customDomain'
 import { messageTemplateApi, type MessageTemplate, type CreateTemplateDto } from '@/api/messageTemplate'
 import { loginStyleApi, type UpdateLoginStyleDto } from '@/api/loginStyle'
@@ -599,7 +599,7 @@ const loadDomains = async () => {
     domains.value = response
   } catch (error) {
     console.error('加载域名列表失败:', error)
-    toast.error('加载域名列表失败')
+    message.error('加载域名列表失败')
   } finally {
     domainsLoading.value = false
   }
@@ -607,20 +607,20 @@ const loadDomains = async () => {
 
 const handleCreateDomain = async () => {
   if (!domainForm.domain) {
-    toast.warning('请输入域名')
+    message.warning('请输入域名')
     return
   }
 
   creatingDomain.value = true
   try {
     await customDomainApi.create(domainForm)
-    toast.success('域名添加成功，请完成验证')
+    message.success('域名添加成功，请完成验证')
     showDomainDialog.value = false
     domainForm.domain = ''
     domainForm.verificationMethod = 'dns'
     loadDomains()
   } catch (error: any) {
-    toast.error(error.response?.data?.msg || '添加域名失败')
+    message.error(error.response?.data?.msg || '添加域名失败')
   } finally {
     creatingDomain.value = false
   }
@@ -632,12 +632,12 @@ const handleVerifyDomainConfirm = async () => {
   verifying.value = true
   try {
     await customDomainApi.verify(verifyingDomain.value.id)
-    toast.success('域名验证成功')
+    message.success('域名验证成功')
     showVerifyDialog.value = false
     verifyingDomain.value = null
     loadDomains()
   } catch (error: any) {
-    toast.error(error.response?.data?.msg || '域名验证失败')
+    message.error(error.response?.data?.msg || '域名验证失败')
   } finally {
     verifying.value = false
   }
@@ -645,18 +645,18 @@ const handleVerifyDomainConfirm = async () => {
 
 const handleSaveSSL = async () => {
   if (!sslForm.sslCertificate || !sslForm.sslPrivateKey) {
-    toast.warning('请填写SSL证书和私钥')
+    message.warning('请填写SSL证书和私钥')
     return
   }
 
   savingSSL.value = true
   try {
     await customDomainApi.updateSSL(currentDomainId.value, sslForm)
-    toast.success('SSL证书配置成功')
+    message.success('SSL证书配置成功')
     showSSLDialog.value = false
     loadDomains()
   } catch (error: any) {
-    toast.error(error.response?.data?.msg || '配置SSL证书失败')
+    message.error(error.response?.data?.msg || '配置SSL证书失败')
   } finally {
     savingSSL.value = false
   }
@@ -667,10 +667,10 @@ const handleDeleteDomain = async (domain: CustomDomain) => {
   
   try {
     await customDomainApi.delete(domain.id)
-    toast.success('域名删除成功')
+    message.success('域名删除成功')
     loadDomains()
   } catch (error: any) {
-    toast.error(error.response?.data?.msg || '删除域名失败')
+    message.error(error.response?.data?.msg || '删除域名失败')
   }
 }
 
@@ -687,9 +687,9 @@ const handleSaveLoginStyle = async () => {
   savingLoginStyle.value = true
   try {
     await loginStyleApi.update(loginStyle)
-    toast.success('保存成功')
+    message.success('保存成功')
   } catch (error: any) {
-    toast.error(error.response?.data?.msg || '保存失败')
+    message.error(error.response?.data?.msg || '保存失败')
   } finally {
     savingLoginStyle.value = false
   }
@@ -699,11 +699,11 @@ const beforeLogoUpload = (file: UploadFile) => {
   const isImage = file.type.startsWith('image/')
   const isLt2M = file.size / 1024 / 1024 < 2
   if (!isImage) {
-    toast.error('只能上传图片文件!')
+    message.error('只能上传图片文件!')
     return false
   }
   if (!isLt2M) {
-    toast.error('图片大小不能超过 2MB!')
+    message.error('图片大小不能超过 2MB!')
     return false
   }
   return true
@@ -713,11 +713,11 @@ const beforeBgUpload = (file: UploadFile) => {
   const isImage = file.type.startsWith('image/')
   const isLt5M = file.size / 1024 / 1024 < 5
   if (!isImage) {
-    toast.error('只能上传图片文件!')
+    message.error('只能上传图片文件!')
     return false
   }
   if (!isLt5M) {
-    toast.error('图片大小不能超过 5MB!')
+    message.error('图片大小不能超过 5MB!')
     return false
   }
   return true
@@ -741,7 +741,7 @@ const loadTemplates = async () => {
     templates.value = response
   } catch (error) {
     console.error('加载模板列表失败:', error)
-    toast.error('加载模板列表失败')
+    message.error('加载模板列表失败')
   } finally {
     templatesLoading.value = false
   }
@@ -751,10 +751,10 @@ const handleInitTemplates = async () => {
   initingTemplates.value = true
   try {
     await messageTemplateApi.initDefaults()
-    toast.success('默认模板初始化成功')
+    message.success('默认模板初始化成功')
     loadTemplates()
   } catch (error: any) {
-    toast.error(error.response?.data?.msg || '初始化模板失败')
+    message.error(error.response?.data?.msg || '初始化模板失败')
   } finally {
     initingTemplates.value = false
   }
@@ -773,7 +773,7 @@ const handleEditTemplate = (template: MessageTemplate) => {
 
 const handleSaveTemplate = async () => {
   if (!templateForm.code || !templateForm.name || !templateForm.content) {
-    toast.warning('请填写完整信息')
+    message.warning('请填写完整信息')
     return
   }
 
@@ -786,10 +786,10 @@ const handleSaveTemplate = async () => {
         content: templateForm.content,
         isDefault: templateForm.isDefault,
       })
-      toast.success('模板更新成功')
+      message.success('模板更新成功')
     } else {
       await messageTemplateApi.create(templateForm)
-      toast.success('模板创建成功')
+      message.success('模板创建成功')
     }
     showTemplateDialog.value = false
     editingTemplate.value = null
@@ -801,7 +801,7 @@ const handleSaveTemplate = async () => {
     templateForm.isDefault = false
     loadTemplates()
   } catch (error: any) {
-    toast.error(error.response?.data?.msg || '保存模板失败')
+    message.error(error.response?.data?.msg || '保存模板失败')
   } finally {
     savingTemplate.value = false
   }
@@ -812,10 +812,10 @@ const handleDeleteTemplate = async (template: MessageTemplate) => {
   
   try {
     await messageTemplateApi.delete(template.id)
-    toast.success('模板删除成功')
+    message.success('模板删除成功')
     loadTemplates()
   } catch (error: any) {
-    toast.error(error.response?.data?.msg || '删除模板失败')
+    message.error(error.response?.data?.msg || '删除模板失败')
   }
 }
 

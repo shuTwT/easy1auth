@@ -1,6 +1,6 @@
 import axios from 'axios'
 import type { AxiosInstance, AxiosResponse } from 'axios'
-import { toast } from 'vue-sonner'
+import { message } from 'antdv-next'
 import { useUserStore } from '@/stores/user'
 
 const request: AxiosInstance = axios.create({
@@ -14,7 +14,10 @@ const request: AxiosInstance = axios.create({
 request.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token')
-    if (token) {
+    // Login is anonymous. Sending an expired token here lets Spring Security
+    // reject the request before the login controller can return its business error.
+    const isAnonymousAuthRequest = /^\/auth\/(login|mfa\/verify|register|send-code|refresh)$/.test(config.url || '')
+    if (token && !isAnonymousAuthRequest) {
       config.headers.Authorization = `Bearer ${token}`
     }
 
@@ -35,7 +38,7 @@ request.interceptors.response.use(
     const { data } = response
     if (data && typeof data === 'object' && typeof data.code === 'number') {
       if (data.code !== 0) {
-        toast.error(data.msg || '请求失败')
+        message.error(data.msg || '请求失败')
         return Promise.reject(new Error(data.msg || '请求失败'))
       }
       return data.data
@@ -47,26 +50,26 @@ request.interceptors.response.use(
     if (response) {
       switch (response.status) {
         case 401:
-          toast.error('登录已过期，请重新登录')
+          message.error('登录已过期，请重新登录')
           localStorage.removeItem('token')
           localStorage.removeItem('currentTenantId')
           useUserStore().logout()
           window.location.href = '/login'
           break
         case 403:
-          toast.error('没有权限访问')
+          message.error('没有权限访问')
           break
         case 404:
-          toast.error('请求资源不存在')
+          message.error('请求资源不存在')
           break
         case 500:
-          toast.error('服务器错误')
+          message.error('服务器错误')
           break
         default:
-          toast.error(response.data?.msg || '请求失败')
+          message.error(response.data?.msg || '请求失败')
       }
     } else {
-      toast.error('网络连接失败')
+      message.error('网络连接失败')
     }
     return Promise.reject(error)
   }

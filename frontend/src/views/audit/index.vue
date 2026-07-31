@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue'
-import { toast } from 'vue-sonner'
+import { message } from 'antdv-next'
 import { FileText, CheckCircle, XCircle, Clock, Search, RefreshCw, Download, Trash2 } from '@lucide/vue'
 import { auditApi } from '@/api/audit'
 import type { AuditLog, AuditLogQueryDto, AuditLogStats } from '@/types/audit'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Label } from '@/components/ui/label'
+import { Button } from '@/components/antd-compat'
+import { Input } from '@/components/antd-compat'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/antd-compat'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/antd-compat'
+import { Badge } from '@/components/antd-compat'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/antd-compat'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/antd-compat'
+import { Label } from '@/components/antd-compat'
 
 const loading = ref(false)
 const logs = ref<AuditLog[]>([])
@@ -47,7 +47,7 @@ const loadLogs = async () => {
     total.value = res.total
   } catch (error) {
     console.error('加载审计日志失败:', error)
-    toast.error('加载审计日志失败')
+    message.error('加载审计日志失败')
   } finally {
     loading.value = false
   }
@@ -100,10 +100,10 @@ const handleExport = async (format: 'csv' | 'json') => {
     link.download = `audit-logs-${new Date().toISOString().split('T')[0]}.${format}`
     link.click()
     window.URL.revokeObjectURL(url)
-    toast.success('导出成功')
+    message.success('导出成功')
   } catch (error) {
     console.error('导出失败:', error)
-    toast.error('导出失败')
+    message.error('导出失败')
   }
 }
 
@@ -113,12 +113,12 @@ const handleCleanup = async () => {
   
   try {
     await auditApi.cleanup(90)
-    toast.success('清理成功')
+    message.success('清理成功')
     loadLogs()
     loadStats()
   } catch (error) {
     console.error('清理失败:', error)
-    toast.error('清理失败')
+    message.error('清理失败')
   }
 }
 

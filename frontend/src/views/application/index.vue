@@ -2,20 +2,20 @@
 import { ref, onMounted, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
-import { toast } from 'vue-sonner'
+import { message } from 'antdv-next'
 import { Plus, Search, Copy, Trash2 } from '@lucide/vue'
 import { applicationApi } from '@/api/application'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Checkbox } from '@/components/ui/checkbox'
-import { NumberField, NumberFieldContent, NumberFieldDecrement, NumberFieldIncrement, NumberFieldInput } from '@/components/ui/number-field'
+import { Button } from '@/components/antd-compat'
+import { Input } from '@/components/antd-compat'
+import { Textarea } from '@/components/antd-compat'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/antd-compat'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/antd-compat'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/antd-compat'
+import { Badge } from '@/components/antd-compat'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/antd-compat'
+import { Alert, AlertDescription, AlertTitle } from '@/components/antd-compat'
+import { Checkbox } from '@/components/antd-compat'
+import { NumberField, NumberFieldContent, NumberFieldDecrement, NumberFieldIncrement, NumberFieldInput } from '@/components/antd-compat'
 import { Minus, Plus as PlusIcon } from '@lucide/vue'
 import type { Application, CreateApplicationDto, UpdateApplicationDto, ApplicationQueryDto } from '@/types/application'
 
@@ -126,7 +126,7 @@ const loadApplications = async () => {
     total.value = res.total
   } catch (error) {
     console.error('加载应用列表失败:', error)
-    toast.error('加载应用列表失败')
+    message.error('加载应用列表失败')
   } finally {
     loading.value = false
   }
@@ -191,22 +191,22 @@ const handleDelete = async (row: Application) => {
   
   try {
     await applicationApi.delete(row.id)
-    toast.success('删除成功')
+    message.success('删除成功')
     loadApplications()
   } catch (error) {
     console.error('删除应用失败:', error)
-    toast.error('删除应用失败')
+    message.error('删除应用失败')
   }
 }
 
 const handleStatusChange = async (row: Application, status: string) => {
   try {
     await applicationApi.updateStatus(row.id, status)
-    toast.success('状态更新成功')
+    message.success('状态更新成功')
     loadApplications()
   } catch (error) {
     console.error('更新状态失败:', error)
-    toast.error('更新状态失败')
+    message.error('更新状态失败')
   }
 }
 
@@ -227,7 +227,7 @@ const handleRemoveRedirectUri = (index: number) => {
 const handleSubmit = async () => {
   const valid = isEditing.value ? validateEditForm() : validateCreateForm()
   if (!valid) {
-    toast.error('请检查表单填写是否正确')
+    message.error('请检查表单填写是否正确')
     return
   }
   try {
@@ -237,7 +237,7 @@ const handleSubmit = async () => {
         newClientSecret.value = res.clientSecret
         secretDialogVisible.value = true
       }
-      toast.success('更新成功')
+      message.success('更新成功')
     } else {
       const createPayload = {
         name: appForm.name.trim(),
@@ -246,13 +246,13 @@ const handleSubmit = async () => {
       const res = await applicationApi.create(createPayload)
       newClientSecret.value = res.clientSecret ?? ''
       secretDialogVisible.value = true
-      toast.success('创建成功')
+      message.success('创建成功')
     }
     dialogVisible.value = false
     loadApplications()
   } catch (error: unknown) {
     console.error('保存应用失败:', error)
-    toast.error(getApiErrorMessage(error, '保存应用失败'))
+    message.error(getApiErrorMessage(error, '保存应用失败'))
   }
 }
 
@@ -270,10 +270,10 @@ const handleSizeChange = (size: number) => {
 const copyToClipboard = async (text: string) => {
   try {
     await navigator.clipboard.writeText(text)
-    toast.success('已复制到剪贴板')
+    message.success('已复制到剪贴板')
   } catch (error) {
     console.error('复制失败:', error)
-    toast.error('复制失败')
+    message.error('复制失败')
   }
 }
 

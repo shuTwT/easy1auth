@@ -12,7 +12,6 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import com.easy1auth.tenant.TenantDataBoundary;
 
 import java.util.List;
 import java.util.UUID;
@@ -28,7 +27,7 @@ public class PlatformPermissionController {
         this.catalog = catalog;
     }
 
-    @PlatformManagementPermission(value = ManagementPermissionCode.TENANT_PACKAGE_PERMISSION_CATALOG, boundary = TenantDataBoundary.PLATFORM_ALL)
+    @PlatformManagementPermission(value = ManagementPermissionCode.TENANT_PACKAGE_PERMISSION_CATALOG)
     @GetMapping
     public ApiResponse<List<ManagementPermissionView>> list(@AuthenticationPrincipal Jwt actor) {
         require(actor, ManagementPermissionCode.TENANT_PACKAGE_PERMISSION_CATALOG);

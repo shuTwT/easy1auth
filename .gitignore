@@ -57,3 +57,4 @@ temp/
 /deploy/backups/
 
 /.claude
+/.agents

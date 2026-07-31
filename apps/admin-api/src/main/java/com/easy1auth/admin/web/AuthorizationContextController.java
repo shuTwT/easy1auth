@@ -1,6 +1,7 @@
 package com.easy1auth.admin.web;
 
-import com.easy1auth.admin.security.TenantContextFilter;
+import com.easy1auth.tenant.WebFramework;
+
 import com.easy1auth.admin.security.ManagementRouteClassification;
 import com.easy1auth.admin.security.ManagementRouteKind;
 import com.easy1auth.adminaccess.ManagementPermissionCatalog;
@@ -30,12 +31,11 @@ public class AuthorizationContextController {
     @ManagementRouteClassification(ManagementRouteKind.AUTHORIZATION_CONTEXT)
     @GetMapping("/context")
     public ApiResponse<AuthorizationContextResponse> context(HttpServletRequest request) {
-        TenantContext context = (TenantContext) Objects.requireNonNull(request.getAttribute(TenantContextFilter.ATTRIBUTE));
+        TenantContext context = WebFramework.requireTenantContext(request);
         return ApiResponse.ok(new AuthorizationContextResponse(
                 context.tenantId(),
                 context.membershipRole(),
                 context.permissions().stream().sorted().toList(),
-                context.dataBoundary().code(),
                 context.tenantPackage(),
                 visibleMenus(context)));
     }
@@ -52,7 +52,6 @@ public class AuthorizationContextController {
             UUID tenantId,
             String membershipRole,
             List<String> permissions,
-            String dataBoundary,
             TenantPackageView tenantPackage,
             List<ManagementPermissionView> menus) {
     }

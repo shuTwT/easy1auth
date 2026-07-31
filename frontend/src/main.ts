@@ -2,7 +2,7 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import router from './router'
 import App from './App.vue'
-import 'vue-sonner/style.css'
+import { configureStaticFeedback } from './config/antd'
 
 import './styles/tailwind.css'
 import './style.css'
@@ -12,5 +12,6 @@ const app = createApp(App)
 
 app.use(createPinia())
 app.use(router)
+configureStaticFeedback()
 
 app.mount('#app')

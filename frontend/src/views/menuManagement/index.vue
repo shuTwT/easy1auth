@@ -4,14 +4,13 @@ import { useRouter } from 'vue-router'
 import { AppWindow, FolderTree, LockKeyhole, RefreshCw, Search, ShieldCheck } from '@lucide/vue'
 import { authorizationApi } from '@/api/authorization'
 import type { ManagementMenu } from '@/types/authorization'
-import type { TreeNodeData } from '@/components/ui/tree'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Tree } from '@/components/ui/tree'
+import { Tree as AntTree } from 'antdv-next'
+import { Badge } from '@/components/antd-compat'
+import { Button } from '@/components/antd-compat'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/antd-compat'
+import { Input } from '@/components/antd-compat'
 
-interface MenuTreeNode extends TreeNodeData {
+interface MenuTreeNode {
   id: string
   label: string
   code: string
@@ -130,8 +129,8 @@ onMounted(loadCatalog)
       <CardContent>
         <div v-if="loading" class="flex min-h-48 items-center justify-center text-sm text-muted-foreground">加载中...</div>
         <div v-else-if="filteredTree.length === 0" class="flex min-h-48 items-center justify-center text-sm text-muted-foreground">暂无匹配菜单</div>
-        <Tree v-else :data="filteredTree" node-key="id" class="rounded-md border p-3">
-          <template #default="{ data }">
+        <AntTree v-else :tree-data="filteredTree" :field-names="{ key: 'id', title: 'label', children: 'children' }" :default-expand-all="true" :selectable="false" class="rounded-md border p-3">
+          <template #titleRender="data">
             <div class="flex min-w-0 items-center gap-2 py-1">
               <FolderTree v-if="data.type === 'directory'" class="shrink-0 text-primary" />
               <AppWindow v-else-if="data.type === 'menu'" class="shrink-0 text-primary" />
@@ -142,7 +141,7 @@ onMounted(loadCatalog)
               <code class="ml-auto hidden truncate text-xs text-muted-foreground md:block">{{ data.code }}</code>
             </div>
           </template>
-        </Tree>
+        </AntTree>
       </CardContent>
     </Card>
   </div>

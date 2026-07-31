@@ -53,8 +53,9 @@ Vite 将 `/api` 代理到 `http://localhost:18848`，配置见 `frontend/vite.co
   `frontend/src/utils/request.ts` 中的 Axios 拦截器设置。
 - 管理 API 通过 `TenantContextFilter` 解析租户上下文，并在领域服务中执行权限校验。
 
-### 前端 shadcn-vue 约定
+### 前端约定
 
+- [antdv-next组件库文档](https://antdv-next.com/llms.txt)
 - `@/*` 别名指向 `frontend/src/`，同时配置于 `tsconfig.json` 和 `vite.config.ts`。
 - shadcn-vue 配置文件为 `frontend/components.json`，样式为 `reka-nova`，
   基础色为 `neutral`。

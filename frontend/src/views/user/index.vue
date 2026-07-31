@@ -1,21 +1,21 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue'
-import { toast } from 'vue-sonner'
+import { message } from 'antdv-next'
 import { Plus, Upload, Download, Search, RefreshCw } from '@lucide/vue'
 import { userApi } from '@/api/user'
 import { roleApi } from '@/api/role'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Card, CardContent } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Separator } from '@/components/ui/separator'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Upload as UploadComponent } from '@/components/ui/upload'
+import { Button } from '@/components/antd-compat'
+import { Input } from '@/components/antd-compat'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/antd-compat'
+import { Card, CardContent } from '@/components/antd-compat'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/antd-compat'
+import { Badge } from '@/components/antd-compat'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/antd-compat'
+import { Checkbox } from '@/components/antd-compat'
+import { Alert, AlertDescription, AlertTitle } from '@/components/antd-compat'
+import { Separator } from '@/components/antd-compat'
+import { Avatar, AvatarFallback } from '@/components/antd-compat'
+import { Upload as UploadComponent } from '@/components/antd-compat'
 import type { User, CreateUserDto, UpdateUserDto, UserQueryDto } from '@/types/user'
 import type { Role } from '@/types/role'
 
@@ -72,7 +72,7 @@ const loadUsers = async () => {
     total.value = res.total
   } catch (error) {
     console.error('加载用户列表失败:', error)
-    toast.error('加载用户列表失败')
+    message.error('加载用户列表失败')
   } finally {
     loading.value = false
   }
@@ -131,22 +131,22 @@ const handleDelete = async (row: User) => {
   
   try {
     await userApi.delete(row.id)
-    toast.success('删除成功')
+    message.success('删除成功')
     loadUsers()
   } catch (error) {
     console.error('删除用户失败:', error)
-    toast.error('删除用户失败')
+    message.error('删除用户失败')
   }
 }
 
 const handleStatusChange = async (row: User, status: string) => {
   try {
     await userApi.updateStatus(row.id, status)
-    toast.success('状态更新成功')
+    message.success('状态更新成功')
     loadUsers()
   } catch (error) {
     console.error('更新状态失败:', error)
-    toast.error('更新状态失败')
+    message.error('更新状态失败')
   }
 }
 
@@ -161,36 +161,36 @@ const handleSubmit = async () => {
   try {
     if (currentUser.value.id) {
       await userApi.update(currentUser.value.id, userForm)
-      toast.success('更新成功')
+      message.success('更新成功')
     } else {
       if (!userForm.password) {
-        toast.warning('创建用户时必须设置密码')
+        message.warning('创建用户时必须设置密码')
         return
       }
       await userApi.create(userForm as CreateUserDto)
-      toast.success('创建成功')
+      message.success('创建成功')
     }
     dialogVisible.value = false
     loadUsers()
   } catch (error: any) {
     console.error('保存用户失败:', error)
-    toast.error(error.response?.data?.msg || '保存用户失败')
+    message.error(error.response?.data?.msg || '保存用户失败')
   }
 }
 
 const handleResetPasswordSubmit = async () => {
   try {
     if (resetPasswordForm.newPassword !== resetPasswordForm.confirmPassword) {
-      toast.error('两次输入的密码不一致')
+      message.error('两次输入的密码不一致')
       return
     }
     
     await userApi.resetPassword(resetPasswordUserId.value, resetPasswordForm.newPassword)
-    toast.success('密码重置成功')
+    message.success('密码重置成功')
     resetPasswordDialogVisible.value = false
   } catch (error: any) {
     console.error('重置密码失败:', error)
-    toast.error(error.response?.data?.msg || '重置密码失败')
+    message.error(error.response?.data?.msg || '重置密码失败')
   }
 }
 
@@ -208,7 +208,7 @@ const handleAssignRole = async (row: User) => {
     assignRoleDialogVisible.value = true
   } catch (error) {
     console.error('加载角色数据失败:', error)
-    toast.error('加载角色数据失败')
+    message.error('加载角色数据失败')
   } finally {
     assignRoleLoading.value = false
   }
@@ -218,12 +218,12 @@ const handleAssignRoleSubmit = async () => {
   assignRoleLoading.value = true
   try {
     await roleApi.assignRolesToUser(assignRoleUserId.value, selectedRoleIds.value)
-    toast.success('分配角色成功')
+    message.success('分配角色成功')
     assignRoleDialogVisible.value = false
     loadUsers()
   } catch (error: any) {
     console.error('分配角色失败:', error)
-    toast.error(error.response?.data?.msg || '分配角色失败')
+    message.error(error.response?.data?.msg || '分配角色失败')
   } finally {
     assignRoleLoading.value = false
   }
@@ -303,14 +303,14 @@ const handleFileChange = async (file: any) => {
     
     if (result.code === 0) {
       importResult.value = result.data
-      toast.success(result.msg)
+      message.success(result.msg)
       loadUsers()
     } else {
-      toast.error(result.msg || '导入失败')
+      message.error(result.msg || '导入失败')
     }
   } catch (error) {
     console.error('导入用户失败:', error)
-    toast.error('导入用户失败')
+    message.error('导入用户失败')
   } finally {
     importLoading.value = false
   }

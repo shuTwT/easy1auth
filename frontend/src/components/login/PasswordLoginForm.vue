@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { reactive, shallowRef } from 'vue'
 import { useAuth } from '@/composables/useAuth'
-import { Input } from '@/components/ui/input'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Label } from '@/components/ui/label'
+import { Input } from '@/components/antd-compat'
+import { Checkbox } from '@/components/antd-compat'
+import { Label } from '@/components/antd-compat'
 
 const emit = defineEmits<{
   switchToEmail: []

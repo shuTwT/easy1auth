@@ -3,8 +3,10 @@ package com.easy1auth.admin.config;
 import com.easy1auth.adminidentity.AdminIdentityService;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import com.nimbusds.jose.proc.SecurityContext;
+
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,37 +18,53 @@ import org.springframework.security.oauth2.jwt.*;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import com.easy1auth.admin.security.TenantContextFilter;
+import com.easy1auth.admin.security.TenantSecurityFilter;
 import com.easy1auth.admin.security.AuditMutationFilter;
 import com.easy1auth.admin.security.ApiErrorWriter;
 
 @Configuration
-@EnableConfigurationProperties({AdminJwtProperties.class,RegistrationProperties.class})
+@EnableConfigurationProperties({AdminJwtProperties.class, RegistrationProperties.class})
 public class SecurityConfiguration {
-    @Bean PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(12); }
+    @Bean
+    PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder(12);
+    }
 
-    @Bean JwtEncoder jwtEncoder(AdminJwtProperties properties) {
+    @Bean
+    JwtEncoder jwtEncoder(AdminJwtProperties properties) {
         return new NimbusJwtEncoder(new ImmutableSecret<SecurityContext>(key(properties)));
     }
 
-    @Bean JwtDecoder jwtDecoder(AdminJwtProperties properties, AdminIdentityService identities) {
+    @Bean
+    JwtDecoder jwtDecoder(AdminJwtProperties properties, AdminIdentityService identities) {
         var decoder = NimbusJwtDecoder.withSecretKey(key(properties)).macAlgorithm(org.springframework.security.oauth2.jose.jws.MacAlgorithm.HS256).build();
         OAuth2TokenValidator<Jwt> issuer = JwtValidators.createDefaultWithIssuer(properties.issuer());
         OAuth2TokenValidator<Jwt> application = jwt -> {
             if (!jwt.getAudience().contains(properties.audience()) || !"admin".equals(jwt.getClaimAsString("subject_type")))
                 return OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", "Wrong admin token audience or subject type", null));
-            try { identities.validateTokenSubject(java.util.UUID.fromString(jwt.getSubject()), jwt.getClaim("security_version")); return OAuth2TokenValidatorResult.success(); }
-            catch (RuntimeException ex) { return OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", "Admin session invalid", null)); }
+            try {
+                identities.validateTokenSubject(java.util.UUID.fromString(jwt.getSubject()), jwt.getClaim("security_version"));
+                return OAuth2TokenValidatorResult.success();
+            } catch (RuntimeException ex) {
+                return OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", "Admin session invalid", null));
+            }
         };
         decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(issuer, application));
         return decoder;
     }
 
-    @Bean SecurityFilterChain security(HttpSecurity http, TenantContextFilter tenantContextFilter,AuditMutationFilter auditMutationFilter,ApiErrorWriter errors) throws Exception {
+    @Bean
+    SecurityFilterChain security(HttpSecurity http, TenantContextFilter tenantContextFilter, TenantSecurityFilter tenantSecurityFilter,
+                                 AuditMutationFilter auditMutationFilter, ApiErrorWriter errors) throws Exception {
         return http.csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth.requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info", "/livez", "/readyz", "/api/auth/login", "/api/auth/mfa/verify", "/api/auth/register", "/api/auth/send-code", "/api/auth/refresh", "/api/login-style/public").permitAll().anyRequest().authenticated())
-                .exceptionHandling(exceptions -> exceptions.accessDeniedHandler((request,response,exception) -> errors.write(response,403,"没有权限访问")))
-                .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> {}).authenticationEntryPoint((request,response,exception) -> errors.write(response,401,"登录状态无效或已过期")))
-                .addFilterAfter(tenantContextFilter, BearerTokenAuthenticationFilter.class).addFilterAfter(auditMutationFilter,TenantContextFilter.class).build();
+                .exceptionHandling(exceptions -> exceptions.accessDeniedHandler((request, response, exception) -> errors.write(response, 403, "没有权限访问")))
+                .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> {
+                }).authenticationEntryPoint((request, response, exception) -> errors.write(response, 401, "登录状态无效或已过期")))
+                .addFilterAfter(tenantContextFilter, BearerTokenAuthenticationFilter.class)
+                .addFilterAfter(tenantSecurityFilter, TenantContextFilter.class)
+                .addFilterAfter(auditMutationFilter, TenantSecurityFilter.class)
+                .build();
     }
 
     private static SecretKeySpec key(AdminJwtProperties properties) {

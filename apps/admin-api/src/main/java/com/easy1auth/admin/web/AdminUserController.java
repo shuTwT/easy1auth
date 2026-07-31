@@ -8,7 +8,6 @@ import com.easy1auth.adminidentity.AdminIdentityService;
 import com.easy1auth.foundation.error.DomainException;
 import com.easy1auth.foundation.web.ApiResponse;
 import com.easy1auth.foundation.web.PageData;
-import com.easy1auth.tenant.TenantDataBoundary;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
@@ -29,7 +28,7 @@ public class AdminUserController {
         this.platformAuthorization = platformAuthorization;
     }
 
-    @PlatformManagementPermission(value = ManagementPermissionCode.ADMIN_USER_LIST, boundary = TenantDataBoundary.PLATFORM_ALL)
+    @PlatformManagementPermission(value = ManagementPermissionCode.ADMIN_USER_LIST)
     @GetMapping
     public ApiResponse<?> list(@AuthenticationPrincipal Jwt actor, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, @RequestParam(required = false) String username, @RequestParam(required = false) String email, @RequestParam(required = false) String status, @RequestParam(required = false) UUID roleId) {
         require(actor, ManagementPermissionCode.ADMIN_USER_LIST);
@@ -37,28 +36,28 @@ public class AdminUserController {
         return ApiResponse.ok(PageData.of(p.admins(), p.page(), p.pageSize(), p.total()));
     }
 
-    @PlatformManagementPermission(value = ManagementPermissionCode.ADMIN_USER_STATS, boundary = TenantDataBoundary.PLATFORM_ALL)
+    @PlatformManagementPermission(value = ManagementPermissionCode.ADMIN_USER_STATS)
     @GetMapping("/stats")
     public ApiResponse<?> stats(@AuthenticationPrincipal Jwt actor) {
         require(actor, ManagementPermissionCode.ADMIN_USER_STATS);
         return ApiResponse.ok(access.memberStats());
     }
 
-    @PlatformManagementPermission(value = ManagementPermissionCode.ADMIN_USER_READ, boundary = TenantDataBoundary.PLATFORM_ALL)
+    @PlatformManagementPermission(value = ManagementPermissionCode.ADMIN_USER_READ)
     @GetMapping("/{id}")
     public ApiResponse<?> get(@AuthenticationPrincipal Jwt actor, @PathVariable UUID id) {
         require(actor, ManagementPermissionCode.ADMIN_USER_READ);
         return ApiResponse.ok(access.member(id));
     }
 
-    @PlatformManagementPermission(value = ManagementPermissionCode.ADMIN_USER_CREATE, boundary = TenantDataBoundary.PLATFORM_ALL)
+    @PlatformManagementPermission(value = ManagementPermissionCode.ADMIN_USER_CREATE)
     @PostMapping
     public ApiResponse<?> create(@AuthenticationPrincipal Jwt actor, @RequestBody CreateInput in) {
         require(actor, ManagementPermissionCode.ADMIN_USER_CREATE);
         return ApiResponse.ok(identities.createAdministrator(in.username(), in.email(), in.password()), "管理员账号创建成功，尚未分配租户");
     }
 
-    @PlatformManagementPermission(value = ManagementPermissionCode.ADMIN_USER_UPDATE, boundary = TenantDataBoundary.PLATFORM_ALL)
+    @PlatformManagementPermission(value = ManagementPermissionCode.ADMIN_USER_UPDATE)
     @PutMapping("/{id}")
     public ApiResponse<?> update(@AuthenticationPrincipal Jwt actor, @PathVariable UUID id, @RequestBody ProfileInput in) {
         require(actor, ManagementPermissionCode.ADMIN_USER_UPDATE);
@@ -67,7 +66,7 @@ public class AdminUserController {
         return ApiResponse.ok(access.member(id), "管理员信息更新成功");
     }
 
-    @PlatformManagementPermission(value = ManagementPermissionCode.ADMIN_USER_STATUS, boundary = TenantDataBoundary.PLATFORM_ALL)
+    @PlatformManagementPermission(value = ManagementPermissionCode.ADMIN_USER_STATUS)
     @PutMapping("/{id}/status")
     public ApiResponse<?> status(@AuthenticationPrincipal Jwt actor, @PathVariable UUID id, @RequestBody StatusInput in) {
         require(actor, ManagementPermissionCode.ADMIN_USER_STATUS);
@@ -76,7 +75,7 @@ public class AdminUserController {
         return ApiResponse.ok(access.member(id), "管理员状态更新成功");
     }
 
-    @PlatformManagementPermission(value = ManagementPermissionCode.ADMIN_USER_RESET_PASSWORD, boundary = TenantDataBoundary.PLATFORM_ALL)
+    @PlatformManagementPermission(value = ManagementPermissionCode.ADMIN_USER_RESET_PASSWORD)
     @PostMapping("/{id}/reset-password")
     public ApiResponse<?> password(@AuthenticationPrincipal Jwt actor, @PathVariable UUID id, @RequestBody PasswordInput in) {
         require(actor, ManagementPermissionCode.ADMIN_USER_RESET_PASSWORD);
@@ -85,7 +84,7 @@ public class AdminUserController {
         return ApiResponse.ok(access.member(id), "管理员密码重置成功");
     }
 
-    @PlatformManagementPermission(value = ManagementPermissionCode.ADMIN_USER_RESET_MFA, boundary = TenantDataBoundary.PLATFORM_ALL)
+    @PlatformManagementPermission(value = ManagementPermissionCode.ADMIN_USER_RESET_MFA)
     @PostMapping("/{id}/reset-mfa")
     public ApiResponse<?> mfa(@AuthenticationPrincipal Jwt actor, @PathVariable UUID id) {
         require(actor, ManagementPermissionCode.ADMIN_USER_RESET_MFA);
@@ -94,7 +93,7 @@ public class AdminUserController {
         return ApiResponse.ok(access.member(id), "管理员 MFA 重置成功");
     }
 
-    @PlatformManagementPermission(value = ManagementPermissionCode.ADMIN_USER_ASSIGN_ROLE, boundary = TenantDataBoundary.PLATFORM_ALL)
+    @PlatformManagementPermission(value = ManagementPermissionCode.ADMIN_USER_ASSIGN_ROLE)
     @PutMapping("/{id}/roles")
     public ApiResponse<?> roles(@AuthenticationPrincipal Jwt actor, @PathVariable UUID id, @RequestBody RolesInput in) {
         require(actor, ManagementPermissionCode.ADMIN_USER_ASSIGN_ROLE);

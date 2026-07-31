@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { toast } from 'vue-sonner'
+import { message } from 'antdv-next'
 import { securityApi, type PasswordPolicy, type MfaStatus } from '@/api/security'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Progress } from '@/components/ui/progress'
-import { Separator } from '@/components/ui/separator'
-import { Label } from '@/components/ui/label'
+import { Button } from '@/components/antd-compat'
+import { Input } from '@/components/antd-compat'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/antd-compat'
+import { Badge } from '@/components/antd-compat'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/antd-compat'
+import { Progress } from '@/components/antd-compat'
+import { Separator } from '@/components/antd-compat'
+import { Label } from '@/components/antd-compat'
 
 const activeTab = ref('password')
 
@@ -70,19 +70,19 @@ const loadSecurityData = async () => {
 
 const handleChangePassword = async () => {
   if (!passwordForm.value.currentPassword || !passwordForm.value.newPassword || !passwordForm.value.confirmPassword) {
-    toast.warning('请填写所有密码字段')
+    message.warning('请填写所有密码字段')
     return
   }
 
   if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
-    toast.error('两次输入的新密码不一致')
+    message.error('两次输入的新密码不一致')
     return
   }
 
   try {
     loading.value = true
     await securityApi.changePassword(passwordForm.value)
-    toast.success('密码修改成功')
+    message.success('密码修改成功')
     passwordForm.value = {
       currentPassword: '',
       newPassword: '',
@@ -90,7 +90,7 @@ const handleChangePassword = async () => {
     }
     loadSecurityData()
   } catch (error: any) {
-    toast.error(error.response?.data?.msg || '密码修改失败')
+    message.error(error.response?.data?.msg || '密码修改失败')
   } finally {
     loading.value = false
   }
@@ -103,7 +103,7 @@ const handleSetupMfa = async () => {
     mfaSetupData.value = res
     showMfaSetup.value = true
   } catch (error: any) {
-    toast.error(error.response?.data?.msg || 'MFA设置失败')
+    message.error(error.response?.data?.msg || 'MFA设置失败')
   } finally {
     loading.value = false
   }
@@ -111,19 +111,19 @@ const handleSetupMfa = async () => {
 
 const handleEnableMfa = async () => {
   if (!mfaToken.value) {
-    toast.warning('请输入验证码')
+    message.warning('请输入验证码')
     return
   }
 
   try {
     loading.value = true
     await securityApi.enableMfa(mfaToken.value)
-    toast.success('MFA已启用')
+    message.success('MFA已启用')
     showMfaSetup.value = false
     mfaToken.value = ''
     loadSecurityData()
   } catch (error: any) {
-    toast.error(error.response?.data?.msg || '启用MFA失败')
+    message.error(error.response?.data?.msg || '启用MFA失败')
   } finally {
     loading.value = false
   }
@@ -131,18 +131,18 @@ const handleEnableMfa = async () => {
 
 const handleDisableMfa = async () => {
   if (!mfaToken.value) {
-    toast.warning('请输入验证码')
+    message.warning('请输入验证码')
     return
   }
 
   try {
     loading.value = true
     await securityApi.disableMfa(mfaToken.value)
-    toast.success('MFA已禁用')
+    message.success('MFA已禁用')
     mfaToken.value = ''
     loadSecurityData()
   } catch (error: any) {
-    toast.error(error.response?.data?.msg || '禁用MFA失败')
+    message.error(error.response?.data?.msg || '禁用MFA失败')
   } finally {
     loading.value = false
   }
@@ -150,7 +150,7 @@ const handleDisableMfa = async () => {
 
 const copyBackupCodes = () => {
   navigator.clipboard.writeText(mfaSetupData.value.backupCodes.join('\n'))
-  toast.success('备用码已复制到剪贴板')
+  message.success('备用码已复制到剪贴板')
 }
 
 onMounted(() => {

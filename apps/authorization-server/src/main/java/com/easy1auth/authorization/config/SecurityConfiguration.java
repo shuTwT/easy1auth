@@ -1,5 +1,7 @@
 package com.easy1auth.authorization.config;
 
+import com.easy1auth.tenant.WebFramework;
+
 import com.easy1auth.directory.*;
 import com.easy1auth.oauth2.*;
 import com.easy1auth.useraccess.UserAccessCatalogService;
@@ -90,7 +92,7 @@ public class SecurityConfiguration {
     SecurityFilterChain applicationSecurity(HttpSecurity http,AuthenticationProvider provider,SecurityPolicyService security)throws Exception{
         return http.authenticationProvider(provider)
                 .authorizeHttpRequests(auth->auth.requestMatchers("/actuator/health","/actuator/health/**","/actuator/info","/livez","/readyz","/oauth-login","/oauth-login/mfa","/t/*/federation/**","/error").permitAll().anyRequest().authenticated())
-                .formLogin(form->form.loginPage("/oauth-login").loginProcessingUrl("/oauth-login").authenticationDetailsSource(request->new PoolLoginDetails(request.getParameter("tenant"),request.getHeader("User-Agent"),request.getRemoteAddr())).successHandler((request,response,authentication)->{if(authentication.getAuthorities().stream().anyMatch(a->"MFA_REQUIRED".equals(a.getAuthority()))){UUID user=UUID.fromString(authentication.getName()),tenant=UUID.fromString(Objects.toString(request.getParameter("tenant")));var challenge=security.issueTotpChallenge("pool_user",user,tenant,"oidc_login");request.getSession(true).setAttribute("EASY1AUTH_MFA_CHALLENGE",challenge.token());request.getSession().setAttribute("EASY1AUTH_MFA_USER",user);request.getSession().setAttribute("EASY1AUTH_MFA_TENANT",tenant);org.springframework.security.core.context.SecurityContextHolder.clearContext();response.sendRedirect("/oauth-login/mfa");return;}new org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler().onAuthenticationSuccess(request,response,authentication);}).failureHandler((request,response,exception)->response.sendRedirect("/oauth-login?tenant="+URLEncoder.encode(Objects.toString(request.getParameter("tenant"),""),StandardCharsets.UTF_8)+"&error")).permitAll())
+                .formLogin(form->form.loginPage("/oauth-login").loginProcessingUrl("/oauth-login").authenticationDetailsSource(request->new PoolLoginDetails(request.getParameter("tenant"),WebFramework.getUserAgent(request),request.getRemoteAddr())).successHandler((request,response,authentication)->{if(authentication.getAuthorities().stream().anyMatch(a->"MFA_REQUIRED".equals(a.getAuthority()))){UUID user=UUID.fromString(authentication.getName()),tenant=UUID.fromString(Objects.toString(request.getParameter("tenant")));var challenge=security.issueTotpChallenge("pool_user",user,tenant,"oidc_login");request.getSession(true).setAttribute("EASY1AUTH_MFA_CHALLENGE",challenge.token());request.getSession().setAttribute("EASY1AUTH_MFA_USER",user);request.getSession().setAttribute("EASY1AUTH_MFA_TENANT",tenant);org.springframework.security.core.context.SecurityContextHolder.clearContext();response.sendRedirect("/oauth-login/mfa");return;}new org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler().onAuthenticationSuccess(request,response,authentication);}).failureHandler((request,response,exception)->response.sendRedirect("/oauth-login?tenant="+URLEncoder.encode(Objects.toString(request.getParameter("tenant"),""),StandardCharsets.UTF_8)+"&error")).permitAll())
                 .build();
     }
 

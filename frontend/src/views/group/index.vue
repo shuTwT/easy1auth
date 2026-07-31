@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive, computed } from 'vue'
-import { toast } from 'vue-sonner'
+import { message } from 'antdv-next'
 import { Plus, Search, Users, UserCog, Pencil, Trash2 } from '@lucide/vue'
 import { groupApi } from '@/api/group'
 import { userApi } from '@/api/user'
@@ -13,15 +13,15 @@ import type {
   GroupStats,
   User
 } from '@/types/group'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Tree } from '@/components/ui/tree'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Textarea } from '@/components/ui/textarea'
+import { Button } from '@/components/antd-compat'
+import { Input } from '@/components/antd-compat'
+import { Card, CardContent, CardHeader } from '@/components/antd-compat'
+import { Badge } from '@/components/antd-compat'
+import { Tree } from '@/components/antd-compat'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/antd-compat'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/antd-compat'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/antd-compat'
+import { Textarea } from '@/components/antd-compat'
 
 const loading = ref(false)
 const groups = ref<UserGroup[]>([])
@@ -87,7 +87,7 @@ const loadGroups = async () => {
     total.value = res.total
   } catch (error) {
     console.error('加载用户组列表失败:', error)
-    toast.error('加载用户组列表失败')
+    message.error('加载用户组列表失败')
   } finally {
     loading.value = false
   }
@@ -155,13 +155,13 @@ const handleDelete = async (row: UserGroup) => {
   
   try {
     await groupApi.delete(row.id)
-    toast.success('删除成功')
+    message.success('删除成功')
     loadGroups()
     loadTree()
     loadStats()
   } catch (error) {
     console.error('删除用户组失败:', error)
-    toast.error('删除用户组失败')
+    message.error('删除用户组失败')
   }
 }
 
@@ -169,10 +169,10 @@ const handleSubmit = async () => {
   try {
     if (currentGroup.value.id) {
       await groupApi.update(currentGroup.value.id, groupForm)
-      toast.success('更新成功')
+      message.success('更新成功')
     } else {
       await groupApi.create(groupForm as CreateGroupDto)
-      toast.success('创建成功')
+      message.success('创建成功')
     }
     dialogVisible.value = false
     loadGroups()
@@ -180,7 +180,7 @@ const handleSubmit = async () => {
     loadStats()
   } catch (error: any) {
     console.error('保存用户组失败:', error)
-    toast.error(error.response?.data?.msg || '保存用户组失败')
+    message.error(error.response?.data?.msg || '保存用户组失败')
   }
 }
 
@@ -200,7 +200,7 @@ const handleManageMembers = async (row: UserGroup) => {
     memberForm.selectedUsers = []
   } catch (error) {
     console.error('加载成员数据失败:', error)
-    toast.error('加载成员数据失败')
+    message.error('加载成员数据失败')
   }
 }
 
@@ -220,61 +220,61 @@ const handleManageAdmins = async (row: UserGroup) => {
     memberForm.selectedUsers = []
   } catch (error) {
     console.error('加载管理员数据失败:', error)
-    toast.error('加载管理员数据失败')
+    message.error('加载管理员数据失败')
   }
 }
 
 const handleAddMembers = async () => {
   if (memberForm.selectedUsers.length === 0) {
-    toast.warning('请选择要添加的成员')
+    message.warning('请选择要添加的成员')
     return
   }
   
   try {
     await groupApi.addMembers(currentGroupId.value, { userIds: memberForm.selectedUsers })
-    toast.success('添加成员成功')
+    message.success('添加成员成功')
     handleManageMembers({ id: currentGroupId.value } as UserGroup)
   } catch (error: any) {
     console.error('添加成员失败:', error)
-    toast.error(error.response?.data?.msg || '添加成员失败')
+    message.error(error.response?.data?.msg || '添加成员失败')
   }
 }
 
 const handleRemoveMember = async (userId: string) => {
   try {
     await groupApi.removeMembers(currentGroupId.value, { userIds: [userId] })
-    toast.success('移除成员成功')
+    message.success('移除成员成功')
     handleManageMembers({ id: currentGroupId.value } as UserGroup)
   } catch (error: any) {
     console.error('移除成员失败:', error)
-    toast.error(error.response?.data?.msg || '移除成员失败')
+    message.error(error.response?.data?.msg || '移除成员失败')
   }
 }
 
 const handleAddAdmins = async () => {
   if (memberForm.selectedUsers.length === 0) {
-    toast.warning('请选择要添加的管理员')
+    message.warning('请选择要添加的管理员')
     return
   }
   
   try {
     await groupApi.addAdmins(currentGroupId.value, { userIds: memberForm.selectedUsers })
-    toast.success('添加管理员成功')
+    message.success('添加管理员成功')
     handleManageAdmins({ id: currentGroupId.value } as UserGroup)
   } catch (error: any) {
     console.error('添加管理员失败:', error)
-    toast.error(error.response?.data?.msg || '添加管理员失败')
+    message.error(error.response?.data?.msg || '添加管理员失败')
   }
 }
 
 const handleRemoveAdmin = async (userId: string) => {
   try {
     await groupApi.removeAdmins(currentGroupId.value, { userIds: [userId] })
-    toast.success('移除管理员成功')
+    message.success('移除管理员成功')
     handleManageAdmins({ id: currentGroupId.value } as UserGroup)
   } catch (error: any) {
     console.error('移除管理员失败:', error)
-    toast.error(error.response?.data?.msg || '移除管理员失败')
+    message.error(error.response?.data?.msg || '移除管理员失败')
   }
 }
 

@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { toast } from 'vue-sonner'
+import { message } from 'antdv-next'
 import { User, Lock } from '@lucide/vue'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Button } from '@/components/antd-compat'
+import { Input } from '@/components/antd-compat'
 
 const route = useRoute()
 
@@ -35,7 +35,7 @@ const code_challenge_method = route.query.code_challenge_method as string
 const loadApplicationInfo = async () => {
   try {
     if (!client_id) {
-      toast.error('缺少 client_id 参数')
+      message.error('缺少 client_id 参数')
       loading.value = false
       return
     }
@@ -44,7 +44,7 @@ const loadApplicationInfo = async () => {
     const data = await res.json()
 
     if (!res.ok) {
-      toast.error(data.error || '应用不存在或未授权')
+      message.error(data.error || '应用不存在或未授权')
       error.value = '应用不存在或未授权'
       loading.value = false
       return
@@ -56,7 +56,7 @@ const loadApplicationInfo = async () => {
     loading.value = false
   } catch (err: any) {
     console.error('加载应用信息失败:', err)
-    toast.error(err.message || '加载应用信息失败')
+    message.error(err.message || '加载应用信息失败')
     error.value = '加载应用信息失败'
     loading.value = false
   }
@@ -110,7 +110,7 @@ const handleLoginAndAuthorize = async () => {
     window.location.href = authData.redirectUrl
   } catch (err: any) {
     console.error('授权失败:', err)
-    toast.error(err.message || '授权失败')
+    message.error(err.message || '授权失败')
     authorizing.value = false
   }
 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { reactive, shallowRef } from 'vue'
 import { useAuth } from '@/composables/useAuth'
-import { Input } from '@/components/ui/input'
+import { Input } from '@/components/antd-compat'
 
 const emit = defineEmits<{
   switchToLogin: []

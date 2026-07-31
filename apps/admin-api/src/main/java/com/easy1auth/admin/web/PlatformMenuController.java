@@ -8,7 +8,6 @@ import com.easy1auth.adminaccess.ManagementPermissionView;
 import com.easy1auth.adminaccess.PlatformAuthorizationResolver;
 import com.easy1auth.foundation.error.DomainException;
 import com.easy1auth.foundation.web.ApiResponse;
-import com.easy1auth.tenant.TenantDataBoundary;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,7 +28,7 @@ public class PlatformMenuController {
         this.catalog = catalog;
     }
 
-    @PlatformManagementPermission(value = ManagementPermissionCode.MENU_MANAGEMENT_LIST, boundary = TenantDataBoundary.PLATFORM_ALL)
+    @PlatformManagementPermission(value = ManagementPermissionCode.MENU_MANAGEMENT_LIST)
     @GetMapping
     public ApiResponse<MenuCatalogResponse> list(@AuthenticationPrincipal Jwt actor) {
         platformAuthorization.require(accountId(actor), ManagementPermissionCode.MENU_MANAGEMENT_LIST);

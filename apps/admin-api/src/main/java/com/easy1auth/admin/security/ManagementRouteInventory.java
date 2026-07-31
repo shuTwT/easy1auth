@@ -3,7 +3,6 @@ package com.easy1auth.admin.security;
 import com.easy1auth.adminaccess.ManagementPermissionCode;
 import com.easy1auth.adminaccess.ManagementPermissionScope;
 import com.easy1auth.adminaccess.ManagementPermissionType;
-import com.easy1auth.tenant.TenantDataBoundary;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -19,6 +18,7 @@ import org.springframework.web.util.pattern.PathPattern;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @Component
@@ -52,9 +52,22 @@ public final class ManagementRouteInventory implements SmartInitializingSingleto
     }
 
     public boolean requiresTenantContext(HttpServletRequest request) {
+        return metadata(request).map(RouteMetadata::requiresTenantContext).orElse(false);
+    }
+
+    public Optional<ManagementPermissionCode> tenantPermission(HttpServletRequest request) {
+        return metadata(request)
+                .map(RouteMetadata::tenant)
+                .map(TenantManagementPermission::value);
+    }
+
+    private Optional<RouteMetadata> metadata(HttpServletRequest request) {
         String path = request.getRequestURI().substring(request.getContextPath().length());
         HttpMethod method = HttpMethod.valueOf(request.getMethod());
-        return routes.stream().anyMatch(route -> route.matches(path, method) && route.metadata.requiresTenantContext());
+        return routes.stream()
+                .filter(route -> route.matches(path, method))
+                .map(Route::metadata)
+                .findFirst();
     }
 
     private static RouteMetadata metadata(HandlerMethod handler, RequestMappingInfo mapping) {
@@ -80,17 +93,15 @@ public final class ManagementRouteInventory implements SmartInitializingSingleto
 
     private static void validateTenant(HandlerMethod handler, TenantManagementPermission requirement) {
         ManagementPermissionCode code = requirement.value();
-        if (code.scope() != ManagementPermissionScope.TENANT || code.type() != ManagementPermissionType.ACTION
-                || requirement.boundary() != TenantDataBoundary.TENANT_ALL) {
-            throw invalid(handler, "has an invalid tenant permission or data boundary");
+        if (code.scope() != ManagementPermissionScope.TENANT || code.type() != ManagementPermissionType.ACTION) {
+            throw invalid(handler, "has an invalid tenant permission");
         }
     }
 
     private static void validatePlatform(HandlerMethod handler, PlatformManagementPermission requirement) {
         ManagementPermissionCode code = requirement.value();
-        if (code.scope() != ManagementPermissionScope.PLATFORM || code.type() != ManagementPermissionType.ACTION
-                || requirement.boundary() != TenantDataBoundary.PLATFORM_ALL) {
-            throw invalid(handler, "has an invalid platform permission or data boundary");
+        if (code.scope() != ManagementPermissionScope.PLATFORM || code.type() != ManagementPermissionType.ACTION) {
+            throw invalid(handler, "has an invalid platform permission");
         }
     }
 

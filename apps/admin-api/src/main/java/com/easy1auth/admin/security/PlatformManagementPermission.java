@@ -1,7 +1,6 @@
 package com.easy1auth.admin.security;
 
 import com.easy1auth.adminaccess.ManagementPermissionCode;
-import com.easy1auth.tenant.TenantDataBoundary;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -12,6 +11,4 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 public @interface PlatformManagementPermission {
     ManagementPermissionCode value();
-
-    TenantDataBoundary boundary();
 }

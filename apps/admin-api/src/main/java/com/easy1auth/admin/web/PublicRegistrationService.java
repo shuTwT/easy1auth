@@ -27,5 +27,6 @@ class PublicRegistrationService {
         return new RegistrationResult(identity, tenant);
     }
 
-    record RegistrationResult(AuthenticatedAdmin identity, TenantSummary tenant) {}
+    record RegistrationResult(AuthenticatedAdmin identity, TenantSummary tenant) {
+    }
 }
