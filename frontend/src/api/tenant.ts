@@ -1,6 +1,6 @@
 import request from '@/utils/request'
 import type { TenantInfo } from '@/types/auth'
-import type { Tenant, CreateTenantDto, UpdateTenantDto, TenantQueryDto, TenantListResponse } from '@/types/tenant'
+import type { Tenant, CreateTenantDto, TenantControl, TenantControlListResponse, TenantQueryDto, TenantListResponse, TenantUpdateDto } from '@/types/tenant'
 
 export interface CreateTenantRequest {
   name: string
@@ -31,11 +31,15 @@ export const tenantApi = {
     return request.get('/tenants/list', { params })
   },
 
+  getManagedList(): Promise<TenantControlListResponse> {
+    return request.get('/tenants/managed')
+  },
+
   create(data: CreateTenantDto): Promise<Tenant> {
     return request.post('/tenants/create', data)
   },
 
-  update(id: string, data: UpdateTenantDto): Promise<Tenant> {
+  update(id: string, data: TenantUpdateDto): Promise<TenantControl> {
     return request.put(`/tenants/${id}`, data)
   },
 
@@ -43,7 +47,11 @@ export const tenantApi = {
     return request.delete(`/tenants/${id}`)
   },
 
-  updateStatus(id: string, status: string): Promise<Tenant> {
+  updateStatus(id: string, status: 'active' | 'suspended'): Promise<TenantControl> {
     return request.put(`/tenants/${id}/status`, { status })
+  },
+
+  transferAdministrator(id: string, administratorAccountId: string): Promise<TenantControl> {
+    return request.put(`/tenants/${id}/administrator`, { administratorAccountId })
   }
 }

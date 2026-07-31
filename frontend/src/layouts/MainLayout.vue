@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import type { Component } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { brandSettingsApi } from '@/api/brandSettings'
+import { authorizationApi } from '@/api/authorization'
+import type { ManagementMenu } from '@/types/authorization'
 
 import {
   Sidebar,
@@ -49,6 +52,7 @@ import {
   Link2,
   Palette,
   Lock,
+  Package,
   WandSparkles,
   ScrollText,
   House,
@@ -59,6 +63,7 @@ import {
   User,
   Settings,
   ChevronDown,
+  Menu,
 } from '@lucide/vue'
 
 const router = useRouter()
@@ -66,56 +71,86 @@ const route = useRoute()
 const userStore = useUserStore()
 
 const brandSettings = ref<any>(null)
+const authorizedMenus = ref<ManagementMenu[]>([])
+const menuLoading = ref(false)
 
-// Menu structure with groups
-const menuGroups = [
-  {
-    label: '概览',
-    items: [
-      { index: '/dashboard', title: '控制台', icon: LayoutDashboard },
-    ],
-  },
-  {
-    label: '用户与权限',
-    items: [
-      {
-        index: '/user-management',
-        title: '用户管理',
-        icon: Users,
-        children: [
-          { index: '/user', title: '用户列表', icon: Users },
-          { index: '/group', title: '用户组', icon: Users },
-        ],
-      },
-      { index: '/position', title: '岗位管理', icon: BriefcaseBusiness },
-      { index: '/role', title: '角色管理', icon: ShieldCheck },
-      { index: '/permission', title: '权限管理', icon: LockKeyhole },
-      { index: '/admin-user', title: '管理员管理', icon: UserCog },
-    ],
-  },
-  {
-    label: '应用与集成',
-    items: [
-      { index: '/application', title: '应用管理', icon: Monitor },
-      { index: '/social-identity-provider', title: '社会化身份源', icon: Link2 },
-    ],
-  },
-  {
-    label: '租户与设置',
-    items: [
-      { index: '/tenant', title: '租户管理', icon: Building2 },
-      { index: '/brand-settings', title: '品牌设置', icon: Palette },
-      { index: '/security', title: '安全设置', icon: Lock },
-      { index: '/personalization', title: '个性化设置', icon: WandSparkles },
-    ],
-  },
-  {
-    label: '审计',
-    items: [
-      { index: '/audit', title: '审计日志', icon: ScrollText },
-    ],
-  },
-]
+interface SidebarMenuItem {
+  code: string
+  title: string
+  index: string
+  type: 'directory' | 'menu'
+  icon: Component
+  sortOrder: number
+  children: SidebarMenuItem[]
+}
+
+const menuIcons: Record<string, Component> = {
+  dashboard: LayoutDashboard,
+  'user-management': Users,
+  user: Users,
+  group: Users,
+  position: BriefcaseBusiness,
+  role: ShieldCheck,
+  permission: LockKeyhole,
+  'admin-user': UserCog,
+  application: Monitor,
+  'social-identity-provider': Link2,
+  tenant: Building2,
+  'tenant-package': Package,
+  'menu-management': Menu,
+  'brand-settings': Palette,
+  security: Lock,
+  personalization: WandSparkles,
+  audit: ScrollText,
+}
+
+const menuGroups = computed(() => {
+  const nodes = new Map<string, SidebarMenuItem>()
+  const roots: Array<{ scope: string; item: SidebarMenuItem }> = []
+
+  authorizedMenus.value
+    .filter((menu) => menu.active && ['DIRECTORY', 'MENU'].includes(menu.type.toUpperCase()))
+    .sort((left, right) => left.sortOrder - right.sortOrder || left.code.localeCompare(right.code))
+    .forEach((menu) => nodes.set(menu.code, {
+      code: menu.code,
+      title: menu.name,
+      index: menu.type.toUpperCase() === 'DIRECTORY' ? '' : `/${menu.resource}`,
+      type: menu.type.toUpperCase() === 'DIRECTORY' ? 'directory' : 'menu',
+      icon: menuIcons[menu.resource] || Menu,
+      sortOrder: menu.sortOrder,
+      children: [],
+    }))
+
+  authorizedMenus.value
+    .filter((menu) => nodes.has(menu.code))
+    .forEach((menu) => {
+      const item = nodes.get(menu.code)!
+      const parent = menu.parentCode ? nodes.get(menu.parentCode) : undefined
+      if (parent) {
+        parent.children.push(item)
+      } else {
+        roots.push({ scope: menu.scope, item })
+      }
+    })
+
+  const sortItems = (items: SidebarMenuItem[]) => {
+    items.sort((left, right) => left.sortOrder - right.sortOrder || left.title.localeCompare(right.title))
+    items.forEach((item) => sortItems(item.children))
+    return items
+  }
+
+  const groups = new Map<string, SidebarMenuItem[]>()
+  roots.forEach(({ scope, item }) => {
+    const label = scope.toUpperCase() === 'PLATFORM' ? '平台管理' : '租户管理'
+    groups.set(label, [...(groups.get(label) || []), item])
+  })
+  return [...groups.entries()].map(([label, items]) => ({ label, items: sortItems(items) }))
+})
+
+const flattenedMenus = computed(() => {
+  const flatten = (items: SidebarMenuItem[]): SidebarMenuItem[] => items.flatMap((item) => [item, ...flatten(item.children)])
+  return menuGroups.value.flatMap((group) => flatten(group.items))
+})
 
 const handleSelect = (index: string) => {
   router.push(index)
@@ -137,21 +172,26 @@ const currentMenuTitle = computed(() => {
     return (route.meta.title as string | undefined) ?? '应用详情'
   }
 
-  for (const group of menuGroups) {
-    for (const item of group.items) {
-      if (item.index === route.path) {
-        return item.title
-      }
-      if (item.children) {
-        const child = item.children.find((c) => c.index === route.path)
-        if (child) {
-          return `${item.title} / ${child.title}`
-        }
-      }
-    }
-  }
-  return '首页'
+  return flattenedMenus.value.find((item) => item.index === route.path)?.title
+    ?? (route.meta.title as string | undefined)
+    ?? '首页'
 })
+
+async function loadAuthorizedMenus() {
+  if (!userStore.currentTenant?.id) {
+    authorizedMenus.value = []
+    return
+  }
+  menuLoading.value = true
+  try {
+    authorizedMenus.value = (await authorizationApi.getContext()).menus
+  } catch (error) {
+    console.error('加载当前租户菜单失败:', error)
+    authorizedMenus.value = []
+  } finally {
+    menuLoading.value = false
+  }
+}
 
 const handleLogout = () => {
   userStore.logout()
@@ -191,6 +231,8 @@ onMounted(async () => {
     console.error('加载品牌设置失败:', error)
   }
 })
+
+watch(() => userStore.currentTenant?.id, loadAuthorizedMenus, { immediate: true })
 </script>
 
 <template>
@@ -250,8 +292,14 @@ onMounted(async () => {
         </div>
       </SidebarHeader>
 
-      <!-- Sidebar Content: Grouped Menu Items -->
+      <!-- Sidebar Content: current tenant's permission-driven menus -->
       <SidebarContent class="gap-0">
+        <SidebarGroup v-if="menuLoading" class="py-2">
+          <SidebarGroupContent class="px-4 py-3 text-xs text-slate-400 group-data-[collapsible=icon]:hidden">正在加载菜单…</SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup v-else-if="menuGroups.length === 0" class="py-2">
+          <SidebarGroupContent class="px-4 py-3 text-xs text-slate-400 group-data-[collapsible=icon]:hidden">当前租户暂无可见菜单</SidebarGroupContent>
+        </SidebarGroup>
         <template v-for="group in menuGroups" :key="group.label">
           <SidebarGroup class="py-2">
             <SidebarGroupLabel class="px-3 text-[11px] font-medium uppercase tracking-wider text-slate-500 group-data-[collapsible=icon]:hidden">
@@ -261,7 +309,7 @@ onMounted(async () => {
               <SidebarMenu class="gap-0.5">
                 <template v-for="item in group.items" :key="item.index">
                   <!-- Items with children (submenu) -->
-                  <Collapsible v-if="item.children" :default-open="isChildActive(item.children)">
+                  <Collapsible v-if="item.children.length > 0" :default-open="isChildActive(item.children)">
                     <SidebarMenuItem>
                       <CollapsibleTrigger as-child>
                         <SidebarMenuButton
@@ -306,7 +354,7 @@ onMounted(async () => {
                     <SidebarMenuButton
                       :is-active="isActive(item.index)"
                       :tooltip="item.title"
-                      @click="handleSelect(item.index)"
+                      @click="item.type === 'menu' && handleSelect(item.index)"
                       class="relative text-slate-300 transition-colors duration-200 hover:bg-white/5 hover:text-white data-[active=true]:bg-white/5 data-[active=true]:text-sky-400"
                     >
                       <component :is="item.icon" class="size-4" />

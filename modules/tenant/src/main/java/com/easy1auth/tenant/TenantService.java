@@ -19,6 +19,7 @@ public class TenantService {
                   ActiveAdminAccountLocker administratorAccounts) { this.repository = repository; this.authorization = authorization; this.packages = packages; this.administratorAccounts = administratorAccounts; }
 
     @Transactional(readOnly = true) public List<TenantSummary> list(UUID accountId) { return repository.listForAccount(accountId).stream().map(this::summary).toList(); }
+    @Transactional(readOnly = true) public List<TenantControlView> listManaged() { return repository.listOrdinaryTenants().stream().map(this::controlView).toList(); }
     @Transactional(readOnly = true)
     public TenantContext resolve(UUID accountId, UUID tenantId, String traceId) {
         var membership=repository.activeMembership(accountId,tenantId).filter(it->authorization.isActiveAccount(accountId)).orElseThrow(() -> new DomainException("TENANT_ACCESS_DENIED", "无权访问所选租户", 403));
@@ -42,32 +43,62 @@ public class TenantService {
         return createOrdinary(name, tenantPackage, administratorAccountId);
     }
     @Transactional
-    public void transferAdministrator(UUID serverResolvedTenantId, UUID targetAccountId) {
+    public TenantControlView updateOrdinary(UUID tenantId, String name, Long packageId) {
+        TenantEntity existing = requiredOrdinaryTenant(tenantId);
+        String normalizedName = name == null ? existing.name() : normalizeName(name);
+        long assignedPackageId = packageId == null
+                ? Objects.requireNonNull(existing.packageInfo(), "ordinary tenant package missing").id()
+                : packages.lockActiveAssignable(packageId).id();
+        repository.updateOrdinaryTenant(existing.id(), normalizedName, assignedPackageId);
+        return controlView(requiredOrdinaryTenant(existing.id()));
+    }
+    @Transactional
+    public TenantControlView updateOrdinaryStatus(UUID tenantId, String status) {
+        TenantEntity tenant = requiredOrdinaryTenant(tenantId);
+        String normalized = status == null ? "" : status.strip();
+        if (!"active".equals(normalized) && !"suspended".equals(normalized)) {
+            throw new DomainException("TENANT_STATUS_INVALID", "租户状态只能是 active 或 suspended", 400);
+        }
+        if ("active".equals(normalized)) {
+            packages.lockActiveAssignable(Objects.requireNonNull(tenant.packageInfo(), "ordinary tenant package missing").id());
+        }
+        repository.updateTenantStatus(tenant.id(), normalized);
+        return controlView(requiredOrdinaryTenant(tenant.id()));
+    }
+    @Transactional
+    public void deleteOrdinary(UUID tenantId) {
+        TenantEntity tenant = requiredOrdinaryTenant(tenantId);
+        repository.updateTenantStatus(tenant.id(), "deleted");
+        repository.suspendAllMemberships(tenant.id());
+    }
+    @Transactional
+    public TenantControlView transferAdministrator(UUID tenantId, UUID targetAccountId) {
         if (targetAccountId == null) {
             throw new DomainException("ADMINISTRATOR_ACCOUNT_REQUIRED", "管理员账号不能为空", 400);
         }
-        TenantEntity tenant = repository.lockActiveTenant(serverResolvedTenantId)
-                .orElseThrow(() -> new DomainException("TENANT_NOT_FOUND", "租户不存在或未启用", 404));
-        String administratorRole = administratorRole(tenant.isSystem());
-        administratorAccounts.lockActive(targetAccountId);
-        var current = repository.lockActiveMembership(tenant.id())
-                .orElseThrow(() -> new DomainException("TENANT_ADMINISTRATOR_MISSING", "租户缺少有效管理员", 409));
-        if (!administratorRole.equals(current.membershipRole())) {
-            throw new DomainException("TENANT_ADMINISTRATOR_ROLE_INVALID", "租户管理员角色与租户类型不匹配", 409);
+        TenantEntity tenant = requiredOrdinaryTenant(tenantId);
+        if (!"active".equals(tenant.status())) {
+            throw new DomainException("TENANT_NOT_ACTIVE", "停用的租户不能转移管理员", 409);
         }
+        String administratorRole = administratorRole(false);
+        administratorAccounts.lockActive(targetAccountId);
+        var current = repository.lockActiveAdministratorMembership(tenant.id())
+                .orElseThrow(() -> new DomainException("TENANT_ADMINISTRATOR_MISSING", "租户缺少有效管理员", 409));
         if (current.accountId().equals(targetAccountId)) {
             throw new DomainException("TENANT_ADMINISTRATOR_TARGET_CURRENT", "目标账号已是当前租户管理员", 409);
         }
         var targetMembership = repository.lockMembership(tenant.id(), targetAccountId);
-        if (targetMembership.isPresent() && "active".equals(targetMembership.get().status())) {
-            throw new DomainException("TENANT_ADMINISTRATOR_TARGET_ACTIVE", "目标账号已拥有有效租户成员关系", 409);
-        }
-        repository.suspendMembership(current.id());
         if (targetMembership.isPresent()) {
-            repository.activateAdministratorMembership(targetMembership.get().id(), administratorRole);
+            if ("active".equals(targetMembership.get().status())) {
+                repository.promoteActiveMembership(targetMembership.get().id(), administratorRole);
+            } else {
+                repository.activateAdministratorMembership(targetMembership.get().id(), administratorRole);
+            }
         } else {
             repository.createActiveAdministratorMembership(tenant.id(), targetAccountId, administratorRole);
         }
+        repository.suspendMembership(current.id());
+        return controlView(requiredOrdinaryTenant(tenant.id()));
     }
     @Transactional public int lockForUserQuota(UUID tenantId){return repository.lockAndGetMaxUsers(tenantId);}
     @Transactional public int lockForAppQuota(UUID tenantId){return repository.lockAndGetMaxApps(tenantId);}
@@ -80,6 +111,22 @@ public class TenantService {
                 ? packages.systemPackage()
                 : packages.view(Objects.requireNonNull(tenant.packageInfo(), "ordinary tenant package missing"));
         return new TenantSummary(tenant.id(), tenant.name(), tenant.status(), tenant.isSystem(), tenantPackage, state.role());
+    }
+
+    private TenantControlView controlView(TenantEntity tenant) {
+        var tenantPackage = packages.view(Objects.requireNonNull(tenant.packageInfo(), "ordinary tenant package missing"));
+        UUID administratorAccountId = repository.activeAdministratorMembership(tenant.id())
+                .map(membership -> membership.accountId())
+                .orElse(null);
+        return new TenantControlView(tenant.id(), tenant.name(), tenant.status(), tenantPackage, administratorAccountId);
+    }
+
+    private TenantEntity requiredOrdinaryTenant(UUID tenantId) {
+        if (tenantId == null) {
+            throw new DomainException("TENANT_ID_REQUIRED", "租户不能为空", 400);
+        }
+        return repository.lockOrdinaryTenant(tenantId)
+                .orElseThrow(() -> new DomainException("TENANT_NOT_FOUND", "普通租户不存在或已删除", 404));
     }
 
     private TenantSummary createOrdinary(String name, TenantPackageView tenantPackage, UUID administratorAccountId) {

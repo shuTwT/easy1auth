@@ -1,45 +1,46 @@
+export interface TenantPackageSummary {
+  id: number
+  code: string
+  name: string
+  status: 'active' | 'inactive'
+  defaultPackage: boolean
+  maxUsers: number
+  maxApps: number
+  permissionCodes: string[]
+}
+
 export interface Tenant {
   id: string
   name: string
-  logo?: string
-  domain?: string
   status: TenantStatus
-  plan: TenantPlan
-  maxUsers: number
-  maxApps: number
-  createdAt: string
-  updatedAt: string
+  system: boolean
+  tenantPackage: TenantPackageSummary | null
+  role: string
+}
+
+export interface TenantControl {
+  id: string
+  name: string
+  status: TenantStatus
+  tenantPackage: TenantPackageSummary
+  administratorAccountId: string | null
 }
 
 export type TenantStatus = 'active' | 'suspended' | 'deleted'
-export type TenantPlan = 'basic' | 'professional' | 'enterprise'
 
 export interface CreateTenantDto {
   name: string
-  logo?: string
-  domain?: string
-  plan?: TenantPlan
-  maxUsers?: number
-  maxApps?: number
+  packageId?: number
+  administratorAccountId?: string
 }
 
-export interface UpdateTenantDto {
-  name?: string
-  logo?: string
-  domain?: string
-  plan?: TenantPlan
-  maxUsers?: number
-  maxApps?: number
-  status?: TenantStatus
-}
+export type UpdateTenantDto = Partial<CreateTenantDto>
 
 export interface TenantQueryDto {
   page?: number
   pageSize?: number
   name?: string
   status?: TenantStatus
-  plan?: TenantPlan
-  domain?: string
 }
 
 export interface TenantListResponse {
@@ -47,6 +48,18 @@ export interface TenantListResponse {
   total: number
   page: number
   pageSize: number
+}
+
+export interface TenantControlListResponse {
+  items: TenantControl[]
+  total: number
+  page: number
+  pageSize: number
+}
+
+export interface TenantUpdateDto {
+  name?: string
+  packageId?: number
 }
 
 export interface TenantStats {

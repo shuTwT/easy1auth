@@ -21,6 +21,18 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '租户管理', requiresAuth: true }
       },
       {
+        path: 'tenant-package',
+        name: 'TenantPackage',
+        component: () => import('@/views/tenantPackage/index.vue'),
+        meta: { title: '租户套餐', requiresAuth: true }
+      },
+      {
+        path: 'menu-management',
+        name: 'MenuManagement',
+        component: () => import('@/views/menuManagement/index.vue'),
+        meta: { title: '菜单管理', requiresAuth: true }
+      },
+      {
         path: 'user',
         name: 'User',
         component: () => import('@/views/user/index.vue'),

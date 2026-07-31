@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.Optional;
 
 public enum ManagementPermissionType {
+    DIRECTORY("directory"),
     MENU("menu"),
     ACTION("action"),
     DATA("data");

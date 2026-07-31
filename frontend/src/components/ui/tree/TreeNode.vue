@@ -36,12 +36,6 @@ const hasChildren = computed(() => children.value.length > 0)
 
 const isOpen = ref(props.defaultExpandAll && hasChildren.value)
 
-function toggle() {
-  if (!hasChildren.value) return
-  isOpen.value = !isOpen.value
-  emit('toggle', props.node)
-}
-
 function handleSelect() {
   emit('select', props.node)
 }
@@ -49,7 +43,7 @@ function handleSelect() {
 
 <template>
   <div data-slot="tree-node" :class="cn('group/tree-node')">
-    <Collapsible v-if="hasChildren" v-model:open="isOpen">
+    <Collapsible v-if="hasChildren" v-model:open="isOpen" @update:open="emit('toggle', props.node)">
       <div
         :class="cn(
           'flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-sm transition-colors hover:bg-muted/50',
@@ -59,7 +53,7 @@ function handleSelect() {
         )"
         :style="{ paddingLeft: `${depth * 16 + 8}px` }"
       >
-        <CollapsibleTrigger as-child @click.stop="toggle">
+        <CollapsibleTrigger as-child>
           <button
             type="button"
             class="text-muted-foreground hover:text-foreground flex size-4 shrink-0 cursor-pointer items-center justify-center rounded transition-transform data-open:rotate-90"

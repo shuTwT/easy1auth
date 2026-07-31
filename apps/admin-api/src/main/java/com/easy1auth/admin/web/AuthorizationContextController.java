@@ -3,6 +3,9 @@ package com.easy1auth.admin.web;
 import com.easy1auth.admin.security.TenantContextFilter;
 import com.easy1auth.admin.security.ManagementRouteClassification;
 import com.easy1auth.admin.security.ManagementRouteKind;
+import com.easy1auth.adminaccess.ManagementPermissionCatalog;
+import com.easy1auth.adminaccess.ManagementPermissionType;
+import com.easy1auth.adminaccess.ManagementPermissionView;
 import com.easy1auth.foundation.web.ApiResponse;
 import com.easy1auth.tenant.TenantContext;
 import com.easy1auth.tenant.TenantPackageView;
@@ -18,6 +21,12 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/authorization")
 public class AuthorizationContextController {
+    private final ManagementPermissionCatalog catalog;
+
+    AuthorizationContextController(ManagementPermissionCatalog catalog) {
+        this.catalog = catalog;
+    }
+
     @ManagementRouteClassification(ManagementRouteKind.AUTHORIZATION_CONTEXT)
     @GetMapping("/context")
     public ApiResponse<AuthorizationContextResponse> context(HttpServletRequest request) {
@@ -27,7 +36,16 @@ public class AuthorizationContextController {
                 context.membershipRole(),
                 context.permissions().stream().sorted().toList(),
                 context.dataBoundary().code(),
-                context.tenantPackage()));
+                context.tenantPackage(),
+                visibleMenus(context)));
+    }
+
+    private List<ManagementPermissionView> visibleMenus(TenantContext context) {
+        return catalog.activeViews().stream()
+                .filter(permission -> permission.type() == ManagementPermissionType.MENU
+                        || permission.type() == ManagementPermissionType.DIRECTORY)
+                .filter(permission -> context.permissions().contains(permission.code()))
+                .toList();
     }
 
     public record AuthorizationContextResponse(
@@ -35,6 +53,7 @@ public class AuthorizationContextController {
             String membershipRole,
             List<String> permissions,
             String dataBoundary,
-            TenantPackageView tenantPackage) {
+            TenantPackageView tenantPackage,
+            List<ManagementPermissionView> menus) {
     }
 }
