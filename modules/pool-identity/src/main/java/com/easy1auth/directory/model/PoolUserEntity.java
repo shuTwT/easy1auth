@@ -36,6 +36,12 @@ public interface PoolUserEntity extends BaseEntity, BaseTenantEntity {
 
     @Nullable String position();
 
+    @Column(name = "enterprise_identity_source_id")
+    @Nullable UUID enterpriseIdentitySourceId();
+
+    @Column(name = "enterprise_identity_external_id")
+    @Nullable String enterpriseIdentityExternalId();
+
     @Serialized
     @Nullable Map<String, Object> customAttributes();
 

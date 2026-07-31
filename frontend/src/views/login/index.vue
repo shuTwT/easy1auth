@@ -1,25 +1,19 @@
 <script setup lang="ts">
-import { shallowRef, onMounted, computed, ref } from 'vue'
+import { shallowRef } from 'vue'
+import { Tabs } from 'antdv-next'
 import PasswordLoginForm from '@/components/login/PasswordLoginForm.vue'
 import EmailCodeLoginForm from '@/components/login/EmailCodeLoginForm.vue'
 import PasskeyLogin from '@/components/login/PasskeyLogin.vue'
-import SocialLogin from '@/components/login/SocialLogin.vue'
 import RegisterForm from '@/components/login/RegisterForm.vue'
-import { loginStyleApi, type LoginStyle } from '@/api/loginStyle'
 
 type LoginMode = 'password' | 'email' | 'passkey' | 'register'
 
 const currentMode = shallowRef<LoginMode>('password')
-const loginStyle = ref<LoginStyle | null>(null)
-const loading = ref(true)
-
-const availableMethods = computed(() => {
-  return loginStyle.value?.loginMethods || ['password', 'email', 'passkey']
-})
-
-const firstAvailableMethod = computed(() => {
-  return availableMethods.value[0] || 'password'
-})
+const loginTabs = [
+  { key: 'password', label: '账号密码' },
+  { key: 'email', label: '邮箱验证码' },
+  { key: 'passkey', label: 'Passkey' }
+]
 
 function switchToPassword() {
   currentMode.value = 'password'
@@ -29,53 +23,15 @@ function switchToEmail() {
   currentMode.value = 'email'
 }
 
-function switchToPasskey() {
-  currentMode.value = 'passkey'
-}
-
 function switchToRegister() {
   currentMode.value = 'register'
 }
 
-const loadLoginStyle = async () => {
-  try {
-    const hostname = window.location.hostname
-    const response = await loginStyleApi.getPublic(hostname !== 'localhost' ? hostname : undefined)
-    loginStyle.value = response
-    currentMode.value = firstAvailableMethod.value as LoginMode
-    applySafeTheme()
-  } catch (error) {
-    console.error('加载登录样式失败:', error)
-  } finally {
-    loading.value = false
-  }
-}
-
-const applySafeTheme = () => {
-  if (!loginStyle.value) return
-
-  const root = document.documentElement
-
-  if (loginStyle.value.primaryColor) {
-    root.style.setProperty('--login-primary-color', loginStyle.value.primaryColor)
-  }
-
-}
-
-onMounted(() => {
-  loadLoginStyle()
-})
 </script>
 
 <template>
-  <div 
-    class="login-container" 
-    :style="{
-      backgroundColor: loginStyle?.backgroundColor || undefined,
-      backgroundImage: loginStyle?.backgroundImage ? `url(${loginStyle.backgroundImage})` : undefined
-    }"
-  >
-    <div v-if="!loginStyle?.backgroundImage" class="background-shapes">
+  <div class="login-container">
+    <div class="background-shapes">
       <div class="shape shape-1"></div>
       <div class="shape shape-2"></div>
       <div class="shape shape-3"></div>
@@ -84,22 +40,12 @@ onMounted(() => {
     <div class="login-card">
       <div class="login-header flex items-center justify-center">
         <div class="logo">
-          <img 
-            v-if="loginStyle?.logo" 
-            :src="loginStyle.logo" 
-            alt="Logo" 
-            class="logo-image"
-          />
-          <svg v-else width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect width="48" height="48" rx="12" :fill="`url(#gradient-${loginStyle?.primaryColor ? 'custom' : 'default'})`"/>
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="48" height="48" rx="12" fill="url(#gradient-default)"/>
             <path d="M24 12L32 18V30L24 36L16 30V18L24 12Z" stroke="white" stroke-width="2" fill="none"/>
             <circle cx="24" cy="24" r="4" fill="white"/>
             <defs>
-              <linearGradient v-if="loginStyle?.primaryColor" :id="`gradient-custom`" x1="0" y1="0" x2="48" y2="48">
-                <stop offset="0%" :stop-color="loginStyle.primaryColor"/>
-                <stop offset="100%" :stop-color="loginStyle.primaryColor"/>
-              </linearGradient>
-              <linearGradient v-else id="gradient-default" x1="0" y1="0" x2="48" y2="48">
+              <linearGradient id="gradient-default" x1="0" y1="0" x2="48" y2="48">
                 <stop offset="0%" stop-color="#0369A1"/>
                 <stop offset="100%" stop-color="#0EA5E9"/>
               </linearGradient>
@@ -107,34 +53,18 @@ onMounted(() => {
           </svg>
         </div>
         <div class="flex flex-col">
-          <h1 class="title">{{ loginStyle?.title || 'Easy1Auth' }}</h1>
-          <p class="subtitle">{{ loginStyle?.subtitle || '企业级统一身份管理平台' }}</p>
+          <h1 class="title">Easy1Auth</h1>
+          <p class="subtitle">企业级统一身份管理平台</p>
         </div>
       </div>
 
-      <div v-if="availableMethods.length > 1 && currentMode !== 'register'" class="login-tabs">
-        <button
-          v-if="availableMethods.includes('password')"
-          :class="['tab-button', { active: currentMode === 'password' }]"
-          @click="switchToPassword"
-        >
-          账号密码
-        </button>
-        <button
-          v-if="availableMethods.includes('email')"
-          :class="['tab-button', { active: currentMode === 'email' }]"
-          @click="switchToEmail"
-        >
-          邮箱验证码
-        </button>
-        <button
-          v-if="availableMethods.includes('passkey')"
-          :class="['tab-button', { active: currentMode === 'passkey' }]"
-          @click="switchToPasskey"
-        >
-          Passkey
-        </button>
-      </div>
+      <Tabs
+        v-if="currentMode !== 'register'"
+        v-model:active-key="currentMode"
+        :items="loginTabs"
+        :animated="false"
+        class="login-tabs"
+      />
 
       <div class="login-content">
         <transition name="fade" mode="out-in">
@@ -143,29 +73,21 @@ onMounted(() => {
             @switch-to-email="switchToEmail"
             @switch-to-register="switchToRegister"
           />
-          
           <EmailCodeLoginForm
             v-else-if="currentMode === 'email'"
             @switch-to-password="switchToPassword"
             @switch-to-register="switchToRegister"
           />
-          
           <PasskeyLogin v-else-if="currentMode === 'passkey'" />
-          
           <RegisterForm
-            v-else-if="currentMode === 'register'"
+            v-else
             @switch-to-login="switchToPassword"
           />
         </transition>
       </div>
 
-      <SocialLogin
-        v-if="currentMode !== 'register'"
-        :providers="loginStyle?.socialProviders"
-      />
-
       <div class="login-footer">
-        <p>© 2024 {{ loginStyle?.title || 'Easy1Auth' }}. All rights reserved.</p>
+        <p>© 2024 Easy1Auth. All rights reserved.</p>
       </div>
     </div>
   </div>
@@ -285,36 +207,53 @@ onMounted(() => {
 }
 
 .login-tabs {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 16px;
+}
+
+.login-tabs :deep(.ant-tabs-nav) {
+  margin: 0;
   padding: 4px;
   background: rgba(241, 245, 249, 0.5);
   border-radius: 8px;
 }
 
-.tab-button {
+.login-tabs :deep(.ant-tabs-nav::before),
+.login-tabs :deep(.ant-tabs-ink-bar),
+.login-tabs :deep(.ant-tabs-body-holder) {
+  display: none;
+}
+
+.login-tabs :deep(.ant-tabs-nav-wrap),
+.login-tabs :deep(.ant-tabs-nav-list) {
+  width: 100%;
+}
+
+.login-tabs :deep(.ant-tabs-tab) {
+  display: flex;
   flex: 1;
+  justify-content: center;
+  margin: 0;
   padding: 10px 16px;
-  background: transparent;
-  border: none;
   border-radius: 6px;
+  color: #64748B;
   font-family: 'Open Sans', sans-serif;
   font-size: 14px;
   font-weight: 500;
-  color: #64748B;
-  cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.tab-button:hover {
-  color: var(--login-primary-color, #0369A1);
+.login-tabs :deep(.ant-tabs-tab:hover) {
+  color: #0369A1;
 }
 
-.tab-button.active {
+.login-tabs :deep(.ant-tabs-tab-active) {
   background: white;
-  color: var(--login-primary-color, #0369A1);
+  color: #0369A1;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.login-tabs :deep(.ant-tabs-tab-active .ant-tabs-tab-btn) {
+  color: inherit;
 }
 
 .login-content {
@@ -348,13 +287,10 @@ onMounted(() => {
     font-size: 28px;
   }
 
-  .login-tabs {
+  .login-tabs :deep(.ant-tabs-nav-list) {
     flex-direction: column;
   }
 
-  .tab-button {
-    width: 100%;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -24,7 +24,7 @@ import java.util.Set;
 @Component
 public final class ManagementRouteInventory implements SmartInitializingSingleton {
     private static final String CONTROLLER_PACKAGE = "com.easy1auth.admin.web";
-    private static final Set<String> PUBLIC_ROUTES = Set.of("GET /api/login-style/public");
+    private static final Set<String> PUBLIC_ROUTES = Set.of("GET /api/login-style/public", "POST /api/enterprise-identity-sources/{id}/feishu/events");
 
     private final RequestMappingHandlerMapping mappings;
     private volatile List<Route> routes = List.of();

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue'
-import { message } from 'antdv-next'
+import { Table, message } from 'antdv-next'
 import { Plus, Search, RefreshCw } from '@lucide/vue'
 import { positionApi } from '@/api/position'
 import type { Position, CreatePositionDto, UpdatePositionDto, PositionQueryDto, PositionStats } from '@/types/position'
@@ -246,53 +246,34 @@ onMounted(() => {
           </Button>
         </div>
 
-        <table>
-          <thead>
-            <tr>
-              <th class="w-44">岗位名称</th>
-              <th class="w-36">岗位编码</th>
-              <th>描述</th>
-              <th class="w-28 text-center">岗位级别</th>
-              <th class="w-24 text-center">在职人数</th>
-              <th class="w-44">创建时间</th>
-              <th class="w-36 text-right">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="loading">
-              <td colspan="7" class="text-center py-8 text-muted-foreground">
-                加载中...
-              </td>
-            </tr>
-            <tr v-else-if="positions.length === 0">
-              <td colspan="7" class="text-center py-8 text-muted-foreground">
-                暂无数据
-              </td>
-            </tr>
-            <tr v-for="position in positions" :key="position.id">
-              <td>{{ position.name }}</td>
-              <td>
+        <Table :columns="[
+          { title: '岗位名称', dataIndex: 'name', width: 176 }, { title: '岗位编码', key: 'code', width: 144 },
+          { title: '描述', key: 'description' }, { title: '岗位级别', key: 'level', width: 112, align: 'center' },
+          { title: '在职人数', key: 'userCount', width: 96, align: 'center' }, { title: '创建时间', key: 'createdAt', width: 176 },
+          { title: '操作', key: 'actions', width: 144, align: 'right' }
+        ]" :data-source="positions" :loading="loading" row-key="id" :pagination="false" :scroll="{ x: 1050 }">
+          <template #bodyCell="{ column, record: position }">
+            <template v-if="column.key === 'code'">
                 <span style="font-family: monospace;">{{ position.code }}</span>
-              </td>
-              <td>{{ position.description || '-' }}</td>
-              <td class="text-center">
+            </template>
+            <template v-else-if="column.key === 'description'">{{ position.description || '-' }}</template>
+            <template v-else-if="column.key === 'level'">
                 <Tag :color="getLevelColor(position.level)">
                   {{ position.level }} - {{ getLevelText(position.level) }}
                 </Tag>
-              </td>
-              <td class="text-center">
+            </template>
+            <template v-else-if="column.key === 'userCount'">
                 {{ position.userCount }}{{ position.maxCount ? ` / ${position.maxCount}` : '' }}
-              </td>
-              <td>{{ new Date(position.createdAt).toLocaleString() }}</td>
-              <td class="text-right">
+            </template>
+            <template v-else-if="column.key === 'createdAt'">{{ new Date(position.createdAt).toLocaleString() }}</template>
+            <template v-else-if="column.key === 'actions'">
                 <div class="flex justify-end gap-2">
                   <Button size="small"  @click="handleEdit(position)">编辑</Button>
                   <Button size="small" color="error" @click="handleDelete(position)">删除</Button>
                 </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+            </template>
+          </template>
+        </Table>
 
         <div class="flex items-center justify-between mt-5">
           <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>

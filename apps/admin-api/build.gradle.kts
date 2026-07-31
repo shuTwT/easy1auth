@@ -9,6 +9,7 @@ dependencies {
     implementation(project(":modules:application"))
     implementation(project(":modules:security-policy"))
     implementation(project(":modules:federation"))
+    implementation(project(":modules:enterprise-identity"))
     implementation(project(":modules:customization"))
     implementation(project(":modules:audit"))
     implementation(libs.spring.web)

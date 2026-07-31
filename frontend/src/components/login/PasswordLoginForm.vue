@@ -168,6 +168,8 @@ function togglePassword() {
   background: rgba(255, 255, 255, 0.6) !important;
   border: 1px solid #E2E8F0;
   border-radius: 8px;
+  padding-left: 40px !important;
+  padding-right: 40px !important;
   transition: all 0.2s ease;
 }
 

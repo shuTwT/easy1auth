@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { message } from 'antdv-next'
+import { Table, message } from 'antdv-next'
 import { Copy } from '@lucide/vue'
 import { applicationApi } from '@/api/application'
 import type { Application } from '@/types/application'
@@ -173,58 +173,44 @@ onMounted(() => {
           </p>
         </Alert>
 
-        <table>
-          <thead>
-            <tr>
-              <th class="w-[200px]">应用名称</th>
-              <th class="w-[120px]">应用类型</th>
-              <th class="w-[300px]">Client ID</th>
-              <th class="min-w-[200px]">回调地址</th>
-              <th class="w-[150px] text-center">Access Token 有效期</th>
-              <th class="w-[150px] text-center">Refresh Token 有效期</th>
-              <th class="w-[100px] text-center">状态</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="loading">
-              <td colspan="7" class="text-center text-muted-foreground">加载中...</td>
-            </tr>
-            <tr v-else-if="applications.length === 0">
-              <td colspan="7" class="text-center py-8 text-muted-foreground">暂无数据</td>
-            </tr>
-            <tr v-for="item in applications" :key="item.id">
-              <td>{{ item.name }}</td>
-              <td>
+        <Table :columns="[
+          { title: '应用名称', dataIndex: 'name', width: 200 }, { title: '应用类型', key: 'type', width: 120 },
+          { title: 'Client ID', key: 'clientId', width: 300 }, { title: '回调地址', key: 'redirectUris', width: 240 },
+          { title: 'Access Token 有效期', key: 'accessTokenLifetime', width: 150, align: 'center' },
+          { title: 'Refresh Token 有效期', key: 'refreshTokenLifetime', width: 150, align: 'center' },
+          { title: '状态', key: 'status', width: 100, align: 'center' }
+        ]" :data-source="applications" :loading="loading" row-key="id" :pagination="false" :scroll="{ x: 1260 }">
+          <template #bodyCell="{ column, record: item }">
+            <template v-if="column.key === 'type'">
                 <Tag :color="getTypeVariant(item.type)">
                   {{ getTypeText(item.type) }}
                 </Tag>
-              </td>
-              <td>
+            </template>
+            <template v-else-if="column.key === 'clientId'">
                 <div class="flex items-center gap-2">
                   <span class="font-mono text-xs">{{ item.clientId }}</span>
                   <Button type="text" size="icon" class="h-6 w-6" @click="copyToClipboard(item.clientId)">
                     <Copy class="w-3 h-3" />
                   </Button>
                 </div>
-              </td>
-              <td>
+            </template>
+            <template v-else-if="column.key === 'redirectUris'">
                 <div v-if="Array.isArray(item.redirectUris)">
                   <div v-for="(uri, index) in item.redirectUris" :key="index" class="text-xs mb-1">
                     {{ uri }}
                   </div>
                 </div>
                 <span v-else class="text-muted-foreground">-</span>
-              </td>
-              <td class="text-center">{{ item.accessTokenLifetime }} 秒</td>
-              <td class="text-center">{{ item.refreshTokenLifetime }} 秒</td>
-              <td class="text-center">
+            </template>
+            <template v-else-if="column.key === 'accessTokenLifetime'">{{ item.accessTokenLifetime }} 秒</template>
+            <template v-else-if="column.key === 'refreshTokenLifetime'">{{ item.refreshTokenLifetime }} 秒</template>
+            <template v-else-if="column.key === 'status'">
                 <Tag :color="getStatusVariant(item.status)">
                   {{ getStatusText(item.status) }}
                 </Tag>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+            </template>
+          </template>
+        </Table>
       </div>
     </Card>
 

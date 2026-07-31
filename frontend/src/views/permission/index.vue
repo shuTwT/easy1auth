@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { message } from 'antdv-next'
+import { Table, message } from 'antdv-next'
 import { Search, Plus, List, Share2, RefreshCw, Lock, Menu, Settings2, Database } from '@lucide/vue'
 import { permissionApi } from '@/api/permission'
 import type { Permission, PermissionTree, PermissionStats, CreatePermissionDto, UpdatePermissionDto } from '@/types/permission'
@@ -316,51 +316,32 @@ onMounted(() => {
 
       <div class="pt-4">
         <div v-if="viewMode === 'list'">
-          <table>
-            <thead>
-              <tr>
-                <th class="min-w-[180px]">权限名称</th>
-                <th class="w-[200px]">权限编码</th>
-                <th class="w-[130px]">资源</th>
-                <th class="w-[100px]">操作</th>
-                <th class="w-[150px]">父级权限</th>
-                <th class="min-w-[200px]">描述</th>
-                <th class="w-[150px]">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-if="loading">
-                <td colspan="7" class="text-center py-8 text-muted-foreground">
-                  加载中...
-                </td>
-              </tr>
-              <tr v-else-if="permissions.length === 0">
-                <td colspan="7" class="text-center py-8 text-muted-foreground">
-                  暂无数据
-                </td>
-              </tr>
-              <tr v-for="row in permissions" :key="row.id">
-                <td>
+          <Table :columns="[
+            { title: '权限名称', key: 'name', width: 180 }, { title: '权限编码', key: 'code', width: 200 },
+            { title: '资源', dataIndex: 'resource', width: 130 }, { title: '操作', dataIndex: 'action', width: 100 },
+            { title: '父级权限', key: 'parent', width: 150 }, { title: '描述', key: 'description', width: 200 },
+            { title: '操作', key: 'actions', width: 150 }
+          ]" :data-source="permissions" :loading="loading" row-key="id" :pagination="false" :scroll="{ x: 1110 }">
+            <template #bodyCell="{ column, record: row }">
+              <template v-if="column.key === 'name'">
                   <div class="flex items-center gap-2">
                     <Tag :color="getTypeVariant(row.type)" class="text-xs">
                       {{ getTypeLabel(row.type) }}
                     </Tag>
                     <span class="font-medium text-foreground">{{ row.name }}</span>
                   </div>
-                </td>
-                <td>
+              </template>
+              <template v-else-if="column.key === 'code'">
                   <code class="bg-muted px-2 py-0.5 rounded text-xs text-muted-foreground font-mono">
                     {{ row.code }}
                   </code>
-                </td>
-                <td>{{ row.resource }}</td>
-                <td>{{ row.action }}</td>
-                <td>
+              </template>
+              <template v-else-if="column.key === 'parent'">
                   <span v-if="row.parent">{{ row.parent.name }}</span>
                   <span v-else class="text-muted-foreground">-</span>
-                </td>
-                <td class="text-muted-foreground">{{ row.description || '-' }}</td>
-                <td>
+              </template>
+              <template v-else-if="column.key === 'description'"><span class="text-muted-foreground">{{ row.description || '-' }}</span></template>
+              <template v-else-if="column.key === 'actions'">
                   <div class="flex gap-2">
                     <Button type="link" size="small" class="p-0 h-auto" @click="handleEdit(row)">
                       编辑
@@ -369,10 +350,9 @@ onMounted(() => {
                       删除
                     </Button>
                   </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+              </template>
+            </template>
+          </Table>
           <div v-if="total > pageSize" class="flex items-center justify-between mt-4">
             <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
             <div class="flex items-center gap-1">

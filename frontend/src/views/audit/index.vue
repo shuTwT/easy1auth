@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue'
-import { message } from 'antdv-next'
+import { Table, message } from 'antdv-next'
 import { FileText, CheckCircle, XCircle, Clock, Search, RefreshCw, Download, Trash2 } from '@lucide/vue'
 import { auditApi } from '@/api/audit'
 import type { AuditLog, AuditLogQueryDto, AuditLogStats } from '@/types/audit'
@@ -325,50 +325,33 @@ onMounted(() => {
           </div>
         </div>
 
-        <table>
-          <thead>
-            <tr>
-              <th class="w-[180px]">时间</th>
-              <th class="w-[120px]">用户</th>
-              <th class="w-[100px]">类型</th>
-              <th class="w-[120px]">操作</th>
-              <th class="w-[120px]">资源</th>
-              <th class="w-[140px]">IP地址</th>
-              <th class="w-[80px]">状态</th>
-              <th class="min-w-[200px]">错误信息</th>
-              <th class="w-[100px]">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="loading">
-              <td colspan="9" class="text-center text-muted-foreground">加载中...</td>
-            </tr>
-            <tr v-else-if="logs.length === 0">
-              <td colspan="9" class="text-center py-8 text-muted-foreground">暂无数据</td>
-            </tr>
-            <tr v-for="item in logs" :key="item.id">
-              <td>{{ formatDate(item.createdAt) }}</td>
-              <td>{{ item.username || '-' }}</td>
-              <td>
+        <Table :columns="[
+          { title: '时间', key: 'createdAt', width: 180 }, { title: '用户', key: 'username', width: 120 },
+          { title: '类型', key: 'type', width: 100 }, { title: '操作', key: 'action', width: 120 },
+          { title: '资源', dataIndex: 'resource', width: 120 }, { title: 'IP地址', dataIndex: 'ip', width: 140 },
+          { title: '状态', key: 'status', width: 80 }, { title: '错误信息', key: 'errorMessage', width: 200 },
+          { title: '操作', key: 'actions', width: 100 }
+        ]" :data-source="logs" :loading="loading" row-key="id" :pagination="false" :scroll="{ x: 1160 }">
+          <template #bodyCell="{ column, record: item }">
+            <template v-if="column.key === 'createdAt'">{{ formatDate(item.createdAt) }}</template>
+            <template v-else-if="column.key === 'username'">{{ item.username || '-' }}</template>
+            <template v-else-if="column.key === 'type'">
                 <Tag :color="getTypeVariant(item.type)" size="sm">
                   {{ getTypeText(item.type) }}
                 </Tag>
-              </td>
-              <td>{{ getActionText(item.action) }}</td>
-              <td>{{ item.resource }}</td>
-              <td>{{ item.ip }}</td>
-              <td>
+            </template>
+            <template v-else-if="column.key === 'action'">{{ getActionText(item.action) }}</template>
+            <template v-else-if="column.key === 'status'">
                 <Tag :color="getStatusVariant(item.status)" size="sm">
                   {{ getStatusText(item.status) }}
                 </Tag>
-              </td>
-              <td class="text-muted-foreground">{{ item.errorMessage || '-' }}</td>
-              <td>
+            </template>
+            <template v-else-if="column.key === 'errorMessage'"><span class="text-muted-foreground">{{ item.errorMessage || '-' }}</span></template>
+            <template v-else-if="column.key === 'actions'">
                 <Button type="link" size="small" @click="handleViewDetail(item)">详情</Button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+            </template>
+          </template>
+        </Table>
 
         <div class="flex items-center justify-between mt-5">
           <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>

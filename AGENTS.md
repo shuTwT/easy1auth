@@ -57,29 +57,20 @@ Vite 将 `/api` 代理到 `http://localhost:18848`，配置见 `frontend/vite.co
 
 - [antdv-next组件库文档](https://antdv-next.com/llms.txt)
 - `@/*` 别名指向 `frontend/src/`，同时配置于 `tsconfig.json` 和 `vite.config.ts`。
-- shadcn-vue 配置文件为 `frontend/components.json`，样式为 `reka-nova`，
   基础色为 `neutral`。
-- UI 组件位于 `frontend/src/components/ui/`，由 shadcn-vue CLI 管理。
 - 自定义共享组件放在 `frontend/src/components/common/`。
 - Pinia Store 使用组合式 API 风格，目前统一放在 `user.ts`。
-- Toast 通知使用 `vue-sonner`，不使用 Element Plus Message。
-- 表单使用 `vee-validate` 和 `zod`，不使用 Element Plus 表单校验。
-- 表格使用 `@tanstack/vue-table`，不使用 Element Plus Table。
 
 ### 前端编码规范
 
 - 不得将error等消息放在页面中，应当使用toast或message显示
 
-### 双配色方案
+### 配色方案
 
-目前存在两套可能不一致的颜色配置：
 
-1. `frontend/src/styles/theme.css`：主色为蓝色 `#0369A1`，侧边栏使用深色渐变。
+`frontend/src/styles/theme.css`：主色为蓝色 `#0369A1`，侧边栏使用深色渐变。
    这是应用实际加载的主题，由 `main.ts` 引入。
-2. `design-system/easy1auth-admin/MASTER.md`：主色为紫色 `#7C3AED`，
-   辅色为橙色 `#F97316`。这是设计规范，可能尚未完整应用。
 
-修改颜色时必须同时检查这两个来源，并明确哪一个是当前需求的事实来源。
 
 ### 路由
 

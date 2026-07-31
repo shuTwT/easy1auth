@@ -2,7 +2,7 @@
 import { ref, onMounted, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
-import { message } from 'antdv-next'
+import { Table, message } from 'antdv-next'
 import { Plus, Search, Copy, Trash2 } from '@lucide/vue'
 import { applicationApi } from '@/api/application'
 import type { Application, CreateApplicationDto, UpdateApplicationDto, ApplicationQueryDto } from '@/types/application'
@@ -387,46 +387,35 @@ onMounted(() => {
           </div>
         </div>
 
-        <table>
-          <thead>
-            <tr>
-              <th class="w-44">应用名称</th>
-              <th class="w-28">应用类型</th>
-              <th class="w-72">Client ID</th>
-              <th class="w-24">状态</th>
-              <th class="w-32">访问令牌有效期</th>
-              <th class="w-32">刷新令牌有效期</th>
-              <th class="w-40">创建时间</th>
-              <th class="w-80">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="loading">
-              <td colspan="8" class="text-center py-8 text-muted-foreground">加载中...</td>
-            </tr>
-            <tr v-else-if="applications.length === 0">
-              <td colspan="8" class="text-center py-8 text-muted-foreground">暂无数据</td>
-            </tr>
-            <tr v-for="row in applications" :key="row.id">
-              <td>{{ row.name }}</td>
-              <td>{{ getTypeText(row.type) }}</td>
-              <td>
+        <Table :columns="[
+          { title: '应用名称', dataIndex: 'name', width: 176 },
+          { title: '应用类型', key: 'type', width: 112 },
+          { title: 'Client ID', key: 'clientId', width: 288 },
+          { title: '状态', key: 'status', width: 96 },
+          { title: '访问令牌有效期', key: 'accessTokenLifetime', width: 128 },
+          { title: '刷新令牌有效期', key: 'refreshTokenLifetime', width: 128 },
+          { title: '创建时间', key: 'createdAt', width: 160 },
+          { title: '操作', key: 'actions', width: 320 }
+        ]" :data-source="applications" :loading="loading" row-key="id" :pagination="false" :scroll="{ x: 1408 }">
+          <template #bodyCell="{ column, record: row }">
+            <template v-if="column.key === 'type'">{{ getTypeText(row.type) }}</template>
+            <template v-else-if="column.key === 'clientId'">
                 <div class="flex items-center gap-2">
                   <span class="font-mono text-xs">{{ row.clientId }}</span>
                   <Button type="link" size="small" class="h-auto p-0" @click="copyToClipboard(row.clientId)">
                     <Copy class="w-4 h-4" />
                   </Button>
                 </div>
-              </td>
-              <td>
+            </template>
+            <template v-else-if="column.key === 'status'">
                 <Tag :color="getStatusVariant(row.status)">
                   {{ getStatusText(row.status) }}
                 </Tag>
-              </td>
-              <td>{{ formatLifetime(row.accessTokenLifetime) }}</td>
-              <td>{{ formatLifetime(row.refreshTokenLifetime) }}</td>
-              <td>{{ new Date(row.createdAt).toLocaleString() }}</td>
-              <td>
+            </template>
+            <template v-else-if="column.key === 'accessTokenLifetime'">{{ formatLifetime(row.accessTokenLifetime) }}</template>
+            <template v-else-if="column.key === 'refreshTokenLifetime'">{{ formatLifetime(row.refreshTokenLifetime) }}</template>
+            <template v-else-if="column.key === 'createdAt'">{{ new Date(row.createdAt).toLocaleString() }}</template>
+            <template v-else-if="column.key === 'actions'">
                 <div class="flex gap-1 flex-wrap">
                   <Button type="link" size="small" class="h-auto p-0" @click="handleDetail(row)">详情</Button>
                   <Button type="link" size="small" class="h-auto p-0" @click="handleEdit(row)">编辑</Button>
@@ -440,10 +429,9 @@ onMounted(() => {
                   </Button>
                   <Button type="link" size="small" class="h-auto p-0 text-destructive" @click="handleDelete(row)">删除</Button>
                 </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+            </template>
+          </template>
+        </Table>
 
         <div class="flex items-center justify-between mt-5">
           <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>

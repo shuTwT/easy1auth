@@ -58,7 +58,8 @@ public class PoolUserService {
 
     @Transactional
     public PoolUserView update(UUID tenant, UUID id, Input in) {
-        entity(tenant, id);
+        var existing = entity(tenant, id);
+        rejectEnterpriseManaged(existing);
         var u = sql.createUpdate(USER).set(USER.updatedAt(), Instant.now()).where(USER.id().eq(id), USER.tenantId().eq(tenant));
         if (in.username() != null) u.set(USER.username(), in.username());
         if (in.email() != null) u.set(USER.email(), in.email().toLowerCase());
@@ -75,6 +76,7 @@ public class PoolUserService {
 
     @Transactional
     public void delete(UUID tenant, UUID id) {
+        rejectEnterpriseManaged(entity(tenant, id));
         int changed = sql.createDelete(USER).where(USER.id().eq(id), USER.tenantId().eq(tenant)).execute();
         if (changed != 1) throw missing();
     }
@@ -83,7 +85,7 @@ public class PoolUserService {
     public PoolUserView status(UUID tenant, UUID id, String status) {
         if (!Set.of("active", "disabled", "locked").contains(status))
             throw new DomainException("USER_STATUS_INVALID", "用户状态无效", 400);
-        entity(tenant, id);
+        rejectEnterpriseManaged(entity(tenant, id));
         sql.createUpdate(USER).set(USER.status(), status).set(USER.updatedAt(), Instant.now()).where(USER.id().eq(id), USER.tenantId().eq(tenant)).execute();
         return get(tenant, id);
     }
@@ -122,6 +124,11 @@ public class PoolUserService {
 
     private DomainException missing() {
         return new DomainException("POOL_USER_NOT_FOUND", "用户不存在", 404);
+    }
+
+    private static void rejectEnterpriseManaged(PoolUserEntity user) {
+        if (user.enterpriseIdentitySourceId() != null)
+            throw new DomainException("ENTERPRISE_IDENTITY_MANAGED", "该用户由企业身份源管理，请在身份源中修改", 409);
     }
 
     private void validate(String u, String e, String n) {

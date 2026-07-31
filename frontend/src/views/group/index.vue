@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive, computed } from 'vue'
-import { message } from 'antdv-next'
+import { Table, message } from 'antdv-next'
 import { Plus, Search, Users, UserCog, Pencil, Trash2 } from '@lucide/vue'
 import { groupApi } from '@/api/group'
 import { userApi } from '@/api/user'
@@ -392,45 +392,27 @@ onMounted(() => {
         </div>
 
         <div v-if="viewMode === 'list'">
-          <table>
-            <thead>
-              <tr>
-                <th class="w-[200px]">用户组名称</th>
-                <th>描述</th>
-                <th class="w-[100px]">类型</th>
-                <th class="w-[150px]">父级用户组</th>
-                <th class="w-[100px]">成员数</th>
-                <th class="w-[100px]">管理员数</th>
-                <th class="w-[100px]">子组数</th>
-                <th class="w-[180px]">创建时间</th>
-                <th class="w-[280px]">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-if="loading">
-                <td colspan="9" class="text-center py-8 text-muted-foreground">
-                  加载中...
-                </td>
-              </tr>
-              <tr v-else-if="groups.length === 0">
-                <td colspan="9" class="text-center py-8 text-muted-foreground">
-                  暂无数据
-                </td>
-              </tr>
-              <tr v-for="row in groups" :key="row.id">
-                <td class="font-medium">{{ row.name }}</td>
-                <td class="text-muted-foreground">{{ row.description || '-' }}</td>
-                <td>
+          <Table :columns="[
+            { title: '用户组名称', key: 'name', width: 200 }, { title: '描述', key: 'description' },
+            { title: '类型', key: 'type', width: 100 }, { title: '父级用户组', key: 'parent', width: 150 },
+            { title: '成员数', key: 'members', width: 100, align: 'center' }, { title: '管理员数', key: 'admins', width: 100, align: 'center' },
+            { title: '子组数', key: 'children', width: 100, align: 'center' }, { title: '创建时间', key: 'createdAt', width: 180 },
+            { title: '操作', key: 'actions', width: 280 }
+          ]" :data-source="groups" :loading="loading" row-key="id" :pagination="false" :scroll="{ x: 1320 }">
+            <template #bodyCell="{ column, record: row }">
+              <template v-if="column.key === 'name'"><span class="font-medium">{{ row.name }}</span></template>
+              <template v-else-if="column.key === 'description'"><span class="text-muted-foreground">{{ row.description || '-' }}</span></template>
+              <template v-else-if="column.key === 'type'">
                   <Tag :color="getTypeVariant(row.type)" class="text-xs">
                     {{ getTypeText(row.type) }}
                   </Tag>
-                </td>
-                <td class="text-muted-foreground">{{ row.parent?.name || '-' }}</td>
-                <td class="text-center">{{ row._count?.members || 0 }}</td>
-                <td class="text-center">{{ row._count?.admins || 0 }}</td>
-                <td class="text-center">{{ row._count?.children || 0 }}</td>
-                <td class="text-muted-foreground">{{ new Date(row.createdAt).toLocaleString() }}</td>
-                <td>
+              </template>
+              <template v-else-if="column.key === 'parent'"><span class="text-muted-foreground">{{ row.parent?.name || '-' }}</span></template>
+              <template v-else-if="column.key === 'members'">{{ row._count?.members || 0 }}</template>
+              <template v-else-if="column.key === 'admins'">{{ row._count?.admins || 0 }}</template>
+              <template v-else-if="column.key === 'children'">{{ row._count?.children || 0 }}</template>
+              <template v-else-if="column.key === 'createdAt'"><span class="text-muted-foreground">{{ new Date(row.createdAt).toLocaleString() }}</span></template>
+              <template v-else-if="column.key === 'actions'">
                   <div class="flex gap-2">
                     <Button size="small"  @click="handleEdit(row)">
                       <Pencil class="w-3 h-3 mr-1" />
@@ -449,10 +431,9 @@ onMounted(() => {
                       删除
                     </Button>
                   </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+              </template>
+            </template>
+          </Table>
 
           <div v-if="total > queryForm.pageSize!" class="flex items-center justify-between mt-4">
             <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
@@ -583,33 +564,7 @@ onMounted(() => {
               </div>
               <div class="pt-4">
                 <div class="max-h-[350px] overflow-y-auto">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>姓名</th>
-                        <th>用户名</th>
-                        <th>邮箱</th>
-                        <th class="w-[80px]">操作</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="member in memberForm.currentMembers" :key="member.id">
-                        <td>{{ member.name }}</td>
-                        <td>{{ member.username }}</td>
-                        <td>{{ member.email }}</td>
-                        <td>
-                          <Button type="link" size="small" class="p-0 h-auto text-destructive" @click="handleRemoveMember(member.id)">
-                            移除
-                          </Button>
-                        </td>
-                      </tr>
-                      <tr v-if="memberForm.currentMembers.length === 0">
-                        <td colspan="4" class="text-center py-4 text-muted-foreground">
-                          暂无成员
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+                  <Table :columns="[{ title: '姓名', dataIndex: 'name' }, { title: '用户名', dataIndex: 'username' }, { title: '邮箱', dataIndex: 'email' }, { title: '操作', key: 'actions', width: 80 }]" :data-source="memberForm.currentMembers" :pagination="false" row-key="id" size="small"><template #bodyCell="{ column, record: member }"><Button v-if="column.key === 'actions'" type="link" size="small" class="p-0 h-auto text-destructive" @click="handleRemoveMember(member.id)">移除</Button></template></Table>
                 </div>
               </div>
             </Card>
@@ -657,33 +612,7 @@ onMounted(() => {
               </div>
               <div class="pt-4">
                 <div class="max-h-[350px] overflow-y-auto">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>姓名</th>
-                        <th>用户名</th>
-                        <th>邮箱</th>
-                        <th class="w-[80px]">操作</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="admin in memberForm.currentAdmins" :key="admin.id">
-                        <td>{{ admin.name }}</td>
-                        <td>{{ admin.username }}</td>
-                        <td>{{ admin.email }}</td>
-                        <td>
-                          <Button type="link" size="small" class="p-0 h-auto text-destructive" @click="handleRemoveAdmin(admin.id)">
-                            移除
-                          </Button>
-                        </td>
-                      </tr>
-                      <tr v-if="memberForm.currentAdmins.length === 0">
-                        <td colspan="4" class="text-center py-4 text-muted-foreground">
-                          暂无管理员
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+                  <Table :columns="[{ title: '姓名', dataIndex: 'name' }, { title: '用户名', dataIndex: 'username' }, { title: '邮箱', dataIndex: 'email' }, { title: '操作', key: 'actions', width: 80 }]" :data-source="memberForm.currentAdmins" :pagination="false" row-key="id" size="small"><template #bodyCell="{ column, record: admin }"><Button v-if="column.key === 'actions'" type="link" size="small" class="p-0 h-auto text-destructive" @click="handleRemoveAdmin(admin.id)">移除</Button></template></Table>
                 </div>
               </div>
             </Card>

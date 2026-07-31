@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue'
-import { message } from 'antdv-next'
+import { Table, message } from 'antdv-next'
 import { Plus, Upload, Download, Search, RefreshCw } from '@lucide/vue'
 import { userApi } from '@/api/user'
 import { roleApi } from '@/api/role'
@@ -368,28 +368,14 @@ const toggleRole = (roleId: string) => {
 
     <Card>
       <div class="pt-6">
-        <table>
-          <thead>
-            <tr>
-              <th class="w-40">用户名</th>
-              <th class="w-48">邮箱</th>
-              <th class="w-32">手机号</th>
-              <th class="w-28">部门</th>
-              <th class="w-24">状态</th>
-              <th class="w-40">最后登录</th>
-              <th class="w-40">创建时间</th>
-              <th class="w-64">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="loading">
-              <td colspan="8" class="text-center py-8 text-muted-foreground">加载中...</td>
-            </tr>
-            <tr v-else-if="users.length === 0">
-              <td colspan="8" class="text-center py-8 text-muted-foreground">暂无数据</td>
-            </tr>
-            <tr v-for="row in users" :key="row.id">
-              <td>
+        <Table :columns="[
+          { title: '用户名', key: 'username', width: 160 }, { title: '邮箱', dataIndex: 'email', width: 192 },
+          { title: '手机号', key: 'phone', width: 128 }, { title: '部门', key: 'department', width: 112 },
+          { title: '状态', key: 'status', width: 96 }, { title: '最后登录', key: 'lastLoginAt', width: 160 },
+          { title: '创建时间', key: 'createdAt', width: 160 }, { title: '操作', key: 'actions', width: 256 }
+        ]" :data-source="users" :loading="loading" row-key="id" :pagination="false" :scroll="{ x: 1264 }">
+          <template #bodyCell="{ column, record: row }">
+            <template v-if="column.key === 'username'">
                 <div class="flex items-center gap-3">
                   <Avatar class="size-8 bg-gradient-to-br from-blue-500 to-purple-600">
                     <span class="bg-transparent text-white text-sm font-semibold">
@@ -401,18 +387,17 @@ const toggleRole = (roleId: string) => {
                     <span class="text-xs text-muted-foreground">{{ row.name }}</span>
                   </div>
                 </div>
-              </td>
-              <td>{{ row.email }}</td>
-              <td>{{ row.phone || '-' }}</td>
-              <td>{{ row.department || '-' }}</td>
-              <td>
+            </template>
+            <template v-else-if="column.key === 'phone'">{{ row.phone || '-' }}</template>
+            <template v-else-if="column.key === 'department'">{{ row.department || '-' }}</template>
+            <template v-else-if="column.key === 'status'">
                 <Tag :color="getStatusVariant(row.status)">
                   {{ getStatusText(row.status) }}
                 </Tag>
-              </td>
-              <td>{{ row.lastLoginAt ? new Date(row.lastLoginAt).toLocaleString() : '-' }}</td>
-              <td>{{ new Date(row.createdAt).toLocaleString() }}</td>
-              <td>
+            </template>
+            <template v-else-if="column.key === 'lastLoginAt'">{{ row.lastLoginAt ? new Date(row.lastLoginAt).toLocaleString() : '-' }}</template>
+            <template v-else-if="column.key === 'createdAt'">{{ new Date(row.createdAt).toLocaleString() }}</template>
+            <template v-else-if="column.key === 'actions'">
                 <div class="flex gap-1 flex-wrap">
                   <Button type="link" size="small" class="h-auto p-0" @click="handleEdit(row)">编辑</Button>
                   <Button type="link" size="small" class="h-auto p-0" @click="handleAssignRole(row)">分配角色</Button>
@@ -427,10 +412,9 @@ const toggleRole = (roleId: string) => {
                   </Button>
                   <Button type="link" size="small" class="h-auto p-0 text-destructive" @click="handleDelete(row)">删除</Button>
                 </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+            </template>
+          </template>
+        </Table>
 
         <div class="flex items-center justify-between mt-4 pt-4 border-t">
           <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
@@ -637,42 +621,12 @@ const toggleRole = (roleId: string) => {
 
             <div v-if="importResult.errors && importResult.errors.length > 0" class="mt-4">
               <h4 class="font-semibold mb-2">错误详情</h4>
-              <table>
-                <thead>
-                  <tr>
-                    <th class="w-20">行号</th>
-                    <th class="w-36">用户名</th>
-                    <th>错误信息</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(err, idx) in importResult.errors" :key="idx">
-                    <td>{{ err.row }}</td>
-                    <td>{{ err.username }}</td>
-                    <td>{{ err.error }}</td>
-                  </tr>
-                </tbody>
-              </table>
+              <Table :columns="[{ title: '行号', dataIndex: 'row', width: 80 }, { title: '用户名', dataIndex: 'username', width: 144 }, { title: '错误信息', dataIndex: 'error' }]" :data-source="importResult.errors" :pagination="false" row-key="row" size="small" />
             </div>
 
             <div v-if="importResult.importedUsers && importResult.importedUsers.length > 0" class="mt-4">
               <h4 class="font-semibold mb-2">成功导入的用户</h4>
-              <table>
-                <thead>
-                  <tr>
-                    <th class="w-36">用户名</th>
-                    <th class="w-48">邮箱</th>
-                    <th>姓名</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(user, idx) in importResult.importedUsers" :key="idx">
-                    <td>{{ user.username }}</td>
-                    <td>{{ user.email }}</td>
-                    <td>{{ user.name }}</td>
-                  </tr>
-                </tbody>
-              </table>
+              <Table :columns="[{ title: '用户名', dataIndex: 'username', width: 144 }, { title: '邮箱', dataIndex: 'email', width: 192 }, { title: '姓名', dataIndex: 'name' }]" :data-source="importResult.importedUsers" :pagination="false" row-key="username" size="small" />
             </div>
           </div>
         </div>

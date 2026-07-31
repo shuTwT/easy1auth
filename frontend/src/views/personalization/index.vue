@@ -24,25 +24,13 @@
             </div>
 
             <div class="rounded-md border mb-6">
-              <table>
-                <thead>
-                  <tr>
-                    <th class="min-w-[200px]">域名</th>
-                    <th class="w-[120px]">SSL状态</th>
-                    <th class="w-[100px]">验证方式</th>
-                    <th class="w-[180px]">创建时间</th>
-                    <th class="w-[200px] text-right">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-if="domainsLoading">
-                    <td colspan="5" class="text-center py-8 text-muted-foreground">加载中...</td>
-                  </tr>
-                  <tr v-else-if="domains.length === 0">
-                    <td colspan="5" class="text-center py-8 text-muted-foreground">暂无数据</td>
-                  </tr>
-                  <tr v-for="domain in domains" :key="domain.id">
-                    <td>
+              <Table :columns="[
+                { title: '域名', key: 'domain', width: 200 }, { title: 'SSL状态', key: 'sslStatus', width: 120 },
+                { title: '验证方式', key: 'verificationMethod', width: 100 }, { title: '创建时间', key: 'createdAt', width: 180 },
+                { title: '操作', key: 'actions', width: 200, align: 'right' }
+              ]" :data-source="domains" :loading="domainsLoading" row-key="id" :pagination="false" :scroll="{ x: 800 }">
+                <template #bodyCell="{ column, record: domain }">
+                  <template v-if="column.key === 'domain'">
                       <div class="flex items-center gap-2">
                         <span class="font-medium">{{ domain.domain }}</span>
                         <Tag v-if="domain.status === 'verified'" color="processing" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">已验证</Tag>
@@ -50,23 +38,22 @@
                         <Tag v-else-if="domain.status === 'verifying'" >验证中</Tag>
                         <Tag v-else color="error">验证失败</Tag>
                       </div>
-                    </td>
-                    <td>
+                  </template>
+                  <template v-else-if="column.key === 'sslStatus'">
                       <Tag v-if="domain.sslStatus === 'active'" color="processing" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">已配置</Tag>
                       <Tag v-else >未配置</Tag>
-                    </td>
-                    <td>{{ domain.verificationMethod === 'dns' ? 'DNS记录' : '文件验证' }}</td>
-                    <td>{{ formatDate(domain.createdAt) }}</td>
-                    <td class="text-right">
+                  </template>
+                  <template v-else-if="column.key === 'verificationMethod'">{{ domain.verificationMethod === 'dns' ? 'DNS记录' : '文件验证' }}</template>
+                  <template v-else-if="column.key === 'createdAt'">{{ formatDate(domain.createdAt) }}</template>
+                  <template v-else-if="column.key === 'actions'">
                       <div class="flex justify-end gap-2">
                         <Button v-if="domain.status !== 'verified'" type="link" size="small" class="h-auto p-0" disabled title="阶段 6 仅登记域名">验证未启用</Button>
                         <Button v-if="domain.status === 'verified'" type="link" size="small" class="h-auto p-0" disabled title="TLS 由外部网关管理">TLS由网关管理</Button>
                         <Button type="link" size="small" class="h-auto p-0 text-destructive" @click="handleDeleteDomain(domain)">删除</Button>
                       </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+                  </template>
+                </template>
+              </Table>
             </div>
 
             <Alert class="bg-muted border">
@@ -242,89 +229,56 @@
 
               <div v-show="templateType === 'email'">
                 <div class="rounded-md border">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th class="w-[150px]">模板名称</th>
-                        <th class="w-[150px]">模板代码</th>
-                        <th class="min-w-[200px]">邮件主题</th>
-                        <th class="w-[80px]">默认</th>
-                        <th class="w-[80px]">状态</th>
-                        <th class="w-[150px] text-right">操作</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-if="templatesLoading">
-                        <td colspan="6" class="text-center py-8 text-muted-foreground">加载中...</td>
-                      </tr>
-                      <tr v-else-if="emailTemplates.length === 0">
-                        <td colspan="6" class="text-center py-8 text-muted-foreground">暂无数据</td>
-                      </tr>
-                      <tr v-for="template in emailTemplates" :key="template.id">
-                        <td>{{ template.name }}</td>
-                        <td>{{ template.code }}</td>
-                        <td>{{ template.subject }}</td>
-                        <td>
+                  <Table :columns="[
+                    { title: '模板名称', dataIndex: 'name', width: 150 }, { title: '模板代码', dataIndex: 'code', width: 150 },
+                    { title: '邮件主题', dataIndex: 'subject', width: 200 }, { title: '默认', key: 'isDefault', width: 80 },
+                    { title: '状态', key: 'status', width: 80 }, { title: '操作', key: 'actions', width: 150, align: 'right' }
+                  ]" :data-source="emailTemplates" :loading="templatesLoading" row-key="id" :pagination="false" :scroll="{ x: 810 }">
+                    <template #bodyCell="{ column, record: template }">
+                      <template v-if="column.key === 'isDefault'">
                           <Tag v-if="template.isDefault" color="processing" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">是</Tag>
                           <Tag v-else >否</Tag>
-                        </td>
-                        <td>
+                      </template>
+                      <template v-else-if="column.key === 'status'">
                           <Tag v-if="template.status === 'active'" color="processing" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">启用</Tag>
                           <Tag v-else >禁用</Tag>
-                        </td>
-                        <td class="text-right">
+                      </template>
+                      <template v-else-if="column.key === 'actions'">
                           <div class="flex justify-end gap-2">
                             <Button type="link" size="small" class="h-auto p-0" @click="handleEditTemplate(template)">编辑</Button>
                             <Button type="link" size="small" class="h-auto p-0 text-destructive" @click="handleDeleteTemplate(template)">删除</Button>
                           </div>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+                      </template>
+                    </template>
+                  </Table>
                 </div>
               </div>
 
               <div v-show="templateType === 'sms'">
                 <div class="rounded-md border">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th class="w-[150px]">模板名称</th>
-                        <th class="w-[150px]">模板代码</th>
-                        <th class="min-w-[300px]">模板内容</th>
-                        <th class="w-[80px]">默认</th>
-                        <th class="w-[80px]">状态</th>
-                        <th class="w-[150px] text-right">操作</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-if="templatesLoading">
-                        <td colspan="6" class="text-center py-8 text-muted-foreground">加载中...</td>
-                      </tr>
-                      <tr v-else-if="smsTemplates.length === 0">
-                        <td colspan="6" class="text-center py-8 text-muted-foreground">暂无数据</td>
-                      </tr>
-                      <tr v-for="template in smsTemplates" :key="template.id">
-                        <td>{{ template.name }}</td>
-                        <td>{{ template.code }}</td>
-                        <td class="max-w-[300px] truncate">{{ template.content }}</td>
-                        <td>
+                  <Table :columns="[
+                    { title: '模板名称', dataIndex: 'name', width: 150 }, { title: '模板代码', dataIndex: 'code', width: 150 },
+                    { title: '模板内容', key: 'content', width: 300 }, { title: '默认', key: 'isDefault', width: 80 },
+                    { title: '状态', key: 'status', width: 80 }, { title: '操作', key: 'actions', width: 150, align: 'right' }
+                  ]" :data-source="smsTemplates" :loading="templatesLoading" row-key="id" :pagination="false" :scroll="{ x: 910 }">
+                    <template #bodyCell="{ column, record: template }">
+                      <template v-if="column.key === 'content'"><span class="block truncate">{{ template.content }}</span></template>
+                      <template v-else-if="column.key === 'isDefault'">
                           <Tag v-if="template.isDefault" color="processing" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">是</Tag>
                           <Tag v-else >否</Tag>
-                        </td>
-                        <td>
+                      </template>
+                      <template v-else-if="column.key === 'status'">
                           <Tag v-if="template.status === 'active'" color="processing" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">启用</Tag>
                           <Tag v-else >禁用</Tag>
-                        </td>
-                        <td class="text-right">
+                      </template>
+                      <template v-else-if="column.key === 'actions'">
                           <div class="flex justify-end gap-2">
                             <Button type="link" size="small" class="h-auto p-0" @click="handleEditTemplate(template)">编辑</Button>
                             <Button type="link" size="small" class="h-auto p-0 text-destructive" @click="handleDeleteTemplate(template)">删除</Button>
                           </div>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+                      </template>
+                    </template>
+                  </Table>
                 </div>
               </div>
             </div>
@@ -491,7 +445,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, reactive } from 'vue'
-import { message } from 'antdv-next'
+import { Table, message } from 'antdv-next'
 import { Plus, Check, Info } from '@lucide/vue'
 
 type UploadFile = { type: string; size: number }

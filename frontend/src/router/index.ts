@@ -81,6 +81,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '社会化身份源', requiresAuth: true }
       },
       {
+        path: 'enterprise-identity-source',
+        name: 'EnterpriseIdentitySource',
+        component: () => import('@/views/enterpriseIdentitySource/index.vue'),
+        meta: { title: '企业身份源', requiresAuth: true }
+      },
+      {
         path: 'brand-settings',
         name: 'BrandSettings',
         component: () => import('@/views/brandSettings/index.vue'),

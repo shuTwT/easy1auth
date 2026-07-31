@@ -20,6 +20,12 @@ public interface UserGroupEntity extends BaseEntity, BaseTenantEntity {
     @Column(name = "parent_id")
     @Nullable UUID parentId();
 
+    @Column(name = "enterprise_identity_source_id")
+    @Nullable UUID enterpriseIdentitySourceId();
+
+    @Column(name = "enterprise_identity_external_id")
+    @Nullable String enterpriseIdentityExternalId();
+
     @Column(name = "created_at")
     Instant createdAt();
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { message } from 'antdv-next'
+import { Table, message } from 'antdv-next'
 import {
   Search,
   Plus,
@@ -441,56 +441,39 @@ onMounted(() => {
 
       <div class="pt-4">
         <div v-if="viewMode === 'list'">
-          <table>
-            <thead>
-              <tr>
-                <th class="w-[200px]">角色名称</th>
-                <th class="w-[180px]">角色编码</th>
-                <th class="min-w-[200px]">描述</th>
-                <th class="w-[140px]">数据范围</th>
-                <th class="w-[100px]">用户数</th>
-                <th class="w-[180px]">创建时间</th>
-                <th class="w-[180px]">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-if="loading">
-                <td colspan="7" class="text-center py-8 text-muted-foreground">
-                  加载中...
-                </td>
-              </tr>
-              <tr v-else-if="roles.length === 0">
-                <td colspan="7" class="text-center py-8 text-muted-foreground">
-                  暂无数据
-                </td>
-              </tr>
-              <tr v-for="row in roles" :key="row.id">
-                <td>
+          <Table :columns="[
+            { title: '角色名称', key: 'name', width: 200 }, { title: '角色编码', key: 'code', width: 180 },
+            { title: '描述', key: 'description', width: 200 }, { title: '数据范围', key: 'dataScope', width: 140 },
+            { title: '用户数', key: 'userCount', width: 100, align: 'center' }, { title: '创建时间', key: 'createdAt', width: 180 },
+            { title: '操作', key: 'actions', width: 180 }
+          ]" :data-source="roles" :loading="loading" row-key="id" :pagination="false" :scroll="{ x: 1180 }">
+            <template #bodyCell="{ column, record: row }">
+              <template v-if="column.key === 'name'">
                   <div class="flex items-center gap-2">
                     <Tag :color="getTypeVariant(row.type)" class="text-xs">
                       {{ row.type === 'system' ? '系统' : '自定义' }}
                     </Tag>
                     <span class="font-medium text-foreground">{{ row.name }}</span>
                   </div>
-                </td>
-                <td>
+              </template>
+              <template v-else-if="column.key === 'code'">
                   <code class="bg-muted px-2 py-0.5 rounded text-xs text-muted-foreground font-mono">
                     {{ row.code }}
                   </code>
-                </td>
-                <td class="text-muted-foreground">{{ row.description || '-' }}</td>
-                <td>
+              </template>
+              <template v-else-if="column.key === 'description'"><span class="text-muted-foreground">{{ row.description || '-' }}</span></template>
+              <template v-else-if="column.key === 'dataScope'">
                   <Tag  class="text-xs">
                     {{ getDataScopeLabel(row.dataScope) }}
                   </Tag>
-                </td>
-                <td class="text-center">
+              </template>
+              <template v-else-if="column.key === 'userCount'">
                   <Button type="link" size="small" class="p-0 h-auto font-semibold" @click="handleViewUsers(row)">
                     {{ row.userCount || 0 }}
                   </Button>
-                </td>
-                <td class="text-muted-foreground">{{ formatDate(row.createdAt) }}</td>
-                <td>
+              </template>
+              <template v-else-if="column.key === 'createdAt'"><span class="text-muted-foreground">{{ formatDate(row.createdAt) }}</span></template>
+              <template v-else-if="column.key === 'actions'">
                   <div class="flex gap-2">
                     <Button type="link" size="small" class="p-0 h-auto" @click="handleViewUsers(row)">
                       查看用户
@@ -514,10 +497,9 @@ onMounted(() => {
                       删除
                     </Button>
                   </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+              </template>
+            </template>
+          </Table>
 
           <div class="flex items-center justify-between mt-5">
             <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
@@ -671,31 +653,14 @@ onMounted(() => {
               分配用户
             </Button>
           </div>
-          <table>
-            <thead>
-              <tr>
-                <th class="w-[150px]">用户名</th>
-                <th class="w-[120px]">姓名</th>
-                <th class="w-[200px]">邮箱</th>
-                <th class="w-[150px]">部门</th>
-                <th class="w-[150px]">岗位</th>
-                <th class="w-[100px]">状态</th>
-                <th class="w-[100px]">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-if="usersLoading">
-                <td colspan="7" class="text-center py-8 text-muted-foreground">
-                  加载中...
-                </td>
-              </tr>
-              <tr v-else-if="roleUsers.length === 0">
-                <td colspan="7" class="text-center py-8 text-muted-foreground">
-                  暂无数据
-                </td>
-              </tr>
-              <tr v-for="row in roleUsers" :key="row.id">
-                <td>
+          <Table :columns="[
+            { title: '用户名', key: 'username', width: 150 }, { title: '姓名', dataIndex: 'name', width: 120 },
+            { title: '邮箱', dataIndex: 'email', width: 200 }, { title: '部门', dataIndex: 'department', width: 150 },
+            { title: '岗位', dataIndex: 'position', width: 150 }, { title: '状态', key: 'status', width: 100 },
+            { title: '操作', key: 'actions', width: 100 }
+          ]" :data-source="roleUsers" :loading="usersLoading" row-key="id" :pagination="false" :scroll="{ x: 970 }">
+            <template #bodyCell="{ column, record: row }">
+              <template v-if="column.key === 'username'">
                   <div class="flex items-center gap-2">
                     <Avatar class="w-7 h-7">
                       <span class="bg-gradient-to-br from-primary to-primary/60 text-white text-xs font-semibold">
@@ -704,24 +669,19 @@ onMounted(() => {
                     </Avatar>
                     <span>{{ row.username }}</span>
                   </div>
-                </td>
-                <td>{{ row.name }}</td>
-                <td>{{ row.email }}</td>
-                <td>{{ row.department }}</td>
-                <td>{{ row.position }}</td>
-                <td>
+              </template>
+              <template v-else-if="column.key === 'status'">
                   <Tag :color="row.status === 'active' ? 'default' : 'destructive'" class="text-xs">
                     {{ row.status === 'active' ? '正常' : '禁用' }}
                   </Tag>
-                </td>
-                <td>
+              </template>
+              <template v-else-if="column.key === 'actions'">
                   <Button type="link" size="small" class="p-0 h-auto text-destructive" @click="handleRemoveUser(row)">
                     移除
                   </Button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+              </template>
+            </template>
+          </Table>
         </div>
       </div>
     </Modal>

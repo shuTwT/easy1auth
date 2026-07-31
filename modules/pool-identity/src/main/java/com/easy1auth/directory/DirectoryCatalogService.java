@@ -61,6 +61,7 @@ public class DirectoryCatalogService {
     @Transactional
     public GroupView updateGroup(UUID tenant, UUID id, GroupInput in) {
         var old = groupEntity(tenant, id);
+        rejectEnterpriseManaged(old);
         String name = in.name() == null ? old.name() : in.name();
         String type = in.type() == null ? old.type() : in.type();
         validateGroup(name, type);
@@ -75,7 +76,7 @@ public class DirectoryCatalogService {
 
     @Transactional
     public void deleteGroup(UUID tenant, UUID id) {
-        groupEntity(tenant, id);
+        rejectEnterpriseManaged(groupEntity(tenant, id));
         if (sql.createQuery(GROUP).where(GROUP.tenantId().eq(tenant), GROUP.parentId().eq(id)).select(GROUP.id()).exists())
             throw new DomainException("GROUP_HAS_CHILDREN", "用户组下仍有子组，不能删除", 409);
         sql.createDelete(GROUP).where(GROUP.id().eq(id), GROUP.tenantId().eq(tenant)).execute();
@@ -205,7 +206,7 @@ public class DirectoryCatalogService {
     }
 
     private void mutateGroupUsers(UUID tenant, UUID groupId, Collection<UUID> userIds, boolean admins, boolean add) {
-        groupEntity(tenant, groupId);
+        rejectEnterpriseManaged(groupEntity(tenant, groupId));
         userIds.forEach(id -> userEntity(tenant, id));
         for (UUID userId : userIds) {
             if (admins) {
@@ -299,6 +300,11 @@ public class DirectoryCatalogService {
 
     private DomainException missing(String type) {
         return new DomainException("DIRECTORY_ITEM_NOT_FOUND", type + "不存在", 404);
+    }
+
+    private static void rejectEnterpriseManaged(UserGroupEntity group) {
+        if (group.enterpriseIdentitySourceId() != null)
+            throw new DomainException("ENTERPRISE_IDENTITY_MANAGED", "该部门由企业身份源管理，请在身份源中修改", 409);
     }
 
     private static long countType(List<UserGroupEntity> groups, String type) {

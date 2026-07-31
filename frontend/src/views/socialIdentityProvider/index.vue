@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { message } from 'antdv-next'
+import { Table, message } from 'antdv-next'
 import { Link, CheckCircle, XCircle, Grid3X3, Plus, Search, RefreshCw } from '@lucide/vue'
 import { socialIdentityProviderApi } from '@/api/socialIdentityProvider'
 import type {
@@ -357,40 +357,25 @@ onMounted(() => {
         </div>
       </div>
       <div>
-        <table>
-          <thead>
-            <tr>
-              <th class="w-48">名称</th>
-              <th class="w-36">类型</th>
-              <th class="w-64">Client ID</th>
-              <th class="w-24">状态</th>
-              <th class="w-48">Scope</th>
-              <th class="w-40">创建时间</th>
-              <th class="w-60">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="loading">
-              <td colspan="7" class="text-center py-8 text-muted-foreground">加载中...</td>
-            </tr>
-            <tr v-else-if="providers.length === 0">
-              <td colspan="7" class="text-center py-8 text-muted-foreground">暂无数据</td>
-            </tr>
-            <tr v-for="row in providers" :key="row.id">
-              <td>{{ row.name }}</td>
-              <td>
+        <Table :columns="[
+          { title: '名称', dataIndex: 'name', width: 192 }, { title: '类型', key: 'type', width: 144 },
+          { title: 'Client ID', dataIndex: 'clientId', width: 256 }, { title: '状态', key: 'status', width: 96 },
+          { title: 'Scope', key: 'scope', width: 192 }, { title: '创建时间', key: 'createdAt', width: 160 },
+          { title: '操作', key: 'actions', width: 240 }
+        ]" :data-source="providers" :loading="loading" row-key="id" :pagination="false" :scroll="{ x: 1280 }">
+          <template #bodyCell="{ column, record: row }">
+            <template v-if="column.key === 'type'">
                 <div class="flex items-center gap-2">
                   <Link :style="{ color: PROVIDER_CONFIGS[row.type as SocialProviderType]?.color }" class="w-4 h-4" />
                   <span>{{ PROVIDER_CONFIGS[row.type as SocialProviderType]?.name || row.type }}</span>
                 </div>
-              </td>
-              <td>{{ row.clientId }}</td>
-              <td>
+            </template>
+            <template v-else-if="column.key === 'status'">
                 <Tag :color="row.status === 'active' ? 'default' : 'destructive'">
                   {{ row.status === 'active' ? '已启用' : '已禁用' }}
                 </Tag>
-              </td>
-              <td>
+            </template>
+            <template v-else-if="column.key === 'scope'">
                 <div class="flex flex-wrap gap-1">
                   <Tag v-for="scope in row.scope.slice(0, 2)" :key="scope" color="blue" class="text-xs">
                     {{ scope }}
@@ -399,9 +384,9 @@ onMounted(() => {
                     +{{ row.scope.length - 2 }}
                   </Tag>
                 </div>
-              </td>
-              <td>{{ formatDate(row.createdAt) }}</td>
-              <td>
+            </template>
+            <template v-else-if="column.key === 'createdAt'">{{ formatDate(row.createdAt) }}</template>
+            <template v-else-if="column.key === 'actions'">
                 <div class="flex gap-1 flex-wrap">
                   <Button type="link" size="small" class="h-auto p-0" @click="handleEdit(row)">编辑</Button>
                   <Button
@@ -415,10 +400,9 @@ onMounted(() => {
                   <Button type="link" size="small" class="h-auto p-0" @click="handleViewGuide(row)">配置指南</Button>
                   <Button type="link" size="small" class="h-auto p-0 text-destructive" @click="handleDelete(row)">删除</Button>
                 </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+            </template>
+          </template>
+        </Table>
 
         <div class="flex items-center justify-between mt-5">
           <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
