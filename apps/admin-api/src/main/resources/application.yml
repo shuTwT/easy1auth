@@ -10,6 +10,8 @@ spring:
     password: ${DATABASE_PASSWORD:easy1auth}
   flyway.enabled: false
   lifecycle.timeout-per-shutdown-phase: 20s
+jimmer:
+  dialect: org.babyfish.jimmer.sql.dialect.PostgresDialect
 management.endpoints.web.exposure.include: health,info
 management.endpoint.health:
   probes.enabled: true

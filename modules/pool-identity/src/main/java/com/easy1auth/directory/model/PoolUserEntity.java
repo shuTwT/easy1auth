@@ -13,7 +13,7 @@ import java.util.*;
 public interface PoolUserEntity extends BaseEntity, BaseTenantEntity {
     String username();
 
-    String email();
+    @Nullable String email();
 
     @Nullable String phone();
 

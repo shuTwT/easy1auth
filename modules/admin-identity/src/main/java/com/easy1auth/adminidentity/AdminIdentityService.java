@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.security.SecureRandom;
 import java.time.*;
 import java.util.Base64;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -110,6 +111,45 @@ public class AdminIdentityService implements ActiveAdminAccountLocker {
     }
 
     @Transactional
+    public AdminAccount updateOwnProfile(UUID id, String username, String phone) {
+        var account = account(id);
+        var identity = AdminIdentityNormalizer.normalize(username, account.email());
+        validateProfile(identity.username(), identity.email(), phone);
+        String normalizedPhone = phone == null || phone.isBlank() ? null : phone.strip();
+        try {
+            return repository.updateOwnProfile(id, identity.username(), normalizedPhone);
+        } catch (DuplicateKeyException exception) {
+            throw adminExists();
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<AdminAccount> activeAccountByEmail(String email) {
+        String normalized = validatedEmail(email);
+        return repository.findActiveByEmail(normalized);
+    }
+
+    @Transactional(readOnly = true)
+    public String prepareOwnEmailChange(UUID id, String email) {
+        var account = account(id);
+        String normalized = validatedEmail(email);
+        if (account.email().equalsIgnoreCase(normalized))
+            throw new DomainException("EMAIL_UNCHANGED", "新邮箱不能与当前邮箱相同", 400);
+        if (repository.emailExistsForOtherAccount(id, normalized)) throw adminExists();
+        return normalized;
+    }
+
+    @Transactional
+    public AdminAccount changeOwnEmail(UUID id, String email) {
+        String normalized = prepareOwnEmailChange(id, email);
+        try {
+            return repository.changeOwnEmail(id, normalized);
+        } catch (DuplicateKeyException exception) {
+            throw adminExists();
+        }
+    }
+
+    @Transactional
     public AdminAccount updateStatus(UUID actor, UUID id, String status) {
         if (actor.equals(id)) throw new DomainException("SELF_STATUS_CHANGE", "不能修改自己的账号状态", 409);
         if (!java.util.Set.of("active", "disabled").contains(status))
@@ -180,6 +220,7 @@ public class AdminIdentityService implements ActiveAdminAccountLocker {
     @Transactional
     public AuthenticatedAdmin completeMfa(UUID id, Duration ttl, String userAgent, String ip) {
         var account = account(id);
+        repository.recordLogin(id);
         return new AuthenticatedAdmin(account, issueRefresh(account, ttl, userAgent, ip).token());
     }
 
@@ -201,11 +242,24 @@ public class AdminIdentityService implements ActiveAdminAccountLocker {
     }
 
     private static void validateCredentials(String username, String email, String password) {
+        validateProfile(username, email, null);
+        validatePassword(password);
+    }
+
+    private static void validateProfile(String username, String email, String phone) {
         if (username == null || username.isBlank() || username.length() > 100)
             throw new DomainException("USERNAME_INVALID", "用户名不能为空且不能超过100字符", 400);
         if (email == null || !email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$") || email.length() > 320)
             throw new DomainException("EMAIL_INVALID", "邮箱格式不正确", 400);
-        validatePassword(password);
+        if (phone != null && !phone.isBlank() && (phone.strip().length() > 32 || !phone.strip().matches("^\\+?[0-9][0-9 -]{5,31}$")))
+            throw new DomainException("PHONE_INVALID", "手机号格式不正确", 400);
+    }
+
+    private static String validatedEmail(String email) {
+        String normalized = AdminIdentityNormalizer.normalizeEmail(email);
+        if (normalized == null || !normalized.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$") || normalized.length() > 320)
+            throw new DomainException("EMAIL_INVALID", "邮箱格式不正确", 400);
+        return normalized;
     }
 
     private static void validatePassword(String password) {

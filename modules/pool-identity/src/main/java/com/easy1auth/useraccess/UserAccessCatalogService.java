@@ -12,6 +12,7 @@ import org.babyfish.jimmer.sql.JSqlClient;
 import org.babyfish.jimmer.sql.ast.LikeMode;
 import org.babyfish.jimmer.sql.ast.Predicate;
 import org.babyfish.jimmer.sql.ast.mutation.SaveMode;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +26,7 @@ public class UserAccessCatalogService {
     private static final UserRoleAssignmentEntityTable ASSIGNMENT = UserRoleAssignmentEntityTable.$;
     private static final PoolUserEntityTable USER = PoolUserEntityTable.$;
     private final JSqlClient sql;
+    private final JdbcClient db;
     private static final List<PermissionSeed> PRESETS = List.of(
             new PermissionSeed("user:read", "查看用户", "operation", "user", "read"), new PermissionSeed("user:create", "创建用户", "operation", "user", "create"), new PermissionSeed("user:update", "编辑用户", "operation", "user", "update"), new PermissionSeed("user:delete", "删除用户", "operation", "user", "delete"),
             new PermissionSeed("group:read", "查看用户组", "operation", "group", "read"), new PermissionSeed("group:create", "创建用户组", "operation", "group", "create"), new PermissionSeed("group:update", "编辑用户组", "operation", "group", "update"), new PermissionSeed("group:delete", "删除用户组", "operation", "group", "delete"),
@@ -34,8 +36,9 @@ public class UserAccessCatalogService {
             new PermissionSeed("data:all", "全部数据", "data", "data", "all"), new PermissionSeed("data:department", "本部门数据", "data", "data", "department"), new PermissionSeed("data:department-sub", "本部门及下级数据", "data", "data", "department_and_sub"), new PermissionSeed("data:self", "仅本人数据", "data", "data", "self"),
             new PermissionSeed("menu:user", "用户管理", "menu", "menu", "user"), new PermissionSeed("menu:group", "用户组管理", "menu", "menu", "group"), new PermissionSeed("menu:position", "岗位管理", "menu", "menu", "position"), new PermissionSeed("menu:role", "角色管理", "menu", "menu", "role"), new PermissionSeed("menu:permission", "权限管理", "menu", "menu", "permission"));
 
-    public UserAccessCatalogService(JSqlClient sql) {
+    public UserAccessCatalogService(JSqlClient sql, JdbcClient db) {
         this.sql = sql;
+        this.db = db;
     }
 
     @Transactional(readOnly = true)
@@ -56,7 +59,7 @@ public class UserAccessCatalogService {
     @Transactional
     public RoleView createRole(UUID tenant, RoleInput in) {
         if ("system".equals(in.type())) {
-            throw new DomainException("SYSTEM_ROLE_RESERVED", "系统角色只能由系统初始化", 403);
+            throw new DomainException("SYSTEM_ROLE_RESERVED", "内置角色只能由系统初始化", 403);
         }
         validateRole(in.name(), in.code(), in.dataScope());
         validateRoleParent(tenant, null, in.parentId());
@@ -72,7 +75,7 @@ public class UserAccessCatalogService {
     @Transactional
     public RoleView updateRole(UUID tenant, UUID id, RoleInput in) {
         var old = roleEntity(tenant, id);
-        if ("system".equals(old.type())) throw new DomainException("SYSTEM_ROLE_IMMUTABLE", "系统角色不能修改", 403);
+        if ("system".equals(old.type())) throw new DomainException("SYSTEM_ROLE_IMMUTABLE", "内置角色不能修改", 403);
         String name = in.name() == null ? old.name() : in.name(), scope = in.dataScope() == null ? old.dataScope() : in.dataScope();
         validateRole(name, old.code(), scope);
         validateRoleParent(tenant, id, in.parentId());
@@ -87,7 +90,7 @@ public class UserAccessCatalogService {
     @Transactional
     public void deleteRole(UUID tenant, UUID id) {
         var role = roleEntity(tenant, id);
-        if ("system".equals(role.type())) throw new DomainException("SYSTEM_ROLE_IMMUTABLE", "系统角色不能删除", 403);
+        if ("system".equals(role.type())) throw new DomainException("SYSTEM_ROLE_IMMUTABLE", "内置角色不能删除", 403);
         if (assignmentCount(tenant, id) > 0)
             throw new DomainException("ROLE_HAS_USERS", "角色下还有用户，不能删除", 409);
         if (sql.createQuery(ROLE).where(ROLE.tenantId().eq(tenant), ROLE.parentId().eq(id)).select(ROLE.id()).exists())
@@ -172,8 +175,8 @@ public class UserAccessCatalogService {
         ensurePresetPermissions(tenant);
         int p = Math.max(1, page), size = Math.min(200, Math.max(1, pageSize));
         var query = sql.createQuery(PERMISSION).where(PERMISSION.tenantId().eq(tenant))
-                .whereIf(search != null, () -> Predicate.or(PERMISSION.name().ilike(search, LikeMode.ANYWHERE), PERMISSION.code().ilike(search, LikeMode.ANYWHERE), PERMISSION.resource().ilike(search, LikeMode.ANYWHERE)))
-                .whereIf(type != null, () -> PERMISSION.type().eq(type)).whereIf(resource != null, () -> PERMISSION.resource().eq(resource))
+                .whereIf(search != null && !search.isBlank(), () -> Predicate.or(PERMISSION.name().ilike(search, LikeMode.ANYWHERE), PERMISSION.code().ilike(search, LikeMode.ANYWHERE), PERMISSION.resource().ilike(search, LikeMode.ANYWHERE)))
+                .whereIf(type != null && !type.isBlank(), () -> PERMISSION.type().eq(type)).whereIf(resource != null && !resource.isBlank(), () -> PERMISSION.resource().eq(resource))
                 .orderBy(PERMISSION.resource(), PERMISSION.code()).select(PERMISSION);
         long total = query.fetchUnlimitedCount();
         return new PermissionPage(query.limit(size, (long) (p - 1) * size).execute().stream().map(this::permissionView).toList(), total, p, size);
@@ -244,12 +247,31 @@ public class UserAccessCatalogService {
     }
 
     private void ensurePresetPermissions(UUID tenant) {
+        var presetCodes = PRESETS.stream().map(PermissionSeed::code).toList();
+        var existingCodes = new HashSet<>(sql.createQuery(PERMISSION)
+                .where(PERMISSION.tenantId().eq(tenant), PERMISSION.code().in(presetCodes))
+                .select(PERMISSION.code())
+                .execute());
+        if (existingCodes.size() == PRESETS.size()) return;
+
         Instant now = Instant.now();
-        var entities = PRESETS.stream().map(p -> PoolPermissionEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTenantId(tenant).setCode(p.code()).setName(p.name()).setDescription(null).setType(p.type()).setParentId(null).setResource(p.resource()).setAction(p.action()).setCreatedAt(now).setUpdatedAt(now))).toList();
-        sql.saveEntitiesCommand(entities)
-                .setMode(SaveMode.INSERT_IF_ABSENT)
-                .setKeyProps(PoolPermissionEntityProps.TENANT_ID, PoolPermissionEntityProps.CODE)
-                .execute();
+        PRESETS.stream().filter(p -> !existingCodes.contains(p.code())).forEach(p -> db.sql("""
+                        insert into pool_permission
+                            (id, tenant_id, code, name, type, resource, action, created_at, updated_at)
+                        values
+                            (:id, :tenantId, :code, :name, :type, :resource, :action, :createdAt, :updatedAt)
+                        on conflict (tenant_id, code) do nothing
+                        """)
+                .param("id", UuidV7.randomUuid())
+                .param("tenantId", tenant)
+                .param("code", p.code())
+                .param("name", p.name())
+                .param("type", p.type())
+                .param("resource", p.resource())
+                .param("action", p.action())
+                .param("createdAt", now)
+                .param("updatedAt", now)
+                .update());
     }
 
     private PoolRoleEntity roleEntity(UUID tenant, UUID id) {
@@ -390,7 +412,7 @@ public class UserAccessCatalogService {
         replaceUserRoles(TenantContextHolder.requireTenantId(), userId, roleIds);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public PermissionPage permissions(int page, int pageSize, String search, String type, String resource) {
         return permissions(TenantContextHolder.requireTenantId(), page, pageSize, search, type, resource);
     }
@@ -415,12 +437,12 @@ public class UserAccessCatalogService {
         deletePermission(TenantContextHolder.requireTenantId(), id);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<PermissionTree> permissionTree() {
         return permissionTree(TenantContextHolder.requireTenantId());
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public Map<String, Long> permissionStats() {
         return permissionStats(TenantContextHolder.requireTenantId());
     }

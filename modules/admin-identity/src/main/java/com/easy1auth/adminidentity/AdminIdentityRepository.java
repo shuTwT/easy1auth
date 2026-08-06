@@ -34,6 +34,10 @@ class AdminIdentityRepository {
         return sql.createQuery(ACCOUNT).where(ACCOUNT.id().eq(id), ACCOUNT.status().eq("active")).select(ACCOUNT).fetchOptional().map(AdminIdentityRepository::toDomain);
     }
 
+    Optional<AdminAccount> findActiveByEmail(String email) {
+        return sql.createQuery(ACCOUNT).where(ACCOUNT.email().lower().eq(email), ACCOUNT.status().eq("active")).select(ACCOUNT).fetchOptional().map(AdminIdentityRepository::toDomain);
+    }
+
     Optional<AdminAccount> lockActive(UUID id) {
         return sql.createQuery(ACCOUNT).where(ACCOUNT.id().eq(id), ACCOUNT.status().eq("active")).select(ACCOUNT).forUpdate().fetchOptional().map(AdminIdentityRepository::toDomain);
     }
@@ -97,6 +101,35 @@ class AdminIdentityRepository {
         if (email != null) update.set(ACCOUNT.email(), email);
         if (phone != null) update.set(ACCOUNT.phone(), phone);
         if (update.execute() != 1) throw new IllegalStateException("account missing");
+        return findActive(id).orElseThrow();
+    }
+
+    boolean emailExistsForOtherAccount(UUID id, String email) {
+        return sql.createQuery(ACCOUNT).where(ACCOUNT.id().ne(id), ACCOUNT.email().lower().eq(email)).select(ACCOUNT.id()).exists();
+    }
+
+    AdminAccount updateOwnProfile(UUID id, String username, String phone) {
+        if (sql.createUpdate(ACCOUNT)
+                .set(ACCOUNT.username(), username)
+                .set(ACCOUNT.phone(), phone)
+                .set(ACCOUNT.updatedAt(), Instant.now())
+                .where(ACCOUNT.id().eq(id), ACCOUNT.status().eq("active"))
+                .execute() != 1) {
+            throw new IllegalStateException("account missing");
+        }
+        return findActive(id).orElseThrow();
+    }
+
+    AdminAccount changeOwnEmail(UUID id, String email) {
+        if (sql.createUpdate(ACCOUNT)
+                .set(ACCOUNT.email(), email)
+                .set(ACCOUNT.securityVersion(), ACCOUNT.securityVersion().plus(1L))
+                .set(ACCOUNT.updatedAt(), Instant.now())
+                .where(ACCOUNT.id().eq(id), ACCOUNT.status().eq("active"))
+                .execute() != 1) {
+            throw new IllegalStateException("account missing");
+        }
+        revokeAll(id);
         return findActive(id).orElseThrow();
     }
 

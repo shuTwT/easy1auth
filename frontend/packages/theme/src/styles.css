@@ -1,0 +1,10 @@
+:root {
+  --easy1auth-primary: #0369A1;
+  --easy1auth-primary-dark: #075985;
+  --easy1auth-background: #F5F7FA;
+  --easy1auth-text: #0F172A;
+  --easy1auth-muted: #64748B;
+  --easy1auth-border: #E2E8F0;
+  --easy1auth-card: #FFFFFF;
+  --easy1auth-radius: 1.25rem;
+}

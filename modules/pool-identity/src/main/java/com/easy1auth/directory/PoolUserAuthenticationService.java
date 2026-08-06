@@ -3,6 +3,7 @@ package com.easy1auth.directory;
 import com.easy1auth.directory.model.*;
 import org.babyfish.jimmer.sql.JSqlClient;
 import org.babyfish.jimmer.sql.ast.Predicate;
+import org.jspecify.annotations.Nullable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,6 +44,6 @@ public class PoolUserAuthenticationService {
         return new PoolPrincipal(user.id(), user.tenantId(), user.username(), user.name(), user.email());
     }
 
-    public record PoolPrincipal(UUID id, UUID tenantId, String username, String name, String email) {
+    public record PoolPrincipal(UUID id, UUID tenantId, String username, String name, @Nullable String email) {
     }
 }

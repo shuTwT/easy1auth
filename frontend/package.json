@@ -1,30 +1,15 @@
 {
-  "name": "frontend",
+  "name": "@easy1auth/frontend",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vue-tsc -b && vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "@lucide/vue": "^1.16.0",
-    "@tailwindcss/vite": "^4.3.0",
-    "antdv-next": "^1.4.5",
-    "axios": "^1.13.6",
-    "pinia": "^3.0.4",
-    "tailwindcss": "^4.3.0",
-    "vue": "^3.5.25",
-    "vue-router": "^4.6.4"
-  },
-  "devDependencies": {
-    "@antdv-next/tailwind": "^1.1.1",
-    "@types/node": "^24.10.1",
-    "@vitejs/plugin-vue": "^6.0.2",
-    "@vue/tsconfig": "^0.8.1",
-    "typescript": "~5.9.3",
-    "vite": "^7.3.1",
-    "vue-tsc": "^3.1.5"
+    "dev": "pnpm --filter @easy1auth/admin-console dev",
+    "dev:admin": "pnpm --filter @easy1auth/admin-console dev",
+    "dev:auth": "pnpm --filter @easy1auth/auth-portal dev",
+    "build": "pnpm -r --if-present build",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "build:admin": "pnpm --filter @easy1auth/admin-console build",
+    "build:auth": "pnpm --filter @easy1auth/auth-portal build"
   }
 }

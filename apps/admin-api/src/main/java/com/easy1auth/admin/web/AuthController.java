@@ -13,8 +13,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import com.easy1auth.admin.config.RegistrationProperties;
 import com.easy1auth.security.SecurityPolicyService;
 import com.easy1auth.audit.DeliveryService;
@@ -31,19 +29,17 @@ public class AuthController {
     private final AdminJwtProperties jwt;
     private final PublicRegistrationService registrations;
     private final RegistrationCodeService registrationCodes;
-    private final JavaMailSender mail;
     private final RegistrationProperties registration;
     private final SecurityPolicyService security;
     private final DeliveryService delivery;
 
-    AuthController(AdminIdentityService identities, AdminTokenService tokens, TenantService tenants, AdminJwtProperties jwt, PublicRegistrationService registrations, RegistrationCodeService registrationCodes, JavaMailSender mail, RegistrationProperties registration, SecurityPolicyService security, DeliveryService delivery) {
+    AuthController(AdminIdentityService identities, AdminTokenService tokens, TenantService tenants, AdminJwtProperties jwt, PublicRegistrationService registrations, RegistrationCodeService registrationCodes, RegistrationProperties registration, SecurityPolicyService security, DeliveryService delivery) {
         this.identities = identities;
         this.tokens = tokens;
         this.tenants = tenants;
         this.jwt = jwt;
         this.registrations = registrations;
         this.registrationCodes = registrationCodes;
-        this.mail = mail;
         this.registration = registration;
         this.security = security;
         this.delivery = delivery;
@@ -52,8 +48,8 @@ public class AuthController {
     @ManagementRouteClassification(ManagementRouteKind.AUTHENTICATION)
     @PostMapping("/login")
     public ApiResponse<LoginResponse> login(@RequestBody LoginRequest request, HttpServletRequest http) {
-        if (!"password".equals(request.loginType()))
-            throw new DomainException("LOGIN_TYPE_UNSUPPORTED", "当前仅支持密码登录", 400);
+        if ("email".equals(request.loginType())) return emailLogin(request, http);
+        if (!"password".equals(request.loginType())) throw new DomainException("LOGIN_TYPE_UNSUPPORTED", "不支持的登录方式", 400);
         var result = identities.authenticate(request.username(), request.password(), jwt.refreshTtl(), WebFramework.getUserAgent(http), http.getRemoteAddr());
         if (result.account().mfaEnabled()) {
             identities.logout(result.refreshToken());
@@ -66,7 +62,7 @@ public class AuthController {
     @ManagementRouteClassification(ManagementRouteKind.AUTHENTICATION)
     @PostMapping("/mfa/verify")
     public ApiResponse<LoginResponse> verifyMfa(@RequestBody MfaLoginRequest request, HttpServletRequest http) {
-        UUID account = security.consumeTotpChallenge(request.challengeToken(), request.code());
+        UUID account = security.consumeTotpChallenge(request.challengeToken(), request.code(), "admin", "login");
         var result = identities.completeMfa(account, jwt.refreshTtl(), WebFramework.getUserAgent(http), http.getRemoteAddr());
         return ApiResponse.ok(response(result.account(), result.refreshToken()));
     }
@@ -83,12 +79,24 @@ public class AuthController {
     @PostMapping("/send-code")
     @Transactional
     public ApiResponse<Map<String, Object>> sendCode(@RequestBody SendCodeRequest request) {
-        if (!"register".equals(request.type()))
-            throw new DomainException("CODE_TYPE_UNSUPPORTED", "当前仅支持注册验证码", 400);
-        var issued = registrationCodes.issue(request.email());
-        delivery.enqueueEmail(null, issued.email(), "Easy1Auth 注册验证码", "您的验证码是 " + issued.code() + "，10分钟内有效。", "registration:" + issued.email() + ":" + java.time.Instant.now().getEpochSecond() / 60);
         var body = new HashMap<String, Object>();
-        if (registration.exposeCode()) body.put("code", issued.code());
+        if ("register".equals(request.type())) {
+            var issued = registrationCodes.issue(request.email());
+            delivery.enqueueEmail(null, issued.email(), "Easy1Auth 注册验证码", "您的验证码是 " + issued.code() + "，10分钟内有效。", "registration:" + issued.email() + ":" + java.time.Instant.now().getEpochSecond() / 60);
+            if (registration.exposeCode()) body.put("code", issued.code());
+        } else if ("login".equals(request.type())) {
+            String challengeToken = security.decoyChallengeToken();
+            var account = identities.activeAccountByEmail(request.email());
+            if (account.isPresent()) {
+                var challenge = security.issueEmailChallenge("admin", account.get().id(), null, "login", account.get().email());
+                challengeToken = challenge.token();
+                delivery.enqueueEmail(null, account.get().email(), "Easy1Auth 登录验证码", "您的登录验证码是 " + challenge.code() + "，10分钟内有效。", "email-login:" + account.get().id() + ":" + java.time.Instant.now().getEpochSecond() / 60);
+                if (registration.exposeCode()) body.put("code", challenge.code());
+            }
+            body.put("challengeToken", challengeToken);
+        } else {
+            throw new DomainException("CODE_TYPE_UNSUPPORTED", "不支持的验证码类型", 400);
+        }
         return ApiResponse.ok(body, "验证码已进入发送队列");
     }
 
@@ -107,6 +115,19 @@ public class AuthController {
         return ApiResponse.ok(null, "退出成功");
     }
 
+    private ApiResponse<LoginResponse> emailLogin(LoginRequest request, HttpServletRequest http) {
+        var challenge = security.consumeEmailChallenge(request.challengeToken(), request.code(), "admin", "login");
+        var account = identities.account(challenge.subjectId());
+        if (challenge.destination() == null || !account.email().equalsIgnoreCase(challenge.destination()))
+            throw new DomainException("MFA_CHALLENGE_INVALID", "邮箱登录挑战无效或已过期", 401);
+        if (account.mfaEnabled()) {
+            var totp = security.issueTotpChallenge("admin", account.id(), null, "login");
+            return ApiResponse.ok(LoginResponse.mfa(totp.token(), totp.expiresIn()));
+        }
+        var result = identities.completeMfa(account.id(), jwt.refreshTtl(), WebFramework.getUserAgent(http), http.getRemoteAddr());
+        return ApiResponse.ok(response(result.account(), result.refreshToken()));
+    }
+
     private LoginResponse response(AdminAccount account, String refresh) {
         var memberships = tenants.list(account.id());
         UUID current = account.lastTenantId();
@@ -115,7 +136,7 @@ public class AuthController {
         return LoginResponse.success(tokens.issue(account), refresh, new LoginUser(account.id(), account.username(), account.email(), null, current), memberships);
     }
 
-    public record LoginRequest(String username, String password, String email, String code, String loginType) {
+    public record LoginRequest(String username, String password, String email, String code, String challengeToken, String loginType) {
     }
 
     public record RegisterRequest(String email, String password, String code, String username) {

@@ -9,6 +9,7 @@ import com.easy1auth.tenant.TenantService;
 import org.babyfish.jimmer.sql.JSqlClient;
 import org.babyfish.jimmer.sql.ast.LikeMode;
 import org.babyfish.jimmer.sql.ast.mutation.SaveMode;
+import org.jspecify.annotations.Nullable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,12 +47,13 @@ public class PoolUserService {
 
     @Transactional
     public PoolUserView create(UUID tenant, Input in) {
-        validate(in.username(), in.email(), in.name());
+        validate(in.username(), in.email(), in.phone(), in.name());
         int limit = tenants.lockForUserQuota(tenant);
         long count = sql.createQuery(USER).where(USER.tenantId().eq(tenant)).select(USER.id()).fetchUnlimitedCount();
         if (count >= limit) throw new DomainException("TENANT_USER_LIMIT", "已达到用户数量上限", 403);
         Instant now = Instant.now();
-        var e = PoolUserEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTenantId(tenant).setUsername(in.username().strip()).setEmail(in.email().strip().toLowerCase()).setPhone(in.phone()).setPasswordHash(in.password() == null ? null : passwords.encode(in.password())).setName(in.name().strip()).setAvatar(in.avatar()).setStatus("active").setEmailVerified(false).setPhoneVerified(false).setDepartment(in.department()).setPosition(in.position()).setCustomAttributes(in.customAttributes()).setLastLoginAt(null).setCreatedAt(now).setUpdatedAt(now));
+        String email = normalizeEmail(in.email());
+        var e = PoolUserEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTenantId(tenant).setUsername(in.username().strip()).setEmail(email).setPhone(in.phone()).setPasswordHash(in.password() == null ? null : passwords.encode(in.password())).setName(in.name().strip()).setAvatar(in.avatar()).setStatus("active").setEmailVerified(false).setPhoneVerified(false).setDepartment(in.department()).setPosition(in.position()).setCustomAttributes(in.customAttributes()).setLastLoginAt(null).setCreatedAt(now).setUpdatedAt(now));
         sql.saveCommand(e).setMode(SaveMode.INSERT_ONLY).execute();
         return view(e);
     }
@@ -131,9 +133,17 @@ public class PoolUserService {
             throw new DomainException("ENTERPRISE_IDENTITY_MANAGED", "该用户由企业身份源管理，请在身份源中修改", 409);
     }
 
-    private void validate(String u, String e, String n) {
-        if (u == null || u.isBlank() || e == null || !e.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$") || n == null || n.isBlank())
-            throw new DomainException("POOL_USER_INVALID", "用户名、邮箱和姓名为必填项", 400);
+    private void validate(String u, String e, String p, String n) {
+        if (u == null || u.isBlank() || n == null || n.isBlank() || (!present(e) && !present(p)) || (present(e) && !e.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")))
+            throw new DomainException("POOL_USER_INVALID", "用户名、姓名以及邮箱或手机号为必填项", 400);
+    }
+
+    private static boolean present(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private static String normalizeEmail(String email) {
+        return present(email) ? email.strip().toLowerCase() : null;
     }
 
     private void validatePassword(String p) {
@@ -223,6 +233,6 @@ public class PoolUserService {
     public record Page(List<PoolUserView> users, long total, int page, int pageSize) {
     }
 
-    public record RecentLogin(String username, String email, Instant time) {
+    public record RecentLogin(String username, @Nullable String email, Instant time) {
     }
 }

@@ -6,6 +6,7 @@ import com.easy1auth.application.ApplicationService;
 import com.easy1auth.directory.PoolUserService;
 import com.easy1auth.foundation.web.ApiResponse;
 import com.easy1auth.tenant.TenantService;
+import org.jspecify.annotations.Nullable;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -57,6 +58,6 @@ public class DashboardController {
     public record DashboardStats(long tenantCount, long userCount, long applicationCount, long todayLoginCount) {
     }
 
-    public record RecentLogin(String username, String email, String ip, Instant time, String status) {
+    public record RecentLogin(String username, @Nullable String email, String ip, Instant time, String status) {
     }
 }

@@ -48,8 +48,15 @@ public class CustomizationController {
     @ManagementRouteClassification(ManagementRouteKind.PUBLIC)
     @GetMapping("/api/login-style/public")
     ApiResponse<?> publicStyle(@RequestParam(required = false) UUID tenantId) {
-        return ApiResponse.ok(tenantId == null ? Map.of("backgroundColor", "#f5f7fa", "primaryColor", "#0369A1", "title", "Easy1Auth", "subtitle", "企业级身份管理平台", "loginMethods", List.of("password"), "socialProviders", List.of()) : service.publicStyle(tenantId));
+        if (tenantId == null)
+            return ApiResponse.ok(new PublicStyleView(null, null, null, "#f5f7fa", "#0369A1", "Easy1Auth", "企业级身份管理平台", List.of("password"), List.of()));
+        var style = service.publicStyle(tenantId);
+        return ApiResponse.ok(new PublicStyleView(style.logo(), style.logoDark(), style.backgroundImage(), style.backgroundColor(), style.primaryColor(), style.title(), style.subtitle(), style.loginMethods(), style.socialProviders()));
     }
+
+    record PublicStyleView(String logo, String logoDark, String backgroundImage, String backgroundColor,
+                           String primaryColor, String title, String subtitle, List<String> loginMethods,
+                           List<String> socialProviders) { }
 
     @TenantManagementPermission(value = ManagementPermissionCode.CUSTOM_DOMAIN_LIST)
     @GetMapping("/api/custom-domains")

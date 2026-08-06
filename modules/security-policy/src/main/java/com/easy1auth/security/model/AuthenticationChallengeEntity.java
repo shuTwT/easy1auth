@@ -28,6 +28,9 @@ public interface AuthenticationChallengeEntity {
 
     String purpose();
 
+    @Nullable
+    String destination();
+
     @Column(name = "factor_type")
     String factorType();
 

@@ -145,7 +145,7 @@ public class EnterpriseIdentityService {
         Map<String, Object> summary = new LinkedHashMap<>();
         try {
             if ("full".equals(task.type())) full(source, summary); else event(source, task.payload(), summary);
-            boolean partial = summary.containsKey("skippedMissingEmail") || summary.containsKey("skippedEmailConflict");
+            boolean partial = summary.containsKey("skippedMissingPhone") || summary.containsKey("skippedEmailConflict") || summary.containsKey("skippedPhoneConflict");
             finish(task.id(), summary, partial ? "partial" : "succeeded", null);
         } catch (Exception ex) { finish(task.id(), summary, "failed", trim(ex.getMessage())); }
     }
@@ -194,11 +194,15 @@ public class EnterpriseIdentityService {
     }
 
     private void upsertUser(EnterpriseIdentitySourceEntity source, String externalId, Map<String,Object> remote, Map<String,Object> summary) {
-        UUID tenant = source.tenantId(); String email = string(remote.get("email")).strip().toLowerCase();
-        if (email.isBlank()) { increment(summary, "skippedMissingEmail"); return; }
+        UUID tenant = source.tenantId();
+        String emailValue = string(remote.get("email")).strip().toLowerCase();
+        String email = emailValue.isBlank() ? null : emailValue;
+        String phone = string(remote.get("mobile")).strip();
+        if (phone.isBlank()) { increment(summary, "skippedMissingPhone"); return; }
         var old = sql.createQuery(USER).where(USER.tenantId().eq(tenant), USER.enterpriseIdentitySourceId().eq(source.id()), USER.enterpriseIdentityExternalId().eq(externalId)).select(USER).fetchOneOrNull();
-        if (old == null && sql.createQuery(USER).where(USER.tenantId().eq(tenant), USER.email().eq(email)).select(USER.id()).exists()) { increment(summary, "skippedEmailConflict"); return; }
-        String name = nonBlank(string(remote.get("name")), email), phone = string(remote.get("mobile")), avatar = string(map(remote.get("avatar")).get("avatar_240")), position = string(remote.get("job_title"));
+        if (old == null && email != null && sql.createQuery(USER).where(USER.tenantId().eq(tenant), USER.email().eq(email)).select(USER.id()).exists()) { increment(summary, "skippedEmailConflict"); return; }
+        if (old == null && sql.createQuery(USER).where(USER.tenantId().eq(tenant), USER.phone().eq(phone)).select(USER.id()).exists()) { increment(summary, "skippedPhoneConflict"); return; }
+        String name = nonBlank(string(remote.get("name")), phone), avatar = string(map(remote.get("avatar")).get("avatar_240")), position = string(remote.get("job_title"));
         String department = "";
         List<String> deps = ids(remote, "department_ids"); if (!deps.isEmpty()) { var g = sql.createQuery(GROUP).where(GROUP.enterpriseIdentitySourceId().eq(source.id()), GROUP.enterpriseIdentityExternalId().eq(deps.getFirst())).select(GROUP).fetchOneOrNull(); if (g != null) department = g.name(); }
         if (old == null) {

@@ -18,8 +18,8 @@ public final class ProductionConfigurationValidation implements ApplicationRunne
     private final String signingKeySecret;
 
     ProductionConfigurationValidation(Environment environment,
-            @Value("${easy1auth.oauth2.issuer-base}") String issuerBase,
-            @Value("${easy1auth.oauth2.key-encryption-secret:}") String signingKeySecret) {
+                                      @Value("${easy1auth.oauth2.issuer-base}") String issuerBase,
+                                      @Value("${easy1auth.oauth2.key-encryption-secret:}") String signingKeySecret) {
         this.environment = environment;
         this.issuerBase = issuerBase;
         this.signingKeySecret = signingKeySecret;

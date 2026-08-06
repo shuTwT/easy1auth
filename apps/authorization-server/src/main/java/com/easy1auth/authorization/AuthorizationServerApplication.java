@@ -5,5 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication(scanBasePackages = "com.easy1auth")
 public class AuthorizationServerApplication {
-    public static void main(String[] args) { SpringApplication.run(AuthorizationServerApplication.class, args); }
+    public static void main(String[] args) {
+        SpringApplication.run(AuthorizationServerApplication.class, args);
+    }
 }

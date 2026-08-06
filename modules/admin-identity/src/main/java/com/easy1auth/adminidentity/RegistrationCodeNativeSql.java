@@ -3,6 +3,7 @@ package com.easy1auth.adminidentity;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
+import java.sql.Timestamp;
 import java.util.UUID;
 
 /**
@@ -22,6 +23,6 @@ final class RegistrationCodeNativeSql {
 
     void issue(UUID id, String email, String hash, java.time.Instant expires) {
         db.sql("delete from admin_registration_code where lower(email)=lower(:e) or expires_at<=now()").param("e", email).update();
-        db.sql("insert into admin_registration_code(id,email,code_hash,expires_at) values(:id,:e,:h,:x)").param("id", id).param("e", email).param("h", hash).param("x", expires).update();
+        db.sql("insert into admin_registration_code(id,email,code_hash,expires_at) values(:id,:e,:h,:x)").param("id", id).param("e", email).param("h", hash).param("x", Timestamp.from(expires)).update();
     }
 }

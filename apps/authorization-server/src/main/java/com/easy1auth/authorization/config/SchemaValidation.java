@@ -9,7 +9,9 @@ import org.springframework.stereotype.Component;
 public final class SchemaValidation implements ApplicationRunner {
     private final JdbcClient db;
 
-    SchemaValidation(JdbcClient db) { this.db = db; }
+    SchemaValidation(JdbcClient db) {
+        this.db = db;
+    }
 
     @Override
     public void run(ApplicationArguments args) {

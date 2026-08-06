@@ -15,8 +15,8 @@ public final class Phase7ReadinessHealthIndicator implements HealthIndicator {
     private final String keyEncryptionSecret;
 
     Phase7ReadinessHealthIndicator(JdbcClient db,
-            @Value("${easy1auth.oauth2.issuer-base}") String issuerBase,
-            @Value("${easy1auth.oauth2.key-encryption-secret:}") String keyEncryptionSecret) {
+                                   @Value("${easy1auth.oauth2.issuer-base}") String issuerBase,
+                                   @Value("${easy1auth.oauth2.key-encryption-secret:}") String keyEncryptionSecret) {
         this.db = db;
         this.issuerBase = issuerBase;
         this.keyEncryptionSecret = keyEncryptionSecret;

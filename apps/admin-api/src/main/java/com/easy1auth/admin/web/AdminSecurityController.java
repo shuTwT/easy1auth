@@ -8,6 +8,7 @@ import com.easy1auth.foundation.web.ApiResponse;
 import com.easy1auth.security.SecurityPolicyService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -29,6 +30,41 @@ public class AdminSecurityController {
     @GetMapping("/password-policy")
     public ApiResponse<?> policy(@AuthenticationPrincipal Jwt jwt) {
         return ApiResponse.ok(Map.of("policy", SecurityPolicyService.adminPolicy(), "expiryStatus", Map.of("expired", false, "daysUntilExpiry", 90)));
+    }
+
+    @ManagementRouteClassification(ManagementRouteKind.AUTHENTICATED_SELF)
+    @GetMapping("/profile")
+    public ApiResponse<?> profile(@AuthenticationPrincipal Jwt jwt) {
+        return ApiResponse.ok(identities.account(id(jwt)));
+    }
+
+    @ManagementRouteClassification(ManagementRouteKind.AUTHENTICATED_SELF)
+    @PutMapping("/profile")
+    public ApiResponse<?> updateProfile(@AuthenticationPrincipal Jwt jwt, @RequestBody ProfileInput input) {
+        return ApiResponse.ok(identities.updateOwnProfile(id(jwt), input.username(), input.phone()), "个人资料更新成功");
+    }
+
+    @Transactional
+    @ManagementRouteClassification(ManagementRouteKind.AUTHENTICATED_SELF)
+    @PostMapping("/email/send-code")
+    public ApiResponse<?> sendEmailChangeCode(@AuthenticationPrincipal Jwt jwt, @RequestBody EmailChangeRequest input) {
+        UUID accountId = id(jwt);
+        String email = identities.prepareOwnEmailChange(accountId, input.email());
+        var challenge = security.issueEmailChallenge("admin", accountId, null, "email_change", email);
+        delivery.enqueueEmail(null, email, "Easy1Auth 邮箱换绑验证码", "您的邮箱换绑验证码是 " + challenge.code() + "，10分钟内有效。", "email-change:" + accountId + ":" + java.time.Instant.now().getEpochSecond() / 60);
+        return ApiResponse.ok(Map.of("challengeToken", challenge.token(), "expiresIn", challenge.expiresIn()), "验证码已发送到新邮箱");
+    }
+
+    @Transactional
+    @ManagementRouteClassification(ManagementRouteKind.AUTHENTICATED_SELF)
+    @PostMapping("/email/verify")
+    public ApiResponse<?> verifyEmailChange(@AuthenticationPrincipal Jwt jwt, @RequestBody EmailVerifyRequest input) {
+        UUID accountId = id(jwt);
+        var challenge = security.consumeEmailChallenge(input.challengeToken(), input.code(), "admin", "email_change");
+        if (!accountId.equals(challenge.subjectId()) || challenge.destination() == null)
+            throw new com.easy1auth.foundation.error.DomainException("EMAIL_CHANGE_CHALLENGE_INVALID", "邮箱换绑挑战无效或已过期", 401);
+        var account = identities.changeOwnEmail(accountId, challenge.destination());
+        return ApiResponse.ok(Map.of("email", account.email()), "邮箱换绑成功，请重新登录");
     }
 
     @ManagementRouteClassification(ManagementRouteKind.AUTHENTICATED_SELF)
@@ -96,6 +132,15 @@ public class AdminSecurityController {
     }
 
     public record ChangePassword(String currentPassword, String newPassword, String confirmPassword) {
+    }
+
+    public record ProfileInput(String username, String phone) {
+    }
+
+    public record EmailChangeRequest(String email) {
+    }
+
+    public record EmailVerifyRequest(String challengeToken, String code) {
     }
 
     public record TokenInput(String token, String challengeToken, String type) {
