@@ -19,6 +19,7 @@ import com.easy1auth.audit.DeliveryService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import java.util.*;
+import com.fasterxml.jackson.annotation.JsonInclude;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -79,33 +80,33 @@ public class AuthController {
     @ManagementRouteClassification(ManagementRouteKind.AUTHENTICATION)
     @PostMapping("/send-code")
     @Transactional
-    public ApiResponse<Map<String, Object>> sendCode(@RequestBody SendCodeRequest request) {
-        var body = new HashMap<String, Object>();
+    public ApiResponse<SendCodeResponse> sendCode(@RequestBody SendCodeRequest request) {
+        String code = null;
+        String challengeToken = null;
         if ("register".equals(request.type())) {
             var issued = registrationCodes.issue(request.email());
             delivery.enqueueEmail(null, issued.email(), "Easy1Auth 注册验证码", "您的验证码是 " + issued.code() + "，10分钟内有效。", "registration:" + issued.email() + ":" + java.time.Instant.now().getEpochSecond() / 60);
-            if (registration.exposeCode()) body.put("code", issued.code());
+            if (registration.exposeCode()) code = issued.code();
         } else if ("login".equals(request.type())) {
-            String challengeToken = security.decoyChallengeToken();
+            challengeToken = security.decoyChallengeToken();
             var account = identities.activeAccountByEmail(request.email());
             if (account.isPresent()) {
                 var challenge = security.issueEmailChallenge("admin", account.get().id(), null, "login", account.get().email());
                 challengeToken = challenge.token();
                 delivery.enqueueEmail(null, account.get().email(), "Easy1Auth 登录验证码", "您的登录验证码是 " + challenge.code() + "，10分钟内有效。", "email-login:" + account.get().id() + ":" + java.time.Instant.now().getEpochSecond() / 60);
-                if (registration.exposeCode()) body.put("code", challenge.code());
+                if (registration.exposeCode()) code = challenge.code();
             }
-            body.put("challengeToken", challengeToken);
         } else {
             throw new DomainException(ErrorCodeConstants.CODE_TYPE_UNSUPPORTED);
         }
-        return ApiResponse.ok(body, "验证码已进入发送队列");
+        return ApiResponse.ok(new SendCodeResponse(code, challengeToken), "验证码已进入发送队列");
     }
 
     @ManagementRouteClassification(ManagementRouteKind.AUTHENTICATION)
     @PostMapping("/refresh")
-    public ApiResponse<Map<String, String>> refresh(@RequestBody RefreshRequest request, HttpServletRequest http) {
+    public ApiResponse<RefreshResponse> refresh(@RequestBody RefreshRequest request, HttpServletRequest http) {
         var result = identities.rotate(request.refreshToken(), jwt.refreshTtl(), WebFramework.getUserAgent(http), http.getRemoteAddr());
-        return ApiResponse.ok(Map.of("token", tokens.issue(result.account()), "refreshToken", result.replacementToken()));
+        return ApiResponse.ok(new RefreshResponse(tokens.issue(result.account()), result.replacementToken()));
     }
 
     @ManagementRouteClassification(ManagementRouteKind.AUTHENTICATION)
@@ -148,6 +149,13 @@ public class AuthController {
     }
 
     public record SendCodeRequest(String email, String type) {
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record SendCodeResponse(String code, String challengeToken) {
+    }
+
+    public record RefreshResponse(String token, String refreshToken) {
     }
 
     public record MfaLoginRequest(String challengeToken, String code) {

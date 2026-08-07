@@ -46,8 +46,8 @@ public class PoolUserImportController {
     ApiResponse<?> upload(@RequestParam("file") MultipartFile file) throws IOException {
         if (file.isEmpty() || file.getSize() > MAX_FILE_SIZE)
             throw new DomainException(ErrorCodeConstants.IMPORT_FILE_INVALID);
-        List<Map<String, Object>> errors = new ArrayList<>();
-        List<Map<String, Object>> imported = new ArrayList<>();
+        List<ImportError> errors = new ArrayList<>();
+        List<ImportedUser> imported = new ArrayList<>();
         int total = 0;
         try (var input = new BufferedInputStream(file.getInputStream()); var workbook = WorkbookFactory.create(input)) {
             var sheet = workbook.getSheetAt(0);
@@ -60,17 +60,14 @@ public class PoolUserImportController {
                 total++;
                 try {
                     var user = users.create(new PoolUserService.Input(username, email, blank(password), blank(phone), name, null, null, blank(department), blank(position), null));
-                    imported.add(Map.of("username", user.username(), "email", user.email(), "name", user.name()));
+                    imported.add(new ImportedUser(user.username(), user.email(), user.name()));
                 } catch (RuntimeException ex) {
-                    var error = new LinkedHashMap<String, Object>();
-                    error.put("row", rowIndex + 1);
-                    error.put("username", username);
-                    error.put("error", ex instanceof DomainException ? ex.getMessage() : "导入失败或数据重复");
-                    errors.add(error);
+                    errors.add(new ImportError(rowIndex + 1, username,
+                            ex instanceof DomainException ? ex.getMessage() : "导入失败或数据重复"));
                 }
             }
         }
-        return ApiResponse.ok(Map.of("success", imported.size(), "failed", errors.size(), "total", total, "errors", errors, "importedUsers", imported), "导入完成：成功 " + imported.size() + " 条，失败 " + errors.size() + " 条");
+        return ApiResponse.ok(new ImportResponse(imported.size(), errors.size(), total, errors, imported), "导入完成：成功 " + imported.size() + " 条，失败 " + errors.size() + " 条");
     }
 
     private static String value(Row row, int index, DataFormatter formatter) {
@@ -86,5 +83,15 @@ public class PoolUserImportController {
         static boolean empty(String... values) {
             return Arrays.stream(values).allMatch(String::isBlank);
         }
+    }
+
+    public record ImportError(int row, String username, String error) {
+    }
+
+    public record ImportedUser(String username, String email, String name) {
+    }
+
+    public record ImportResponse(int success, int failed, int total, List<ImportError> errors,
+                                 List<ImportedUser> importedUsers) {
     }
 }

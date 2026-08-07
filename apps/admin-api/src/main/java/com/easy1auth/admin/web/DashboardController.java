@@ -46,8 +46,8 @@ public class DashboardController {
         return ApiResponse.ok(new DashboardData(
                 new DashboardStats(
                         tenants.list(UUID.fromString(actor.getSubject())).size(),
-                        userStats.getOrDefault("totalUsers", 0L),
-                        applicationStats.getOrDefault("totalApplications", 0L),
+                        userStats.totalUsers(),
+                        applicationStats.totalApplications(),
                         users.successfulLoginCountSince(today)),
                 recentLogins));
     }

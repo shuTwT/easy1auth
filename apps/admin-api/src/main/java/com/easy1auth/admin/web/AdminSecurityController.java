@@ -29,7 +29,7 @@ public class AdminSecurityController {
     @ManagementRouteClassification(ManagementRouteKind.AUTHENTICATED_SELF)
     @GetMapping("/password-policy")
     public ApiResponse<?> policy(@AuthenticationPrincipal Jwt jwt) {
-        return ApiResponse.ok(Map.of("policy", SecurityPolicyService.adminPolicy(), "expiryStatus", Map.of("expired", false, "daysUntilExpiry", 90)));
+        return ApiResponse.ok(new PasswordPolicyResponse(SecurityPolicyService.adminPolicy(), new ExpiryStatus(false, 90)));
     }
 
     @ManagementRouteClassification(ManagementRouteKind.AUTHENTICATED_SELF)
@@ -52,7 +52,7 @@ public class AdminSecurityController {
         String email = identities.prepareOwnEmailChange(accountId, input.email());
         var challenge = security.issueEmailChallenge("admin", accountId, null, "email_change", email);
         delivery.enqueueEmail(null, email, "Easy1Auth 邮箱换绑验证码", "您的邮箱换绑验证码是 " + challenge.code() + "，10分钟内有效。", "email-change:" + accountId + ":" + java.time.Instant.now().getEpochSecond() / 60);
-        return ApiResponse.ok(Map.of("challengeToken", challenge.token(), "expiresIn", challenge.expiresIn()), "验证码已发送到新邮箱");
+        return ApiResponse.ok(new ChallengeResponse(challenge.token(), challenge.expiresIn()), "验证码已发送到新邮箱");
     }
 
     @Transactional
@@ -64,7 +64,7 @@ public class AdminSecurityController {
         if (!accountId.equals(challenge.subjectId()) || challenge.destination() == null)
             throw new com.easy1auth.foundation.error.DomainException(ErrorCodeConstants.EMAIL_CHANGE_CHALLENGE_INVALID);
         var account = identities.changeOwnEmail(accountId, challenge.destination());
-        return ApiResponse.ok(Map.of("email", account.email()), "邮箱换绑成功，请重新登录");
+        return ApiResponse.ok(new EmailChangeResponse(account.email()), "邮箱换绑成功，请重新登录");
     }
 
     @ManagementRouteClassification(ManagementRouteKind.AUTHENTICATED_SELF)
@@ -81,7 +81,7 @@ public class AdminSecurityController {
     @GetMapping("/mfa/status")
     public ApiResponse<?> status(@AuthenticationPrincipal Jwt jwt) {
         var status = security.status("admin", id(jwt));
-        return ApiResponse.ok(Map.of("enabled", status.enabled(), "type", status.methods().isEmpty() ? "" : status.methods().getFirst()));
+        return ApiResponse.ok(new MfaStatusResponse(status.enabled(), status.methods().isEmpty() ? "" : status.methods().getFirst()));
     }
 
     @ManagementRouteClassification(ManagementRouteKind.AUTHENTICATED_SELF)
@@ -120,7 +120,7 @@ public class AdminSecurityController {
         var account = identities.account(id(jwt));
         var c = security.issueEmailChallenge("admin", account.id(), null, "step_up");
         delivery.enqueueEmail(null, account.email(), "Easy1Auth 安全验证码", "您的验证码是 " + c.code() + "，10分钟内有效。", "mfa-email:" + c.token());
-        return ApiResponse.ok(Map.of("challengeToken", c.token()), "验证码已发送");
+        return ApiResponse.ok(new ChallengeTokenResponse(c.token()), "验证码已发送");
     }
 
     private static UUID id(Jwt jwt) {
@@ -144,5 +144,23 @@ public class AdminSecurityController {
     }
 
     public record TokenInput(String token, String challengeToken, String type) {
+    }
+
+    public record ExpiryStatus(boolean expired, int daysUntilExpiry) {
+    }
+
+    public record PasswordPolicyResponse(SecurityPolicyService.Policy policy, ExpiryStatus expiryStatus) {
+    }
+
+    public record ChallengeResponse(String challengeToken, int expiresIn) {
+    }
+
+    public record EmailChangeResponse(String email) {
+    }
+
+    public record MfaStatusResponse(boolean enabled, String type) {
+    }
+
+    public record ChallengeTokenResponse(String challengeToken) {
     }
 }

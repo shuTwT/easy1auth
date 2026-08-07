@@ -128,9 +128,9 @@ public class AdminAccessService {
     }
 
     @Transactional(readOnly = true)
-    public Map<String, Long> roleStats() {
+    public RoleStats roleStats() {
         var roles = sql.createQuery(ROLE).select(ROLE.fetch(AdminRoleEntityFetcher.$.allScalarFields().memberships())).execute();
-        return Map.of("totalRoles", (long) roles.size(), "systemRoles", roles.stream().filter(AdminRoleEntity::systemRole).count(), "customRoles", roles.stream().filter(r -> !r.systemRole()).count(), "totalAdmins", roles.stream().flatMap(r -> r.memberships().stream()).map(TenantMembershipEntity::id).distinct().count());
+        return new RoleStats(roles.size(), roles.stream().filter(AdminRoleEntity::systemRole).count(), roles.stream().filter(r -> !r.systemRole()).count(), roles.stream().flatMap(r -> r.memberships().stream()).map(TenantMembershipEntity::id).distinct().count());
     }
 
     @Transactional(readOnly = true)
@@ -139,10 +139,16 @@ public class AdminAccessService {
     }
 
     @Transactional(readOnly = true)
-    public Map<String, Long> memberStats() {
+    public MemberStats memberStats() {
         var accounts = sql.createQuery(ACCOUNT).select(ACCOUNT).execute();
         var memberships = activeMemberships();
-        return Map.of("totalAdmins", (long) accounts.size(), "activeAdmins", accounts.stream().filter(a -> "active".equals(a.status())).count(), "disabledAdmins", accounts.stream().filter(a -> "disabled".equals(a.status())).count(), "mfaEnabledAdmins", accounts.stream().filter(AdminAccountEntity::mfaEnabled).count(), "ownerCount", memberships.stream().filter(m -> "owner".equals(m.membershipRole())).map(TenantMembershipEntity::accountId).distinct().count());
+        return new MemberStats(accounts.size(), accounts.stream().filter(a -> "active".equals(a.status())).count(), accounts.stream().filter(a -> "disabled".equals(a.status())).count(), accounts.stream().filter(AdminAccountEntity::mfaEnabled).count(), memberships.stream().filter(m -> "owner".equals(m.membershipRole())).map(TenantMembershipEntity::accountId).distinct().count());
+    }
+
+    public record RoleStats(long totalRoles, long systemRoles, long customRoles, long totalAdmins) {
+    }
+
+    public record MemberStats(long totalAdmins, long activeAdmins, long disabledAdmins, long mfaEnabledAdmins, long ownerCount) {
     }
 
     private AdminRoleView find(UUID tenant, UUID id) {

@@ -125,9 +125,12 @@ public class ApplicationService {
     }
 
     @Transactional(readOnly = true)
-    public Map<String, Long> stats() {
+    public ApplicationStats stats() {
         var rows = sql.createQuery(APP).select(APP.status()).execute();
-        return Map.of("totalApplications", (long) rows.size(), "activeApplications", rows.stream().filter("active"::equals).count(), "disabledApplications", rows.stream().filter("disabled"::equals).count());
+        return new ApplicationStats(rows.size(), rows.stream().filter("active"::equals).count(), rows.stream().filter("disabled"::equals).count());
+    }
+
+    public record ApplicationStats(long totalApplications, long activeApplications, long disabledApplications) {
     }
 
     private OAuthApplicationEntity entity(UUID id) {

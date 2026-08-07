@@ -4,6 +4,8 @@ import com.easy1auth.admin.security.*;
 import com.easy1auth.adminaccess.ManagementPermissionCode;
 import com.easy1auth.enterpriseidentity.EnterpriseIdentityService;
 import com.easy1auth.foundation.web.ApiResponse;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -12,9 +14,11 @@ import java.util.*;
 @RequestMapping("/api/enterprise-identity-sources")
 public class EnterpriseIdentitySourceController {
     private final EnterpriseIdentityService service;
+    private final ObjectMapper json;
 
-    EnterpriseIdentitySourceController(EnterpriseIdentityService service) {
+    EnterpriseIdentitySourceController(EnterpriseIdentityService service, ObjectMapper json) {
         this.service = service;
+        this.json = json;
     }
 
     @TenantManagementPermission(ManagementPermissionCode.ENTERPRISE_IDENTITY_SOURCE_LIST)
@@ -69,7 +73,16 @@ public class EnterpriseIdentitySourceController {
 
     @ManagementRouteClassification(ManagementRouteKind.PUBLIC)
     @PostMapping("/{id}/feishu/events")
-    public Map<String, Object> feishuEvent(@PathVariable UUID id, @RequestBody Map<String, Object> event) {
-        return service.acceptFeishuEvent(id, event);
+    public EnterpriseIdentityService.FeishuEventResponse feishuEvent(@PathVariable UUID id, @RequestBody FeishuEventRequest event) {
+        return service.acceptFeishuEvent(id, json.convertValue(event.fields, Map.class));
+    }
+
+    public static final class FeishuEventRequest {
+        private final Map<String, Object> fields = new LinkedHashMap<>();
+
+        @JsonAnySetter
+        public void set(String name, Object value) {
+            fields.put(name, value);
+        }
     }
 }

@@ -98,11 +98,10 @@ public class DirectoryCatalogService {
     }
 
     @Transactional(readOnly = true)
-    public Map<String, Long> groupStats(UUID tenant) {
+    public GroupStats groupStats(UUID tenant) {
         var rows = sql.createQuery(GROUP).where(GROUP.tenantId().eq(tenant)).select(GROUP).execute();
-        return Map.of("totalGroups", (long) rows.size(), "teamGroups", countType(rows, "team"),
-                "departmentGroups", countType(rows, "department"), "projectGroups", countType(rows, "project"),
-                "organizationGroups", countType(rows, "organization"), "rootGroups", rows.stream().filter(g -> g.parentId() == null).count());
+        return new GroupStats(rows.size(), countType(rows, "team"), countType(rows, "department"), countType(rows, "project"),
+                countType(rows, "organization"), rows.stream().filter(g -> g.parentId() == null).count());
     }
 
     @Transactional(readOnly = true)
@@ -184,11 +183,11 @@ public class DirectoryCatalogService {
     }
 
     @Transactional(readOnly = true)
-    public Map<String, Object> positionStats(UUID tenant) {
+    public PositionStats positionStats(UUID tenant) {
         var rows = sql.createQuery(POSITION).where(POSITION.tenantId().eq(tenant)).select(POSITION).execute();
         long filled = rows.stream().filter(p -> positionUserCount(p) > 0).count();
-        return Map.of("totalPositions", rows.size(), "filledPositions", filled, "vacantPositions", rows.size() - filled,
-                "averageLevel", rows.stream().mapToInt(PositionEntity::level).average().orElse(0));
+        return new PositionStats(rows.size(), filled, rows.size() - filled,
+                rows.stream().mapToInt(PositionEntity::level).average().orElse(0));
     }
 
     @Transactional(readOnly = true)
@@ -339,7 +338,7 @@ public class DirectoryCatalogService {
     }
 
     @Transactional(readOnly = true)
-    public Map<String, Long> groupStats() {
+    public GroupStats groupStats() {
         return groupStats(TenantContextHolder.requireTenantId());
     }
 
@@ -394,7 +393,7 @@ public class DirectoryCatalogService {
     }
 
     @Transactional(readOnly = true)
-    public Map<String, Object> positionStats() {
+    public PositionStats positionStats() {
         return positionStats(TenantContextHolder.requireTenantId());
     }
 
@@ -406,6 +405,13 @@ public class DirectoryCatalogService {
     @Transactional
     public void replaceUserGroups(UUID userId, Collection<UUID> groupIds) {
         replaceUserGroups(TenantContextHolder.requireTenantId(), userId, groupIds);
+    }
+
+    public record GroupStats(long totalGroups, long teamGroups, long departmentGroups, long projectGroups,
+                             long organizationGroups, long rootGroups) {
+    }
+
+    public record PositionStats(long totalPositions, long filledPositions, long vacantPositions, double averageLevel) {
     }
 
     public record GroupInput(String name, String description, String type, UUID parentId) {

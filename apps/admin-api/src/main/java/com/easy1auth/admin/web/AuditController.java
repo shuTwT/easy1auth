@@ -31,7 +31,7 @@ public class AuditController {
     @GetMapping("/stats")
     ApiResponse<?> stats() {
         var s = service.stats();
-        return ApiResponse.ok(Map.of("totalLogs", s.totalLogs(), "successLogs", s.successLogs(), "failedLogs", s.failedLogs(), "todayLogs", s.todayLogs(), "weekLogs", 0, "monthLogs", 0, "topActions", List.of(), "topUsers", List.of(), "topIps", List.of()));
+        return ApiResponse.ok(new AuditStatsResponse(s.totalLogs(), s.successLogs(), s.failedLogs(), s.todayLogs(), 0, 0, List.of(), List.of(), List.of()));
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.AUDIT_READ)
@@ -43,27 +43,26 @@ public class AuditController {
     @TenantManagementPermission(value = ManagementPermissionCode.AUDIT_CLEANUP)
     @DeleteMapping("/cleanup")
     ApiResponse<?> cleanup(@RequestParam(defaultValue = "90") int days) {
-        return ApiResponse.ok(Map.of("deletedCount", service.cleanup(days)), "审计日志清理完成");
+        return ApiResponse.ok(new CleanupResponse(service.cleanup(days)), "审计日志清理完成");
     }
 
-    private static Map<String, Object> legacy(com.easy1auth.audit.model.AuditEventEntity e) {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("id", e.id());
-        m.put("tenantId", e.tenantId());
-        m.put("userId", e.actorId());
-        m.put("username", e.actorName());
-        m.put("type", e.eventType());
-        m.put("action", e.action());
-        m.put("resource", e.resourceType());
-        m.put("resourceId", e.resourceId());
-        m.put("method", e.method());
-        m.put("ip", e.ipAddress() == null ? "" : e.ipAddress());
-        m.put("userAgent", e.userAgent());
-        m.put("location", null);
-        m.put("status", "failure".equals(e.outcome()) ? "failed" : "success");
-        m.put("errorMessage", e.errorCode());
-        m.put("changes", e.details());
-        m.put("createdAt", e.createdAt());
-        return m;
+    private static AuditLogResponse legacy(com.easy1auth.audit.model.AuditEventEntity e) {
+        return new AuditLogResponse(e.id(), e.tenantId(), e.actorId(), e.actorName(), e.eventType(), e.action(),
+                e.resourceType(), e.resourceId(), e.method(), e.ipAddress() == null ? "" : e.ipAddress(),
+                e.userAgent(), null, "failure".equals(e.outcome()) ? "failed" : "success", e.errorCode(),
+                e.details(), e.createdAt());
+    }
+
+    public record AuditStatsResponse(long totalLogs, long successLogs, long failedLogs, long todayLogs,
+                                     long weekLogs, long monthLogs, List<?> topActions, List<?> topUsers, List<?> topIps) {
+    }
+
+    public record CleanupResponse(int deletedCount) {
+    }
+
+    public record AuditLogResponse(UUID id, UUID tenantId, UUID userId, String username, String type, String action,
+                                   String resource, String resourceId, String method, String ip, String userAgent,
+                                   Object location, String status, String errorMessage, Map<String, Object> changes,
+                                   Instant createdAt) {
     }
 }

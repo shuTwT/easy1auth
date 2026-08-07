@@ -6,6 +6,7 @@ import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.ManagementPermissionCode;
 import com.easy1auth.customization.*;
 import com.easy1auth.foundation.web.ApiResponse;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -22,15 +23,14 @@ public class CustomizationController {
     @GetMapping("/api/brand-settings")
     ApiResponse<?> brand() {
         var e = service.brand();
-        return ApiResponse.ok(Map.of("tenantId", e.tenantId(), "brandSettings", e.settings(), "updatedAt", e.updatedAt()));
+        return ApiResponse.ok(new BrandSettingsResponse(e.tenantId(), e.settings(), e.updatedAt()));
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.BRAND_UPDATE)
     @PutMapping("/api/brand-settings")
-    ApiResponse<?> brandUpdate(@RequestBody Map<String, Object> in) {
-        var settings = in.containsKey("brandSettings") ? (Map<String, Object>) in.get("brandSettings") : in;
-        var e = service.updateBrand(settings);
-        return ApiResponse.ok(Map.of("tenantId", e.tenantId(), "brandSettings", e.settings(), "updatedAt", e.updatedAt()), "品牌设置更新成功");
+    ApiResponse<?> brandUpdate(@RequestBody BrandSettingsInput in) {
+        var e = service.updateBrand(in == null ? null : in.settings());
+        return ApiResponse.ok(new BrandSettingsResponse(e.tenantId(), e.settings(), e.updatedAt()), "品牌设置更新成功");
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.LOGIN_STYLE_READ)
@@ -124,5 +124,23 @@ public class CustomizationController {
     }
 
     public record DomainInput(String domain, String verificationMethod) {
+    }
+
+    public static final class BrandSettingsInput {
+        private final Map<String, Object> fields = new LinkedHashMap<>();
+
+        @JsonAnySetter
+        public void set(String name, Object value) {
+            fields.put(name, value);
+        }
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> settings() {
+            Object nested = fields.get("brandSettings");
+            return nested instanceof Map<?, ?> map ? (Map<String, Object>) map : fields;
+        }
+    }
+
+    public record BrandSettingsResponse(UUID tenantId, Map<String, Object> brandSettings, java.time.Instant updatedAt) {
     }
 }

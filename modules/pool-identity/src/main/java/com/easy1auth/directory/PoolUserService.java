@@ -116,9 +116,9 @@ public class PoolUserService {
     }
 
     @Transactional(readOnly = true)
-    public Map<String, Long> stats(UUID tenant) {
+    public UserStats stats(UUID tenant) {
         var rows = sql.createQuery(USER).where(USER.tenantId().eq(tenant)).select(USER.status()).execute();
-        return Map.of("totalUsers", (long) rows.size(), "activeUsers", rows.stream().filter("active"::equals).count(), "disabledUsers", rows.stream().filter("disabled"::equals).count(), "lockedUsers", rows.stream().filter("locked"::equals).count());
+        return new UserStats(rows.size(), rows.stream().filter("active"::equals).count(), rows.stream().filter("disabled"::equals).count(), rows.stream().filter("locked"::equals).count());
     }
 
     private PoolUserEntity entity(UUID tenant, UUID id) {
@@ -196,8 +196,11 @@ public class PoolUserService {
     }
 
     @Transactional(readOnly = true)
-    public Map<String, Long> stats() {
+    public UserStats stats() {
         return stats(TenantContextHolder.requireTenantId());
+    }
+
+    public record UserStats(long totalUsers, long activeUsers, long disabledUsers, long lockedUsers) {
     }
 
     /**

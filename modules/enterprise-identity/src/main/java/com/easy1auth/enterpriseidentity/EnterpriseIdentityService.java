@@ -130,18 +130,18 @@ public class EnterpriseIdentityService {
     }
 
     @Transactional(readOnly = true)
-    public Map<String, Long> stats() {
+    public Stats stats() {
         UUID tenant = TenantContextHolder.requireTenantId();
         var rows = sql.createQuery(SOURCE).where(SOURCE.tenantId().eq(tenant)).select(SOURCE.status()).execute();
         long active = rows.stream().filter("active"::equals).count();
-        return Map.of("totalSources", (long) rows.size(), "activeSources", active, "inactiveSources", rows.size() - active);
+        return new Stats(rows.size(), active, rows.size() - active);
     }
 
     /**
      * Public callback path resolves a source without trusting a request tenant header.
      */
     @Transactional
-    public Map<String, Object> acceptFeishuEvent(UUID sourceId, Map<String, Object> envelope) {
+    public FeishuEventResponse acceptFeishuEvent(UUID sourceId, Map<String, Object> envelope) {
         EnterpriseIdentitySourceEntity source = ignored(() -> sql.findById(EnterpriseIdentitySourceEntity.class, sourceId));
         if (source == null || !"feishu".equals(source.provider()))
             throw new DomainException(ErrorCodeConstants.ENTERPRISE_IDENTITY_SOURCE_NOT_FOUND);
@@ -150,8 +150,8 @@ public class EnterpriseIdentityService {
         if (!MessageDigest.isEqual(token.getBytes(StandardCharsets.UTF_8), decrypt(source, "verification-token").getBytes(StandardCharsets.UTF_8)))
             throw new DomainException(ErrorCodeConstants.FEISHU_EVENT_UNAUTHORIZED);
         if ("url_verification".equals(string(event.get("type"))))
-            return Map.of("challenge", string(event.get("challenge")));
-        if (!"active".equals(source.status())) return Map.of();
+            return new FeishuEventResponse(string(event.get("challenge")));
+        if (!"active".equals(source.status())) return new FeishuEventResponse(null);
         Map<String, Object> header = map(event.get("header"));
         String eventId = string(header.get("event_id"));
         if (eventId.isBlank()) throw new DomainException(ErrorCodeConstants.FEISHU_EVENT_INVALID);
@@ -162,7 +162,13 @@ public class EnterpriseIdentityService {
         } catch (RuntimeException ex) {
             if (!isDuplicate(ex)) throw ex;
         }
-        return Map.of();
+        return new FeishuEventResponse(null);
+    }
+
+    public record Stats(long totalSources, long activeSources, long inactiveSources) {
+    }
+
+    public record FeishuEventResponse(String challenge) {
     }
 
     @Transactional

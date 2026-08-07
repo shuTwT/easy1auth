@@ -29,7 +29,7 @@ public class FederationController {
     ApiResponse<?> stats() {
         var p = service.list(1, 100, null, null);
         long active = p.items().stream().filter(x -> "active".equals(x.status())).count();
-        return ApiResponse.ok(Map.of("totalProviders", p.total(), "activeProviders", active, "inactiveProviders", p.total() - active, "byType", Map.of("oidc", p.total())));
+        return ApiResponse.ok(new FederationStatsResponse(p.total(), active, p.total() - active, new ProviderTypeStats(p.total())));
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.SOCIAL_IDENTITY_PROVIDER_READ)
@@ -55,5 +55,12 @@ public class FederationController {
     ApiResponse<Void> delete(@PathVariable UUID id) {
         service.delete(id);
         return ApiResponse.ok(null, "OIDC 身份源删除成功");
+    }
+
+    public record FederationStatsResponse(long totalProviders, long activeProviders, long inactiveProviders,
+                                         ProviderTypeStats byType) {
+    }
+
+    public record ProviderTypeStats(long oidc) {
     }
 }

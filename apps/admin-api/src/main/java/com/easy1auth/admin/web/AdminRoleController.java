@@ -27,7 +27,7 @@ public class AdminRoleController {
     @TenantManagementPermission(value = ManagementPermissionCode.ADMIN_ROLE_PERMISSIONS_CATALOG)
     @GetMapping("/permissions/catalog")
     public ApiResponse<?> catalog() {
-        return ApiResponse.ok(Map.of("permissions", access.catalog()));
+        return ApiResponse.ok(new PermissionCatalogResponse(access.catalog()));
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.ADMIN_ROLE_LIST)
@@ -63,5 +63,8 @@ public class AdminRoleController {
     }
 
     public record RoleInput(String name, String description, List<String> permissions) {
+    }
+
+    public record PermissionCatalogResponse(List<?> permissions) {
     }
 }

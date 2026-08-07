@@ -114,12 +114,12 @@ public class UserAccessCatalogService {
     }
 
     @Transactional(readOnly = true)
-    public Map<String, Long> roleStats(UUID tenant) {
+    public RoleStats roleStats(UUID tenant) {
         var roles = sql.createQuery(ROLE).where(ROLE.tenantId().eq(tenant)).select(ROLE).execute();
         var roleIds = roles.stream().map(PoolRoleEntity::id).toList();
         var assigned = roleIds.isEmpty() ? 0L : sql.createQuery(ASSIGNMENT).where(ASSIGNMENT.id().tenantId().eq(tenant), ASSIGNMENT.id().roleId().in(roleIds)).select(ASSIGNMENT.id().userId()).execute().stream().distinct().count();
-        return Map.of("totalRoles", (long) roles.size(), "systemRoles", roles.stream().filter(r -> "system".equals(r.type())).count(),
-                "customRoles", roles.stream().filter(r -> "custom".equals(r.type())).count(), "totalUsers", assigned);
+        return new RoleStats(roles.size(), roles.stream().filter(r -> "system".equals(r.type())).count(),
+                roles.stream().filter(r -> "custom".equals(r.type())).count(), assigned);
     }
 
     @Transactional(readOnly = true)
@@ -236,10 +236,10 @@ public class UserAccessCatalogService {
     }
 
     @Transactional
-    public Map<String, Long> permissionStats(UUID tenant) {
+    public PermissionStats permissionStats(UUID tenant) {
         ensurePresetPermissions(tenant);
         var rows = sql.createQuery(PERMISSION).where(PERMISSION.tenantId().eq(tenant)).select(PERMISSION.type()).execute();
-        return Map.of("totalPermissions", (long) rows.size(), "menuPermissions", rows.stream().filter("menu"::equals).count(), "operationPermissions", rows.stream().filter("operation"::equals).count(), "dataPermissions", rows.stream().filter("data"::equals).count());
+        return new PermissionStats(rows.size(), rows.stream().filter("menu"::equals).count(), rows.stream().filter("operation"::equals).count(), rows.stream().filter("data"::equals).count());
     }
 
     private void insertAssignment(UUID tenant, UUID user, UUID role) {
@@ -380,7 +380,7 @@ public class UserAccessCatalogService {
     }
 
     @Transactional(readOnly = true)
-    public Map<String, Long> roleStats() {
+    public RoleStats roleStats() {
         return roleStats(TenantContextHolder.requireTenantId());
     }
 
@@ -440,12 +440,18 @@ public class UserAccessCatalogService {
     }
 
     @Transactional
-    public Map<String, Long> permissionStats() {
+    public PermissionStats permissionStats() {
         return permissionStats(TenantContextHolder.requireTenantId());
     }
 
     public record RoleInput(String name, String code, String description, String type, Map<String, Boolean> permissions,
                             String dataScope, UUID parentId) {
+    }
+
+    public record RoleStats(long totalRoles, long systemRoles, long customRoles, long totalUsers) {
+    }
+
+    public record PermissionStats(long totalPermissions, long menuPermissions, long operationPermissions, long dataPermissions) {
     }
 
     public record PermissionInput(String code, String name, String description, String type, UUID parentId,
