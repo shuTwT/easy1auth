@@ -4,7 +4,6 @@ import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.ManagementPermissionCode;
 import com.easy1auth.federation.FederationService;
 import com.easy1auth.foundation.web.ApiResponse;
-import com.easy1auth.foundation.web.PageData;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -22,14 +21,14 @@ public class FederationController {
     @GetMapping
     ApiResponse<?> list(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, @RequestParam(required = false) String search, @RequestParam(required = false) String status) {
         var p = service.list(page, pageSize, search, status);
-        return ApiResponse.ok(PageData.of(p.providers(), p.page(), p.pageSize(), p.total()));
+        return ApiResponse.ok(p);
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.SOCIAL_IDENTITY_PROVIDER_STATS)
     @GetMapping("/stats")
     ApiResponse<?> stats() {
         var p = service.list(1, 100, null, null);
-        long active = p.providers().stream().filter(x -> "active".equals(x.status())).count();
+        long active = p.items().stream().filter(x -> "active".equals(x.status())).count();
         return ApiResponse.ok(Map.of("totalProviders", p.total(), "activeProviders", active, "inactiveProviders", p.total() - active, "byType", Map.of("oidc", p.total())));
     }
 

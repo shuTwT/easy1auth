@@ -712,11 +712,7 @@ onMounted(() => {
               </div>
               <div class="grid gap-2">
                 <label>状态</label>
-                <Select v-model:value="adminQuery.status">
-                  <div class="w-32">
-
-                  </div>
-
+                <Select v-model:value="adminQuery.status" class="w-32" allow-clear>
                     <SelectOption value="active">正常</SelectOption>
                     <SelectOption value="disabled">禁用</SelectOption>
 
@@ -724,11 +720,7 @@ onMounted(() => {
               </div>
               <div class="grid gap-2">
                 <label>管理员角色</label>
-                <Select v-model:value="adminQuery.roleId">
-                  <div class="w-44">
-
-                  </div>
-
+                <Select v-model:value="adminQuery.roleId" class="w-44" allow-clear>
                     <SelectOption v-for="role in adminRolesForFilter" :key="role.id" :value="role.id">
                       {{ role.name }}
                     </SelectOption>
@@ -858,11 +850,7 @@ onMounted(() => {
             <div class="flex items-center justify-between mt-4 pt-4 border-t">
               <span class="text-sm text-muted-foreground">共 {{ adminTotal }} 条</span>
               <div class="flex items-center gap-1">
-                <Select :value="String(adminQuery.pageSize)" @update:value="handleAdminPageSizeChange(Number($event))">
-                  <div class="w-20">
-
-                  </div>
-
+                <Select :value="String(adminQuery.pageSize)" class="w-20" @update:value="handleAdminPageSizeChange(Number($event))">
                     <SelectOption value="10">10</SelectOption>
                     <SelectOption value="20">20</SelectOption>
                     <SelectOption value="50">50</SelectOption>

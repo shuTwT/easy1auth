@@ -42,11 +42,11 @@ public final class TenantSecurityFilter extends OncePerRequestFilter {
 
         TenantContext context = WebFramework.getTenantContext(request);
         if (context == null) {
-            errors.write(response, 403, "租户上下文不可用");
+            errors.write(request, response, com.easy1auth.tenant.ErrorCodeConstants.TENANT_CONTEXT_REQUIRED);
             return;
         }
         if (!context.hasPermission(requirement.get().value())) {
-            errors.write(response, 403, "权限不足");
+            errors.write(request, response, com.easy1auth.adminaccess.ErrorCodeConstants.PERMISSION_DENIED);
             return;
         }
         chain.doFilter(request, response);

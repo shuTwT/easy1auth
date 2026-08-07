@@ -1,20 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import axios from 'axios'
 import { Table, message } from 'antdv-next'
 import { Plus, Search, Copy, Trash2 } from '@lucide/vue'
 import { applicationApi } from '@/api/application'
 import type { Application, CreateApplicationDto, UpdateApplicationDto, ApplicationQueryDto } from '@/types/application'
-
-type ApiErrorResponse = {
-  readonly msg?: string
-}
-
-const getApiErrorMessage = (error: unknown, fallback: string): string => {
-  if (!axios.isAxiosError<ApiErrorResponse>(error)) return fallback
-  return error.response?.data?.msg ?? fallback
-}
 
 const router = useRouter()
 
@@ -34,6 +24,18 @@ const queryForm = reactive<ApplicationQueryDto>({
   type: undefined,
   status: undefined
 })
+
+const applicationTypeOptions = [
+  { value: 'web', label: 'Web应用' },
+  { value: 'native', label: '原生应用' },
+  { value: 'spa', label: '单页应用' },
+  { value: 'machine', label: '机器对机器' },
+]
+const applicationStatusOptions = [
+  { value: 'active', label: '正常' },
+  { value: 'disabled', label: '禁用' },
+]
+const pageSizeOptions = [10, 20, 50, 100].map(value => ({ value, label: String(value) }))
 
 const appForm = reactive<CreateApplicationDto & UpdateApplicationDto>({
   name: '',
@@ -114,7 +116,6 @@ const loadApplications = async () => {
     total.value = res.total
   } catch (error) {
     console.error('加载应用列表失败:', error)
-    message.error('加载应用列表失败')
   } finally {
     loading.value = false
   }
@@ -183,7 +184,6 @@ const handleDelete = async (row: Application) => {
     loadApplications()
   } catch (error) {
     console.error('删除应用失败:', error)
-    message.error('删除应用失败')
   }
 }
 
@@ -194,7 +194,6 @@ const handleStatusChange = async (row: Application, status: string) => {
     loadApplications()
   } catch (error) {
     console.error('更新状态失败:', error)
-    message.error('更新状态失败')
   }
 }
 
@@ -240,7 +239,6 @@ const handleSubmit = async () => {
     loadApplications()
   } catch (error: unknown) {
     console.error('保存应用失败:', error)
-    message.error(getApiErrorMessage(error, '保存应用失败'))
   }
 }
 
@@ -354,29 +352,11 @@ onMounted(() => {
           </div>
           <div class="grid gap-2">
             <label class="text-sm font-medium">应用类型</label>
-            <Select v-model:value="queryForm.type">
-              <div class="w-36">
-
-              </div>
-
-                <SelectOption value="web">Web应用</SelectOption>
-                <SelectOption value="native">原生应用</SelectOption>
-                <SelectOption value="spa">单页应用</SelectOption>
-                <SelectOption value="machine">机器对机器</SelectOption>
-
-            </Select>
+            <Select v-model:value="queryForm.type" class="w-36" allow-clear :options="applicationTypeOptions" />
           </div>
           <div class="grid gap-2">
             <label class="text-sm font-medium">状态</label>
-            <Select v-model:value="queryForm.status">
-              <div class="w-28">
-
-              </div>
-
-                <SelectOption value="active">正常</SelectOption>
-                <SelectOption value="disabled">禁用</SelectOption>
-
-            </Select>
+            <Select v-model:value="queryForm.status" class="w-28" allow-clear :options="applicationStatusOptions" />
           </div>
           <div class="flex gap-2">
             <Button @click="handleSearch">
@@ -436,17 +416,7 @@ onMounted(() => {
         <div class="flex items-center justify-between mt-5">
           <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
           <div class="flex items-center gap-1">
-            <Select v-model:value="queryForm.pageSize!" @update:value="handleSizeChange(Number($event))">
-              <div class="w-20">
-
-              </div>
-
-                <SelectOption :value="10">10</SelectOption>
-                <SelectOption :value="20">20</SelectOption>
-                <SelectOption :value="50">50</SelectOption>
-                <SelectOption :value="100">100</SelectOption>
-
-            </Select>
+            <Select v-model:value="queryForm.pageSize!" class="w-20" :options="pageSizeOptions" @update:value="handleSizeChange(Number($event))" />
             <span class="text-sm px-2">条/页</span>
             <Button  size="small" :disabled="queryForm.page! <= 1" @click="handlePageChange(queryForm.page! - 1)">上一页</Button>
             <span class="text-sm px-2">{{ queryForm.page! }} / {{ totalPages() }}</span>
@@ -470,17 +440,7 @@ onMounted(() => {
             </div>
             <div class="grid gap-2">
               <label class="text-sm font-medium">应用类型</label>
-              <Select v-model:value="appForm.type">
-                <div :aria-invalid="!!formErrors.type">
-
-                </div>
-
-                  <SelectOption value="web">Web应用</SelectOption>
-                  <SelectOption value="native">原生应用</SelectOption>
-                  <SelectOption value="spa">单页应用</SelectOption>
-                  <SelectOption value="machine">机器对机器</SelectOption>
-
-              </Select>
+              <Select v-model:value="appForm.type" :status="formErrors.type ? 'error' : undefined" :options="applicationTypeOptions" />
               <p v-if="formErrors.type" class="text-sm text-destructive">{{ formErrors.type }}</p>
             </div>
             <template v-if="isEditing">

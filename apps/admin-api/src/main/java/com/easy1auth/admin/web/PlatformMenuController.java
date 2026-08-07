@@ -42,12 +42,12 @@ public class PlatformMenuController {
 
     private static UUID accountId(Jwt actor) {
         if (actor == null || actor.getSubject() == null) {
-            throw new DomainException("AUTHENTICATION_SUBJECT_INVALID", "认证主体无效", 403);
+            throw new DomainException(ErrorCodeConstants.AUTHENTICATION_SUBJECT_INVALID);
         }
         try {
             return UUID.fromString(actor.getSubject());
         } catch (IllegalArgumentException exception) {
-            throw new DomainException("AUTHENTICATION_SUBJECT_INVALID", "认证主体无效", 403);
+            throw new DomainException(ErrorCodeConstants.AUTHENTICATION_SUBJECT_INVALID);
         }
     }
 

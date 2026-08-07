@@ -4,7 +4,6 @@ import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.ManagementPermissionCode;
 import com.easy1auth.directory.DirectoryCatalogService;
 import com.easy1auth.foundation.web.ApiResponse;
-import com.easy1auth.foundation.web.PageData;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -22,7 +21,7 @@ public class DirectoryCatalogController {
     ApiResponse<?> groups(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,
                           @RequestParam(required = false) String name, @RequestParam(required = false) String type, @RequestParam(required = false) UUID parentId) {
         var x = catalog.groups(page, pageSize, name, type, parentId);
-        return ApiResponse.ok(PageData.of(x.data(), x.page(), x.pageSize(), x.total()));
+        return ApiResponse.ok(x);
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.GROUP_TREE)
@@ -102,7 +101,7 @@ public class DirectoryCatalogController {
                              @RequestParam(required = false) String name, @RequestParam(required = false) String code,
                              @RequestParam(required = false) UUID departmentId, @RequestParam(required = false) Integer level) {
         var x = catalog.positions(page, pageSize, name, code, departmentId, level);
-        return ApiResponse.ok(PageData.of(x.data(), x.page(), x.pageSize(), x.total()));
+        return ApiResponse.ok(x);
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.POSITION_STATS)

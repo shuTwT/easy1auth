@@ -31,13 +31,25 @@ public class TenantService {
     }
 
     @Transactional(readOnly = true)
+    public List<TenantSummary> listAll() {
+        return repository.listAllTenants().stream().map(this::managementSummary).toList();
+    }
+
+    @Transactional(readOnly = true)
     public List<TenantControlView> listManaged() {
         return repository.listOrdinaryTenants().stream().map(this::controlView).toList();
     }
 
     @Transactional(readOnly = true)
+    public List<TenantPackageView> listAssignablePackages() {
+        return packages.list().stream()
+                .filter(item -> "active".equals(item.status()))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public TenantContext resolve(UUID accountId, UUID tenantId, String traceId) {
-        var membership = repository.activeMembership(accountId, tenantId).filter(it -> authorization.isActiveAccount(accountId)).orElseThrow(() -> new DomainException("TENANT_ACCESS_DENIED", "无权访问所选租户", 403));
+        var membership = repository.activeMembership(accountId, tenantId).filter(it -> authorization.isActiveAccount(accountId)).orElseThrow(() -> new DomainException(ErrorCodeConstants.TENANT_ACCESS_DENIED));
         validateMembershipRole(membership.system(), membership.role());
         var effective = authorization.resolve(new TenantAuthorizationRequest(
                 accountId, tenantId, membership.id(), membership.role(), membership.system(), membership.packageId()));
@@ -76,7 +88,7 @@ public class TenantService {
         TenantEntity tenant = requiredOrdinaryTenant(tenantId);
         String normalized = status == null ? "" : status.strip();
         if (!"active".equals(normalized) && !"suspended".equals(normalized)) {
-            throw new DomainException("TENANT_STATUS_INVALID", "租户状态只能是 active 或 suspended", 400);
+            throw new DomainException(ErrorCodeConstants.TENANT_STATUS_INVALID);
         }
         if ("active".equals(normalized)) {
             packages.lockActiveAssignable(Objects.requireNonNull(tenant.packageInfo(), "ordinary tenant package missing").id());
@@ -95,18 +107,18 @@ public class TenantService {
     @Transactional
     public TenantControlView transferAdministrator(UUID tenantId, UUID targetAccountId) {
         if (targetAccountId == null) {
-            throw new DomainException("ADMINISTRATOR_ACCOUNT_REQUIRED", "管理员账号不能为空", 400);
+            throw new DomainException(ErrorCodeConstants.ADMINISTRATOR_ACCOUNT_REQUIRED);
         }
         TenantEntity tenant = requiredOrdinaryTenant(tenantId);
         if (!"active".equals(tenant.status())) {
-            throw new DomainException("TENANT_NOT_ACTIVE", "停用的租户不能转移管理员", 409);
+            throw new DomainException(ErrorCodeConstants.TENANT_NOT_ACTIVE);
         }
         String administratorRole = administratorRole(false);
         administratorAccounts.lockActive(targetAccountId);
         var current = repository.lockActiveAdministratorMembership(tenant.id())
-                .orElseThrow(() -> new DomainException("TENANT_ADMINISTRATOR_MISSING", "租户缺少有效管理员", 409));
+                .orElseThrow(() -> new DomainException(ErrorCodeConstants.TENANT_ADMINISTRATOR_MISSING));
         if (current.accountId().equals(targetAccountId)) {
-            throw new DomainException("TENANT_ADMINISTRATOR_TARGET_CURRENT", "目标账号已是当前租户管理员", 409);
+            throw new DomainException(ErrorCodeConstants.TENANT_ADMINISTRATOR_TARGET_CURRENT);
         }
         var targetMembership = repository.lockMembership(tenant.id(), targetAccountId);
         if (targetMembership.isPresent()) {
@@ -134,7 +146,7 @@ public class TenantService {
 
     @Transactional
     public void lockForSecurityMaterial(UUID tenantId) {
-        repository.lockActiveTenant(tenantId).orElseThrow(() -> new DomainException("TENANT_NOT_FOUND", "租户不存在或未启用", 404));
+        repository.lockActiveTenant(tenantId).orElseThrow(() -> new DomainException(ErrorCodeConstants.TENANT_NOT_FOUND_ACTIVE));
     }
 
     private TenantSummary summary(TenantRepository.TenantState state) {
@@ -144,6 +156,14 @@ public class TenantService {
                 ? packages.systemPackage()
                 : packages.view(Objects.requireNonNull(tenant.packageInfo(), "ordinary tenant package missing"));
         return new TenantSummary(tenant.id(), tenant.name(), tenant.status(), tenant.isSystem(), tenantPackage, state.role());
+    }
+
+    private TenantSummary managementSummary(TenantEntity tenant) {
+        var tenantPackage = tenant.isSystem()
+                ? packages.systemPackage()
+                : packages.view(Objects.requireNonNull(tenant.packageInfo(), "ordinary tenant package missing"));
+        return new TenantSummary(tenant.id(), tenant.name(), tenant.status(), tenant.isSystem(), tenantPackage,
+                tenant.isSystem() ? "super_admin" : "tenant_admin");
     }
 
     private TenantControlView controlView(TenantEntity tenant) {
@@ -156,10 +176,10 @@ public class TenantService {
 
     private TenantEntity requiredOrdinaryTenant(UUID tenantId) {
         if (tenantId == null) {
-            throw new DomainException("TENANT_ID_REQUIRED", "租户不能为空", 400);
+            throw new DomainException(ErrorCodeConstants.TENANT_ID_REQUIRED);
         }
         return repository.lockOrdinaryTenant(tenantId)
-                .orElseThrow(() -> new DomainException("TENANT_NOT_FOUND", "普通租户不存在或已删除", 404));
+                .orElseThrow(() -> new DomainException(ErrorCodeConstants.TENANT_NOT_FOUND_ORDINARY));
     }
 
     private TenantSummary createOrdinary(String name, TenantPackageView tenantPackage, UUID administratorAccountId) {
@@ -181,13 +201,13 @@ public class TenantService {
                 || (!systemTenant && "tenant_admin".equals(membershipRole))) {
             return;
         }
-        throw new DomainException("TENANT_MEMBERSHIP_ROLE_INVALID", "成员角色与租户类型不匹配", 409);
+        throw new DomainException(ErrorCodeConstants.TENANT_MEMBERSHIP_ROLE_INVALID);
     }
 
     private static String normalizeName(String name) {
         String normalized = name == null ? "" : name.strip();
         if (normalized.isEmpty() || normalized.length() > 200) {
-            throw new DomainException("TENANT_NAME_INVALID", "租户名称不能为空且不能超过200个字符", 400);
+            throw new DomainException(ErrorCodeConstants.TENANT_NAME_INVALID);
         }
         return normalized;
     }

@@ -37,7 +37,8 @@ public final class AuditMutationFilter extends OncePerRequestFilter {
                 Jwt jwt = auth != null && auth.getPrincipal() instanceof Jwt j ? j : null;
                 String[] path = request.getRequestURI().split("/");
                 String resource = path.length > 2 ? path[2] : "api";
-                audit.record(new AuditService.Event(context == null ? null : context.tenantId(), "admin", jwt == null ? null : UUID.fromString(jwt.getSubject()), null, "admin_api", request.getMethod().toLowerCase(Locale.ROOT), resource, path.length > 3 ? path[3] : null, response.getHeader(TraceIdFilter.HEADER), request.getMethod(), request.getRemoteAddr(), WebFramework.getUserAgent(request), response.getStatus() < 400 ? "success" : "failure", response.getStatus() < 400 ? null : "HTTP_" + response.getStatus(), Map.of("path", request.getRequestURI())));
+                boolean businessError = Boolean.TRUE.equals(request.getAttribute("easy1auth.business.error"));
+                audit.record(new AuditService.Event(context == null ? null : context.tenantId(), "admin", jwt == null ? null : UUID.fromString(jwt.getSubject()), null, "admin_api", request.getMethod().toLowerCase(Locale.ROOT), resource, path.length > 3 ? path[3] : null, response.getHeader(TraceIdFilter.HEADER), request.getMethod(), request.getRemoteAddr(), WebFramework.getUserAgent(request), !businessError && response.getStatus() < 400 ? "success" : "failure", businessError ? "BUSINESS_ERROR" : (response.getStatus() < 400 ? null : "HTTP_" + response.getStatus()), Map.of("path", request.getRequestURI())));
             } catch (RuntimeException ignored) {
             }
         }

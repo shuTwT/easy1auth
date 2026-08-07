@@ -7,6 +7,7 @@ import com.easy1auth.directory.model.PoolUserEntity;
 import com.easy1auth.directory.model.PoolUserEntityTable;
 import com.easy1auth.foundation.error.DomainException;
 import com.easy1auth.foundation.id.UuidV7;
+import com.easy1auth.foundation.web.PageData;
 import com.easy1auth.useraccess.model.*;
 import org.babyfish.jimmer.sql.JSqlClient;
 import org.babyfish.jimmer.sql.ast.LikeMode;
@@ -42,13 +43,13 @@ public class UserAccessCatalogService {
     }
 
     @Transactional(readOnly = true)
-    public RolePage roles(UUID tenant, int page, int pageSize, String search, String type) {
+    public PageData<RoleView> roles(UUID tenant, int page, int pageSize, String search, String type) {
         int p = Math.max(1, page), size = Math.min(100, Math.max(1, pageSize));
         var query = sql.createQuery(ROLE).where(ROLE.tenantId().eq(tenant))
                 .whereIf(search != null, () -> Predicate.or(ROLE.name().ilike(search, LikeMode.ANYWHERE), ROLE.code().ilike(search, LikeMode.ANYWHERE)))
                 .whereIf(type != null, () -> ROLE.type().eq(type)).orderBy(ROLE.createdAt().desc()).select(ROLE);
         long total = query.fetchUnlimitedCount();
-        return new RolePage(query.limit(size, (long) (p - 1) * size).execute().stream().map(this::roleView).toList(), total, p, size);
+        return PageData.of(query.limit(size, (long) (p - 1) * size).execute().stream().map(this::roleView).toList(), p, size, total);
     }
 
     @Transactional(readOnly = true)
@@ -59,7 +60,7 @@ public class UserAccessCatalogService {
     @Transactional
     public RoleView createRole(UUID tenant, RoleInput in) {
         if ("system".equals(in.type())) {
-            throw new DomainException("SYSTEM_ROLE_RESERVED", "内置角色只能由系统初始化", 403);
+            throw new DomainException(ErrorCodeConstants.SYSTEM_ROLE_RESERVED);
         }
         validateRole(in.name(), in.code(), in.dataScope());
         validateRoleParent(tenant, null, in.parentId());
@@ -75,7 +76,7 @@ public class UserAccessCatalogService {
     @Transactional
     public RoleView updateRole(UUID tenant, UUID id, RoleInput in) {
         var old = roleEntity(tenant, id);
-        if ("system".equals(old.type())) throw new DomainException("SYSTEM_ROLE_IMMUTABLE", "内置角色不能修改", 403);
+        if ("system".equals(old.type())) throw new DomainException(ErrorCodeConstants.SYSTEM_ROLE_IMMUTABLE_UPDATE);
         String name = in.name() == null ? old.name() : in.name(), scope = in.dataScope() == null ? old.dataScope() : in.dataScope();
         validateRole(name, old.code(), scope);
         validateRoleParent(tenant, id, in.parentId());
@@ -90,11 +91,11 @@ public class UserAccessCatalogService {
     @Transactional
     public void deleteRole(UUID tenant, UUID id) {
         var role = roleEntity(tenant, id);
-        if ("system".equals(role.type())) throw new DomainException("SYSTEM_ROLE_IMMUTABLE", "内置角色不能删除", 403);
+        if ("system".equals(role.type())) throw new DomainException(ErrorCodeConstants.SYSTEM_ROLE_IMMUTABLE_DELETE);
         if (assignmentCount(tenant, id) > 0)
-            throw new DomainException("ROLE_HAS_USERS", "角色下还有用户，不能删除", 409);
+            throw new DomainException(ErrorCodeConstants.ROLE_HAS_USERS);
         if (sql.createQuery(ROLE).where(ROLE.tenantId().eq(tenant), ROLE.parentId().eq(id)).select(ROLE.id()).exists())
-            throw new DomainException("ROLE_HAS_CHILDREN", "角色下还有子角色，不能删除", 409);
+            throw new DomainException(ErrorCodeConstants.ROLE_HAS_CHILDREN);
         sql.createDelete(ROLE).where(ROLE.id().eq(id), ROLE.tenantId().eq(tenant)).execute();
     }
 
@@ -171,7 +172,7 @@ public class UserAccessCatalogService {
     }
 
     @Transactional
-    public PermissionPage permissions(UUID tenant, int page, int pageSize, String search, String type, String resource) {
+    public PageData<PermissionView> permissions(UUID tenant, int page, int pageSize, String search, String type, String resource) {
         ensurePresetPermissions(tenant);
         int p = Math.max(1, page), size = Math.min(200, Math.max(1, pageSize));
         var query = sql.createQuery(PERMISSION).where(PERMISSION.tenantId().eq(tenant))
@@ -179,7 +180,7 @@ public class UserAccessCatalogService {
                 .whereIf(type != null && !type.isBlank(), () -> PERMISSION.type().eq(type)).whereIf(resource != null && !resource.isBlank(), () -> PERMISSION.resource().eq(resource))
                 .orderBy(PERMISSION.resource(), PERMISSION.code()).select(PERMISSION);
         long total = query.fetchUnlimitedCount();
-        return new PermissionPage(query.limit(size, (long) (p - 1) * size).execute().stream().map(this::permissionView).toList(), total, p, size);
+        return PageData.of(query.limit(size, (long) (p - 1) * size).execute().stream().map(this::permissionView).toList(), p, size, total);
     }
 
     @Transactional(readOnly = true)
@@ -215,7 +216,7 @@ public class UserAccessCatalogService {
     public void deletePermission(UUID tenant, UUID id) {
         permissionEntity(tenant, id);
         if (sql.createQuery(PERMISSION).where(PERMISSION.tenantId().eq(tenant), PERMISSION.parentId().eq(id)).select(PERMISSION.id()).exists())
-            throw new DomainException("PERMISSION_HAS_CHILDREN", "权限下还有子权限，不能删除", 409);
+            throw new DomainException(ErrorCodeConstants.PERMISSION_HAS_CHILDREN);
         sql.createDelete(PERMISSION).where(PERMISSION.id().eq(id), PERMISSION.tenantId().eq(tenant)).execute();
     }
 
@@ -275,15 +276,15 @@ public class UserAccessCatalogService {
     }
 
     private PoolRoleEntity roleEntity(UUID tenant, UUID id) {
-        return sql.createQuery(ROLE).where(ROLE.id().eq(id), ROLE.tenantId().eq(tenant)).select(ROLE).fetchOptional().orElseThrow(() -> missing("角色"));
+        return sql.createQuery(ROLE).where(ROLE.id().eq(id), ROLE.tenantId().eq(tenant)).select(ROLE).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.USER_ROLE_NOT_FOUND));
     }
 
     private PoolPermissionEntity permissionEntity(UUID tenant, UUID id) {
-        return sql.createQuery(PERMISSION).where(PERMISSION.id().eq(id), PERMISSION.tenantId().eq(tenant)).select(PERMISSION).fetchOptional().orElseThrow(() -> missing("权限"));
+        return sql.createQuery(PERMISSION).where(PERMISSION.id().eq(id), PERMISSION.tenantId().eq(tenant)).select(PERMISSION).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.USER_PERMISSION_NOT_FOUND));
     }
 
     private PoolUserEntity userEntity(UUID tenant, UUID id) {
-        return sql.createQuery(USER).where(USER.id().eq(id), USER.tenantId().eq(tenant)).select(USER).fetchOptional().orElseThrow(() -> missing("用户"));
+        return sql.createQuery(USER).where(USER.id().eq(id), USER.tenantId().eq(tenant)).select(USER).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.USER_ACCESS_USER_NOT_FOUND));
     }
 
     private long assignmentCount(UUID tenant, UUID role) {
@@ -316,44 +317,40 @@ public class UserAccessCatalogService {
 
     private void validateRoleParent(UUID tenant, UUID self, UUID parent) {
         if (parent == null) return;
-        if (parent.equals(self)) throw new DomainException("ROLE_PARENT_SELF", "不能将自身设为父角色", 400);
+        if (parent.equals(self)) throw new DomainException(ErrorCodeConstants.ROLE_PARENT_SELF);
         var p = roleEntity(tenant, parent);
         Set<UUID> seen = new HashSet<>();
         while (p.parentId() != null) {
             if (!seen.add(p.id()) || p.parentId().equals(self))
-                throw new DomainException("ROLE_CYCLE", "角色层级不能形成循环", 400);
+                throw new DomainException(ErrorCodeConstants.ROLE_CYCLE);
             p = roleEntity(tenant, p.parentId());
         }
     }
 
     private void validatePermissionParent(UUID tenant, UUID self, UUID parent) {
         if (parent == null) return;
-        if (parent.equals(self)) throw new DomainException("PERMISSION_PARENT_SELF", "不能将自身设为父权限", 400);
+        if (parent.equals(self)) throw new DomainException(ErrorCodeConstants.PERMISSION_PARENT_SELF);
         var p = permissionEntity(tenant, parent);
         Set<UUID> seen = new HashSet<>();
         while (p.parentId() != null) {
             if (!seen.add(p.id()) || p.parentId().equals(self))
-                throw new DomainException("PERMISSION_CYCLE", "权限层级不能形成循环", 400);
+                throw new DomainException(ErrorCodeConstants.PERMISSION_CYCLE);
             p = permissionEntity(tenant, p.parentId());
         }
     }
 
     private void validateRole(String name, String code, String scope) {
         if (name == null || name.isBlank() || code == null || code.isBlank() || !Set.of("all", "department", "department_and_sub", "self").contains(scope == null ? "self" : scope))
-            throw new DomainException("ROLE_INVALID", "角色字段或数据范围无效", 400);
+            throw new DomainException(ErrorCodeConstants.ROLE_INVALID);
     }
 
     private void validatePermission(String name, String code, String type, String resource, String action) {
         if (name == null || code == null || resource == null || action == null || !Set.of("menu", "operation", "data").contains(type == null ? "operation" : type))
-            throw new DomainException("PERMISSION_INVALID", "权限字段无效", 400);
-    }
-
-    private DomainException missing(String type) {
-        return new DomainException("USER_ACCESS_NOT_FOUND", type + "不存在", 404);
+            throw new DomainException(ErrorCodeConstants.PERMISSION_INVALID);
     }
 
     @Transactional(readOnly = true)
-    public RolePage roles(int page, int pageSize, String search, String type) {
+    public PageData<RoleView> roles(int page, int pageSize, String search, String type) {
         return roles(TenantContextHolder.requireTenantId(), page, pageSize, search, type);
     }
 
@@ -413,7 +410,7 @@ public class UserAccessCatalogService {
     }
 
     @Transactional
-    public PermissionPage permissions(int page, int pageSize, String search, String type, String resource) {
+    public PageData<PermissionView> permissions(int page, int pageSize, String search, String type, String resource) {
         return permissions(TenantContextHolder.requireTenantId(), page, pageSize, search, type, resource);
     }
 
@@ -460,9 +457,6 @@ public class UserAccessCatalogService {
                            Instant updatedAt, long userCount, ParentSummary parent) {
     }
 
-    public record RolePage(List<RoleView> roles, long total, int page, int pageSize) {
-    }
-
     public record RoleUsers(List<PoolUserView> users, int total) {
     }
 
@@ -476,9 +470,6 @@ public class UserAccessCatalogService {
     }
 
     public record ParentSummary(UUID id, String name, String code) {
-    }
-
-    public record PermissionPage(List<PermissionView> permissions, long total, int page, int pageSize) {
     }
 
     public record PermissionTree(UUID id, String code, String name, String description, String type, String resource,

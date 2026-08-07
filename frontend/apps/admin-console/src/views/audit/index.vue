@@ -266,11 +266,7 @@ onMounted(() => {
           </div>
           <div class="grid gap-1.5">
             <label>日志类型</label>
-            <Select v-model:value="queryForm.type" class="w-[150px]">
-              <div>
-
-              </div>
-
+            <Select v-model:value="queryForm.type" class="w-[150px]" allow-clear>
                 <SelectOptGroup>
                   <SelectOption value="auth">认证</SelectOption>
                   <SelectOption value="user">用户</SelectOption>
@@ -289,11 +285,7 @@ onMounted(() => {
           </div>
           <div class="grid gap-1.5">
             <label>状态</label>
-            <Select v-model:value="queryForm.status" class="w-[120px]">
-              <div>
-
-              </div>
-
+            <Select v-model:value="queryForm.status" class="w-[120px]" allow-clear>
                 <SelectOptGroup>
                   <SelectOption value="success">成功</SelectOption>
                   <SelectOption value="failed">失败</SelectOption>

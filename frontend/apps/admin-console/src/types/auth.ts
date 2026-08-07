@@ -58,9 +58,16 @@ export interface TenantInfo {
   id: string
   name: string
   role: string
+  system?: boolean
   logo?: string
   status?: string
   plan?: string
+  tenantPackage?: {
+    id: number
+    name: string
+    maxUsers: number
+    maxApps: number
+  } | null
 }
 
 export interface PasskeyLoginStartResponse {

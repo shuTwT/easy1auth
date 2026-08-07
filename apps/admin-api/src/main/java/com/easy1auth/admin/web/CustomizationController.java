@@ -56,7 +56,8 @@ public class CustomizationController {
 
     record PublicStyleView(String logo, String logoDark, String backgroundImage, String backgroundColor,
                            String primaryColor, String title, String subtitle, List<String> loginMethods,
-                           List<String> socialProviders) { }
+                           List<String> socialProviders) {
+    }
 
     @TenantManagementPermission(value = ManagementPermissionCode.CUSTOM_DOMAIN_LIST)
     @GetMapping("/api/custom-domains")

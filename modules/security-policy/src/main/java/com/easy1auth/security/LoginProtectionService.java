@@ -25,7 +25,7 @@ public class LoginProtectionService {
     public void assertAllowed(String type, String key, UUID tenant) {
         var row = find(type, normalize(key), tenant, false);
         if (row != null && row.lockedUntil() != null && row.lockedUntil().isAfter(Instant.now()))
-            throw new DomainException("ACCOUNT_TEMPORARILY_LOCKED", "登录失败次数过多，请稍后再试", 423);
+            throw new DomainException(ErrorCodeConstants.ACCOUNT_TEMPORARILY_LOCKED);
     }
 
     @Transactional

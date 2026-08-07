@@ -126,12 +126,12 @@ public class DeliveryService {
     }
 
     private DomainException missing() {
-        return new DomainException("WEBHOOK_NOT_FOUND", "Webhook 不存在", 404);
+        return new DomainException(ErrorCodeConstants.WEBHOOK_NOT_FOUND);
     }
 
     private static void validate(SubscriptionInput in) {
         if (in == null || in.name() == null || in.name().isBlank() || in.events() == null || in.events().isEmpty())
-            throw new DomainException("WEBHOOK_INVALID", "Webhook 参数不完整", 400);
+            throw new DomainException(ErrorCodeConstants.WEBHOOK_INVALID);
         try {
             URI u = URI.create(in.url());
             if (!"https".equals(u.getScheme()) || u.getHost() == null) throw new IllegalArgumentException();
@@ -139,10 +139,10 @@ public class DeliveryService {
                 if (a.isAnyLocalAddress() || a.isLoopbackAddress() || a.isLinkLocalAddress() || a.isSiteLocalAddress())
                     throw new IllegalArgumentException();
         } catch (Exception ex) {
-            throw new DomainException("WEBHOOK_URL_FORBIDDEN", "Webhook 必须使用可公开访问的 HTTPS 地址", 400);
+            throw new DomainException(ErrorCodeConstants.WEBHOOK_URL_FORBIDDEN);
         }
         if (in.maxRetries() != null && (in.maxRetries() < 0 || in.maxRetries() > 20))
-            throw new DomainException("WEBHOOK_RETRY_INVALID", "Webhook 重试次数无效", 400);
+            throw new DomainException(ErrorCodeConstants.WEBHOOK_RETRY_INVALID);
     }
 
     private String token(int n) {
@@ -161,7 +161,7 @@ public class DeliveryService {
 
     private static String status(String v) {
         if (!Set.of("active", "disabled").contains(v))
-            throw new DomainException("WEBHOOK_STATUS_INVALID", "Webhook 状态无效", 400);
+            throw new DomainException(ErrorCodeConstants.WEBHOOK_STATUS_INVALID);
         return v;
     }
 

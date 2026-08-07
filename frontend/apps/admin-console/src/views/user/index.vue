@@ -341,11 +341,7 @@ const toggleRole = (roleId: string) => {
           </div>
           <div class="grid gap-2">
             <label class="text-sm font-medium">状态</label>
-            <Select v-model:value="queryForm.status">
-              <div class="w-32">
-
-              </div>
-
+            <Select v-model:value="queryForm.status" class="w-32" allow-clear>
                 <SelectOption value="active">正常</SelectOption>
                 <SelectOption value="disabled">禁用</SelectOption>
                 <SelectOption value="locked">锁定</SelectOption>
@@ -419,11 +415,7 @@ const toggleRole = (roleId: string) => {
         <div class="flex items-center justify-between mt-4 pt-4 border-t">
           <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
           <div class="flex items-center gap-1">
-            <Select v-model:value="queryForm.pageSize!" @update:value="handleSizeChange(Number($event))">
-              <div class="w-20">
-
-              </div>
-
+            <Select v-model:value="queryForm.pageSize!" class="w-20" @update:value="handleSizeChange(Number($event))">
                 <SelectOption :value="10">10</SelectOption>
                 <SelectOption :value="20">20</SelectOption>
                 <SelectOption :value="50">50</SelectOption>

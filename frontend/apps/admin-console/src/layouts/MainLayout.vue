@@ -12,11 +12,16 @@ import {
   LayoutHeader,
   LayoutSider,
   Menu,
+  Modal,
+  Input,
+  Select,
   Spin,
+  message,
 } from 'antdv-next'
 import { useUserStore } from '@/stores/user'
 import { authorizationApi } from '@/api/authorization'
 import { brandSettingsApi } from '@/api/brandSettings'
+import { tenantApi, type TenantPackageOption } from '@/api/tenant'
 import { setAdminTheme } from '@/config/antd'
 import type { ManagementMenu } from '@/types/authorization'
 import {
@@ -62,6 +67,11 @@ const collapsed = ref(false)
 const mobileOpen = ref(false)
 const mobile = ref(false)
 const openKeys = ref<string[]>([])
+const createTenantDialogOpen = ref(false)
+const createTenantSubmitting = ref(false)
+const createTenantName = ref('')
+const createTenantPackageId = ref<number | undefined>()
+const createTenantPackages = ref<TenantPackageOption[]>([])
 
 const menuIcons: Record<string, Component> = {
   dashboard: LayoutDashboard,
@@ -131,7 +141,14 @@ const menuItems = computed<any[]>(() => {
 })
 
 const selectedKeys = computed(() => [route.path])
-const tenantItems = computed(() => userStore.tenants.map(tenant => ({ key: tenant.id, label: tenant.name })))
+const tenantItems = computed(() => [
+  ...userStore.tenants.map(tenant => ({
+    key: tenant.id,
+    label: `${tenant.name}${tenant.tenantPackage?.name ? ` · ${tenant.tenantPackage.name}` : ''}`,
+  })),
+  { type: 'divider' as const },
+  { key: 'create-tenant', label: '新建租户' },
+])
 const profileItems: any[] = [
   { key: 'profile', label: '个人中心', icon: h(UserRound, { size: 16 }) },
   { type: 'divider' },
@@ -152,8 +169,50 @@ function onMenuClick({ key }: { key: string }) {
 }
 
 function onTenantClick({ key }: { key: string }) {
+  if (key === 'create-tenant') {
+    openCreateTenantDialog()
+    return
+  }
   const tenant = userStore.tenants.find(item => item.id === key)
   if (tenant) userStore.setCurrentTenant(tenant)
+}
+
+async function openCreateTenantDialog() {
+  createTenantName.value = ''
+  createTenantPackageId.value = undefined
+  createTenantDialogOpen.value = true
+  try {
+    createTenantPackages.value = await tenantApi.getAvailablePackages()
+    createTenantPackageId.value = createTenantPackages.value.find(item => item.id > 0)?.id
+  } catch (error) {
+    console.error('加载可用租户套餐失败:', error)
+  }
+}
+
+async function submitCreateTenant() {
+  if (!createTenantName.value.trim()) {
+    message.warning('请输入租户名称')
+    return
+  }
+  if (!createTenantPackageId.value) {
+    message.warning('请选择租户套餐')
+    return
+  }
+  createTenantSubmitting.value = true
+  try {
+    const tenant = await tenantApi.createTenant({
+      name: createTenantName.value.trim(),
+      packageId: createTenantPackageId.value,
+    })
+    userStore.setTenants([...userStore.tenants, tenant])
+    userStore.setCurrentTenant(tenant)
+    createTenantDialogOpen.value = false
+    message.success('租户创建成功')
+  } catch (error) {
+    console.error('创建租户失败:', error)
+  } finally {
+    createTenantSubmitting.value = false
+  }
 }
 
 function onProfileClick({ key }: { key: string }) {
@@ -251,7 +310,7 @@ watch(() => userStore.currentTenant?.id, loadAuthorizedMenus, { immediate: true 
       </div>
     </LayoutSider>
 
-    <Drawer v-model:open="mobileOpen" title="Easy1Auth" placement="left" :size="280" :styles="{ body: { padding: 0 } }">
+      <Drawer v-model:open="mobileOpen" title="Easy1Auth" placement="left" :size="280" :styles="{ body: { padding: 0 } }">
       <div class="p-3"><Dropdown :menu="{ items: tenantItems, onClick: onTenantClick }" :trigger="['click']"><Button block><Building2 :size="16" class="mr-2" />{{ userStore.currentTenant?.name || '选择租户' }}</Button></Dropdown></div>
       <Menu :selected-keys="selectedKeys" :items="menuItems" mode="inline" @click="onMenuClick" />
     </Drawer>
@@ -275,6 +334,29 @@ watch(() => userStore.currentTenant?.id, loadAuthorizedMenus, { immediate: true 
         <router-view v-slot="{ Component }"><transition name="slide-fade" mode="out-in"><component :is="Component" /></transition></router-view>
       </LayoutContent>
     </Layout>
+
+    <Modal v-model:open="createTenantDialogOpen" title="新建租户" :footer="null">
+      <form class="grid gap-4" @submit.prevent="submitCreateTenant">
+        <div class="grid gap-2">
+          <label for="create-tenant-name">租户名称</label>
+          <Input id="create-tenant-name" v-model:value="createTenantName" placeholder="请输入租户名称" />
+        </div>
+        <div class="grid gap-2">
+          <label for="create-tenant-package">租户套餐</label>
+          <Select
+            id="create-tenant-package"
+            v-model:value="createTenantPackageId"
+            class="w-full"
+            placeholder="请选择租户套餐"
+            :options="createTenantPackages.map(item => ({ value: item.id, label: `${item.name} · ${item.maxUsers.toLocaleString()} 用户 / ${item.maxApps.toLocaleString()} 应用` }))"
+          />
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <Button html-type="button" @click="createTenantDialogOpen = false">取消</Button>
+          <Button html-type="submit" :disabled="createTenantSubmitting">{{ createTenantSubmitting ? '创建中...' : '创建租户' }}</Button>
+        </div>
+      </form>
+    </Modal>
   </Layout>
 </template>
 

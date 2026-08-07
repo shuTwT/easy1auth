@@ -340,8 +340,6 @@ onBeforeUnmount(() => {
         </Card>
       </section>
     </div>
-  </main>
-
   <Modal v-model:open="emailModalOpen" title="换绑邮箱" :footer="null" :mask-closable="!emailSending && !emailVerifying">
     <div v-if="emailStep === 'email'" class="space-y-5 pt-2">
       <div class="rounded-lg border border-sky-100 bg-sky-50 p-4 text-sm text-sky-900">
@@ -373,6 +371,7 @@ onBeforeUnmount(() => {
       </div>
     </div>
   </Modal>
+</main>
 </template>
 
 <style scoped>

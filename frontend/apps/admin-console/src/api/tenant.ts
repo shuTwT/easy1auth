@@ -4,19 +4,23 @@ import type { Tenant, CreateTenantDto, TenantControl, TenantControlListResponse,
 
 export interface CreateTenantRequest {
   name: string
-  plan?: string
+  packageId: number
 }
 
-export interface TenantPageResponse {
-  items: TenantInfo[]
-  page: number
-  pageSize: number
-  total: number
+export interface TenantPackageOption {
+  id: number
+  name: string
+  maxUsers: number
+  maxApps: number
 }
 
 export const tenantApi = {
-  getTenants(): Promise<TenantPageResponse> {
-    return request.get('/tenants/list')
+  getSimpleList(): Promise<TenantInfo[]> {
+    return request.get('/tenants/simple-list')
+  },
+
+  getCurrentSimpleList(): Promise<TenantInfo[]> {
+    return request.get('/tenants/simple-slist/current')
   },
 
   createTenant(data: CreateTenantRequest): Promise<TenantInfo> {
@@ -25,6 +29,10 @@ export const tenantApi = {
 
   getCurrentTenant(): Promise<TenantInfo> {
     return request.get('/tenants/current')
+  },
+
+  getAvailablePackages(): Promise<TenantPackageOption[]> {
+    return request.get('/tenants/available-packages')
   },
 
   getList(params: TenantQueryDto): Promise<TenantListResponse> {

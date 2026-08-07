@@ -3,7 +3,6 @@ package com.easy1auth.admin.web;
 import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.*;
 import com.easy1auth.foundation.web.ApiResponse;
-import com.easy1auth.foundation.web.PageData;
 import com.easy1auth.tenant.TenantContext;
 import com.easy1auth.tenant.WebFramework;
 import org.springframework.web.bind.annotation.*;
@@ -35,7 +34,7 @@ public class AdminRoleController {
     @GetMapping
     public ApiResponse<?> list(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, @RequestParam(required = false) String name, @RequestParam(required = false) Boolean isSystem) {
         var p = access.roles(page, pageSize, name, isSystem);
-        return ApiResponse.ok(PageData.of(p.roles(), p.page(), p.pageSize(), p.total()));
+        return ApiResponse.ok(p);
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.ADMIN_ROLE_READ)

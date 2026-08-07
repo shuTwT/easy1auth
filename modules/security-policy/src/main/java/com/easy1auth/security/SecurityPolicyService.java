@@ -57,17 +57,17 @@ public class SecurityPolicyService {
 
     public void validatePassword(String password, Policy p) {
         if (password == null || password.length() < p.minLength() || password.length() > 128 || (p.requireUpper() && !password.matches(".*[A-Z].*")) || (p.requireLower() && !password.matches(".*[a-z].*")) || (p.requireNumber() && !password.matches(".*\\d.*")) || (p.requireSpecial() && !password.matches(".*[^A-Za-z0-9].*")))
-            throw new DomainException("PASSWORD_WEAK", "密码不符合安全策略", 400);
+            throw new DomainException(ErrorCodeConstants.PASSWORD_WEAK);
     }
 
     @Transactional(readOnly = true)
     public void rejectReusedPassword(String subjectType, UUID subject, String candidate, String currentHash, org.springframework.security.crypto.password.PasswordEncoder encoder, int count) {
         if (currentHash != null && encoder.matches(candidate, currentHash))
-            throw new DomainException("PASSWORD_REUSED", "不能重复使用当前密码", 400);
+            throw new DomainException(ErrorCodeConstants.PASSWORD_REUSED_CURRENT);
         if (count <= 0) return;
         var hashes = sql.createQuery(HISTORY).where(HISTORY.subjectType().eq(subjectType), HISTORY.subjectId().eq(subject)).orderBy(HISTORY.createdAt().desc()).select(HISTORY.passwordHash()).limit(count).execute();
         if (hashes.stream().anyMatch(h -> encoder.matches(candidate, h)))
-            throw new DomainException("PASSWORD_REUSED", "不能使用最近使用过的密码", 400);
+            throw new DomainException(ErrorCodeConstants.PASSWORD_REUSED_RECENT);
     }
 
     @Transactional
@@ -83,7 +83,7 @@ public class SecurityPolicyService {
     @Transactional
     public Setup setupTotp(String subjectType, UUID subject, UUID tenant, String label) {
         var old = findFactor(subjectType, subject, "totp");
-        if (old != null && old.enabled()) throw new DomainException("MFA_ALREADY_ENABLED", "TOTP 已启用", 409);
+        if (old != null && old.enabled()) throw new DomainException(ErrorCodeConstants.MFA_ALREADY_ENABLED);
         String secret = totp.secret();
         UUID id = old == null ? UuidV7.randomUuid() : old.id();
         Instant now = Instant.now();
@@ -105,7 +105,7 @@ public class SecurityPolicyService {
         var f = requireFactor(subjectType, subject, "totp");
         String secret = cipher.decrypt(aad(subjectType, subject, "totp"), f.encryptedSecret());
         if (!totp.verify(secret, code, Instant.now(), f.lastTotpStep()))
-            throw new DomainException("MFA_CODE_INVALID", "验证码无效", 400);
+            throw new DomainException(ErrorCodeConstants.MFA_CODE_INVALID);
         sql.createUpdate(FACTOR).set(FACTOR.enabled(), true).set(FACTOR.lastTotpStep(), totp.step(Instant.now())).set(FACTOR.updatedAt(), Instant.now()).where(FACTOR.id().eq(f.id())).execute();
     }
 
@@ -118,11 +118,11 @@ public class SecurityPolicyService {
     @Transactional
     public boolean verifyTotp(String subjectType, UUID subject, String code) {
         var f = requireFactor(subjectType, subject, "totp");
-        if (!f.enabled()) throw new DomainException("MFA_NOT_ENABLED", "MFA 未启用", 409);
+        if (!f.enabled()) throw new DomainException(ErrorCodeConstants.MFA_NOT_ENABLED);
         String secret = cipher.decrypt(aad(subjectType, subject, "totp"), f.encryptedSecret());
         Instant now = Instant.now();
         if (!totp.verify(secret, code, now, f.lastTotpStep()))
-            throw new DomainException("MFA_CODE_INVALID", "验证码无效", 400);
+            throw new DomainException(ErrorCodeConstants.MFA_CODE_INVALID);
         sql.createUpdate(FACTOR).set(FACTOR.lastTotpStep(), totp.step(now)).set(FACTOR.updatedAt(), now).where(FACTOR.id().eq(f.id()), Predicate.or(FACTOR.lastTotpStep().isNull(), FACTOR.lastTotpStep().lt(totp.step(now)))).execute();
         return true;
     }
@@ -136,7 +136,7 @@ public class SecurityPolicyService {
     public Challenge issueEmailChallenge(String subjectType, UUID subject, UUID tenant, String purpose, String destination) {
         Instant now = Instant.now();
         var recent = sql.createQuery(CHALLENGE).where(CHALLENGE.subjectType().eq(subjectType), CHALLENGE.subjectId().eq(subject), CHALLENGE.purpose().eq(purpose), CHALLENGE.factorType().eq("email"), CHALLENGE.createdAt().gt(now.minusSeconds(60))).select(CHALLENGE.id()).exists();
-        if (recent) throw new DomainException("CODE_RATE_LIMITED", "验证码发送过于频繁", 429);
+        if (recent) throw new DomainException(ErrorCodeConstants.CODE_RATE_LIMITED);
         String token = randomToken(32), code = String.format(Locale.ROOT, "%06d", random.nextInt(1_000_000));
         var e = AuthenticationChallengeEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTokenHash(hash(token)).setSubjectType(subjectType).setSubjectId(subject).setTenantId(tenant).setPurpose(purpose).setDestination(destination).setFactorType("email").setCodeHash(hash(code)).setAttempts(0).setMaxAttempts(5).setExpiresAt(now.plusSeconds(600)).setConsumedAt(null).setCreatedAt(now).setLastSentAt(now));
         sql.saveCommand(e).setMode(SaveMode.INSERT_ONLY).execute();
@@ -151,20 +151,20 @@ public class SecurityPolicyService {
     public ConsumedEmailChallenge consumeEmailChallenge(String token, String code, String subjectType, String purpose) {
         var row = sql.createQuery(CHALLENGE).where(CHALLENGE.tokenHash().eq(hash(token)), CHALLENGE.subjectType().eq(subjectType), CHALLENGE.purpose().eq(purpose), CHALLENGE.factorType().eq("email")).select(CHALLENGE).forUpdate().fetchOneOrNull();
         if (row == null || row.subjectId() == null || row.consumedAt() != null || row.expiresAt().isBefore(Instant.now()) || row.attempts() >= row.maxAttempts())
-            throw new DomainException("MFA_CHALLENGE_INVALID", "MFA 挑战无效或已过期", 401);
+            throw new DomainException(ErrorCodeConstants.MFA_CHALLENGE_INVALID);
         if (row.codeHash() == null || !MessageDigest.isEqual(hash(code).getBytes(StandardCharsets.US_ASCII), row.codeHash().getBytes(StandardCharsets.US_ASCII))) {
             sql.createUpdate(CHALLENGE).set(CHALLENGE.attempts(), CHALLENGE.attempts().plus(1)).where(CHALLENGE.id().eq(row.id())).execute();
-            throw new DomainException("MFA_CODE_INVALID", "验证码无效", 400);
+            throw new DomainException(ErrorCodeConstants.MFA_CODE_INVALID);
         }
         if (sql.createUpdate(CHALLENGE).set(CHALLENGE.consumedAt(), Instant.now()).where(CHALLENGE.id().eq(row.id()), CHALLENGE.consumedAt().isNull()).execute() != 1)
-            throw new DomainException("MFA_CHALLENGE_REPLAYED", "MFA 挑战已使用", 401);
+            throw new DomainException(ErrorCodeConstants.MFA_CHALLENGE_REPLAYED);
         return new ConsumedEmailChallenge(row.subjectId(), row.destination());
     }
 
     @Transactional
     public Challenge issueTotpChallenge(String subjectType, UUID subject, UUID tenant, String purpose) {
         var factor = requireFactor(subjectType, subject, "totp");
-        if (!factor.enabled()) throw new DomainException("MFA_NOT_ENABLED", "MFA 未启用", 409);
+        if (!factor.enabled()) throw new DomainException(ErrorCodeConstants.MFA_NOT_ENABLED);
         String token = randomToken(32);
         Instant now = Instant.now();
         var e = AuthenticationChallengeEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTokenHash(hash(token)).setSubjectType(subjectType).setSubjectId(subject).setTenantId(tenant).setPurpose(purpose).setFactorType("totp").setCodeHash(null).setAttempts(0).setMaxAttempts(5).setExpiresAt(now.plusSeconds(600)).setConsumedAt(null).setCreatedAt(now).setLastSentAt(null));
@@ -176,7 +176,7 @@ public class SecurityPolicyService {
     public UUID consumeTotpChallenge(String token, String code, String subjectType, String purpose) {
         var row = sql.createQuery(CHALLENGE).where(CHALLENGE.tokenHash().eq(hash(token)), CHALLENGE.subjectType().eq(subjectType), CHALLENGE.purpose().eq(purpose), CHALLENGE.factorType().eq("totp")).select(CHALLENGE).forUpdate().fetchOneOrNull();
         if (row == null || row.consumedAt() != null || row.expiresAt().isBefore(Instant.now()) || row.attempts() >= row.maxAttempts() || row.subjectId() == null)
-            throw new DomainException("MFA_CHALLENGE_INVALID", "MFA 挑战无效或已过期", 401);
+            throw new DomainException(ErrorCodeConstants.MFA_CHALLENGE_INVALID);
         try {
             verifyTotp(row.subjectType(), row.subjectId(), code);
         } catch (DomainException ex) {
@@ -184,7 +184,7 @@ public class SecurityPolicyService {
             throw ex;
         }
         if (sql.createUpdate(CHALLENGE).set(CHALLENGE.consumedAt(), Instant.now()).where(CHALLENGE.id().eq(row.id()), CHALLENGE.consumedAt().isNull()).execute() != 1)
-            throw new DomainException("MFA_CHALLENGE_REPLAYED", "MFA 挑战已使用", 401);
+            throw new DomainException(ErrorCodeConstants.MFA_CHALLENGE_REPLAYED);
         return row.subjectId();
     }
 
@@ -200,7 +200,7 @@ public class SecurityPolicyService {
 
     private AuthenticationFactorEntity requireFactor(String type, UUID subject, String factor) {
         var f = findFactor(type, subject, factor);
-        if (f == null) throw new DomainException("MFA_NOT_CONFIGURED", "MFA 尚未配置", 404);
+        if (f == null) throw new DomainException(ErrorCodeConstants.MFA_NOT_CONFIGURED);
         return f;
     }
 
@@ -228,7 +228,7 @@ public class SecurityPolicyService {
 
     private static void validate(Policy p) {
         if (p == null || p.minLength() < 8 || p.minLength() > 128 || p.historyCount() < 0 || p.historyCount() > 24 || p.loginAttemptLimit() < 1 || p.lockoutSeconds() < 60)
-            throw new DomainException("SECURITY_POLICY_INVALID", "安全策略参数无效", 400);
+            throw new DomainException(ErrorCodeConstants.SECURITY_POLICY_INVALID);
     }
 
     private static String aad(String type, UUID id, String factor) {

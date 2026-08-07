@@ -38,6 +38,6 @@ class TenantEntityDraftInterceptorTest {
                     interceptor.beforeSave(draft, null);
                 }));
 
-        assertEquals("TENANT_CONTEXT_MISMATCH", exception.code());
+        assertEquals(ErrorCodeConstants.TENANT_CONTEXT_MISMATCH.code(), exception.code());
     }
 }

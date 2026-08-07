@@ -49,7 +49,8 @@ public class AuthController {
     @PostMapping("/login")
     public ApiResponse<LoginResponse> login(@RequestBody LoginRequest request, HttpServletRequest http) {
         if ("email".equals(request.loginType())) return emailLogin(request, http);
-        if (!"password".equals(request.loginType())) throw new DomainException("LOGIN_TYPE_UNSUPPORTED", "不支持的登录方式", 400);
+        if (!"password".equals(request.loginType()))
+            throw new DomainException(ErrorCodeConstants.LOGIN_TYPE_UNSUPPORTED);
         var result = identities.authenticate(request.username(), request.password(), jwt.refreshTtl(), WebFramework.getUserAgent(http), http.getRemoteAddr());
         if (result.account().mfaEnabled()) {
             identities.logout(result.refreshToken());
@@ -95,7 +96,7 @@ public class AuthController {
             }
             body.put("challengeToken", challengeToken);
         } else {
-            throw new DomainException("CODE_TYPE_UNSUPPORTED", "不支持的验证码类型", 400);
+            throw new DomainException(ErrorCodeConstants.CODE_TYPE_UNSUPPORTED);
         }
         return ApiResponse.ok(body, "验证码已进入发送队列");
     }
@@ -119,7 +120,7 @@ public class AuthController {
         var challenge = security.consumeEmailChallenge(request.challengeToken(), request.code(), "admin", "login");
         var account = identities.account(challenge.subjectId());
         if (challenge.destination() == null || !account.email().equalsIgnoreCase(challenge.destination()))
-            throw new DomainException("MFA_CHALLENGE_INVALID", "邮箱登录挑战无效或已过期", 401);
+            throw new DomainException(ErrorCodeConstants.MFA_CHALLENGE_INVALID);
         if (account.mfaEnabled()) {
             var totp = security.issueTotpChallenge("admin", account.id(), null, "login");
             return ApiResponse.ok(LoginResponse.mfa(totp.token(), totp.expiresIn()));
@@ -136,7 +137,8 @@ public class AuthController {
         return LoginResponse.success(tokens.issue(account), refresh, new LoginUser(account.id(), account.username(), account.email(), null, current), memberships);
     }
 
-    public record LoginRequest(String username, String password, String email, String code, String challengeToken, String loginType) {
+    public record LoginRequest(String username, String password, String email, String code, String challengeToken,
+                               String loginType) {
     }
 
     public record RegisterRequest(String email, String password, String code, String username) {

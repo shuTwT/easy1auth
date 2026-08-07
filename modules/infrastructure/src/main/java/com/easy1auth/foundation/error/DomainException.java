@@ -1,20 +1,18 @@
 package com.easy1auth.foundation.error;
 
 public final class DomainException extends RuntimeException {
-    private final String code;
-    private final int status;
+    private final ErrorCode errorCode;
 
-    public DomainException(String code, String message, int status) {
-        super(message);
-        this.code = code;
-        this.status = status;
+    public DomainException(ErrorCode errorCode) {
+        super(java.util.Objects.requireNonNull(errorCode, "errorCode").message());
+        this.errorCode = errorCode;
     }
 
-    public String code() {
-        return code;
+    public ErrorCode errorCode() {
+        return errorCode;
     }
 
-    public int status() {
-        return status;
+    public int code() {
+        return errorCode.code();
     }
 }

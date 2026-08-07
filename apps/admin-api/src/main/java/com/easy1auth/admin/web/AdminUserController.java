@@ -7,7 +7,6 @@ import com.easy1auth.admin.security.PlatformManagementPermission;
 import com.easy1auth.adminidentity.AdminIdentityService;
 import com.easy1auth.foundation.error.DomainException;
 import com.easy1auth.foundation.web.ApiResponse;
-import com.easy1auth.foundation.web.PageData;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
@@ -33,7 +32,7 @@ public class AdminUserController {
     public ApiResponse<?> list(@AuthenticationPrincipal Jwt actor, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, @RequestParam(required = false) String username, @RequestParam(required = false) String email, @RequestParam(required = false) String status, @RequestParam(required = false) UUID roleId) {
         require(actor, ManagementPermissionCode.ADMIN_USER_LIST);
         var p = access.members(page, pageSize, username, email, status, roleId);
-        return ApiResponse.ok(PageData.of(p.admins(), p.page(), p.pageSize(), p.total()));
+        return ApiResponse.ok(p);
     }
 
     @PlatformManagementPermission(value = ManagementPermissionCode.ADMIN_USER_STATS)
@@ -106,12 +105,12 @@ public class AdminUserController {
 
     private static UUID accountId(Jwt actor) {
         if (actor == null || actor.getSubject() == null) {
-            throw new DomainException("AUTHENTICATION_SUBJECT_INVALID", "认证主体无效", 403);
+            throw new DomainException(ErrorCodeConstants.AUTHENTICATION_SUBJECT_INVALID);
         }
         try {
             return UUID.fromString(actor.getSubject());
         } catch (IllegalArgumentException exception) {
-            throw new DomainException("AUTHENTICATION_SUBJECT_INVALID", "认证主体无效", 403);
+            throw new DomainException(ErrorCodeConstants.AUTHENTICATION_SUBJECT_INVALID);
         }
     }
 

@@ -223,11 +223,7 @@ onMounted(() => {
             <Input v-model:value="queryForm.code" placeholder="请输入岗位编码" class="w-48" />
           </div>
           <div class="grid gap-2">
-            <Select v-model:value="queryForm.level" placeholder="请选择级别">
-              <div class="w-40">
-
-              </div>
-
+            <Select v-model:value="queryForm.level" class="w-40" allow-clear placeholder="请选择级别">
                 <SelectOption :value="1">员工 (1-2级)</SelectOption>
                 <SelectOption :value="3">主管 (3-4级)</SelectOption>
                 <SelectOption :value="5">经理 (5-6级)</SelectOption>

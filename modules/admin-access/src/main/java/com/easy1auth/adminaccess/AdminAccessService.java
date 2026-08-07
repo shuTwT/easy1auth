@@ -5,6 +5,7 @@ import com.easy1auth.adminidentity.AdminIdentityService;
 import com.easy1auth.adminidentity.model.*;
 import com.easy1auth.foundation.error.DomainException;
 import com.easy1auth.foundation.id.UuidV7;
+import com.easy1auth.foundation.web.PageData;
 import com.easy1auth.tenant.TenantContext;
 import com.easy1auth.tenant.model.*;
 import org.babyfish.jimmer.sql.JSqlClient;
@@ -32,11 +33,11 @@ public class AdminAccessService {
     }
 
     @Transactional(readOnly = true)
-    public Page<AdminRoleView> roles(int page, int pageSize, String name, Boolean system) {
+    public PageData<AdminRoleView> roles(int page, int pageSize, String name, Boolean system) {
         int p = Math.max(1, page), size = Math.min(100, Math.max(1, pageSize));
         var query = sql.createQuery(ROLE).whereIf(name != null, () -> ROLE.name().ilike(name, LikeMode.ANYWHERE)).whereIf(system != null, () -> ROLE.systemRole().eq(system)).orderBy(ROLE.createdAt().desc()).select(ROLE.fetch(AdminRoleEntityFetcher.$.allScalarFields().permissions().memberships()));
         long total = query.fetchUnlimitedCount();
-        return new Page<>(query.limit(size, (long) (p - 1) * size).execute().stream().map(this::view).toList(), total, p, size);
+        return PageData.of(query.limit(size, (long) (p - 1) * size).execute().stream().map(this::view).toList(), p, size, total);
     }
 
     @Transactional(readOnly = true)
@@ -77,7 +78,7 @@ public class AdminAccessService {
     }
 
     @Transactional(readOnly = true)
-    public MemberPage members(int page, int pageSize, String username, String email, String status, UUID roleId) {
+    public PageData<AdminMemberView> members(int page, int pageSize, String username, String email, String status, UUID roleId) {
         int p = Math.max(1, page), size = Math.min(100, Math.max(1, pageSize));
         var memberships = activeMemberships();
         var byAccount = memberships.stream().collect(java.util.stream.Collectors.groupingBy(TenantMembershipEntity::accountId));
@@ -86,7 +87,7 @@ public class AdminAccessService {
         var query = sql.createQuery(ACCOUNT).whereIf(allowed != null, () -> ACCOUNT.id().in(allowed)).whereIf(username != null, () -> ACCOUNT.username().ilike(username, LikeMode.ANYWHERE)).whereIf(email != null, () -> ACCOUNT.email().ilike(email, LikeMode.ANYWHERE)).whereIf(status != null, () -> ACCOUNT.status().eq(status)).orderBy(ACCOUNT.createdAt().desc(), ACCOUNT.id().asc()).select(ACCOUNT);
         long total = query.fetchUnlimitedCount();
         var rows = query.limit(size, (long) (p - 1) * size).execute().stream().map(a -> memberView(a, byAccount.getOrDefault(a.id(), List.of()))).toList();
-        return new MemberPage(rows, total, p, size);
+        return PageData.of(rows, p, size, total);
     }
 
     @Transactional(readOnly = true)
@@ -114,7 +115,7 @@ public class AdminAccessService {
             identities.lockActive(account);
             var activeMemberships = sql.createQuery(MEMBERSHIP).where(MEMBERSHIP.accountId().eq(account), MEMBERSHIP.status().eq("active")).select(MEMBERSHIP.id()).forUpdate().execute();
             if (!activeMemberships.isEmpty())
-                throw new DomainException("ADMINISTRATOR_TRANSFER_REQUIRED", "账号仍是租户唯一管理员，请先完成租户管理员转移", 409);
+                throw new DomainException(ErrorCodeConstants.ADMINISTRATOR_TRANSFER_REQUIRED);
         }
         identities.updateStatus(actor, account, status);
     }
@@ -149,23 +150,23 @@ public class AdminAccessService {
     }
 
     private AdminRoleEntity findEntity(UUID id) {
-        return sql.createQuery(ROLE).where(ROLE.id().eq(id)).select(ROLE).fetchOptional().orElseThrow(() -> new DomainException("ADMIN_ROLE_NOT_FOUND", "管理员角色不存在", 404));
+        return sql.createQuery(ROLE).where(ROLE.id().eq(id)).select(ROLE).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.ADMIN_ROLE_NOT_FOUND));
     }
 
     private AdminRoleEntity findEntityFetched(UUID id) {
-        return sql.createQuery(ROLE).where(ROLE.id().eq(id)).select(ROLE.fetch(AdminRoleEntityFetcher.$.allScalarFields().permissions().memberships())).fetchOptional().orElseThrow(() -> new DomainException("ADMIN_ROLE_NOT_FOUND", "管理员角色不存在", 404));
+        return sql.createQuery(ROLE).where(ROLE.id().eq(id)).select(ROLE.fetch(AdminRoleEntityFetcher.$.allScalarFields().permissions().memberships())).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.ADMIN_ROLE_NOT_FOUND));
     }
 
     private AdminRoleEntity findEntity(UUID tenant, UUID id) {
-        return sql.createQuery(ROLE).where(ROLE.id().eq(id), ROLE.tenantId().eq(tenant)).select(ROLE).fetchOptional().orElseThrow(() -> new DomainException("ADMIN_ROLE_NOT_FOUND", "管理员角色不存在", 404));
+        return sql.createQuery(ROLE).where(ROLE.id().eq(id), ROLE.tenantId().eq(tenant)).select(ROLE).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.ADMIN_ROLE_NOT_FOUND));
     }
 
     private AdminRoleEntity findEntityFetched(UUID tenant, UUID id) {
-        return sql.createQuery(ROLE).where(ROLE.id().eq(id), ROLE.tenantId().eq(tenant)).select(ROLE.fetch(AdminRoleEntityFetcher.$.allScalarFields().permissions().memberships())).fetchOptional().orElseThrow(() -> new DomainException("ADMIN_ROLE_NOT_FOUND", "管理员角色不存在", 404));
+        return sql.createQuery(ROLE).where(ROLE.id().eq(id), ROLE.tenantId().eq(tenant)).select(ROLE.fetch(AdminRoleEntityFetcher.$.allScalarFields().permissions().memberships())).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.ADMIN_ROLE_NOT_FOUND));
     }
 
     private Set<UUID> membersForRole(UUID role) {
-        return sql.createQuery(ROLE).where(ROLE.id().eq(role)).select(ROLE.fetch(AdminRoleEntityFetcher.$.allScalarFields().memberships())).fetchOptional().orElseThrow(() -> new DomainException("ADMIN_ROLE_NOT_FOUND", "管理员角色不存在", 404)).memberships().stream().map(TenantMembershipEntity::id).collect(java.util.stream.Collectors.toSet());
+        return sql.createQuery(ROLE).where(ROLE.id().eq(role)).select(ROLE.fetch(AdminRoleEntityFetcher.$.allScalarFields().memberships())).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.ADMIN_ROLE_NOT_FOUND)).memberships().stream().map(TenantMembershipEntity::id).collect(java.util.stream.Collectors.toSet());
     }
 
     private List<AdminRoleEntity> rolesForMembership(UUID membership) {
@@ -186,7 +187,7 @@ public class AdminAccessService {
 
     private AdminAccountEntity findAccount(UUID account) {
         var entity = sql.findById(AdminAccountEntity.class, account);
-        if (entity == null) throw new DomainException("ADMIN_ACCOUNT_NOT_FOUND", "管理员账号不存在", 404);
+        if (entity == null) throw new DomainException(ErrorCodeConstants.ADMIN_ACCOUNT_NOT_FOUND);
         return entity;
     }
 
@@ -232,12 +233,12 @@ public class AdminAccessService {
 
     private void validateName(String name) {
         if (name == null || name.isBlank() || name.length() > 100)
-            throw new DomainException("ROLE_NAME_INVALID", "角色名称无效", 400);
+            throw new DomainException(ErrorCodeConstants.ROLE_NAME_INVALID);
     }
 
     private void requireGrantable(TenantContext c, List<ManagementPermissionCode> permissions) {
         if (permissions.stream().map(ManagementPermissionCode::value).anyMatch(code -> !c.permissions().contains(code)))
-            throw new DomainException("PERMISSION_ESCALATION", "不能授予自己不具备的权限", 403);
+            throw new DomainException(ErrorCodeConstants.PERMISSION_ESCALATION);
     }
 
     private void replacePermissions(UUID role, List<ManagementPermissionCode> permissions) {
@@ -247,20 +248,15 @@ public class AdminAccessService {
     }
 
     private AdminRoleEntity findEntityFetchedWithoutMemberships(UUID role) {
-        return sql.createQuery(ROLE).where(ROLE.id().eq(role)).select(ROLE.fetch(AdminRoleEntityFetcher.$.permissions())).fetchOptional().orElseThrow(() -> new DomainException("ADMIN_ROLE_NOT_FOUND", "管理员角色不存在", 404));
+        return sql.createQuery(ROLE).where(ROLE.id().eq(role)).select(ROLE.fetch(AdminRoleEntityFetcher.$.permissions())).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.ADMIN_ROLE_NOT_FOUND));
     }
 
     private DomainException memberMissing() {
-        return new DomainException("ADMIN_MEMBER_NOT_FOUND", "管理员不属于当前租户", 404);
+        return new DomainException(ErrorCodeConstants.ADMIN_MEMBER_NOT_FOUND);
     }
 
     private DomainException immutable() {
-        return new DomainException("SYSTEM_ROLE_IMMUTABLE", "系统角色不能修改或删除", 409);
+        return new DomainException(ErrorCodeConstants.SYSTEM_ROLE_IMMUTABLE);
     }
 
-    public record Page<T>(List<T> roles, long total, int page, int pageSize) {
-    }
-
-    public record MemberPage(List<AdminMemberView> admins, long total, int page, int pageSize) {
-    }
 }

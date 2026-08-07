@@ -369,11 +369,7 @@ onMounted(() => {
             </div>
             <div class="grid gap-1.5">
               <label class="text-sm font-medium">类型</label>
-              <Select v-model:value="queryForm.type">
-                <div class="w-40">
-
-                </div>
-
+              <Select v-model:value="queryForm.type" class="w-40" allow-clear>
                   <SelectOption value="team">团队</SelectOption>
                   <SelectOption value="department">部门</SelectOption>
                   <SelectOption value="project">项目</SelectOption>
@@ -513,10 +509,6 @@ onMounted(() => {
             <div class="grid gap-2">
               <label class="text-sm font-medium">类型 <span class="text-destructive">*</span></label>
               <Select v-model:value="groupForm.type">
-                <div>
-
-                </div>
-
                   <SelectOption value="team">团队</SelectOption>
                   <SelectOption value="department">部门</SelectOption>
                   <SelectOption value="project">项目</SelectOption>
@@ -527,10 +519,6 @@ onMounted(() => {
             <div class="grid gap-2">
               <label class="text-sm font-medium">父级用户组</label>
               <Select v-model:value="groupForm.parentId">
-                <div>
-
-                </div>
-
                   <SelectOption
                     v-for="option in parentOptions"
                     :key="option.value"
@@ -574,10 +562,6 @@ onMounted(() => {
               </div>
               <div class="pt-4">
                 <Select v-model:value="memberForm.selectedUsers" multiple>
-                  <div class="mb-3">
-
-                  </div>
-
                     <SelectOption
                       v-for="user in memberForm.availableUsers.filter(
                         u => !memberForm.currentMembers.find(m => m.id === u.id)
@@ -622,10 +606,6 @@ onMounted(() => {
               </div>
               <div class="pt-4">
                 <Select v-model:value="memberForm.selectedUsers" multiple>
-                  <div class="mb-3">
-
-                  </div>
-
                     <SelectOption
                       v-for="user in memberForm.availableUsers.filter(
                         u => !memberForm.currentAdmins.find(a => a.id === u.id)

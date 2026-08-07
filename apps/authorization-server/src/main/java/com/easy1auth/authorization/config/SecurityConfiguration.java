@@ -38,7 +38,6 @@ import org.springframework.security.provisioning.UserDetailsManager;
 import org.springframework.security.web.*;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
-import org.springframework.security.oauth2.server.authorization.web.OAuth2AuthorizationEndpointFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 import org.springframework.http.MediaType;
@@ -111,7 +110,10 @@ public class SecurityConfiguration {
                 .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()).ignoringRequestMatchers(configurer.getEndpointsMatcher()))
                 .addFilterAfter(issuerHostValidation, SecurityContextHolderFilter.class)
                 .addFilterAfter(tenantPrincipalValidation, IssuerHostValidationFilter.class)
-                .addFilterBefore(consentInteractionFilter, OAuth2AuthorizationEndpointFilter.class)
+                // Authorization Server 在 http.build() 时才注册授权端点过滤器，不能在这里
+                // 直接以 OAuth2AuthorizationEndpointFilter 作为 addFilterBefore 的定位目标。
+                // 租户校验之后、授权端点处理之前执行即可完成 consent 请求的服务端重建。
+                .addFilterAfter(consentInteractionFilter, TenantPrincipalValidationFilter.class)
                 .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
                 .oauth2ResourceServer(resource -> resource.jwt(Customizer.withDefaults()))
                 .exceptionHandling(errors -> errors.defaultAuthenticationEntryPointFor((request, response, exception) -> {

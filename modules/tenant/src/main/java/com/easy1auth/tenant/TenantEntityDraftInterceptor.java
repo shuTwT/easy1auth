@@ -45,6 +45,6 @@ public final class TenantEntityDraftInterceptor
     }
 
     private static DomainException mismatch() {
-        return new DomainException("TENANT_CONTEXT_MISMATCH", "数据租户与当前租户不一致", 403);
+        return new DomainException(ErrorCodeConstants.TENANT_CONTEXT_MISMATCH);
     }
 }

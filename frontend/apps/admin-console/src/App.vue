@@ -11,8 +11,8 @@ onMounted(async () => {
   if (userStore.accessToken) {
     try {
       if (userStore.tenants.length === 0) {
-        const response = await tenantApi.getTenants()
-        userStore.setTenants(response.items)
+        const response = await tenantApi.getCurrentSimpleList()
+        userStore.setTenants(response)
       }
 
       console.log(userStore.currentTenant , userStore.tenants)

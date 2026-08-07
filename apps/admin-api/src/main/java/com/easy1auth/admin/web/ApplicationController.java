@@ -4,7 +4,6 @@ import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.ManagementPermissionCode;
 import com.easy1auth.application.ApplicationService;
 import com.easy1auth.foundation.web.ApiResponse;
-import com.easy1auth.foundation.web.PageData;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Objects;
@@ -23,7 +22,7 @@ public class ApplicationController {
     @GetMapping
     ApiResponse<?> list(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, @RequestParam(required = false) String name, @RequestParam(required = false) String type, @RequestParam(required = false) String status) {
         var p = applications.list(page, pageSize, name, type, status);
-        return ApiResponse.ok(PageData.of(p.applications(), p.page(), p.pageSize(), p.total()));
+        return ApiResponse.ok(p);
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.APPLICATION_STATS)

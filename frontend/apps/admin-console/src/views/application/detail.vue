@@ -57,6 +57,9 @@ const grantTypeOptions = [
   { value: 'refresh_token', label: '刷新令牌', description: '允许应用续期已过期的访问令牌' }
 ] as const
 
+const applicationTypeOptions = Object.entries(typeLabels).map(([value, label]) => ({ value, label }))
+const applicationStatusOptions = Object.entries(statusLabels).map(([value, label]) => ({ value, label }))
+
 const appTab = ref('config')
 const route = useRoute()
 const router = useRouter()
@@ -274,7 +277,6 @@ const saveConfig = async () => {
     message.success('应用配置已保存')
   } catch (error: unknown) {
     console.error('保存应用配置失败:', error)
-    message.error(getApiErrorMessage(error, '保存应用配置失败'))
   } finally {
     configSaving.value = false
   }
@@ -309,7 +311,6 @@ const saveLoginControl = async () => {
     message.success('登录控制已保存')
   } catch (error: unknown) {
     console.error('保存登录控制失败:', error)
-    message.error(getApiErrorMessage(error, '保存登录控制失败'))
   } finally {
     loginSaving.value = false
   }
@@ -326,7 +327,6 @@ const regenerateSecret = async () => {
     message.success('密钥重新生成成功，请立即复制并妥善保管')
   } catch (error: unknown) {
     console.error('重新生成密钥失败:', error)
-    message.error(getApiErrorMessage(error, '重新生成密钥失败'))
   }
 }
 
@@ -462,17 +462,7 @@ onMounted(loadApplication)
                   </div>
                   <div class="grid gap-2">
                     <label class="text-sm font-medium">应用类型</label>
-                    <Select v-model:value="configForm.type">
-                      <div>
-
-                      </div>
-
-                        <SelectOption value="web">Web 应用</SelectOption>
-                        <SelectOption value="native">原生应用</SelectOption>
-                        <SelectOption value="spa">单页应用</SelectOption>
-                        <SelectOption value="machine">机器对机器</SelectOption>
-
-                    </Select>
+                    <Select v-model:value="configForm.type" :options="applicationTypeOptions" />
                   </div>
                   <div class="grid gap-2">
                     <label for="application-logo" class="text-sm font-medium">应用 Logo</label>
@@ -480,15 +470,7 @@ onMounted(loadApplication)
                   </div>
                   <div class="grid gap-2">
                     <label class="text-sm font-medium">应用状态</label>
-                    <Select v-model:value="configForm.status">
-                      <div>
-
-                      </div>
-
-                        <SelectOption value="active">启用</SelectOption>
-                        <SelectOption value="disabled">禁用</SelectOption>
-
-                    </Select>
+                    <Select v-model:value="configForm.status" :options="applicationStatusOptions" />
                   </div>
                 </div>
                 <div class="grid gap-2">

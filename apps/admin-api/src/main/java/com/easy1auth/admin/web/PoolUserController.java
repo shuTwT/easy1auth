@@ -4,7 +4,6 @@ import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.ManagementPermissionCode;
 import com.easy1auth.directory.*;
 import com.easy1auth.foundation.web.ApiResponse;
-import com.easy1auth.foundation.web.PageData;
 import com.easy1auth.useraccess.UserAccessCatalogService;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,7 +26,7 @@ public class PoolUserController {
     @GetMapping
     public ApiResponse<?> list(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, @RequestParam(required = false) String username, @RequestParam(required = false) String email, @RequestParam(required = false) String phone, @RequestParam(required = false) String name, @RequestParam(required = false) String status, @RequestParam(required = false) String department) {
         var p = users.list(page, pageSize, username, email, phone, name, status, department);
-        return ApiResponse.ok(PageData.of(p.users(), p.page(), p.pageSize(), p.total()));
+        return ApiResponse.ok(p);
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.USER_STATS)

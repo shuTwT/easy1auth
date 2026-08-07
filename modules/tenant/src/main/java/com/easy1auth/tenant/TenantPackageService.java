@@ -37,14 +37,14 @@ public class TenantPackageService {
     public TenantPackageView getActive(long packageId) {
         positivePackageId(packageId);
         return repository.findActive(packageId).map(this::activeOrdinaryView)
-                .orElseThrow(() -> new DomainException("TENANT_PACKAGE_NOT_ACTIVE", "租户套餐不存在或未启用", 409));
+                .orElseThrow(() -> new DomainException(ErrorCodeConstants.TENANT_PACKAGE_NOT_ACTIVE));
     }
 
     @Transactional
     public TenantPackageView lockActiveAssignable(long packageId) {
         var tenantPackage = requiredPositivePackageForUpdate(packageId);
         if (!"active".equals(tenantPackage.status())) {
-            throw new DomainException("TENANT_PACKAGE_NOT_ACTIVE", "租户套餐不存在或未启用", 409);
+            throw new DomainException(ErrorCodeConstants.TENANT_PACKAGE_NOT_ACTIVE);
         }
         return activeOrdinaryView(tenantPackage);
     }
@@ -52,8 +52,7 @@ public class TenantPackageService {
     @Transactional
     public TenantPackageView lockActiveDefaultAssignable() {
         return repository.lockActiveDefault().map(this::activeOrdinaryView)
-                .orElseThrow(() -> new DomainException(
-                        "TENANT_PACKAGE_DEFAULT_NOT_ACTIVE", "默认租户套餐不存在或未启用", 409));
+                .orElseThrow(() -> new DomainException(ErrorCodeConstants.TENANT_PACKAGE_DEFAULT_NOT_ACTIVE));
     }
 
     @Transactional
@@ -91,16 +90,16 @@ public class TenantPackageService {
         var existing = requiredPositivePackageForUpdate(packageId);
         String normalized = status == null ? "" : status.strip();
         if (!"active".equals(normalized) && !"inactive".equals(normalized)) {
-            throw new DomainException("TENANT_PACKAGE_STATUS_INVALID", "租户套餐状态无效", 400);
+            throw new DomainException(ErrorCodeConstants.TENANT_PACKAGE_STATUS_INVALID);
         }
         if (existing.defaultPackage() && !"active".equals(normalized)) {
-            throw new DomainException("TENANT_PACKAGE_DEFAULT_MUST_BE_ACTIVE", "默认租户套餐必须启用", 409);
+            throw new DomainException(ErrorCodeConstants.TENANT_PACKAGE_DEFAULT_MUST_BE_ACTIVE);
         }
         if ("active".equals(normalized)) {
             activeOrdinaryView(existing);
         }
         if ("inactive".equals(normalized) && repository.isReferencedByOrdinaryTenant(existing.id())) {
-            throw new DomainException("TENANT_PACKAGE_ASSIGNED", "已分配给普通租户的套餐不能停用", 409);
+            throw new DomainException(ErrorCodeConstants.TENANT_PACKAGE_ASSIGNED_SUSPEND);
         }
         repository.updateStatus(existing.id(), normalized);
         return view(requiredPositivePackage(existing.id()));
@@ -117,10 +116,10 @@ public class TenantPackageService {
     public void delete(long packageId) {
         var existing = requiredPositivePackageForUpdate(packageId);
         if (existing.defaultPackage()) {
-            throw new DomainException("TENANT_PACKAGE_DEFAULT_DELETE_FORBIDDEN", "默认租户套餐不能删除", 409);
+            throw new DomainException(ErrorCodeConstants.TENANT_PACKAGE_DEFAULT_DELETE_FORBIDDEN);
         }
         if (repository.isReferencedByOrdinaryTenant(existing.id())) {
-            throw new DomainException("TENANT_PACKAGE_ASSIGNED", "已分配给普通租户的套餐不能删除", 409);
+            throw new DomainException(ErrorCodeConstants.TENANT_PACKAGE_ASSIGNED_DELETE);
         }
         repository.delete(existing.id());
     }
@@ -156,45 +155,45 @@ public class TenantPackageService {
     private TenantPackageEntity requiredPositivePackage(long packageId) {
         positivePackageId(packageId);
         return repository.find(packageId)
-                .orElseThrow(() -> new DomainException("TENANT_PACKAGE_NOT_FOUND", "租户套餐不存在", 404));
+                .orElseThrow(() -> new DomainException(ErrorCodeConstants.TENANT_PACKAGE_NOT_FOUND));
     }
 
     private TenantPackageEntity requiredPositivePackageForUpdate(long packageId) {
         positivePackageId(packageId);
         return repository.lock(packageId)
-                .orElseThrow(() -> new DomainException("TENANT_PACKAGE_NOT_FOUND", "租户套餐不存在", 404));
+                .orElseThrow(() -> new DomainException(ErrorCodeConstants.TENANT_PACKAGE_NOT_FOUND));
     }
 
     private static void positivePackageId(long packageId) {
         if (packageId <= SYSTEM_PACKAGE_ID) {
-            throw new DomainException("TENANT_PACKAGE_ID_INVALID", "租户套餐 ID 必须为正数", 400);
+            throw new DomainException(ErrorCodeConstants.TENANT_PACKAGE_ID_INVALID);
         }
     }
 
     private static TenantPackageMutation normalize(TenantPackageMutation mutation) {
         if (mutation == null) {
-            throw new DomainException("TENANT_PACKAGE_REQUIRED", "租户套餐不能为空", 400);
+            throw new DomainException(ErrorCodeConstants.TENANT_PACKAGE_REQUIRED);
         }
-        String code = requiredText(mutation.code(), 100, "TENANT_PACKAGE_CODE_INVALID", "租户套餐编码无效");
-        String name = requiredText(mutation.name(), 100, "TENANT_PACKAGE_NAME_INVALID", "租户套餐名称无效");
+        String code = requiredText(mutation.code(), 100, ErrorCodeConstants.TENANT_PACKAGE_CODE_INVALID);
+        String name = requiredText(mutation.name(), 100, ErrorCodeConstants.TENANT_PACKAGE_NAME_INVALID);
         if (mutation.maxUsers() <= 0 || mutation.maxApps() <= 0) {
-            throw new DomainException("TENANT_PACKAGE_QUOTA_INVALID", "租户套餐配额必须为正数", 400);
+            throw new DomainException(ErrorCodeConstants.TENANT_PACKAGE_QUOTA_INVALID);
         }
         return new TenantPackageMutation(code, name, mutation.defaultPackage(), mutation.maxUsers(), mutation.maxApps(), mutation.permissionCodes());
     }
 
     private void ensureUnique(TenantPackageMutation mutation, Long excludingId) {
         if (repository.codeExists(mutation.code(), excludingId)) {
-            throw new DomainException("TENANT_PACKAGE_CODE_EXISTS", "租户套餐编码已存在", 409);
+            throw new DomainException(ErrorCodeConstants.TENANT_PACKAGE_CODE_EXISTS);
         }
         if (repository.nameExists(mutation.name(), excludingId)) {
-            throw new DomainException("TENANT_PACKAGE_NAME_EXISTS", "租户套餐名称已存在", 409);
+            throw new DomainException(ErrorCodeConstants.TENANT_PACKAGE_NAME_EXISTS);
         }
     }
 
     private List<String> validatePermissionCodes(List<String> permissionCodes) {
         if (permissionCodes == null || permissionCodes.stream().anyMatch(java.util.Objects::isNull)) {
-            throw new DomainException("TENANT_PACKAGE_PERMISSION_CODES_INVALID", "租户套餐权限编码无效", 400);
+            throw new DomainException(ErrorCodeConstants.TENANT_PACKAGE_PERMISSION_CODES_INVALID);
         }
         return permissionCatalog.validateActiveTenantPermissionCodes(permissionCodes);
     }
@@ -203,10 +202,10 @@ public class TenantPackageService {
         return view(entity);
     }
 
-    private static String requiredText(String value, int maxLength, String code, String message) {
+    private static String requiredText(String value, int maxLength, com.easy1auth.foundation.error.ErrorCode errorCode) {
         String normalized = value == null ? "" : value.strip();
         if (normalized.isEmpty() || normalized.length() > maxLength) {
-            throw new DomainException(code, message, 400);
+            throw new DomainException(errorCode);
         }
         return normalized;
     }

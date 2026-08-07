@@ -99,18 +99,18 @@ public class ManagementPermissionCatalog {
     }
 
     private DomainException invalidCode() {
-        return new DomainException("MANAGEMENT_PERMISSION_INVALID", "包含未知或非管理端权限", 400);
+        return new DomainException(ErrorCodeConstants.MANAGEMENT_PERMISSION_INVALID);
     }
 
     private DomainException wrongScope() {
-        return new DomainException("MANAGEMENT_PERMISSION_SCOPE_INVALID", "权限不属于当前作用域", 400);
+        return new DomainException(ErrorCodeConstants.MANAGEMENT_PERMISSION_SCOPE_INVALID);
     }
 
     private DomainException inactive() {
-        return new DomainException("MANAGEMENT_PERMISSION_INACTIVE", "权限已停用", 400);
+        return new DomainException(ErrorCodeConstants.MANAGEMENT_PERMISSION_INACTIVE);
     }
 
     private DomainException invalidMetadata() {
-        return new DomainException("MANAGEMENT_PERMISSION_METADATA_INVALID", "权限目录元数据无效", 409);
+        return new DomainException(ErrorCodeConstants.MANAGEMENT_PERMISSION_METADATA_INVALID);
     }
 }

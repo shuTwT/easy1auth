@@ -43,17 +43,17 @@ public final class TenantContextFilter extends OncePerRequestFilter {
         try {
             try {
                 UUID tenantId = WebFramework.getTenantId(request);
-                if (tenantId == null) throw new DomainException("TENANT_CONTEXT_REQUIRED", "租户上下文不可用", 403);
+                if (tenantId == null) throw new DomainException(com.easy1auth.tenant.ErrorCodeConstants.TENANT_CONTEXT_REQUIRED);
                 TenantContextHolder.setTenantId(tenantId);
                 TenantContextHolder.setIgnore(false);
                 TenantContext context = tenants.resolve(UUID.fromString(jwt.getSubject()), tenantId,
                         response.getHeader(TraceIdFilter.HEADER));
                 WebFramework.setTenantContext(request, context);
             } catch (IllegalArgumentException ex) {
-                writeError(response, new DomainException("TENANT_INVALID", "租户标识无效", 400));
+                writeError(request, response, new DomainException(com.easy1auth.tenant.ErrorCodeConstants.TENANT_INVALID));
                 return;
             } catch (DomainException ex) {
-                writeError(response, ex);
+                writeError(request, response, ex);
                 return;
             }
             chain.doFilter(request, response);
@@ -63,7 +63,7 @@ public final class TenantContextFilter extends OncePerRequestFilter {
         }
     }
 
-    private void writeError(HttpServletResponse response, DomainException ex) throws IOException {
-        errors.write(response, ex.status(), ex.getMessage());
+    private void writeError(HttpServletRequest request, HttpServletResponse response, DomainException ex) throws IOException {
+        errors.write(request, response, ex.errorCode());
     }
 }

@@ -25,7 +25,20 @@ public class TenantController {
         this.platformAuthorization = platformAuthorization;
     }
 
+    @PlatformManagementPermission(value = ManagementPermissionCode.TENANT_LIST)
+    @GetMapping("/simple-list")
+    public ApiResponse<List<TenantSummary>> simpleList(Principal principal) {
+        platformAuthorization.require(accountId(principal), ManagementPermissionCode.TENANT_LIST);
+        return ApiResponse.ok(tenants.listAll());
+    }
+
     @ManagementRouteClassification(ManagementRouteKind.DEFERRED_TODO_7)
+    @GetMapping("/simple-slist/current")
+    public ApiResponse<List<TenantSummary>> currentSimpleList(Principal principal) {
+        return ApiResponse.ok(tenants.list(accountId(principal)));
+    }
+
+    @PlatformManagementPermission(value = ManagementPermissionCode.TENANT_LIST)
     @GetMapping("/list")
     public ApiResponse<PageData<TenantSummary>> list(
             Principal principal,
@@ -33,7 +46,8 @@ public class TenantController {
             @RequestParam(defaultValue = "20") int pageSize,
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String status) {
-        var rows = tenants.list(accountId(principal));
+        platformAuthorization.require(accountId(principal), ManagementPermissionCode.TENANT_LIST);
+        var rows = tenants.listAll();
         var filtered = rows.stream()
                 .filter(tenant -> name == null || name.isBlank() || tenant.name().toLowerCase().contains(name.strip().toLowerCase()))
                 .filter(tenant -> status == null || status.isBlank() || tenant.status().equals(status.strip()))
@@ -46,6 +60,14 @@ public class TenantController {
                 List.copyOf(filtered.subList(fromIndex, toIndex)), normalizedPage, normalizedPageSize, filtered.size()));
     }
 
+    @ManagementRouteClassification(ManagementRouteKind.DEFERRED_TODO_7)
+    @GetMapping("/available-packages")
+    public ApiResponse<?> availablePackages() {
+        return ApiResponse.ok(tenants.listAssignablePackages().stream()
+                .map(TenantPackageOption::from)
+                .toList());
+    }
+
     @PlatformManagementPermission(value = ManagementPermissionCode.TENANT_LIST)
     @GetMapping("/managed")
     public ApiResponse<PageData<TenantControlView>> managed(Principal principal) {
@@ -54,11 +76,10 @@ public class TenantController {
         return ApiResponse.ok(PageData.of(rows, 1, rows.size(), rows.size()));
     }
 
-    @PlatformManagementPermission(value = ManagementPermissionCode.TENANT_CREATE)
+    @ManagementRouteClassification(ManagementRouteKind.DEFERRED_TODO_7)
     @PostMapping("/create")
     public ApiResponse<?> create(Principal principal, @RequestBody CreateTenant request) {
-        platformAuthorization.require(accountId(principal), ManagementPermissionCode.TENANT_CREATE);
-        var tenant = tenants.createOrdinary(request.name(), request.packageId(), request.administratorAccountId());
+        var tenant = tenants.createOrdinary(request.name(), request.packageId(), accountId(principal));
         return ApiResponse.ok(tenant, "租户创建成功");
     }
 
@@ -107,6 +128,12 @@ public class TenantController {
     }
 
     public record CreateTenant(String name, long packageId, UUID administratorAccountId) {
+    }
+
+    public record TenantPackageOption(long id, String name, int maxUsers, int maxApps) {
+        static TenantPackageOption from(TenantPackageView item) {
+            return new TenantPackageOption(item.id(), item.name(), item.maxUsers(), item.maxApps());
+        }
     }
 
     public record TenantUpdateInput(String name, Long packageId) {

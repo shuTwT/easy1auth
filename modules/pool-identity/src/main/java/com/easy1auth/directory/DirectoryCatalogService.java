@@ -5,6 +5,7 @@ import com.easy1auth.tenant.TenantContextHolder;
 import com.easy1auth.directory.model.*;
 import com.easy1auth.foundation.error.DomainException;
 import com.easy1auth.foundation.id.UuidV7;
+import com.easy1auth.foundation.web.PageData;
 import org.babyfish.jimmer.sql.JSqlClient;
 import org.babyfish.jimmer.sql.ast.LikeMode;
 import org.babyfish.jimmer.sql.ast.mutation.SaveMode;
@@ -30,7 +31,7 @@ public class DirectoryCatalogService {
     }
 
     @Transactional(readOnly = true)
-    public Page<GroupView> groups(UUID tenant, int page, int size, String name, String type, UUID parentId) {
+    public PageData<GroupView> groups(UUID tenant, int page, int size, String name, String type, UUID parentId) {
         int p = Math.max(1, page), s = Math.min(100, Math.max(1, size));
         var query = sql.createQuery(GROUP).where(GROUP.tenantId().eq(tenant))
                 .whereIf(name != null, () -> GROUP.name().ilike(name, LikeMode.ANYWHERE))
@@ -38,7 +39,7 @@ public class DirectoryCatalogService {
                 .whereIf(parentId != null, () -> GROUP.parentId().eq(parentId))
                 .orderBy(GROUP.createdAt().desc()).select(GROUP);
         long total = query.fetchUnlimitedCount();
-        return new Page<>(query.limit(s, (long) (p - 1) * s).execute().stream().map(this::groupView).toList(), total, p, s);
+        return PageData.of(query.limit(s, (long) (p - 1) * s).execute().stream().map(this::groupView).toList(), p, s, total);
     }
 
     @Transactional(readOnly = true)
@@ -78,7 +79,7 @@ public class DirectoryCatalogService {
     public void deleteGroup(UUID tenant, UUID id) {
         rejectEnterpriseManaged(groupEntity(tenant, id));
         if (sql.createQuery(GROUP).where(GROUP.tenantId().eq(tenant), GROUP.parentId().eq(id)).select(GROUP.id()).exists())
-            throw new DomainException("GROUP_HAS_CHILDREN", "用户组下仍有子组，不能删除", 409);
+            throw new DomainException(ErrorCodeConstants.GROUP_HAS_CHILDREN);
         sql.createDelete(GROUP).where(GROUP.id().eq(id), GROUP.tenantId().eq(tenant)).execute();
     }
 
@@ -133,7 +134,7 @@ public class DirectoryCatalogService {
     }
 
     @Transactional(readOnly = true)
-    public Page<PositionView> positions(UUID tenant, int page, int size, String name, String code, UUID departmentId, Integer level) {
+    public PageData<PositionView> positions(UUID tenant, int page, int size, String name, String code, UUID departmentId, Integer level) {
         int p = Math.max(1, page), s = Math.min(100, Math.max(1, size));
         var query = sql.createQuery(POSITION).where(POSITION.tenantId().eq(tenant))
                 .whereIf(name != null, () -> POSITION.name().ilike(name, LikeMode.ANYWHERE))
@@ -141,7 +142,7 @@ public class DirectoryCatalogService {
                 .whereIf(departmentId != null, () -> POSITION.departmentId().eq(departmentId))
                 .whereIf(level != null, () -> POSITION.level().eq(level)).orderBy(POSITION.createdAt().desc()).select(POSITION);
         long total = query.fetchUnlimitedCount();
-        return new Page<>(query.limit(s, (long) (p - 1) * s).execute().stream().map(this::positionView).toList(), total, p, s);
+        return PageData.of(query.limit(s, (long) (p - 1) * s).execute().stream().map(this::positionView).toList(), p, s, total);
     }
 
     @Transactional(readOnly = true)
@@ -232,15 +233,15 @@ public class DirectoryCatalogService {
     }
 
     private UserGroupEntity groupEntity(UUID tenant, UUID id) {
-        return sql.createQuery(GROUP).where(GROUP.id().eq(id), GROUP.tenantId().eq(tenant)).select(GROUP).fetchOptional().orElseThrow(() -> missing("用户组"));
+        return sql.createQuery(GROUP).where(GROUP.id().eq(id), GROUP.tenantId().eq(tenant)).select(GROUP).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.DIRECTORY_GROUP_NOT_FOUND));
     }
 
     private PositionEntity positionEntity(UUID tenant, UUID id) {
-        return sql.createQuery(POSITION).where(POSITION.id().eq(id), POSITION.tenantId().eq(tenant)).select(POSITION).fetchOptional().orElseThrow(() -> missing("岗位"));
+        return sql.createQuery(POSITION).where(POSITION.id().eq(id), POSITION.tenantId().eq(tenant)).select(POSITION).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.DIRECTORY_POSITION_NOT_FOUND));
     }
 
     private PoolUserEntity userEntity(UUID tenant, UUID id) {
-        return sql.createQuery(USER).where(USER.id().eq(id), USER.tenantId().eq(tenant)).select(USER).fetchOptional().orElseThrow(() -> missing("用户"));
+        return sql.createQuery(USER).where(USER.id().eq(id), USER.tenantId().eq(tenant)).select(USER).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.DIRECTORY_USER_NOT_FOUND));
     }
 
     private List<PoolUserView> userViews(UUID tenant, Collection<UUID> ids) {
@@ -278,33 +279,29 @@ public class DirectoryCatalogService {
 
     private void validateParent(UUID tenant, UUID self, UUID parent) {
         if (parent == null) return;
-        if (parent.equals(self)) throw new DomainException("GROUP_PARENT_SELF", "不能将自身设为父组", 400);
+        if (parent.equals(self)) throw new DomainException(ErrorCodeConstants.GROUP_PARENT_SELF);
         var current = groupEntity(tenant, parent);
         Set<UUID> seen = new HashSet<>();
         while (current.parentId() != null) {
             if (!seen.add(current.id()) || current.parentId().equals(self))
-                throw new DomainException("GROUP_CYCLE", "用户组层级不能形成循环", 400);
+                throw new DomainException(ErrorCodeConstants.GROUP_CYCLE);
             current = groupEntity(tenant, current.parentId());
         }
     }
 
     private void validateGroup(String name, String type) {
         if (name == null || name.isBlank() || !Set.of("team", "department", "project", "organization").contains(type == null ? "team" : type))
-            throw new DomainException("GROUP_INVALID", "用户组名称或类型无效", 400);
+            throw new DomainException(ErrorCodeConstants.GROUP_INVALID);
     }
 
     private void validatePosition(String name, String code) {
         if (name == null || name.isBlank() || code == null || code.isBlank())
-            throw new DomainException("POSITION_INVALID", "岗位名称和编码不能为空", 400);
-    }
-
-    private DomainException missing(String type) {
-        return new DomainException("DIRECTORY_ITEM_NOT_FOUND", type + "不存在", 404);
+            throw new DomainException(ErrorCodeConstants.POSITION_INVALID);
     }
 
     private static void rejectEnterpriseManaged(UserGroupEntity group) {
         if (group.enterpriseIdentitySourceId() != null)
-            throw new DomainException("ENTERPRISE_IDENTITY_MANAGED", "该部门由企业身份源管理，请在身份源中修改", 409);
+            throw new DomainException(ErrorCodeConstants.ENTERPRISE_IDENTITY_MANAGED_DEPARTMENT);
     }
 
     private static long countType(List<UserGroupEntity> groups, String type) {
@@ -312,7 +309,7 @@ public class DirectoryCatalogService {
     }
 
     @Transactional(readOnly = true)
-    public Page<GroupView> groups(int page, int size, String name, String type, UUID parentId) {
+    public PageData<GroupView> groups(int page, int size, String name, String type, UUID parentId) {
         return groups(TenantContextHolder.requireTenantId(), page, size, name, type, parentId);
     }
 
@@ -372,7 +369,7 @@ public class DirectoryCatalogService {
     }
 
     @Transactional(readOnly = true)
-    public Page<PositionView> positions(int page, int size, String name, String code, UUID departmentId, Integer level) {
+    public PageData<PositionView> positions(int page, int size, String name, String code, UUID departmentId, Integer level) {
         return positions(TenantContextHolder.requireTenantId(), page, size, name, code, departmentId, level);
     }
 
@@ -416,9 +413,6 @@ public class DirectoryCatalogService {
 
     public record PositionInput(String name, String code, String description, UUID departmentId, Integer level,
                                 String sequence, Integer maxCount) {
-    }
-
-    public record Page<T>(List<T> data, long total, int page, int pageSize) {
     }
 
     public record GroupView(UUID id, UUID tenantId, String name, String description, String type, UUID parentId,

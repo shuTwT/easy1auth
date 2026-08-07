@@ -3,6 +3,7 @@ package com.easy1auth.application;
 import com.easy1auth.application.model.*;
 import com.easy1auth.foundation.error.DomainException;
 import com.easy1auth.foundation.id.UuidV7;
+import com.easy1auth.foundation.web.PageData;
 import com.easy1auth.tenant.TenantContextHolder;
 import com.easy1auth.tenant.TenantService;
 import org.babyfish.jimmer.sql.JSqlClient;
@@ -39,20 +40,20 @@ public class ApplicationService {
         var normalized = normalize(input, true);
         int limit = tenants.lockForAppQuota(tenant);
         long count = sql.createQuery(APP).select(APP.id()).fetchUnlimitedCount();
-        if (count >= limit) throw new DomainException("TENANT_APP_LIMIT", "已达到租户应用数量上限", 403);
+        if (count >= limit) throw new DomainException(ErrorCodeConstants.TENANT_APP_LIMIT);
         if (sql.createQuery(APP).where(APP.name().eq(normalized.name())).select(APP.id()).exists())
-            throw new DomainException("APPLICATION_NAME_EXISTS", "应用名称已存在", 409);
+            throw new DomainException(ErrorCodeConstants.APPLICATION_NAME_EXISTS);
         UUID id = UuidV7.randomUuid();
         String clientId = "app_" + id.toString().replace("-", "");
         String secret = isPublic(normalized.type()) ? null : secret();
         Instant now = Instant.now();
-        var entity = OAuthApplicationEntityDraft.$.produce(d -> d.setId(id).setName(normalized.name()).setLogo(normalized.logo()).setDescription(normalized.description()).setType(normalized.type()).setClientId(clientId).setClientSecretHash(secret == null ? null : passwords.encode(secret)).setRedirectUris(normalized.redirectUris()).setPostLogoutRedirectUris(normalized.postLogoutRedirectUris()).setAllowedGrantTypes(normalized.allowedGrantTypes()).setScopes(normalized.scopes()).setRequirePkce(normalized.requirePkce()).setRequireConsent(normalized.requireConsent()).setAccessTokenLifetime(normalized.accessTokenLifetime()).setRefreshTokenLifetime(normalized.refreshTokenLifetime()).setStatus("active").setCreatedAt(now).setUpdatedAt(now));
+        var entity = OAuthApplicationEntityDraft.$.produce(d -> d.setId(id).setTenantId(tenant).setName(normalized.name()).setLogo(normalized.logo()).setDescription(normalized.description()).setType(normalized.type()).setClientId(clientId).setClientSecretHash(secret == null ? null : passwords.encode(secret)).setRedirectUris(normalized.redirectUris()).setPostLogoutRedirectUris(normalized.postLogoutRedirectUris()).setAllowedGrantTypes(normalized.allowedGrantTypes()).setScopes(normalized.scopes()).setRequirePkce(normalized.requirePkce()).setRequireConsent(normalized.requireConsent()).setAccessTokenLifetime(normalized.accessTokenLifetime()).setRefreshTokenLifetime(normalized.refreshTokenLifetime()).setStatus("active").setCreatedAt(now).setUpdatedAt(now));
         sql.saveCommand(entity).setMode(SaveMode.INSERT_ONLY).execute();
         return view(entity, secret);
     }
 
     @Transactional(readOnly = true)
-    public ApplicationPage list(int page, int pageSize, String name, String type, String status) {
+    public PageData<ApplicationView> list(int page, int pageSize, String name, String type, String status) {
         int p = Math.max(1, page), size = Math.min(100, Math.max(1, pageSize));
         var query = sql.createQuery(APP)
                 .whereIf(name != null && !name.isBlank(), () -> APP.name().ilike(name, LikeMode.ANYWHERE))
@@ -60,7 +61,7 @@ public class ApplicationService {
                 .whereIf(status != null && !status.isBlank(), () -> APP.status().eq(status))
                 .orderBy(APP.createdAt().desc()).select(APP);
         long total = query.fetchUnlimitedCount();
-        return new ApplicationPage(query.limit(size, (long) (p - 1) * size).execute().stream().map(e -> view(e, null)).toList(), total, p, size);
+        return PageData.of(query.limit(size, (long) (p - 1) * size).execute().stream().map(e -> view(e, null)).toList(), p, size, total);
     }
 
     @Transactional(readOnly = true)
@@ -84,7 +85,7 @@ public class ApplicationService {
         var old = entity(id);
         var normalized = normalizeForUpdate(old, input);
         if (!old.name().equals(normalized.name()) && sql.createQuery(APP).where(APP.name().eq(normalized.name()), APP.id().ne(id)).select(APP.id()).exists())
-            throw new DomainException("APPLICATION_NAME_EXISTS", "应用名称已存在", 409);
+            throw new DomainException(ErrorCodeConstants.APPLICATION_NAME_EXISTS);
         String oneTimeSecret = null;
         var update = sql.createUpdate(APP).set(APP.name(), normalized.name()).set(APP.logo(), normalized.logo()).set(APP.description(), normalized.description()).set(APP.type(), normalized.type()).set(APP.redirectUris(), normalized.redirectUris()).set(APP.postLogoutRedirectUris(), normalized.postLogoutRedirectUris()).set(APP.allowedGrantTypes(), normalized.allowedGrantTypes()).set(APP.scopes(), normalized.scopes()).set(APP.requirePkce(), normalized.requirePkce()).set(APP.requireConsent(), normalized.requireConsent()).set(APP.accessTokenLifetime(), normalized.accessTokenLifetime()).set(APP.refreshTokenLifetime(), normalized.refreshTokenLifetime()).set(APP.updatedAt(), Instant.now()).where(APP.id().eq(id), APP.tenantId().eq(tenant));
         if (isPublic(old.type()) && !isPublic(normalized.type())) {
@@ -106,7 +107,7 @@ public class ApplicationService {
     public ApplicationView status(UUID id, String status) {
         UUID tenant = TenantContextHolder.requireTenantId();
         if (!Set.of("active", "disabled").contains(status))
-            throw new DomainException("APPLICATION_STATUS_INVALID", "应用状态无效", 400);
+            throw new DomainException(ErrorCodeConstants.APPLICATION_STATUS_INVALID);
         entity(id);
         sql.createUpdate(APP).set(APP.status(), status).set(APP.updatedAt(), Instant.now()).where(APP.id().eq(id), APP.tenantId().eq(tenant)).execute();
         return get(id);
@@ -117,7 +118,7 @@ public class ApplicationService {
         UUID tenant = TenantContextHolder.requireTenantId();
         var app = entity(id);
         if (isPublic(app.type()))
-            throw new DomainException("PUBLIC_CLIENT_HAS_NO_SECRET", "公共客户端不使用客户端密钥", 400);
+            throw new DomainException(ErrorCodeConstants.PUBLIC_CLIENT_HAS_NO_SECRET);
         String secret = secret();
         sql.createUpdate(APP).set(APP.clientSecretHash(), passwords.encode(secret)).set(APP.updatedAt(), Instant.now()).where(APP.id().eq(id), APP.tenantId().eq(tenant)).execute();
         return new SecretView(secret);
@@ -134,7 +135,7 @@ public class ApplicationService {
     }
 
     private DomainException missing() {
-        return new DomainException("APPLICATION_NOT_FOUND", "应用不存在", 404);
+        return new DomainException(ErrorCodeConstants.APPLICATION_NOT_FOUND);
     }
 
     private static boolean isPublic(String type) {
@@ -153,7 +154,7 @@ public class ApplicationService {
             if (!u.isAbsolute() || u.getHost() == null || u.getFragment() != null || !("https".equalsIgnoreCase(u.getScheme()) || "http".equalsIgnoreCase(u.getScheme())))
                 throw new IllegalArgumentException();
         } catch (RuntimeException ex) {
-            throw new DomainException("REDIRECT_URI_INVALID", "重定向 URI 必须是无 fragment 的绝对 HTTP(S) URI", 400);
+            throw new DomainException(ErrorCodeConstants.REDIRECT_URI_INVALID);
         }
     }
 
@@ -163,25 +164,25 @@ public class ApplicationService {
 
     private static ApplicationInput normalize(ApplicationInput in, boolean creating) {
         if (in == null || in.name() == null || in.name().isBlank())
-            throw new DomainException("APPLICATION_NAME_REQUIRED", "应用名称不能为空", 400);
+            throw new DomainException(ErrorCodeConstants.APPLICATION_NAME_REQUIRED);
         String type = in.type() == null ? "web" : in.type();
-        if (!TYPES.contains(type)) throw new DomainException("APPLICATION_TYPE_INVALID", "应用类型无效", 400);
+        if (!TYPES.contains(type)) throw new DomainException(ErrorCodeConstants.APPLICATION_TYPE_INVALID);
         List<String> redirects = copy(in.redirectUris());
         redirects.forEach(ApplicationService::uri);
         List<String> logout = copy(in.postLogoutRedirectUris());
         logout.forEach(ApplicationService::uri);
         List<String> grants = in.allowedGrantTypes() == null ? defaultGrants(type) : copy(in.allowedGrantTypes());
         if (grants.isEmpty() || !GRANTS.containsAll(grants))
-            throw new DomainException("GRANT_TYPE_INVALID", "授权类型无效", 400);
+            throw new DomainException(ErrorCodeConstants.GRANT_TYPE_INVALID);
         if (isPublic(type) && grants.contains("client_credentials"))
-            throw new DomainException("PUBLIC_CLIENT_GRANT_INVALID", "公共客户端不能使用 Client Credentials", 400);
+            throw new DomainException(ErrorCodeConstants.PUBLIC_CLIENT_GRANT_INVALID);
         List<String> scopes = in.scopes() == null ? List.of("openid", "profile", "email", "phone") : copy(in.scopes());
         int access = in.accessTokenLifetime() == null ? 900 : in.accessTokenLifetime(), refresh = in.refreshTokenLifetime() == null ? 2592000 : in.refreshTokenLifetime();
         if (access < 60 || access > 86400 || refresh < 300 || refresh > 31536000)
-            throw new DomainException("TOKEN_LIFETIME_INVALID", "Token 有效期超出允许范围", 400);
+            throw new DomainException(ErrorCodeConstants.TOKEN_LIFETIME_INVALID);
         boolean pkce = in.requirePkce() != null ? in.requirePkce() : grants.contains("authorization_code");
         if (isPublic(type) && grants.contains("authorization_code") && !pkce)
-            throw new DomainException("PKCE_REQUIRED", "公共客户端必须启用 PKCE", 400);
+            throw new DomainException(ErrorCodeConstants.PKCE_REQUIRED);
         return new ApplicationInput(in.name().strip(), in.logo(), in.description(), type, redirects, logout, grants, scopes, pkce, in.requireConsent() == null || in.requireConsent(), access, refresh);
     }
 
@@ -214,9 +215,6 @@ public class ApplicationService {
                                   List<String> scopes, boolean requirePkce, boolean requireConsent,
                                   int accessTokenLifetime, int refreshTokenLifetime, String status, Instant createdAt,
                                   Instant updatedAt) {
-    }
-
-    public record ApplicationPage(List<ApplicationView> applications, long total, int page, int pageSize) {
     }
 
     public record SecretView(String clientSecret) {

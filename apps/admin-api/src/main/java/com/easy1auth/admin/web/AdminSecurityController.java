@@ -62,7 +62,7 @@ public class AdminSecurityController {
         UUID accountId = id(jwt);
         var challenge = security.consumeEmailChallenge(input.challengeToken(), input.code(), "admin", "email_change");
         if (!accountId.equals(challenge.subjectId()) || challenge.destination() == null)
-            throw new com.easy1auth.foundation.error.DomainException("EMAIL_CHANGE_CHALLENGE_INVALID", "邮箱换绑挑战无效或已过期", 401);
+            throw new com.easy1auth.foundation.error.DomainException(ErrorCodeConstants.EMAIL_CHANGE_CHALLENGE_INVALID);
         var account = identities.changeOwnEmail(accountId, challenge.destination());
         return ApiResponse.ok(Map.of("email", account.email()), "邮箱换绑成功，请重新登录");
     }
@@ -71,7 +71,7 @@ public class AdminSecurityController {
     @PostMapping("/change-password")
     public ApiResponse<Void> change(@AuthenticationPrincipal Jwt jwt, @RequestBody ChangePassword input) {
         if (!Objects.equals(input.newPassword(), input.confirmPassword()))
-            throw new com.easy1auth.foundation.error.DomainException("PASSWORD_CONFIRM_MISMATCH", "两次输入的密码不一致", 400);
+            throw new com.easy1auth.foundation.error.DomainException(ErrorCodeConstants.PASSWORD_CONFIRM_MISMATCH);
         security.validatePassword(input.newPassword(), SecurityPolicyService.adminPolicy());
         identities.changePassword(id(jwt), input.currentPassword(), input.newPassword());
         return ApiResponse.ok(null, "密码修改成功，请重新登录");

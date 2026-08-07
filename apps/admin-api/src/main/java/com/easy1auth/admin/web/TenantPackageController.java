@@ -92,18 +92,18 @@ public class TenantPackageController {
 
     private static UUID accountId(Jwt actor) {
         if (actor == null || actor.getSubject() == null) {
-            throw new DomainException("AUTHENTICATION_SUBJECT_INVALID", "认证主体无效", 403);
+            throw new DomainException(ErrorCodeConstants.AUTHENTICATION_SUBJECT_INVALID);
         }
         try {
             return UUID.fromString(actor.getSubject());
         } catch (IllegalArgumentException exception) {
-            throw new DomainException("AUTHENTICATION_SUBJECT_INVALID", "认证主体无效", 403);
+            throw new DomainException(ErrorCodeConstants.AUTHENTICATION_SUBJECT_INVALID);
         }
     }
 
     private static TenantPackageMutation mutation(TenantPackageInput input) {
         if (input == null) {
-            throw new DomainException("TENANT_PACKAGE_REQUIRED", "租户套餐不能为空", 400);
+            throw new DomainException(com.easy1auth.tenant.ErrorCodeConstants.TENANT_PACKAGE_REQUIRED);
         }
         return input.toMutation();
     }

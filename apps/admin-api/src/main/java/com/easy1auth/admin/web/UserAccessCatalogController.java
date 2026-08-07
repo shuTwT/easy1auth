@@ -3,7 +3,6 @@ package com.easy1auth.admin.web;
 import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.ManagementPermissionCode;
 import com.easy1auth.foundation.web.ApiResponse;
-import com.easy1auth.foundation.web.PageData;
 import com.easy1auth.useraccess.UserAccessCatalogService;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,7 +20,7 @@ public class UserAccessCatalogController {
     @GetMapping("/api/roles")
     ApiResponse<?> roles(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, @RequestParam(required = false) String search, @RequestParam(required = false) String type) {
         var p = service.roles(page, pageSize, search, type);
-        return ApiResponse.ok(PageData.of(p.roles(), p.page(), p.pageSize(), p.total()));
+        return ApiResponse.ok(p);
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.USER_ROLE_STATS)
@@ -98,7 +97,7 @@ public class UserAccessCatalogController {
     @GetMapping("/api/permissions")
     ApiResponse<?> permissions(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "50") int pageSize, @RequestParam(required = false) String search, @RequestParam(required = false) String type, @RequestParam(required = false) String resource) {
         var p = service.permissions(page, pageSize, search, type, resource);
-        return ApiResponse.ok(PageData.of(p.permissions(), p.page(), p.pageSize(), p.total()));
+        return ApiResponse.ok(p);
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_STATS)

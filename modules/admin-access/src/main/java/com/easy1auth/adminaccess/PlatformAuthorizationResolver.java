@@ -50,11 +50,11 @@ public class PlatformAuthorizationResolver {
     @Transactional(readOnly = true)
     public PlatformAuthorization require(UUID accountId, ManagementPermissionCode permission) {
         if (permission.scope() != ManagementPermissionScope.PLATFORM) {
-            throw new DomainException("PLATFORM_PERMISSION_SCOPE_INVALID", "权限不属于平台作用域", 400);
+            throw new DomainException(ErrorCodeConstants.PLATFORM_PERMISSION_SCOPE_INVALID);
         }
         PlatformAuthorization authorization = resolve(accountId);
         if (!authorization.has(permission)) {
-            throw new DomainException("PERMISSION_DENIED", "权限不足", 403);
+            throw new DomainException(ErrorCodeConstants.PERMISSION_DENIED);
         }
         return authorization;
     }
@@ -72,12 +72,12 @@ public class PlatformAuthorizationResolver {
                 .select(TENANT)
                 .execute();
         if (systemTenants.size() != 1 || !"active".equals(systemTenants.getFirst().status())) {
-            throw new DomainException("SYSTEM_TENANT_INVALID", "系统租户状态无效", 409);
+            throw new DomainException(ErrorCodeConstants.SYSTEM_TENANT_INVALID);
         }
         return systemTenants.getFirst();
     }
 
     private static DomainException accessDenied() {
-        return new DomainException("PLATFORM_ACCESS_DENIED", "无权访问平台资源", 403);
+        return new DomainException(ErrorCodeConstants.PLATFORM_ACCESS_DENIED);
     }
 }

@@ -58,7 +58,7 @@ final class JimmerTenantAuthorizationProvider implements TenantAuthorizationProv
     private TenantAuthorization resolveSuperAdmin(TenantAuthorizationRequest request) {
         var platform = platforms.resolve(request.accountId());
         if (!request.tenantId().equals(platform.tenantId())) {
-            throw new DomainException("SYSTEM_TENANT_CONTEXT_INVALID", "系统租户上下文无效", 409);
+            throw new DomainException(ErrorCodeConstants.SYSTEM_TENANT_CONTEXT_INVALID);
         }
         Set<String> permissions = Stream.concat(
                         catalog.activeCodes(ManagementPermissionScope.PLATFORM).stream(),
@@ -79,7 +79,7 @@ final class JimmerTenantAuthorizationProvider implements TenantAuthorizationProv
 
     private TenantPackageView activeOrdinaryPackage(TenantAuthorizationRequest request) {
         if (request.packageId() == null || request.packageId() <= 0) {
-            throw new DomainException("TENANT_PACKAGE_MISSING", "普通租户缺少有效套餐", 409);
+            throw new DomainException(ErrorCodeConstants.TENANT_PACKAGE_MISSING);
         }
         return packages.getActive(request.packageId());
     }
@@ -91,6 +91,6 @@ final class JimmerTenantAuthorizationProvider implements TenantAuthorizationProv
     }
 
     private static DomainException invalidMembershipRole() {
-        return new DomainException("TENANT_MEMBERSHIP_ROLE_INVALID", "成员角色与租户类型不匹配", 409);
+        return new DomainException(ErrorCodeConstants.TENANT_MEMBERSHIP_ROLE_INVALID);
     }
 }

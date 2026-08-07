@@ -5,6 +5,7 @@ import com.easy1auth.directory.*;
 import com.easy1auth.federation.model.*;
 import com.easy1auth.foundation.error.DomainException;
 import com.easy1auth.foundation.id.UuidV7;
+import com.easy1auth.foundation.web.PageData;
 import com.easy1auth.security.SecurityDataCipher;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -54,11 +55,11 @@ public class FederationService {
     }
 
     @Transactional(readOnly = true)
-    public Page list(UUID tenant, int page, int size, String search, String status) {
+    public PageData<ProviderView> list(UUID tenant, int page, int size, String search, String status) {
         int p = Math.max(1, page), s = Math.min(100, Math.max(1, size));
         var q = sql.createQuery(PROVIDER).where(PROVIDER.tenantId().eq(tenant)).whereIf(search != null && !search.isBlank(), () -> PROVIDER.name().ilike(search, LikeMode.ANYWHERE)).whereIf(status != null && !status.isBlank(), () -> PROVIDER.status().eq(status)).orderBy(PROVIDER.createdAt().desc()).select(PROVIDER);
         long total = q.fetchUnlimitedCount();
-        return new Page(q.limit(s, (long) (p - 1) * s).execute().stream().map(e -> view(e, null)).toList(), total, p, s);
+        return PageData.of(q.limit(s, (long) (p - 1) * s).execute().stream().map(e -> view(e, null)).toList(), p, s, total);
     }
 
     @Transactional(readOnly = true)
@@ -93,7 +94,7 @@ public class FederationService {
     @Transactional
     public AuthorizationStart authorize(UUID tenant, UUID providerId, String redirectUri) {
         var p = entity(tenant, providerId);
-        if (!"active".equals(p.status())) throw new DomainException("OIDC_PROVIDER_DISABLED", "OIDC 身份源已停用", 409);
+        if (!"active".equals(p.status())) throw new DomainException(ErrorCodeConstants.OIDC_PROVIDER_DISABLED);
         URI callback = safeRedirect(redirectUri);
         Map<String, Object> metadata = metadata(p.issuer());
         String endpoint = Objects.toString(metadata.get("authorization_endpoint"), "");
@@ -111,7 +112,7 @@ public class FederationService {
     public LoginResult callback(UUID tenant, UUID providerId, String code, String state, String redirectUri) {
         var tx = sql.createQuery(TX).where(TX.tenantId().eq(tenant), TX.providerId().eq(providerId), TX.stateHash().eq(hash(state))).select(TX).forUpdate().fetchOneOrNull();
         if (tx == null || tx.consumedAt() != null || tx.expiresAt().isBefore(Instant.now()) || !Objects.equals(tx.returnUri(), redirectUri))
-            throw new DomainException("OIDC_TRANSACTION_INVALID", "OIDC 登录事务无效或已过期", 401);
+            throw new DomainException(ErrorCodeConstants.OIDC_TRANSACTION_INVALID);
         var p = entity(tenant, providerId);
         Map<String, Object> metadata = metadata(p.issuer());
         String tokenEndpoint = Objects.toString(metadata.get("token_endpoint"), ""), jwks = Objects.toString(metadata.get("jwks_uri"), "");
@@ -120,12 +121,12 @@ public class FederationService {
         String verifier = cipher.decrypt("oidc-tx:" + tx.id() + ":pkce", tx.encryptedPkceVerifier());
         Map<String, Object> tokens = postToken(tokenEndpoint, p, code, redirectUri, verifier);
         String raw = Objects.toString(tokens.get("id_token"), "");
-        if (raw.isBlank()) throw new DomainException("OIDC_ID_TOKEN_MISSING", "上游未返回 ID Token", 401);
+        if (raw.isBlank()) throw new DomainException(ErrorCodeConstants.OIDC_ID_TOKEN_MISSING);
         JwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(jwks).build();
         Jwt jwt = decoder.decode(raw);
         String nonce = cipher.decrypt("oidc-tx:" + tx.id() + ":nonce", tx.encryptedNonce());
         if (!p.issuer().equals(jwt.getIssuer() == null ? null : jwt.getIssuer().toString()) || !jwt.getAudience().contains(p.clientId()) || !MessageDigest.isEqual(hash(nonce).getBytes(StandardCharsets.US_ASCII), hash(jwt.getClaimAsString("nonce")).getBytes(StandardCharsets.US_ASCII)))
-            throw new DomainException("OIDC_ID_TOKEN_INVALID", "OIDC ID Token 校验失败", 401);
+            throw new DomainException(ErrorCodeConstants.OIDC_ID_TOKEN_INVALID);
         String sub = jwt.getSubject();
         var binding = sql.createQuery(BINDING).where(BINDING.tenantId().eq(tenant), BINDING.providerId().eq(providerId), BINDING.issuer().eq(p.issuer()), BINDING.subject().eq(sub)).select(BINDING).fetchOneOrNull();
         boolean created = false;
@@ -134,11 +135,11 @@ public class FederationService {
             userId = binding.poolUserId();
             sql.createUpdate(BINDING).set(BINDING.lastLoginAt(), Instant.now()).where(BINDING.id().eq(binding.id())).execute();
         } else {
-            if (!p.jitProvisioning()) throw new DomainException("OIDC_BINDING_REQUIRED", "该外部身份尚未绑定", 403);
+            if (!p.jitProvisioning()) throw new DomainException(ErrorCodeConstants.OIDC_BINDING_REQUIRED);
             Boolean verified = jwt.getClaim("email_verified");
             String email = jwt.getClaimAsString("email");
             if (!Boolean.TRUE.equals(verified) || email == null)
-                throw new DomainException("OIDC_VERIFIED_EMAIL_REQUIRED", "JIT 创建需要已验证邮箱", 403);
+                throw new DomainException(ErrorCodeConstants.OIDC_VERIFIED_EMAIL_REQUIRED);
             String name = Objects.toString(jwt.getClaimAsString("name"), email);
             String username = ("oidc_" + sub.replaceAll("[^A-Za-z0-9]", "")).substring(0, Math.min(80, ("oidc_" + sub.replaceAll("[^A-Za-z0-9]", "")).length()));
             var user = users.create(tenant, new PoolUserService.Input(username, email, null, null, name, null, null, null, null, Map.of("federated", true)));
@@ -160,12 +161,12 @@ public class FederationService {
             Map<String, Object> m = json.readValue(response.body(), new TypeReference<>() {
             });
             if (!issuer.equals(m.get("issuer")))
-                throw new DomainException("OIDC_DISCOVERY_INVALID", "OIDC Discovery issuer 不匹配", 400);
+                throw new DomainException(ErrorCodeConstants.OIDC_DISCOVERY_INVALID);
             return m;
         } catch (DomainException ex) {
             throw ex;
         } catch (Exception ex) {
-            throw new DomainException("OIDC_DISCOVERY_FAILED", "无法读取 OIDC Discovery", 502);
+            throw new DomainException(ErrorCodeConstants.OIDC_DISCOVERY_FAILED);
         }
     }
 
@@ -179,7 +180,7 @@ public class FederationService {
             return json.readValue(res.body(), new TypeReference<>() {
             });
         } catch (Exception ex) {
-            throw new DomainException("OIDC_TOKEN_EXCHANGE_FAILED", "OIDC Token 交换失败", 502);
+            throw new DomainException(ErrorCodeConstants.OIDC_TOKEN_EXCHANGE_FAILED);
         }
     }
 
@@ -188,12 +189,12 @@ public class FederationService {
     }
 
     private DomainException missing() {
-        return new DomainException("OIDC_PROVIDER_NOT_FOUND", "OIDC 身份源不存在", 404);
+        return new DomainException(ErrorCodeConstants.OIDC_PROVIDER_NOT_FOUND);
     }
 
     private void validate(Input i, boolean create) {
         if (i == null || (create && (blank(i.name()) || blank(i.issuer()) || blank(i.clientId()) || blank(i.clientSecret()))))
-            throw new DomainException("OIDC_PROVIDER_INVALID", "OIDC 身份源参数不完整", 400);
+            throw new DomainException(ErrorCodeConstants.OIDC_PROVIDER_INVALID);
         if (i.issuer() != null) normalizeIssuer(i.issuer());
         if (i.status() != null) status(i.status());
     }
@@ -206,7 +207,7 @@ public class FederationService {
             String s = u.toString();
             return s.endsWith("/") ? s.substring(0, s.length() - 1) : s;
         } catch (RuntimeException ex) {
-            throw new DomainException("OIDC_ISSUER_INVALID", "OIDC issuer 必须是 HTTPS（localhost 除外）", 400);
+            throw new DomainException(ErrorCodeConstants.OIDC_ISSUER_INVALID);
         }
     }
 
@@ -214,7 +215,7 @@ public class FederationService {
         if (uri.getHost() == null) throw new IllegalArgumentException();
         for (var a : java.net.InetAddress.getAllByName(uri.getHost()))
             if (a.isAnyLocalAddress() || a.isLoopbackAddress() || a.isLinkLocalAddress() || a.isSiteLocalAddress())
-                throw new DomainException("OIDC_ENDPOINT_FORBIDDEN", "OIDC 地址不能指向私有网络", 400);
+                throw new DomainException(ErrorCodeConstants.OIDC_ENDPOINT_FORBIDDEN);
     }
 
     private static void requireHttpsEndpoint(String value, String issuer) {
@@ -226,7 +227,7 @@ public class FederationService {
         } catch (DomainException e) {
             throw e;
         } catch (Exception e) {
-            throw new DomainException("OIDC_ENDPOINT_INVALID", "OIDC Endpoint 无效", 400);
+            throw new DomainException(ErrorCodeConstants.OIDC_ENDPOINT_INVALID);
         }
     }
 
@@ -237,7 +238,7 @@ public class FederationService {
                 throw new IllegalArgumentException();
             return u;
         } catch (RuntimeException ex) {
-            throw new DomainException("OIDC_REDIRECT_INVALID", "OIDC 回调地址无效", 400);
+            throw new DomainException(ErrorCodeConstants.OIDC_REDIRECT_INVALID);
         }
     }
 
@@ -277,7 +278,7 @@ public class FederationService {
 
     private static String status(String s) {
         if (!Set.of("active", "disabled").contains(s))
-            throw new DomainException("OIDC_STATUS_INVALID", "身份源状态无效", 400);
+            throw new DomainException(ErrorCodeConstants.OIDC_STATUS_INVALID);
         return s;
     }
 
@@ -291,7 +292,7 @@ public class FederationService {
     }
 
     @Transactional(readOnly = true)
-    public Page list(int page, int size, String search, String status) {
+    public PageData<ProviderView> list(int page, int size, String search, String status) {
         return list(TenantContextHolder.requireTenantId(), page, size, search, status);
     }
 
@@ -317,9 +318,6 @@ public class FederationService {
     public record ProviderView(UUID id, UUID tenantId, String name, String type, String issuer, String clientId,
                                String clientSecret, List<String> scopes, Map<String, String> claimMapping,
                                boolean jitProvisioning, String status, Instant createdAt, Instant updatedAt) {
-    }
-
-    public record Page(List<ProviderView> providers, long total, int page, int pageSize) {
     }
 
     public record AuthorizationStart(String authorizeUrl, String state, int expiresIn) {

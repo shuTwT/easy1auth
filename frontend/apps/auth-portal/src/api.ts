@@ -1,6 +1,6 @@
 import type { AuthInteractionContext } from '@easy1auth/types'
 
-type ApiError = { code?: string; message?: string }
+type ApiError = { code?: number; message?: string }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
@@ -14,6 +14,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   })
   const data = await response.json().catch(() => ({})) as T & ApiError
   if (!response.ok) throw new Error(data.message ?? '请求失败')
+  if (typeof data.code === 'number' && data.code !== 0) throw new Error(data.message ?? '请求失败')
   return data
 }
 

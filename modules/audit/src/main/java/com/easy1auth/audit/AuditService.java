@@ -3,6 +3,7 @@ package com.easy1auth.audit;
 import com.easy1auth.audit.model.*;
 import com.easy1auth.foundation.error.DomainException;
 import com.easy1auth.foundation.id.UuidV7;
+import com.easy1auth.foundation.web.PageData;
 import com.easy1auth.tenant.TenantContextHolder;
 import org.babyfish.jimmer.sql.JSqlClient;
 import org.babyfish.jimmer.sql.ast.LikeMode;
@@ -32,24 +33,24 @@ public class AuditService {
     }
 
     @Transactional(readOnly = true)
-    public Page list(int page, int size, Query q) {
+    public PageData<AuditEventEntity> list(int page, int size, Query q) {
         UUID tenant = TenantContextHolder.requireTenantId();
         int p = Math.max(1, page), s = Math.min(200, Math.max(1, size));
         var query = sql.createQuery(EVENT).where(EVENT.tenantId().eq(tenant)).whereIf(q != null && q.actorName() != null && !q.actorName().isBlank(), () -> EVENT.actorName().ilike(q.actorName(), LikeMode.ANYWHERE)).whereIf(q != null && q.eventType() != null && !q.eventType().isBlank(), () -> EVENT.eventType().eq(q.eventType())).whereIf(q != null && q.action() != null && !q.action().isBlank(), () -> EVENT.action().eq(q.action())).whereIf(q != null && q.outcome() != null && !q.outcome().isBlank(), () -> EVENT.outcome().eq(q.outcome())).whereIf(q != null && q.start() != null, () -> EVENT.createdAt().ge(q.start())).whereIf(q != null && q.end() != null, () -> EVENT.createdAt().le(q.end())).orderBy(EVENT.createdAt().desc()).select(EVENT);
         long total = query.fetchUnlimitedCount();
-        return new Page(query.limit(s, (long) (p - 1) * s).execute(), total, p, s);
+        return PageData.of(query.limit(s, (long) (p - 1) * s).execute(), p, s, total);
     }
 
     @Transactional(readOnly = true)
     public AuditEventEntity get(UUID id) {
         UUID tenant = TenantContextHolder.requireTenantId();
-        return sql.createQuery(EVENT).where(EVENT.tenantId().eq(tenant), EVENT.id().eq(id)).select(EVENT).fetchOptional().orElseThrow(() -> new DomainException("AUDIT_EVENT_NOT_FOUND", "审计事件不存在", 404));
+        return sql.createQuery(EVENT).where(EVENT.tenantId().eq(tenant), EVENT.id().eq(id)).select(EVENT).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.AUDIT_EVENT_NOT_FOUND));
     }
 
     @Transactional
     public int cleanup(int days) {
         UUID tenant = TenantContextHolder.requireTenantId();
-        if (days < 30) throw new DomainException("AUDIT_RETENTION_INVALID", "审计保留期不能少于30天", 400);
+        if (days < 30) throw new DomainException(ErrorCodeConstants.AUDIT_RETENTION_INVALID);
         return sql.createDelete(EVENT).where(EVENT.tenantId().eq(tenant), EVENT.createdAt().lt(Instant.now().minus(Duration.ofDays(days)))).execute();
     }
 
@@ -84,9 +85,6 @@ public class AuditService {
     }
 
     public record Query(String actorName, String eventType, String action, String outcome, Instant start, Instant end) {
-    }
-
-    public record Page(List<AuditEventEntity> logs, long total, int page, int pageSize) {
     }
 
     public record Stats(long totalLogs, long successLogs, long failedLogs, long todayLogs) {

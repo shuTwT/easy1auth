@@ -264,21 +264,13 @@ onMounted(() => {
                 @keyup.enter="handleSearch"
               />
             </div>
-            <Select v-model:value="filterType" @update:value="handleSearch">
-              <div class="w-36">
-
-              </div>
-
+            <Select v-model:value="filterType" class="w-36" allow-clear @update:value="handleSearch">
                 <SelectOption value="menu">菜单权限</SelectOption>
                 <SelectOption value="operation">操作权限</SelectOption>
                 <SelectOption value="data">数据权限</SelectOption>
 
             </Select>
-            <Select v-model:value="filterResource" @update:value="handleSearch">
-              <div class="w-36">
-
-              </div>
-
+            <Select v-model:value="filterResource" class="w-36" allow-clear @update:value="handleSearch">
                 <SelectOption v-for="r in resourceOptions" :key="r" :value="r">
                   {{ r }}
                 </SelectOption>
@@ -416,10 +408,6 @@ onMounted(() => {
             <div class="grid gap-2">
               <label class="text-sm font-medium">权限类型 <span class="text-destructive">*</span></label>
               <Select v-model:value="permissionForm.type">
-                <div>
-
-                </div>
-
                   <SelectOption value="menu">菜单权限</SelectOption>
                   <SelectOption value="operation">操作权限</SelectOption>
                   <SelectOption value="data">数据权限</SelectOption>

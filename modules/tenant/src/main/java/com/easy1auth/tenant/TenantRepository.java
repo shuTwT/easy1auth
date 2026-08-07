@@ -2,6 +2,7 @@ package com.easy1auth.tenant;
 
 import com.easy1auth.foundation.id.UuidV7;
 import com.easy1auth.tenant.model.*;
+import com.easy1auth.foundation.error.DomainException;
 import org.babyfish.jimmer.sql.JSqlClient;
 import org.babyfish.jimmer.sql.ast.mutation.SaveMode;
 import org.springframework.stereotype.Repository;
@@ -29,6 +30,10 @@ class TenantRepository {
 
     List<TenantEntity> listOrdinaryTenants() {
         return sql.createQuery(TENANT).where(TENANT.system().eq(false)).orderBy(TENANT.createdAt().desc()).select(TENANT.fetch(TenantEntityFetcher.$.allScalarFields().packageInfo(TenantPackageEntityFetcher.$.allScalarFields()))).execute();
+    }
+
+    List<TenantEntity> listAllTenants() {
+        return sql.createQuery(TENANT).orderBy(TENANT.createdAt().desc()).select(TENANT.fetch(TenantEntityFetcher.$.allScalarFields().packageInfo(TenantPackageEntityFetcher.$.allScalarFields()))).execute();
     }
 
     Optional<MembershipState> activeMembership(UUID accountId, UUID tenantId) {
@@ -102,11 +107,25 @@ class TenantRepository {
     }
 
     int lockAndGetMaxUsers(UUID tenantId) {
-        return sql.createQuery(TENANT).where(TENANT.id().eq(tenantId), TENANT.status().eq("active"), TENANT.system().eq(false), TENANT.packageInfo().status().eq("active")).select(TENANT.packageInfo().maxUsers()).forUpdate().fetchOne();
+        return sql.createQuery(TENANT)
+                .where(TENANT.id().eq(tenantId), TENANT.status().eq("active"), TENANT.system().eq(false), TENANT.packageInfo().status().eq("active"))
+                .select(TENANT.packageInfo().maxUsers())
+                .forUpdate()
+                .fetchOptional()
+                .orElseThrow(() -> quotaUnavailable(ErrorCodeConstants.TENANT_QUOTA_USERS_UNAVAILABLE));
     }
 
     int lockAndGetMaxApps(UUID tenantId) {
-        return sql.createQuery(TENANT).where(TENANT.id().eq(tenantId), TENANT.status().eq("active"), TENANT.system().eq(false), TENANT.packageInfo().status().eq("active")).select(TENANT.packageInfo().maxApps()).forUpdate().fetchOne();
+        return sql.createQuery(TENANT)
+                .where(TENANT.id().eq(tenantId), TENANT.status().eq("active"), TENANT.system().eq(false), TENANT.packageInfo().status().eq("active"))
+                .select(TENANT.packageInfo().maxApps())
+                .forUpdate()
+                .fetchOptional()
+                .orElseThrow(() -> quotaUnavailable(ErrorCodeConstants.TENANT_QUOTA_APPLICATIONS_UNAVAILABLE));
+    }
+
+    private static DomainException quotaUnavailable(com.easy1auth.foundation.error.ErrorCode errorCode) {
+        return new DomainException(errorCode);
     }
 
     record MembershipState(UUID id, String role, boolean system, Long packageId) {

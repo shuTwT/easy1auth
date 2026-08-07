@@ -5,6 +5,7 @@ import com.easy1auth.security.SecurityPolicyService;
 import com.easy1auth.directory.model.*;
 import com.easy1auth.foundation.error.DomainException;
 import com.easy1auth.foundation.id.UuidV7;
+import com.easy1auth.foundation.web.PageData;
 import com.easy1auth.tenant.TenantService;
 import org.babyfish.jimmer.sql.JSqlClient;
 import org.babyfish.jimmer.sql.ast.LikeMode;
@@ -33,11 +34,11 @@ public class PoolUserService {
     }
 
     @Transactional(readOnly = true)
-    public Page list(UUID tenant, int page, int pageSize, String username, String email, String phone, String name, String status, String department) {
+    public PageData<PoolUserView> list(UUID tenant, int page, int pageSize, String username, String email, String phone, String name, String status, String department) {
         int p = Math.max(1, page), size = Math.min(100, Math.max(1, pageSize));
         var q = sql.createQuery(USER).where(USER.tenantId().eq(tenant)).whereIf(username != null, () -> USER.username().ilike(username, LikeMode.ANYWHERE)).whereIf(email != null, () -> USER.email().ilike(email, LikeMode.ANYWHERE)).whereIf(phone != null, () -> USER.phone().ilike(phone, LikeMode.ANYWHERE)).whereIf(name != null, () -> USER.name().ilike(name, LikeMode.ANYWHERE)).whereIf(status != null, () -> USER.status().eq(status)).whereIf(department != null, () -> USER.department().eq(department)).orderBy(USER.createdAt().desc()).select(USER);
         long total = q.fetchUnlimitedCount();
-        return new Page(q.limit(size, (long) (p - 1) * size).execute().stream().map(this::view).toList(), total, p, size);
+        return PageData.of(q.limit(size, (long) (p - 1) * size).execute().stream().map(this::view).toList(), p, size, total);
     }
 
     @Transactional(readOnly = true)
@@ -50,7 +51,7 @@ public class PoolUserService {
         validate(in.username(), in.email(), in.phone(), in.name());
         int limit = tenants.lockForUserQuota(tenant);
         long count = sql.createQuery(USER).where(USER.tenantId().eq(tenant)).select(USER.id()).fetchUnlimitedCount();
-        if (count >= limit) throw new DomainException("TENANT_USER_LIMIT", "已达到用户数量上限", 403);
+        if (count >= limit) throw new DomainException(ErrorCodeConstants.TENANT_USER_LIMIT);
         Instant now = Instant.now();
         String email = normalizeEmail(in.email());
         var e = PoolUserEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTenantId(tenant).setUsername(in.username().strip()).setEmail(email).setPhone(in.phone()).setPasswordHash(in.password() == null ? null : passwords.encode(in.password())).setName(in.name().strip()).setAvatar(in.avatar()).setStatus("active").setEmailVerified(false).setPhoneVerified(false).setDepartment(in.department()).setPosition(in.position()).setCustomAttributes(in.customAttributes()).setLastLoginAt(null).setCreatedAt(now).setUpdatedAt(now));
@@ -86,7 +87,7 @@ public class PoolUserService {
     @Transactional
     public PoolUserView status(UUID tenant, UUID id, String status) {
         if (!Set.of("active", "disabled", "locked").contains(status))
-            throw new DomainException("USER_STATUS_INVALID", "用户状态无效", 400);
+            throw new DomainException(ErrorCodeConstants.USER_STATUS_INVALID);
         rejectEnterpriseManaged(entity(tenant, id));
         sql.createUpdate(USER).set(USER.status(), status).set(USER.updatedAt(), Instant.now()).where(USER.id().eq(id), USER.tenantId().eq(tenant)).execute();
         return get(tenant, id);
@@ -106,7 +107,7 @@ public class PoolUserService {
     public void changePassword(UUID tenant, UUID id, String oldPassword, String newPassword) {
         var user = entity(tenant, id);
         if (user.passwordHash() == null || !passwords.matches(oldPassword, user.passwordHash()))
-            throw new DomainException("CURRENT_PASSWORD_INVALID", "原密码错误", 400);
+            throw new DomainException(ErrorCodeConstants.CURRENT_PASSWORD_INVALID_POOL_USER);
         var policy = security.policy(tenant);
         security.validatePassword(newPassword, policy);
         security.rejectReusedPassword("pool_user", id, newPassword, user.passwordHash(), passwords, policy.historyCount());
@@ -125,17 +126,17 @@ public class PoolUserService {
     }
 
     private DomainException missing() {
-        return new DomainException("POOL_USER_NOT_FOUND", "用户不存在", 404);
+        return new DomainException(ErrorCodeConstants.POOL_USER_NOT_FOUND);
     }
 
     private static void rejectEnterpriseManaged(PoolUserEntity user) {
         if (user.enterpriseIdentitySourceId() != null)
-            throw new DomainException("ENTERPRISE_IDENTITY_MANAGED", "该用户由企业身份源管理，请在身份源中修改", 409);
+            throw new DomainException(ErrorCodeConstants.ENTERPRISE_IDENTITY_MANAGED_USER);
     }
 
     private void validate(String u, String e, String p, String n) {
         if (u == null || u.isBlank() || n == null || n.isBlank() || (!present(e) && !present(p)) || (present(e) && !e.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")))
-            throw new DomainException("POOL_USER_INVALID", "用户名、姓名以及邮箱或手机号为必填项", 400);
+            throw new DomainException(ErrorCodeConstants.POOL_USER_INVALID);
     }
 
     private static boolean present(String value) {
@@ -147,7 +148,7 @@ public class PoolUserService {
     }
 
     private void validatePassword(String p) {
-        if (p == null || p.length() < 8) throw new DomainException("PASSWORD_WEAK", "密码至少8位", 400);
+        if (p == null || p.length() < 8) throw new DomainException(ErrorCodeConstants.PASSWORD_WEAK);
     }
 
     private PoolUserView view(PoolUserEntity e) {
@@ -155,7 +156,7 @@ public class PoolUserService {
     }
 
     @Transactional(readOnly = true)
-    public Page list(int page, int pageSize, String username, String email, String phone, String name, String status, String department) {
+    public PageData<PoolUserView> list(int page, int pageSize, String username, String email, String phone, String name, String status, String department) {
         return list(TenantContextHolder.requireTenantId(), page, pageSize, username, email, phone, name, status, department);
     }
 
@@ -228,9 +229,6 @@ public class PoolUserService {
 
     public record Input(String username, String email, String password, String phone, String name, String avatar,
                         String status, String department, String position, Map<String, Object> customAttributes) {
-    }
-
-    public record Page(List<PoolUserView> users, long total, int page, int pageSize) {
     }
 
     public record RecentLogin(String username, @Nullable String email, Instant time) {

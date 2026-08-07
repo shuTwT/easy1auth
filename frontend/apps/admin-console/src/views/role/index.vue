@@ -400,11 +400,7 @@ onMounted(() => {
                 @keyup.enter="loadRoles"
               />
             </div>
-            <Select v-model:value="filterType" @update:value="loadRoles">
-              <div class="w-36">
-
-              </div>
-
+            <Select v-model:value="filterType" class="w-36" allow-clear @update:value="loadRoles">
                 <SelectOption value="system">内置角色</SelectOption>
                 <SelectOption value="custom">自定义角色</SelectOption>
 
@@ -559,10 +555,6 @@ onMounted(() => {
             <div class="grid gap-2">
               <label class="text-sm font-medium">角色类型 <span class="text-destructive">*</span></label>
               <Select v-model:value="roleForm.type" :disabled="isEdit">
-                <div>
-
-                </div>
-
                   <SelectOption value="custom">自定义角色</SelectOption>
                   <SelectOption value="system">内置角色</SelectOption>
 
@@ -571,10 +563,6 @@ onMounted(() => {
             <div class="grid gap-2">
               <label class="text-sm font-medium">数据范围 <span class="text-destructive">*</span></label>
               <Select v-model:value="roleForm.dataScope">
-                <div>
-
-                </div>
-
                   <SelectOption value="self">仅本人数据</SelectOption>
                   <SelectOption value="department">本部门数据</SelectOption>
                   <SelectOption value="department_and_sub">本部门及下级部门数据</SelectOption>
@@ -585,10 +573,6 @@ onMounted(() => {
             <div class="grid gap-2">
               <label class="text-sm font-medium">父级角色</label>
               <Select v-model:value="roleForm.parentId">
-                <div>
-
-                </div>
-
                   <SelectOption v-for="role in availableParentRoles" :key="role.id" :value="role.id">
                     {{ role.name }}
                   </SelectOption>

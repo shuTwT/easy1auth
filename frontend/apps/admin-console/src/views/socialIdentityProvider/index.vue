@@ -322,21 +322,13 @@ onMounted(() => {
                 <Search class="w-4 h-4 text-muted-foreground" />
               </template>
             </Input>
-            <Select v-model:value="filterType" @update:value="loadProviders">
-              <div class="w-36">
-
-              </div>
-
+            <Select v-model:value="filterType" class="w-36" allow-clear @update:value="loadProviders">
                 <SelectOption v-for="(config, key) in PROVIDER_CONFIGS" :key="key" :value="key">
                   {{ config.name }}
                 </SelectOption>
 
             </Select>
-            <Select v-model:value="filterStatus" @update:value="loadProviders">
-              <div class="w-28">
-
-              </div>
-
+            <Select v-model:value="filterStatus" class="w-28" allow-clear @update:value="loadProviders">
                 <SelectOption value="active">已启用</SelectOption>
                 <SelectOption value="inactive">已禁用</SelectOption>
 
@@ -438,10 +430,6 @@ onMounted(() => {
             <div class="grid gap-2">
               <label for="provider-type">身份源类型</label>
               <Select v-model:value="providerForm.type" :disabled="isEdit" @update:value="handleTypeChange($event as SocialProviderType)">
-                <div id="provider-type">
-
-                </div>
-
                   <SelectOption v-for="(config, key) in PROVIDER_CONFIGS" :key="key" :value="key">
                     <div class="flex items-center gap-2">
                       <Link :style="{ color: config.color }" class="w-4 h-4" />

@@ -45,7 +45,7 @@ public class PoolUserImportController {
     @PostMapping
     ApiResponse<?> upload(@RequestParam("file") MultipartFile file) throws IOException {
         if (file.isEmpty() || file.getSize() > MAX_FILE_SIZE)
-            throw new DomainException("IMPORT_FILE_INVALID", "导入文件为空或超过5MB", 400);
+            throw new DomainException(ErrorCodeConstants.IMPORT_FILE_INVALID);
         List<Map<String, Object>> errors = new ArrayList<>();
         List<Map<String, Object>> imported = new ArrayList<>();
         int total = 0;

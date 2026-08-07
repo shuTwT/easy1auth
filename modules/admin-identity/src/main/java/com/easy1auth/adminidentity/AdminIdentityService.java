@@ -41,7 +41,7 @@ public class AdminIdentityService implements ActiveAdminAccountLocker {
             throw invalidCredentials();
         }
         var row = found.get();
-        if (!"active".equals(row.account().status())) throw new DomainException("ADMIN_DISABLED", "账号已被禁用", 403);
+        if (!"active".equals(row.account().status())) throw new DomainException(ErrorCodeConstants.ADMIN_DISABLED);
         if (!passwords.matches(password, row.passwordHash())) {
             protection.failed("admin", key, null, 5, 1800);
             throw invalidCredentials();
@@ -56,7 +56,7 @@ public class AdminIdentityService implements ActiveAdminAccountLocker {
         var identity = AdminIdentityNormalizer.normalize(username, email);
         validateCredentials(identity.username(), identity.email(), password);
         if (code == null || code.isBlank() || !repository.consumeRegistrationCode(identity.email(), TokenHash.sha256(code)))
-            throw new DomainException("VERIFICATION_CODE_INVALID", "验证码无效或已过期", 400);
+            throw new DomainException(ErrorCodeConstants.VERIFICATION_CODE_INVALID);
         if (repository.exists(identity.username(), identity.email())) throw adminExists();
         var account = createAccount(identity, password);
         return new AuthenticatedAdmin(account, issueRefresh(account, refreshTtl, userAgent, ip).token());
@@ -72,9 +72,9 @@ public class AdminIdentityService implements ActiveAdminAccountLocker {
 
     @Transactional(readOnly = true)
     public AdminAccount validateTokenSubject(UUID accountId, long securityVersion) {
-        var account = repository.findActive(accountId).orElseThrow(() -> new DomainException("ADMIN_SESSION_INVALID", "管理员会话已失效", 401));
+        var account = repository.findActive(accountId).orElseThrow(() -> new DomainException(ErrorCodeConstants.ADMIN_SESSION_INVALID));
         if (account.securityVersion() != securityVersion)
-            throw new DomainException("ADMIN_SESSION_INVALID", "管理员会话已失效", 401);
+            throw new DomainException(ErrorCodeConstants.ADMIN_SESSION_INVALID);
         return account;
     }
 
@@ -134,7 +134,7 @@ public class AdminIdentityService implements ActiveAdminAccountLocker {
         var account = account(id);
         String normalized = validatedEmail(email);
         if (account.email().equalsIgnoreCase(normalized))
-            throw new DomainException("EMAIL_UNCHANGED", "新邮箱不能与当前邮箱相同", 400);
+            throw new DomainException(ErrorCodeConstants.EMAIL_UNCHANGED);
         if (repository.emailExistsForOtherAccount(id, normalized)) throw adminExists();
         return normalized;
     }
@@ -151,9 +151,9 @@ public class AdminIdentityService implements ActiveAdminAccountLocker {
 
     @Transactional
     public AdminAccount updateStatus(UUID actor, UUID id, String status) {
-        if (actor.equals(id)) throw new DomainException("SELF_STATUS_CHANGE", "不能修改自己的账号状态", 409);
+        if (actor.equals(id)) throw new DomainException(ErrorCodeConstants.SELF_STATUS_CHANGE);
         if (!java.util.Set.of("active", "disabled").contains(status))
-            throw new DomainException("STATUS_INVALID", "账号状态无效", 400);
+            throw new DomainException(ErrorCodeConstants.STATUS_INVALID);
         var account = repository.updateStatus(id, status);
         repository.revokeAll(id);
         return account;
@@ -161,7 +161,7 @@ public class AdminIdentityService implements ActiveAdminAccountLocker {
 
     @Transactional
     public void resetPassword(UUID actor, UUID id, String password) {
-        assertNotActor(actor, id, "SELF_PASSWORD_RESET_DENIED", "不能重置自己的密码");
+        assertNotActor(actor, id, ErrorCodeConstants.SELF_PASSWORD_RESET_DENIED);
         validatePassword(password);
         repository.resetPassword(id, passwords.encode(password));
         repository.revokeAll(id);
@@ -172,7 +172,7 @@ public class AdminIdentityService implements ActiveAdminAccountLocker {
         var account = repository.findActive(id).orElseThrow(AdminIdentityService::invalidCredentials);
         var credential = repository.findCredential(account.username()).orElseThrow(AdminIdentityService::invalidCredentials);
         if (!passwords.matches(current, credential.passwordHash()))
-            throw new DomainException("CURRENT_PASSWORD_INVALID", "当前密码错误", 400);
+            throw new DomainException(ErrorCodeConstants.CURRENT_PASSWORD_INVALID);
         security.validatePassword(replacement, SecurityPolicyService.adminPolicy());
         security.rejectReusedPassword("admin", id, replacement, credential.passwordHash(), passwords, SecurityPolicyService.adminPolicy().historyCount());
         repository.resetPassword(id, passwords.encode(replacement));
@@ -182,7 +182,7 @@ public class AdminIdentityService implements ActiveAdminAccountLocker {
 
     @Transactional
     public AdminAccount resetMfa(UUID actor, UUID id) {
-        assertNotActor(actor, id, "SELF_MFA_RESET_DENIED", "不能重置自己的 MFA");
+        assertNotActor(actor, id, ErrorCodeConstants.SELF_MFA_RESET_DENIED);
         var account = repository.resetMfa(id);
         repository.revokeAll(id);
         return account;
@@ -211,10 +211,9 @@ public class AdminIdentityService implements ActiveAdminAccountLocker {
     @Transactional
     public void lockActive(UUID accountId) {
         if (accountId == null) {
-            throw new DomainException("ADMINISTRATOR_ACCOUNT_REQUIRED", "管理员账号不能为空", 400);
+            throw new DomainException(ErrorCodeConstants.ADMINISTRATOR_ACCOUNT_REQUIRED);
         }
-        repository.lockActive(accountId).orElseThrow(() -> new DomainException(
-                "ADMINISTRATOR_ACCOUNT_NOT_ACTIVE", "管理员账号不存在或未启用", 409));
+        repository.lockActive(accountId).orElseThrow(() -> new DomainException(ErrorCodeConstants.ADMINISTRATOR_ACCOUNT_NOT_ACTIVE));
     }
 
     @Transactional
@@ -248,31 +247,31 @@ public class AdminIdentityService implements ActiveAdminAccountLocker {
 
     private static void validateProfile(String username, String email, String phone) {
         if (username == null || username.isBlank() || username.length() > 100)
-            throw new DomainException("USERNAME_INVALID", "用户名不能为空且不能超过100字符", 400);
+            throw new DomainException(ErrorCodeConstants.USERNAME_INVALID);
         if (email == null || !email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$") || email.length() > 320)
-            throw new DomainException("EMAIL_INVALID", "邮箱格式不正确", 400);
+            throw new DomainException(ErrorCodeConstants.EMAIL_INVALID);
         if (phone != null && !phone.isBlank() && (phone.strip().length() > 32 || !phone.strip().matches("^\\+?[0-9][0-9 -]{5,31}$")))
-            throw new DomainException("PHONE_INVALID", "手机号格式不正确", 400);
+            throw new DomainException(ErrorCodeConstants.PHONE_INVALID);
     }
 
     private static String validatedEmail(String email) {
         String normalized = AdminIdentityNormalizer.normalizeEmail(email);
         if (normalized == null || !normalized.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$") || normalized.length() > 320)
-            throw new DomainException("EMAIL_INVALID", "邮箱格式不正确", 400);
+            throw new DomainException(ErrorCodeConstants.EMAIL_INVALID);
         return normalized;
     }
 
     private static void validatePassword(String password) {
         if (password == null || password.length() < 8 || password.length() > 128 || !password.matches(".*[a-z].*") || !password.matches(".*[A-Z].*") || !password.matches(".*\\d.*"))
-            throw new DomainException("PASSWORD_WEAK", "密码至少8位且必须包含大小写字母和数字", 400);
+            throw new DomainException(ErrorCodeConstants.PASSWORD_WEAK);
     }
 
-    private static void assertNotActor(UUID actor, UUID account, String code, String message) {
-        if (actor != null && actor.equals(account)) throw new DomainException(code, message, 409);
+    private static void assertNotActor(UUID actor, UUID account, com.easy1auth.foundation.error.ErrorCode errorCode) {
+        if (actor != null && actor.equals(account)) throw new DomainException(errorCode);
     }
 
     private static DomainException adminExists() {
-        return new DomainException("ADMIN_EXISTS", "用户名或邮箱已被注册", 409);
+        return new DomainException(ErrorCodeConstants.ADMIN_EXISTS_USERNAME_OR_EMAIL);
     }
 
     /**
@@ -282,11 +281,11 @@ public class AdminIdentityService implements ActiveAdminAccountLocker {
      * bad password.
      */
     private static DomainException invalidCredentials() {
-        return new DomainException("INVALID_CREDENTIALS", "用户名或密码错误", 400);
+        return new DomainException(ErrorCodeConstants.INVALID_CREDENTIALS);
     }
 
     private static DomainException invalidRefresh() {
-        return new DomainException("INVALID_REFRESH_TOKEN", "刷新令牌无效或已失效", 401);
+        return new DomainException(ErrorCodeConstants.INVALID_REFRESH_TOKEN);
     }
 
     private static String trim(String value, int max) {

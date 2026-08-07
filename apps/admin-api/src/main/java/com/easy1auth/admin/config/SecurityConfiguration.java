@@ -58,9 +58,9 @@ public class SecurityConfiguration {
                                  AuditMutationFilter auditMutationFilter, ApiErrorWriter errors) throws Exception {
         return http.csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth.requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info", "/livez", "/readyz", "/api/auth/login", "/api/auth/mfa/verify", "/api/auth/register", "/api/auth/send-code", "/api/auth/refresh", "/api/login-style/public", "/api/enterprise-identity-sources/*/feishu/events").permitAll().anyRequest().authenticated())
-                .exceptionHandling(exceptions -> exceptions.accessDeniedHandler((request, response, exception) -> errors.write(response, 403, "没有权限访问")))
+                .exceptionHandling(exceptions -> exceptions.accessDeniedHandler((request, response, exception) -> errors.writeTransport(response, 403, com.easy1auth.foundation.error.ErrorCodeConstants.ACCESS_DENIED)))
                 .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> {
-                }).authenticationEntryPoint((request, response, exception) -> errors.write(response, 401, "登录状态无效或已过期")))
+                }).authenticationEntryPoint((request, response, exception) -> errors.writeTransport(response, 401, com.easy1auth.foundation.error.ErrorCodeConstants.AUTHENTICATION_REQUIRED)))
                 .addFilterAfter(tenantContextFilter, BearerTokenAuthenticationFilter.class)
                 .addFilterAfter(tenantSecurityFilter, TenantContextFilter.class)
                 .addFilterAfter(auditMutationFilter, TenantSecurityFilter.class)

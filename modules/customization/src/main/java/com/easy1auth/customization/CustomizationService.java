@@ -88,7 +88,7 @@ public class CustomizationService {
     public CustomDomainEntity addDomain(String value, String method) {
         String domain = normalizeDomain(value);
         String m = method == null ? "dns" : method;
-        if (!Set.of("dns", "file").contains(m)) throw invalid("DOMAIN_METHOD_INVALID", "域名验证方式无效");
+        if (!Set.of("dns", "file").contains(m)) throw invalid(ErrorCodeConstants.DOMAIN_METHOD_INVALID);
         byte[] b = new byte[24];
         random.nextBytes(b);
         Instant now = Instant.now();
@@ -100,11 +100,11 @@ public class CustomizationService {
     @Transactional
     public void deleteDomain(UUID id) {
         if (!sql.createQuery(DOMAIN).where(DOMAIN.id().eq(id)).select(DOMAIN.id()).exists() || sql.deleteById(CustomDomainEntity.class, id).getTotalAffectedRowCount() != 1)
-            throw new DomainException("DOMAIN_NOT_FOUND", "域名不存在", 404);
+            throw new DomainException(ErrorCodeConstants.DOMAIN_NOT_FOUND);
     }
 
     public void verificationUnavailable() {
-        throw new DomainException("DOMAIN_VERIFICATION_NOT_AVAILABLE", "阶段 6 不提供域名所有权验证或证书托管", 501);
+        throw new DomainException(ErrorCodeConstants.DOMAIN_VERIFICATION_NOT_AVAILABLE);
     }
 
     @Transactional(readOnly = true)
@@ -115,7 +115,7 @@ public class CustomizationService {
     @Transactional
     public MessageTemplateEntity saveTemplate(UUID id, TemplateInput in) {
         if (in == null || !Set.of("email", "sms").contains(in.type()) || in.code() == null || !in.code().matches("[a-z0-9_]{2,100}") || in.name() == null || in.name().isBlank() || in.content() == null || in.content().isBlank())
-            throw invalid("MESSAGE_TEMPLATE_INVALID", "消息模板参数无效");
+            throw invalid(ErrorCodeConstants.MESSAGE_TEMPLATE_INVALID);
         validateVariables(in.content(), in.variables());
         Instant now = Instant.now();
         if (id == null) {
@@ -133,7 +133,7 @@ public class CustomizationService {
     public void deleteTemplate(UUID id) {
         template(id);
         if (sql.deleteById(MessageTemplateEntity.class, id).getTotalAffectedRowCount() != 1)
-            throw new DomainException("MESSAGE_TEMPLATE_NOT_FOUND", "消息模板不存在", 404);
+            throw new DomainException(ErrorCodeConstants.MESSAGE_TEMPLATE_NOT_FOUND);
     }
 
     private MessageTemplateEntity template(UUID id) {
@@ -141,20 +141,20 @@ public class CustomizationService {
     }
 
     private DomainException templateMissing() {
-        return new DomainException("MESSAGE_TEMPLATE_NOT_FOUND", "消息模板不存在", 404);
+        return new DomainException(ErrorCodeConstants.MESSAGE_TEMPLATE_NOT_FOUND);
     }
 
     private static void rejectDangerous(Map<String, Object> m) {
         if (m == null) return;
         if (m.toString().toLowerCase(Locale.ROOT).contains("<script") || m.toString().toLowerCase(Locale.ROOT).contains("javascript:"))
-            throw invalid("BRAND_CONTENT_UNSAFE", "品牌内容包含不安全脚本");
+            throw invalid(ErrorCodeConstants.BRAND_CONTENT_UNSAFE);
     }
 
     private static void validateVariables(String content, Map<String, String> vars) {
         var allowed = vars == null ? Set.<String>of() : vars.keySet();
         var matcher = java.util.regex.Pattern.compile("\\{\\{([A-Za-z][A-Za-z0-9_]*)}}").matcher(content);
         while (matcher.find()) if (!allowed.contains(matcher.group(1)))
-            throw invalid("TEMPLATE_VARIABLE_UNKNOWN", "模板包含未声明变量: " + matcher.group(1));
+            throw invalid(ErrorCodeConstants.TEMPLATE_VARIABLE_UNKNOWN);
     }
 
     private static String normalizeDomain(String value) {
@@ -164,7 +164,7 @@ public class CustomizationService {
                 throw new IllegalArgumentException();
             return d;
         } catch (RuntimeException ex) {
-            throw invalid("DOMAIN_INVALID", "域名格式无效");
+            throw invalid(ErrorCodeConstants.DOMAIN_INVALID);
         }
     }
 
@@ -174,13 +174,13 @@ public class CustomizationService {
             URI u = URI.create(v);
             if (!"https".equalsIgnoreCase(u.getScheme()) || u.getHost() == null) throw new IllegalArgumentException();
         } catch (RuntimeException ex) {
-            throw invalid("ASSET_URL_INVALID", "认证页面资源必须使用 HTTPS URL");
+            throw invalid(ErrorCodeConstants.ASSET_URL_INVALID);
         }
     }
 
     private static String color(String value, String old) {
         String v = value == null ? old : value;
-        if (!v.matches("#[0-9A-Fa-f]{6}")) throw invalid("COLOR_INVALID", "颜色必须为六位十六进制值");
+        if (!v.matches("#[0-9A-Fa-f]{6}")) throw invalid(ErrorCodeConstants.COLOR_INVALID);
         return v;
     }
 
@@ -190,19 +190,19 @@ public class CustomizationService {
 
     private static String shortText(String v, String old, int max) {
         String x = v == null ? old : v.strip();
-        if (x.isEmpty() || x.length() > max) throw invalid("STYLE_TEXT_INVALID", "登录样式文本无效");
+        if (x.isEmpty() || x.length() > max) throw invalid(ErrorCodeConstants.STYLE_TEXT_INVALID);
         return x;
     }
 
     private static List<String> methods(List<String> v) {
         if (v == null) return List.of("password");
         var out = v.stream().filter(Set.of("password", "email", "oidc")::contains).distinct().toList();
-        if (out.isEmpty()) throw invalid("LOGIN_METHOD_INVALID", "至少保留一种登录方式");
+        if (out.isEmpty()) throw invalid(ErrorCodeConstants.LOGIN_METHOD_INVALID);
         return out;
     }
 
-    private static DomainException invalid(String c, String m) {
-        return new DomainException(c, m, 400);
+    private static DomainException invalid(com.easy1auth.foundation.error.ErrorCode errorCode) {
+        return new DomainException(errorCode);
     }
 
     public record StyleInput(String logo, String logoDark, String backgroundImage, String backgroundColor,

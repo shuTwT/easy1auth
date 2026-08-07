@@ -1,6 +1,8 @@
 package com.easy1auth.admin.web;
 
 import com.easy1auth.foundation.error.DomainException;
+import com.easy1auth.foundation.error.ErrorCode;
+import com.easy1auth.foundation.error.ErrorCodeConstants;
 import com.easy1auth.foundation.web.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -22,51 +24,57 @@ public class GlobalExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(DomainException.class)
-    ResponseEntity<ApiResponse<Void>> domain(DomainException ex) {
-        return error(ex.status(), ex.getMessage());
+    ResponseEntity<ApiResponse<Void>> domain(DomainException ex, HttpServletRequest request) {
+        markBusinessError(request);
+        return ResponseEntity.ok(ApiResponse.error(ex.errorCode()));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
-    ResponseEntity<ApiResponse<Void>> conflict(DataIntegrityViolationException ex) {
-        return error(409, "数据已存在或违反关联约束");
+    ResponseEntity<ApiResponse<Void>> conflict(DataIntegrityViolationException ex, HttpServletRequest request) {
+        return business(request, ErrorCodeConstants.DATA_INTEGRITY_CONFLICT);
     }
 
     @ExceptionHandler({MethodArgumentNotValidException.class, BindException.class})
-    ResponseEntity<ApiResponse<Void>> validation(Exception ex) {
+    ResponseEntity<ApiResponse<Void>> validation(Exception ex, HttpServletRequest request) {
         var binding = ex instanceof MethodArgumentNotValidException invalid
                 ? invalid.getBindingResult() : ((BindException) ex).getBindingResult();
         var fieldError = binding.getFieldError();
-        return error(400, fieldError == null ? "请求参数校验失败" : fieldError.getDefaultMessage());
+        return business(request, ErrorCodeConstants.REQUEST_VALIDATION_FAILED);
     }
 
     @ExceptionHandler({HttpMessageNotReadableException.class, MissingServletRequestParameterException.class,
             MethodArgumentTypeMismatchException.class})
-    ResponseEntity<ApiResponse<Void>> badRequest(Exception ex) {
-        return error(400, "请求参数格式错误");
+    ResponseEntity<ApiResponse<Void>> badRequest(Exception ex, HttpServletRequest request) {
+        return business(request, ErrorCodeConstants.REQUEST_FORMAT_INVALID);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     ResponseEntity<ApiResponse<Void>> forbidden(AccessDeniedException ex) {
-        return error(403, "没有权限访问");
+        return ResponseEntity.status(403).body(ApiResponse.error(ErrorCodeConstants.ACCESS_DENIED));
     }
 
     @ExceptionHandler(NoResourceFoundException.class)
     ResponseEntity<ApiResponse<Void>> notFound(NoResourceFoundException ex) {
-        return error(404, "请求资源不存在");
+        return ResponseEntity.status(404).body(ApiResponse.error(ErrorCodeConstants.REQUEST_RESOURCE_NOT_FOUND));
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     ResponseEntity<ApiResponse<Void>> methodNotAllowed(HttpRequestMethodNotSupportedException ex) {
-        return error(405, "请求方法不支持");
+        return ResponseEntity.status(405).body(ApiResponse.error(ErrorCodeConstants.REQUEST_METHOD_NOT_SUPPORTED));
     }
 
     @ExceptionHandler(Exception.class)
     ResponseEntity<ApiResponse<Void>> unexpected(Exception ex, HttpServletRequest request) {
         log.error("Unhandled request error: {} {}", request.getMethod(), request.getRequestURI(), ex);
-        return error(500, "服务器内部错误");
+        return ResponseEntity.status(500).body(ApiResponse.error(ErrorCodeConstants.INTERNAL_SERVER_ERROR));
     }
 
-    private static ResponseEntity<ApiResponse<Void>> error(int status, String msg) {
-        return ResponseEntity.status(status).body(ApiResponse.error(msg));
+    private static ResponseEntity<ApiResponse<Void>> business(HttpServletRequest request, ErrorCode errorCode) {
+        markBusinessError(request);
+        return ResponseEntity.ok(ApiResponse.error(errorCode));
+    }
+
+    private static void markBusinessError(HttpServletRequest request) {
+        request.setAttribute("easy1auth.business.error", Boolean.TRUE);
     }
 }
