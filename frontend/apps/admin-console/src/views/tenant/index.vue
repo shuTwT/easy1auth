@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { Pagination as AntPagination, Table as AntTable, message } from 'antdv-next'
+import { Empty, Form, FormItem, Pagination as AntPagination, Spin, Table as AntTable, message } from 'antdv-next'
 import { Building2, Pencil, RefreshCw, Search, Trash2, UserRoundCog, Users } from '@lucide/vue'
 import { adminUserApi } from '@/api/adminUser'
 import { tenantApi } from '@/api/tenant'
@@ -25,8 +25,11 @@ const transferAdministratorId = ref<string>('')
 
 const queryForm = reactive<TenantQueryDto>({ page: 1, pageSize: 20, name: '', status: undefined })
 const tenantForm = reactive({ name: '', packageId: undefined as number | undefined })
+const tenantFormRules = {
+  name: [{ required: true, message: '请输入租户名称' }],
+  packageId: [{ required: true, message: '请选择租户套餐' }],
+}
 const dialogTitle = computed(() => '编辑租户')
-const totalPages = computed(() => Math.max(1, Math.ceil(total.value / (queryForm.pageSize || 20))))
 const packageOptions = computed(() => packages.value.map(item => ({
   value: item.id,
   label: `${item.name} · ${formatLimit(item.maxUsers)} 用户 / ${formatLimit(item.maxApps)} 应用`,
@@ -86,14 +89,6 @@ function openEditDialog(tenant: Tenant) {
 }
 
 async function submitTenant() {
-  if (!tenantForm.name.trim()) {
-    message.error('请输入租户名称')
-    return
-  }
-  if (!tenantForm.packageId) {
-    message.error('请选择租户套餐')
-    return
-  }
   submitting.value = true
   try {
     if (!editingTenant.value) return
@@ -174,8 +169,7 @@ async function handleReset() {
   await loadData()
 }
 
-async function handlePageChange(page: number) {
-  if (page === queryForm.page || page < 1 || page > totalPages.value) return
+async function handlePageChange(page: number, _pageSize?: number) {
   queryForm.page = page
   await loadData()
 }
@@ -184,13 +178,13 @@ onMounted(loadData)
 </script>
 
 <template>
-  <div class="flex flex-col gap-6 p-5 lg:p-6">
-    <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-      <div>
-        <div class="flex items-center gap-2"><Building2 class="text-primary" /><h1 class="text-2xl font-semibold tracking-tight">租户管理</h1></div>
-        <p class="mt-1 text-sm text-muted-foreground">查看平台内全部租户，并管理普通租户的套餐、状态和租户管理员。</p>
+  <div class="p-6 min-h-[calc(100vh-64px)] space-y-6">
+    <div class="flex justify-between items-start mb-6">
+      <div class="flex-1">
+        <h1 class="text-2xl font-bold text-foreground mb-2">租户管理</h1>
+        <p class="text-sm text-muted-foreground">查看平台内全部租户，并管理普通租户的套餐、状态和租户管理员。</p>
       </div>
-      <div class="flex gap-2"><Button :disabled="loading" @click="loadData"><RefreshCw data-icon="inline-start" :class="loading ? 'animate-spin' : ''" />刷新</Button></div>
+      <div class="flex gap-3"><Button :disabled="loading" @click="loadData"><RefreshCw class="size-4 mr-2" :class="loading ? 'animate-spin' : ''" />刷新</Button></div>
     </div>
 
     <Card>
@@ -204,20 +198,21 @@ onMounted(loadData)
         </div>
       </div>
       <div>
-        <div v-if="loading" class="flex min-h-40 items-center justify-center text-sm text-muted-foreground">加载中...</div>
-        <div v-else-if="tenants.length === 0" class="flex min-h-40 items-center justify-center text-sm text-muted-foreground">暂无租户</div>
+        <Spin v-if="loading" class="flex min-h-40 items-center justify-center" />
+        <Empty v-else-if="tenants.length === 0" class="flex min-h-40 flex-col items-center justify-center" description="暂无租户" />
         <AntTable v-else :columns="tenantColumns" :data-source="tenants" :pagination="false" row-key="id" :scroll="{ x: 1120 }" size="middle">
           <template #bodyCell="{ column, record: tenant }">
             <template v-if="column.key === 'tenant'"><div class="flex items-center gap-3"><div class="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary"><Building2 /></div><div><div class="font-medium">{{ tenant.name }}</div><code class="text-xs text-muted-foreground">{{ tenant.id }}</code></div></div></template>
             <Tag v-else-if="column.key === 'package'" color="blue">{{ tenant.tenantPackage?.name || '未配置套餐' }}</Tag>
-            <Tag v-else-if="column.key === 'status'" :color="tenant.status === 'active' ? 'default' : 'outline'">{{ statusLabel(tenant.status) }}</Tag>
+            <Tag v-else-if="column.key === 'status'" :color="tenant.status === 'active' ? 'green' : 'red'">{{ statusLabel(tenant.status) }}</Tag>
             <div v-else-if="column.key === 'quota'" class="flex gap-4 text-sm text-muted-foreground"><span class="inline-flex items-center gap-1"><Users />{{ formatLimit(tenant.tenantPackage?.maxUsers) }} 用户</span><span>{{ formatLimit(tenant.tenantPackage?.maxApps) }} 应用</span></div>
             <Tag v-else-if="column.key === 'administrator'" >{{ roleLabel(tenant.role) }}</Tag>
-            <div v-else-if="column.key === 'actions'" class="flex justify-end gap-1"><template v-if="!tenant.system"><Button type="text" size="small" :disabled="tenant.status === 'deleted' || !tenant.tenantPackage" @click="openEditDialog(tenant)"><Pencil data-icon="inline-start" />编辑</Button><Button type="text" size="small" :disabled="tenant.status === 'deleted'" @click="toggleStatus(tenant)">{{ tenant.status === 'active' ? '停用' : '启用' }}</Button><Button type="text" size="small" :disabled="tenant.status !== 'active'" @click="openTransferDialog(tenant)"><UserRoundCog data-icon="inline-start" />转移管理员</Button><Button type="text" size="small" class="text-destructive hover:text-destructive" :disabled="tenant.status === 'deleted'" @click="openDeleteDialog(tenant)"><Trash2 data-icon="inline-start" />删除</Button></template><span v-else class="text-sm text-muted-foreground">系统内置</span></div>
+            <div v-else-if="column.key === 'actions'" class="flex justify-end gap-1"><template v-if="!tenant.system"><Button type="link" size="small" class="h-auto p-0" :disabled="tenant.status === 'deleted' || !tenant.tenantPackage" @click="openEditDialog(tenant)"><Pencil class="size-3 mr-1" />编辑</Button><Button type="link" size="small" class="h-auto p-0" :disabled="tenant.status === 'deleted'" @click="toggleStatus(tenant)">{{ tenant.status === 'active' ? '停用' : '启用' }}</Button><Button type="link" size="small" class="h-auto p-0" :disabled="tenant.status !== 'active'" @click="openTransferDialog(tenant)"><UserRoundCog class="size-3 mr-1" />转移管理员</Button><Button type="link" size="small" class="h-auto p-0 text-destructive" :disabled="tenant.status === 'deleted'" @click="openDeleteDialog(tenant)"><Trash2 class="size-3 mr-1" />删除</Button></template><span v-else class="text-sm text-muted-foreground">系统内置</span></div>
           </template>
         </AntTable>
-        <div v-if="total > (queryForm.pageSize || 20)" class="mt-4 flex justify-end">
-          <AntPagination :current="queryForm.page" :page-size="queryForm.pageSize || 20" :total="total" :show-size-changer="false" @change="handlePageChange" />
+        <div class="flex items-center justify-between mt-4 pt-4 border-t">
+          <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
+          <AntPagination :current="queryForm.page" :page-size="queryForm.pageSize || 20" :total="total" :show-size-changer="false" size="small" @change="handlePageChange" />
         </div>
       </div>
     </Card>
@@ -228,20 +223,20 @@ onMounted(loadData)
           <h3>{{ dialogTitle }}</h3>
           <p>{{ editingTenant ? '修改租户名称或更换为启用中的套餐。' : '新租户会绑定套餐，并将当前管理员设为租户管理员。' }}</p>
         </div>
-        <form class="mt-6 grid gap-4" @submit.prevent="submitTenant">
-          <div class="grid gap-2">
-            <label for="tenant-name">租户名称</label>
-            <Input id="tenant-name" v-model="tenantForm.name" placeholder="请输入租户名称" />
+        <Form :model="tenantForm" :rules="tenantFormRules" layout="vertical" class="py-4" @finish="submitTenant">
+          <div class="grid gap-4">
+            <FormItem label="租户名称" name="name">
+              <Input v-model:value="tenantForm.name" placeholder="请输入租户名称" />
+            </FormItem>
+            <FormItem label="租户套餐" name="packageId">
+              <Select v-model:value="tenantForm.packageId" class="w-full" placeholder="请选择租户套餐" :options="packageOptions" />
+            </FormItem>
           </div>
-          <div class="grid gap-2">
-            <label for="tenant-package">租户套餐</label>
-            <Select id="tenant-package" v-model:value="tenantForm.packageId" class="w-full" placeholder="请选择租户套餐" :options="packageOptions" />
+          <div class="flex justify-end gap-2">
+            <Button @click="tenantDialogVisible = false">取消</Button>
+            <Button type="primary" html-type="submit" :loading="submitting">保存</Button>
           </div>
-          <div class="flex justify-end gap-2 pt-2">
-            <Button type="button" @click="tenantDialogVisible = false">取消</Button>
-            <Button type="submit" :disabled="submitting">{{ submitting ? '保存中...' : '保存' }}</Button>
-          </div>
-        </form>
+        </Form>
       </div>
     </Modal>
 
@@ -254,7 +249,7 @@ onMounted(loadData)
     </Modal>
 
     <Modal v-model:open="deleteDialogVisible" :footer="null">
-      <div><div><h3>删除租户</h3><p>确定删除“{{ deleteTarget?.name }}”吗？删除后将停用该租户及其所有管理员成员关系，但保留业务与审计数据。</p></div><div><Button>取消</Button><Button class="bg-destructive text-destructive-foreground hover:bg-destructive/90" @click="confirmDelete">确认删除</Button></div></div>
+      <div><div><h3>删除租户</h3><p>确定删除“{{ deleteTarget?.name }}”吗？删除后将停用该租户及其所有管理员成员关系，但保留业务与审计数据。</p></div><div><Button @click="deleteDialogVisible = false">取消</Button><Button danger @click="confirmDelete">确认删除</Button></div></div>
     </Modal>
   </div>
 </template>

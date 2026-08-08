@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
-import { App as AntApp, ConfigProvider } from 'antdv-next'
+import { App as AntApp, ConfigProvider, message } from 'antdv-next'
 import { useUserStore } from '@/stores/user'
 import { tenantApi } from '@/api/tenant'
 import { antdLocale, antdTheme } from '@/config/antd'
@@ -34,6 +34,7 @@ onMounted(async () => {
       }
     } catch (error) {
       console.error('初始化租户信息失败:', error)
+      message.error('初始化租户信息失败')
     }
   }
 })

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { Table, message } from 'antdv-next'
+import { Form, FormItem, Modal, Pagination as AntPagination, Table, message } from 'antdv-next'
 import {
   Search,
   Plus,
@@ -22,6 +22,8 @@ const roles = ref<Role[]>([])
 const total = ref(0)
 const page = ref(1)
 const pageSize = ref(10)
+
+const [modal, contextHolder] = Modal.useModal()
 const roleTree = ref<RoleTree[]>([])
 const stats = ref<RoleStats>({
   totalRoles: 0,
@@ -45,6 +47,13 @@ const roleForm = reactive<CreateRoleDto & { id?: string }>({
   dataScope: 'self',
   parentId: undefined,
 })
+
+const roleFormRules = {
+  name: [{ required: true, message: '请输入角色名称' }],
+  code: [{ required: true, message: '请输入角色编码' }],
+  type: [{ required: true, message: '请选择角色类型' }],
+  dataScope: [{ required: true, message: '请选择数据范围' }],
+}
 
 const statsData = computed(() => [
   { label: '总角色数', value: stats.value.totalRoles, icon: Settings2, class: 'primary' },
@@ -83,6 +92,7 @@ const loadPermissionTree = async () => {
     permissionTree.value = res
   } catch (error) {
     console.error('加载权限树失败:', error)
+    message.error('加载权限树失败')
   }
 }
 
@@ -111,6 +121,7 @@ const loadStats = async () => {
     stats.value = data
   } catch (error) {
     console.error('加载统计信息失败:', error)
+    message.error('加载角色统计信息失败')
   }
 }
 
@@ -150,6 +161,7 @@ const loadRoleTree = async () => {
     roleTree.value = data
   } catch (error) {
     console.error('加载角色树失败:', error)
+    message.error('加载角色树失败')
   }
 }
 
@@ -198,13 +210,10 @@ const handleSubmit = async () => {
       })
       message.success('更新成功')
     } else {
-      if (!roleForm.code) {
-        message.error('请填写角色编码')
-        submitting.value = false
-        return
-      }
       await roleApi.create({
         ...roleForm,
+        name: roleForm.name.trim(),
+        code: roleForm.code.trim(),
         permissions: permissionsPayload,
       })
       message.success('创建成功')
@@ -221,7 +230,14 @@ const handleSubmit = async () => {
 }
 
 const handleDelete = async (row: Role) => {
-  if (!window.confirm('确定要删除该角色吗？')) {
+  const confirmed = await modal.confirm({
+    title: '删除角色',
+    content: '确定要删除该角色吗？',
+    okText: '删除',
+    cancelText: '取消',
+    okButtonProps: { danger: true },
+  })
+  if (!confirmed) {
     return
   }
 
@@ -298,7 +314,14 @@ const handleSubmitAssignUsers = async () => {
 }
 
 const handleRemoveUser = async (user: RoleUser) => {
-  if (!window.confirm(`确定要从该角色移除用户 ${user.name} 吗？`)) {
+  const confirmed = await modal.confirm({
+    title: '移除角色成员',
+    content: `确定要从该角色移除用户”${user.name}”吗？`,
+    okText: '移除',
+    cancelText: '取消',
+    okButtonProps: { danger: true },
+  })
+  if (!confirmed) {
     return
   }
 
@@ -330,14 +353,13 @@ const formatDate = (date: string) => {
   return new Date(date).toLocaleString('zh-CN')
 }
 
-function getTypeVariant(type: string): 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost' | 'link' {
-  return type === 'system' ? 'destructive' : 'default'
+function getTypeVariant(type: string): string {
+  return type === 'system' ? 'purple' : 'blue'
 }
 
-const totalPages = computed(() => Math.ceil(total.value / pageSize.value))
-
-const handlePageChange = (newPage: number) => {
+const handlePageChange = (newPage: number, newPageSize?: number) => {
   page.value = newPage
+  if (newPageSize !== undefined) pageSize.value = newPageSize
   loadRoles()
 }
 
@@ -353,35 +375,35 @@ onMounted(() => {
   <div class="p-6 min-h-[calc(100vh-64px)]">
     <div class="flex justify-between items-start mb-6">
       <div class="flex-1">
-        <h1 class="text-3xl font-bold text-foreground mb-2">角色管理</h1>
+        <h1 class="text-2xl font-bold text-foreground mb-2">角色管理</h1>
         <p class="text-sm text-muted-foreground">管理用户池角色，包括创建、编辑、删除和分配用户池用户</p>
       </div>
       <div>
         <Button @click="handleCreate">
-          <Plus class="w-4 h-4 mr-1" />
+          <Plus class="size-4 mr-2" />
           创建角色
         </Button>
       </div>
     </div>
 
-    <div class="grid grid-cols-4 gap-5 mb-6">
-      <Card v-for="(stat, index) in statsData" :key="index" class="cursor-pointer transition-all hover:-translate-y-1 hover:shadow-lg">
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
+      <Card v-for="(stat, index) in statsData" :key="index" class="transition-all hover:shadow-md">
         <div class="pt-4">
-          <div class="flex items-center gap-4">
+          <div class="flex items-center gap-3">
             <div
-              class="w-14 h-14 rounded-lg flex items-center justify-center text-white shrink-0"
+              class="size-11 rounded-lg flex items-center justify-center text-white shrink-0"
               :class="{
                 'bg-gradient-to-br from-primary to-primary/60': stat.class === 'primary',
                 'bg-gradient-to-br from-red-500 to-red-400': stat.class === 'danger',
-                'bg-gradient-to-br from-green-500 to-green-400': stat.class === 'success',
+                'bg-gradient-to-br from-emerald-500 to-emerald-400': stat.class === 'success',
                 'bg-gradient-to-br from-sky-500 to-sky-400': stat.class === 'info',
               }"
             >
-              <component :is="stat.icon" class="w-6 h-6" />
+              <component :is="stat.icon" class="size-5" />
             </div>
             <div>
-              <div class="text-3xl font-bold text-foreground leading-tight">{{ stat.value }}</div>
-              <div class="text-sm text-muted-foreground mt-1">{{ stat.label }}</div>
+              <div class="text-2xl font-bold text-foreground leading-tight">{{ stat.value }}</div>
+              <div class="text-xs text-muted-foreground mt-0.5">{{ stat.label }}</div>
             </div>
           </div>
         </div>
@@ -393,7 +415,7 @@ onMounted(() => {
         <div class="flex justify-between items-center">
           <div class="flex items-center gap-3">
             <div class="relative">
-              <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
               <Input v-model:value="searchQuery"
                 placeholder="搜索角色名称、编码"
                 class="w-72 pl-8"
@@ -406,29 +428,29 @@ onMounted(() => {
 
             </Select>
             <Button @click="handleSearch">
-              <Search class="w-4 h-4 mr-1" />
+              <Search class="size-4 mr-2" />
               搜索
             </Button>
             <Button  @click="handleReset">
-              <RefreshCw class="w-4 h-4 mr-1" />
+              <RefreshCw class="size-4 mr-2" />
               重置
             </Button>
           </div>
           <div class="flex gap-0">
             <Button
-              :color="viewMode === 'list' ? 'default' : 'outline'"
+              :type="viewMode === 'list' ? 'primary' : 'default'"
               class="rounded-r-none"
               @click="viewMode = 'list'"
             >
-              <List class="w-4 h-4 mr-1" />
+              <List class="size-4 mr-2" />
               列表
             </Button>
             <Button
-              :color="viewMode === 'tree' ? 'default' : 'outline'"
+              :type="viewMode === 'tree' ? 'primary' : 'default'"
               class="rounded-l-none"
               @click="viewMode = 'tree'"
             >
-              <Share2 class="w-4 h-4 mr-1" />
+              <Share2 class="size-4 mr-2" />
               树形
             </Button>
           </div>
@@ -475,8 +497,8 @@ onMounted(() => {
                       查看用户
                     </Button>
                     <Button
-                      variant="link"
-                      size="sm"
+                      type="link"
+                      size="small"
                       class="p-0 h-auto"
                       :disabled="row.type === 'system'"
                       @click="handleEdit(row)"
@@ -484,8 +506,8 @@ onMounted(() => {
                       编辑
                     </Button>
                     <Button
-                      variant="link"
-                      size="sm"
+                      type="link"
+                      size="small"
                       class="p-0 h-auto text-destructive"
                       :disabled="row.type === 'system'"
                       @click="handleDelete(row)"
@@ -497,28 +519,27 @@ onMounted(() => {
             </template>
           </Table>
 
-          <div class="flex items-center justify-between mt-5">
+          <div class="flex items-center justify-between mt-4 pt-4 border-t">
             <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
-            <div class="flex items-center gap-1">
-              <Button  size="small" :disabled="page <= 1" @click="handlePageChange(page - 1)">
-                上一页
-              </Button>
-              <span class="text-sm px-2">{{ page }} / {{ totalPages || 1 }}</span>
-              <Button  size="small" :disabled="page >= totalPages" @click="handlePageChange(page + 1)">
-                下一页
-              </Button>
-            </div>
+            <AntPagination
+              :current="page"
+              :page-size="pageSize"
+              :total="total"
+              :show-size-changer="false"
+              size="small"
+              @change="handlePageChange"
+            />
           </div>
         </div>
 
         <div v-else>
           <Tree
-            :data="roleTree"
-            :props="{ children: 'children', label: 'name' }"
-            node-key="id"
+            :tree-data="roleTree"
+            :field-names="{ key: 'id', title: 'name', children: 'children' }"
             :default-expand-all="true"
+            :selectable="false"
           >
-            <template #default="{ data }">
+            <template #titleRender="data">
               <div class="flex items-center justify-between w-full pr-5">
                 <div class="flex items-center gap-2">
                   <Tag :color="getTypeVariant(data.type)" class="text-xs">
@@ -542,53 +563,52 @@ onMounted(() => {
         <div>
           <h3>{{ dialogTitle }}</h3>
         </div>
-        <form @submit.prevent="handleSubmit">
-          <div class="grid gap-4 py-4">
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">角色名称 <span class="text-destructive">*</span></label>
+        <Form :model="roleForm" :rules="roleFormRules" layout="vertical" class="py-4" @finish="handleSubmit">
+          <div class="grid gap-4">
+            <FormItem label="角色名称" name="name">
               <Input v-model:value="roleForm.name" placeholder="请输入角色名称" />
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">角色编码 <span class="text-destructive">*</span></label>
+            </FormItem>
+            <FormItem label="角色编码" name="code">
               <Input v-model:value="roleForm.code" placeholder="请输入角色编码" :disabled="isEdit" />
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">角色类型 <span class="text-destructive">*</span></label>
-              <Select v-model:value="roleForm.type" :disabled="isEdit">
-                  <SelectOption value="custom">自定义角色</SelectOption>
-                  <SelectOption value="system">内置角色</SelectOption>
-
-              </Select>
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">数据范围 <span class="text-destructive">*</span></label>
-              <Select v-model:value="roleForm.dataScope">
-                  <SelectOption value="self">仅本人数据</SelectOption>
-                  <SelectOption value="department">本部门数据</SelectOption>
-                  <SelectOption value="department_and_sub">本部门及下级部门数据</SelectOption>
-                  <SelectOption value="all">全部数据</SelectOption>
-
-              </Select>
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">父级角色</label>
-              <Select v-model:value="roleForm.parentId">
-                  <SelectOption v-for="role in availableParentRoles" :key="role.id" :value="role.id">
-                    {{ role.name }}
-                  </SelectOption>
-
-              </Select>
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">权限配置</label>
+            </FormItem>
+            <FormItem label="角色类型" name="type">
+              <Select
+                v-model:value="roleForm.type"
+                :disabled="isEdit"
+                :options="[
+                  { value: 'custom', label: '自定义角色' },
+                  { value: 'system', label: '内置角色' },
+                ]"
+              />
+            </FormItem>
+            <FormItem label="数据范围" name="dataScope">
+              <Select
+                v-model:value="roleForm.dataScope"
+                :options="[
+                  { value: 'self', label: '仅本人数据' },
+                  { value: 'department', label: '本部门数据' },
+                  { value: 'department_and_sub', label: '本部门及下级部门数据' },
+                  { value: 'all', label: '全部数据' },
+                ]"
+              />
+            </FormItem>
+            <FormItem label="父级角色" name="parentId">
+              <Select
+                v-model:value="roleForm.parentId"
+                allow-clear
+                :options="availableParentRoles.map(role => ({ value: role.id, label: role.name }))"
+                placeholder="请选择父级角色"
+              />
+            </FormItem>
+            <FormItem label="权限配置">
               <div class="max-h-[360px] overflow-y-auto border rounded-lg p-2">
                 <Tree
-                  :data="permissionTree"
-                  :props="{ children: 'children', label: 'name' }"
-                  node-key="code"
+                  :tree-data="permissionTree"
+                  :field-names="{ key: 'code', title: 'name', children: 'children' }"
                   :default-expand-all="true"
+                  :selectable="false"
                 >
-                  <template #default="{ data }">
+                  <template #titleRender="data">
                     <div class="flex items-center gap-2">
                       <input
                         type="checkbox"
@@ -601,19 +621,18 @@ onMounted(() => {
                   </template>
                 </Tree>
               </div>
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">描述</label>
+            </FormItem>
+            <FormItem label="描述" name="description">
               <InputTextArea v-model:value="roleForm.description" :rows="3" placeholder="请输入描述" />
-            </div>
+            </FormItem>
           </div>
-        </form>
-        <div>
-          <Button  @click="dialogVisible = false">取消</Button>
-          <Button :disabled="submitting" @click="handleSubmit">
-            {{ submitting ? '提交中...' : '确定' }}
-          </Button>
-        </div>
+          <div class="flex justify-end gap-2 pt-2">
+            <Button html-type="button" @click="dialogVisible = false">取消</Button>
+            <Button type="primary" html-type="submit" :loading="submitting">
+              {{ submitting ? '提交中...' : '确定' }}
+            </Button>
+          </div>
+        </Form>
       </div>
     </Modal>
 
@@ -625,7 +644,7 @@ onMounted(() => {
         <div class="min-h-[400px]">
           <div class="flex justify-between mb-5">
             <div class="relative">
-              <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
               <Input v-model:value="userSearchQuery"
                 placeholder="搜索用户名、邮箱、姓名"
                 class="w-72 pl-8"
@@ -633,7 +652,7 @@ onMounted(() => {
               />
             </div>
             <Button @click="handleAssignUsers">
-              <Plus class="w-4 h-4 mr-1" />
+              <Plus class="size-4 mr-2" />
               分配用户
             </Button>
           </div>
@@ -646,7 +665,7 @@ onMounted(() => {
             <template #bodyCell="{ column, record: row }">
               <template v-if="column.key === 'username'">
                   <div class="flex items-center gap-2">
-                    <Avatar class="w-7 h-7">
+                    <Avatar class="size-7">
                       <span class="bg-gradient-to-br from-primary to-primary/60 text-white text-xs font-semibold">
                         {{ row.name?.charAt(0) || row.username.charAt(0).toUpperCase() }}
                       </span>
@@ -655,7 +674,7 @@ onMounted(() => {
                   </div>
               </template>
               <template v-else-if="column.key === 'status'">
-                  <Tag :color="row.status === 'active' ? 'default' : 'destructive'" class="text-xs">
+                  <Tag :color="row.status === 'active' ? 'green' : 'red'" class="text-xs">
                     {{ row.status === 'active' ? '正常' : '禁用' }}
                   </Tag>
               </template>
@@ -722,19 +741,6 @@ onMounted(() => {
         </div>
       </div>
     </Modal>
+    <contextHolder />
   </div>
 </template>
-
-<style scoped>
-@media (max-width: 1200px) {
-  .grid-cols-4 {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 768px) {
-  .grid-cols-4 {
-    grid-template-columns: 1fr;
-  }
-}
-</style>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { Table, message } from 'antdv-next'
+import { Form, FormItem, Modal, Pagination as AntPagination, Table, message } from 'antdv-next'
 import { Plus, Search, Copy, Trash2 } from '@lucide/vue'
 import { applicationApi } from '@/api/application'
 import type { Application, CreateApplicationDto, UpdateApplicationDto, ApplicationQueryDto } from '@/types/application'
@@ -16,6 +16,8 @@ const dialogTitle = ref('新增应用')
 const currentApp = ref<Partial<Application>>({})
 const secretDialogVisible = ref(false)
 const newClientSecret = ref('')
+
+const [modal, contextHolder] = Modal.useModal()
 
 const queryForm = reactive<ApplicationQueryDto>({
   page: 1,
@@ -35,7 +37,6 @@ const applicationStatusOptions = [
   { value: 'active', label: '正常' },
   { value: 'disabled', label: '禁用' },
 ]
-const pageSizeOptions = [10, 20, 50, 100].map(value => ({ value, label: String(value) }))
 
 const appForm = reactive<CreateApplicationDto & UpdateApplicationDto>({
   name: '',
@@ -48,65 +49,14 @@ const appForm = reactive<CreateApplicationDto & UpdateApplicationDto>({
   refreshTokenLifetime: 2592000
 })
 
+const appFormRules = {
+  name: [{ required: true, message: '请输入应用名称' }],
+  type: [{ required: true, message: '请选择应用类型' }],
+}
+
 const isEditing = computed(() => Boolean(currentApp.value.id))
 
 const redirectUriInput = ref('')
-
-const formErrors = reactive<{
-  name?: string
-  type?: string
-  allowedGrantTypes?: string
-  accessTokenLifetime?: string
-  refreshTokenLifetime?: string
-}>({})
-
-const resetFormErrors = () => {
-  formErrors.name = undefined
-  formErrors.type = undefined
-  formErrors.allowedGrantTypes = undefined
-  formErrors.accessTokenLifetime = undefined
-  formErrors.refreshTokenLifetime = undefined
-}
-
-const validateCreateForm = (): boolean => {
-  resetFormErrors()
-  let valid = true
-  if (!appForm.name || !appForm.name.trim()) {
-    formErrors.name = '请输入应用名称'
-    valid = false
-  }
-  if (!appForm.type) {
-    formErrors.type = '请选择应用类型'
-    valid = false
-  }
-  return valid
-}
-
-const validateEditForm = (): boolean => {
-  resetFormErrors()
-  let valid = true
-  if (!appForm.name || !appForm.name.trim()) {
-    formErrors.name = '请输入应用名称'
-    valid = false
-  }
-  if (!appForm.type) {
-    formErrors.type = '请选择应用类型'
-    valid = false
-  }
-  if (!appForm.allowedGrantTypes || appForm.allowedGrantTypes.length === 0) {
-    formErrors.allowedGrantTypes = '请至少选择一种授权类型'
-    valid = false
-  }
-  if (!appForm.accessTokenLifetime || appForm.accessTokenLifetime < 60) {
-    formErrors.accessTokenLifetime = '访问令牌有效期不能小于 60 秒'
-    valid = false
-  }
-  if (!appForm.refreshTokenLifetime || appForm.refreshTokenLifetime < 3600) {
-    formErrors.refreshTokenLifetime = '刷新令牌有效期不能小于 3600 秒'
-    valid = false
-  }
-  return valid
-}
 
 const loadApplications = async () => {
   loading.value = true
@@ -116,6 +66,7 @@ const loadApplications = async () => {
     total.value = res.total
   } catch (error) {
     console.error('加载应用列表失败:', error)
+    message.error('加载应用列表失败')
   } finally {
     loading.value = false
   }
@@ -148,7 +99,6 @@ const handleAdd = () => {
   })
   redirectUriInput.value = ''
   currentApp.value = {}
-  resetFormErrors()
   dialogVisible.value = true
 }
 
@@ -170,12 +120,17 @@ const handleEdit = (row: Application) => {
   })
   redirectUriInput.value = ''
   currentApp.value = row
-  resetFormErrors()
   dialogVisible.value = true
 }
 
 const handleDelete = async (row: Application) => {
-  const confirmed = window.confirm('确定要删除该应用吗？删除后无法恢复！')
+  const confirmed = await modal.confirm({
+    title: '删除应用',
+    content: '确定要删除该应用吗？删除后无法恢复！',
+    okText: '删除',
+    cancelText: '取消',
+    okButtonProps: { danger: true },
+  })
   if (!confirmed) return
 
   try {
@@ -184,6 +139,7 @@ const handleDelete = async (row: Application) => {
     loadApplications()
   } catch (error) {
     console.error('删除应用失败:', error)
+    message.error('删除应用失败')
   }
 }
 
@@ -194,6 +150,7 @@ const handleStatusChange = async (row: Application, status: string) => {
     loadApplications()
   } catch (error) {
     console.error('更新状态失败:', error)
+    message.error('更新应用状态失败')
   }
 }
 
@@ -212,11 +169,6 @@ const handleRemoveRedirectUri = (index: number) => {
 }
 
 const handleSubmit = async () => {
-  const valid = isEditing.value ? validateEditForm() : validateCreateForm()
-  if (!valid) {
-    message.error('请检查表单填写是否正确')
-    return
-  }
   try {
     if (isEditing.value && currentApp.value.id) {
       const res = await applicationApi.update(currentApp.value.id, appForm)
@@ -239,15 +191,17 @@ const handleSubmit = async () => {
     loadApplications()
   } catch (error: unknown) {
     console.error('保存应用失败:', error)
+    message.error('保存应用失败')
   }
 }
 
-const handlePageChange = (page: number) => {
+const handlePageChange = (page: number, pageSize?: number) => {
   queryForm.page = page
+  if (pageSize !== undefined) queryForm.pageSize = pageSize
   loadApplications()
 }
 
-const handleSizeChange = (size: number) => {
+const handleSizeChange = (_current: number, size: number) => {
   queryForm.pageSize = size
   queryForm.page = 1
   loadApplications()
@@ -266,11 +220,11 @@ const copyToClipboard = async (text: string) => {
 const getStatusVariant = (status: string) => {
   switch (status) {
     case 'active':
-      return 'default'
+      return 'green'
     case 'disabled':
-      return 'secondary'
+      return 'orange'
     default:
-      return 'outline'
+      return 'red'
   }
 }
 
@@ -325,26 +279,28 @@ const toggleGrantType = (type: string) => {
   }
 }
 
-const totalPages = () => Math.ceil(total.value / queryForm.pageSize!)
-
 onMounted(() => {
   loadApplications()
 })
 </script>
 
 <template>
-  <div class="p-5">
-    <Card>
-      <div>
-        <div class="flex justify-between items-center">
-          <h3>应用管理</h3>
-          <Button @click="handleAdd">
-            <Plus class="w-4 h-4 mr-2" />
-            新增应用
-          </Button>
-        </div>
+  <div class="p-6 min-h-[calc(100vh-64px)]">
+    <div class="flex justify-between items-start mb-6">
+      <div class="flex-1">
+        <h1 class="text-2xl font-bold text-foreground mb-2">应用管理</h1>
+        <p class="text-sm text-muted-foreground">管理接入应用，包括 OAuth 2.0 客户端配置</p>
       </div>
-      <div>
+      <div class="flex gap-3">
+        <Button @click="handleAdd">
+          <Plus class="size-4 mr-2" />
+          新增应用
+        </Button>
+      </div>
+    </div>
+
+    <Card>
+      <div class="pt-6">
         <div class="flex flex-wrap gap-4 items-end mb-5">
           <div class="grid gap-2">
             <label class="text-sm font-medium">应用名称</label>
@@ -360,7 +316,7 @@ onMounted(() => {
           </div>
           <div class="flex gap-2">
             <Button @click="handleSearch">
-              <Search class="w-4 h-4 mr-2" />
+              <Search class="size-4 mr-2" />
               搜索
             </Button>
             <Button  @click="handleReset">重置</Button>
@@ -383,7 +339,7 @@ onMounted(() => {
                 <div class="flex items-center gap-2">
                   <span class="font-mono text-xs">{{ row.clientId }}</span>
                   <Button type="link" size="small" class="h-auto p-0" @click="copyToClipboard(row.clientId)">
-                    <Copy class="w-4 h-4" />
+                    <Copy class="size-4" />
                   </Button>
                 </div>
             </template>
@@ -400,8 +356,8 @@ onMounted(() => {
                   <Button type="link" size="small" class="h-auto p-0" @click="handleDetail(row)">详情</Button>
                   <Button type="link" size="small" class="h-auto p-0" @click="handleEdit(row)">编辑</Button>
                   <Button
-                    variant="link"
-                    size="sm"
+                    type="link"
+                    size="small"
                     class="h-auto p-0"
                     @click="handleStatusChange(row, row.status === 'active' ? 'disabled' : 'active')"
                   >
@@ -415,13 +371,16 @@ onMounted(() => {
 
         <div class="flex items-center justify-between mt-5">
           <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
-          <div class="flex items-center gap-1">
-            <Select v-model:value="queryForm.pageSize!" class="w-20" :options="pageSizeOptions" @update:value="handleSizeChange(Number($event))" />
-            <span class="text-sm px-2">条/页</span>
-            <Button  size="small" :disabled="queryForm.page! <= 1" @click="handlePageChange(queryForm.page! - 1)">上一页</Button>
-            <span class="text-sm px-2">{{ queryForm.page! }} / {{ totalPages() }}</span>
-            <Button  size="small" :disabled="queryForm.page! >= totalPages()" @click="handlePageChange(queryForm.page! + 1)">下一页</Button>
-          </div>
+          <AntPagination
+            :current="queryForm.page"
+            :page-size="queryForm.pageSize"
+            :total="total"
+            :show-size-changer="true"
+            :page-size-options="['10', '20', '50', '100']"
+            size="small"
+            @change="handlePageChange"
+            @show-size-change="handleSizeChange"
+          />
         </div>
       </div>
     </Card>
@@ -431,32 +390,25 @@ onMounted(() => {
         <div>
           <h3>{{ dialogTitle }}</h3>
         </div>
-        <form>
-          <div class="grid gap-4 py-4">
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">应用名称</label>
-              <Input v-model:value="appForm.name" placeholder="请输入应用名称" :aria-invalid="!!formErrors.name" />
-              <p v-if="formErrors.name" class="text-sm text-destructive">{{ formErrors.name }}</p>
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">应用类型</label>
-              <Select v-model:value="appForm.type" :status="formErrors.type ? 'error' : undefined" :options="applicationTypeOptions" />
-              <p v-if="formErrors.type" class="text-sm text-destructive">{{ formErrors.type }}</p>
-            </div>
+        <Form :model="appForm" :rules="appFormRules" layout="vertical" class="py-4" @finish="handleSubmit">
+          <div class="grid gap-4">
+            <FormItem label="应用名称" name="name">
+              <Input v-model:value="appForm.name" placeholder="请输入应用名称" />
+            </FormItem>
+            <FormItem label="应用类型" name="type">
+              <Select v-model:value="appForm.type" :options="applicationTypeOptions" />
+            </FormItem>
             <template v-if="isEditing">
-              <div class="grid gap-2">
-                <label class="text-sm font-medium">应用描述</label>
+              <FormItem label="应用描述" name="description">
                 <InputTextArea v-model:value="appForm.description" :rows="3" placeholder="请输入应用描述" />
-              </div>
-              <div class="grid gap-2">
-                <label class="text-sm font-medium">应用Logo</label>
+              </FormItem>
+              <FormItem label="应用Logo" name="logo">
                 <Input v-model:value="appForm.logo" placeholder="请输入Logo URL" />
-              </div>
-              <div class="grid gap-2">
-                <label class="text-sm font-medium">重定向URI</label>
+              </FormItem>
+              <FormItem label="重定向URI">
                 <div class="flex gap-2 mb-2">
                   <Input v-model:value="redirectUriInput" placeholder="请输入重定向URI" class="flex-1" />
-                  <Button type="button" @click="handleAddRedirectUri">添加</Button>
+                  <Button html-type="button" @click="handleAddRedirectUri">添加</Button>
                 </div>
                 <div v-if="appForm.redirectUris && appForm.redirectUris.length > 0" class="flex flex-wrap gap-2">
                   <Tag
@@ -467,12 +419,11 @@ onMounted(() => {
                     @click="handleRemoveRedirectUri(index)"
                   >
                     {{ uri }}
-                    <Trash2 class="w-3 h-3 ml-1" />
+                    <Trash2 class="size-3 ml-1" />
                   </Tag>
                 </div>
-              </div>
-              <div class="grid gap-2">
-                <label class="text-sm font-medium">授权类型</label>
+              </FormItem>
+              <FormItem label="授权类型">
                 <div class="flex flex-col gap-2">
                   <div class="flex items-center gap-2">
                     <Checkbox
@@ -496,39 +447,34 @@ onMounted(() => {
                     <span class="text-sm">刷新令牌</span>
                   </div>
                 </div>
-                <p v-if="formErrors.allowedGrantTypes" class="text-sm text-destructive">{{ formErrors.allowedGrantTypes }}</p>
-              </div>
-              <div class="grid gap-2">
-                <label class="text-sm font-medium">访问令牌有效期</label>
+              </FormItem>
+              <FormItem label="访问令牌有效期" name="accessTokenLifetime">
                 <div class="flex items-center gap-2">
                   <InputNumber
                     v-model:value="appForm.accessTokenLifetime"
                     :min="60"
                     :max="86400"
-                   />
+                  />
                   <span class="text-sm text-muted-foreground">秒 ({{ formatLifetime(appForm.accessTokenLifetime) }})</span>
                 </div>
-                <p v-if="formErrors.accessTokenLifetime" class="text-sm text-destructive">{{ formErrors.accessTokenLifetime }}</p>
-              </div>
-              <div class="grid gap-2">
-                <label class="text-sm font-medium">刷新令牌有效期</label>
+              </FormItem>
+              <FormItem label="刷新令牌有效期" name="refreshTokenLifetime">
                 <div class="flex items-center gap-2">
                   <InputNumber
                     v-model:value="appForm.refreshTokenLifetime"
                     :min="3600"
                     :max="31536000"
-                   />
+                  />
                   <span class="text-sm text-muted-foreground">秒 ({{ formatLifetime(appForm.refreshTokenLifetime) }})</span>
                 </div>
-                <p v-if="formErrors.refreshTokenLifetime" class="text-sm text-destructive">{{ formErrors.refreshTokenLifetime }}</p>
-              </div>
+              </FormItem>
             </template>
           </div>
-        </form>
-        <div>
-          <Button  @click="dialogVisible = false">取消</Button>
-          <Button @click="handleSubmit">确定</Button>
-        </div>
+          <div class="flex justify-end gap-2">
+            <Button @click="dialogVisible = false">取消</Button>
+            <Button type="primary" html-type="submit">确定</Button>
+          </div>
+        </Form>
       </div>
     </Modal>
 
@@ -537,12 +483,13 @@ onMounted(() => {
         <div>
           <h3>Client Secret</h3>
         </div>
-        <Alert class="mb-5">
-          <h3 class="font-semibold">请妥善保管您的客户端密钥</h3>
-          <p>
-            密钥只会在创建应用或重新生成时显示一次，请立即复制并妥善保管。
-          </p>
-        </Alert>
+        <Alert
+          class="mb-5"
+          type="warning"
+          show-icon
+          title="请妥善保管您的客户端密钥"
+          description="密钥只会在创建应用或重新生成时显示一次，请立即复制并妥善保管。"
+        />
         <div class="bg-muted p-3 rounded-md font-mono text-sm break-all">
           {{ newClientSecret }}
         </div>
@@ -553,5 +500,6 @@ onMounted(() => {
       </div>
     </Modal>
 
+    <contextHolder />
     </div>
 </template>

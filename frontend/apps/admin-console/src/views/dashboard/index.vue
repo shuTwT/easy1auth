@@ -4,9 +4,8 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { dashboardApi } from '@/api/dashboard'
 import type { DashboardStats, RecentLogin } from '@/api/dashboard'
-import { message } from 'antdv-next'
-import { Dropdown, Table as AntTable, Tag } from 'antdv-next'
-import { Building2, TrendingUp, User, Monitor, Link, MoreHorizontal, RefreshCw, ArrowRight, Library, FileText, Loader2 } from '@lucide/vue'
+import { Dropdown, Empty, Spin, Table as AntTable, Tag, message } from 'antdv-next'
+import { Building2, TrendingUp, User, Monitor, Link, MoreHorizontal, RefreshCw, ArrowRight, Library, FileText } from '@lucide/vue'
 const router = useRouter()
 const userStore = useUserStore()
 
@@ -118,9 +117,8 @@ onMounted(() => {
         <p class="page-subtitle">欢迎回来，{{ userStore.userInfo?.username || '管理员' }}</p>
       </div>
       <div class="header-actions">
-        <Button @click="handleRefresh" :disabled="loading">
+        <Button @click="handleRefresh" :disabled="loading" :loading="loading">
           <RefreshCw v-if="!loading" class="w-4 h-4 mr-2" />
-          <Loader2 v-else class="w-4 h-4 mr-2 animate-spin" />
           刷新数据
         </Button>
       </div>
@@ -131,7 +129,7 @@ onMounted(() => {
         <div class="pt-6">
           <div class="stat-content">
             <div class="stat-icon" :class="stat.color">
-              <component :is="stat.icon" class="w-6 h-6" />
+              <component :is="stat.icon" class="size-6" />
             </div>
             <div class="stat-info">
               <div class="stat-value">
@@ -159,17 +157,15 @@ onMounted(() => {
           </div>
           <div>
             <div v-if="loading" class="flex justify-center py-12">
-              <Loader2 class="w-6 h-6 animate-spin text-muted-foreground" />
+              <Spin />
             </div>
 
-            <div v-else-if="recentLogins.length === 0" class="empty-state py-12 text-center text-muted-foreground text-sm">
-              暂无登录记录
-            </div>
+            <Empty v-else-if="recentLogins.length === 0" class="py-12" description="暂无登录记录" />
 
             <AntTable v-else :columns="recentLoginColumns" :data-source="recentLogins" :pagination="false" :row-key="login => `${login.username}-${login.time}`" size="small">
               <template #bodyCell="{ column, record }">
                 <template v-if="column.key === 'username'">
-                  <div class="user-cell"><Avatar class="h-7 w-7"><span class="text-xs">{{ record.username.charAt(0).toUpperCase() }}</span></Avatar><span>{{ record.username }}</span></div>
+                  <div class="user-cell"><Avatar class="size-7"><span class="text-xs">{{ record.username.charAt(0).toUpperCase() }}</span></Avatar><span>{{ record.username }}</span></div>
                 </template>
                 <template v-else-if="column.key === 'email'">{{ record.email || '-' }}</template>
                 <template v-else-if="column.key === 'time'">{{ formatTime(record.time) }}</template>
@@ -184,13 +180,13 @@ onMounted(() => {
             <div class="card-header">
               <h3>登录趋势</h3>
               <Dropdown :menu="{ items: trendRangeItems }" :trigger="['click']" placement="bottomRight">
-                <Button type="text" size="small" aria-label="选择登录趋势时间范围"><MoreHorizontal class="w-4 h-4" /></Button>
+                <Button type="text" size="small" aria-label="选择登录趋势时间范围"><MoreHorizontal class="size-4" /></Button>
               </Dropdown>
             </div>
           </div>
           <div>
             <div class="chart-placeholder">
-              <TrendingUp class="w-12 h-12 text-slate-300" />
+              <TrendingUp class="w-12 h-12 text-muted-foreground" />
               <p>登录趋势图表</p>
               <p class="chart-hint">集成图表库后显示数据可视化</p>
             </div>
@@ -213,7 +209,7 @@ onMounted(() => {
                 @click="navigateTo(action.route)"
               >
                 <div class="action-icon">
-                  <component :is="action.icon" class="w-6 h-6" />
+                  <component :is="action.icon" class="size-6" />
                 </div>
                 <span class="action-title">{{ action.title }}</span>
               </div>
@@ -258,21 +254,21 @@ onMounted(() => {
                   <span class="info-label">CPU使用率</span>
                   <span class="info-value">{{ systemInfo.cpuUsage }}%</span>
                 </div>
-                <Progress :model-value="systemInfo.cpuUsage" class="h-1.5" />
+                <Progress :percent="systemInfo.cpuUsage" class="h-1.5" />
               </div>
               <div class="info-item">
                 <div class="flex justify-between mb-2">
                   <span class="info-label">内存使用率</span>
                   <span class="info-value">{{ systemInfo.memoryUsage }}%</span>
                 </div>
-                <Progress :model-value="systemInfo.memoryUsage" class="h-1.5" />
+                <Progress :percent="systemInfo.memoryUsage" class="h-1.5" />
               </div>
               <div class="info-item">
                 <div class="flex justify-between mb-2">
                   <span class="info-label">磁盘使用率</span>
                   <span class="info-value">{{ systemInfo.diskUsage }}%</span>
                 </div>
-                <Progress :model-value="systemInfo.diskUsage" class="h-1.5" />
+                <Progress :percent="systemInfo.diskUsage" class="h-1.5" />
               </div>
             </div>
           </div>
@@ -329,7 +325,7 @@ onMounted(() => {
 }
 
 .stat-icon.success {
-  @apply bg-green-500/10 text-green-500;
+  @apply bg-emerald-500/10 text-emerald-500;
 }
 
 .stat-icon.warning {
@@ -389,7 +385,7 @@ onMounted(() => {
 }
 
 .quick-action-item.success {
-  @apply border-green-500/20 hover:bg-green-500/5;
+  @apply border-emerald-500/20 hover:bg-emerald-500/5;
 }
 
 .quick-action-item.warning {

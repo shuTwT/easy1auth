@@ -186,6 +186,7 @@ async function openCreateTenantDialog() {
     createTenantPackageId.value = createTenantPackages.value.find(item => item.id > 0)?.id
   } catch (error) {
     console.error('加载可用租户套餐失败:', error)
+    message.error('加载可用租户套餐失败')
   }
 }
 
@@ -210,6 +211,7 @@ async function submitCreateTenant() {
     message.success('租户创建成功')
   } catch (error) {
     console.error('创建租户失败:', error)
+    message.error('创建租户失败')
   } finally {
     createTenantSubmitting.value = false
   }
@@ -235,6 +237,7 @@ async function loadAuthorizedMenus() {
     authorizedMenus.value = (await authorizationApi.getContext()).menus
   } catch (error) {
     console.error('加载当前租户菜单失败:', error)
+    message.error('加载当前租户菜单失败')
     authorizedMenus.value = []
   } finally {
     menuLoading.value = false
@@ -254,6 +257,7 @@ onMounted(async () => {
     }
   } catch (error) {
     console.error('加载品牌设置失败:', error)
+    message.warning('加载品牌设置失败，已使用默认主题')
   }
 })
 

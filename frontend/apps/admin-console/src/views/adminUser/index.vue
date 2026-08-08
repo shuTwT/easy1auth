@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import axios from 'axios'
-import { message, Table as ATable } from 'antdv-next'
+import { Form, FormItem, message, Pagination as AntPagination, Table as ATable } from 'antdv-next'
 import {
   Search,
   RefreshCw,
@@ -83,6 +83,10 @@ const editSubmitting = ref(false)
 const resetPwdDialogVisible = ref(false)
 const resetPwdTarget = ref<AdminUser | null>(null)
 const resetPwdForm = reactive({ newPassword: '', confirmPassword: '' })
+const resetPwdFormRules = {
+  newPassword: [{ required: true, message: '请输入新密码' }],
+  confirmPassword: [{ required: true, message: '请确认密码' }, { validator: (_rule: any, value: string) => value === resetPwdForm.newPassword ? Promise.resolve() : Promise.reject('两次输入的密码不一致') }],
+}
 const resetPwdSubmitting = ref(false)
 
 // reset MFA confirmation
@@ -132,6 +136,9 @@ const roleForm = reactive<CreateAdminRoleDto & { id?: string }>({
   description: '',
   permissions: [],
 })
+const roleFormRules = {
+  name: [{ required: true, message: '请输入角色名称' }],
+}
 const roleDialogTitle = computed(() => (roleDialogIsEdit.value ? '编辑管理员角色' : '创建管理员角色'))
 
 // delete role confirmation
@@ -193,7 +200,6 @@ const adminStatsCards = computed(() => [
   { label: '租户所有者', value: adminStats.value.ownerCount || 0, icon: Shield, tone: 'warning' },
 ])
 
-const adminTotalPages = computed(() => Math.max(1, Math.ceil(adminTotal.value / adminQuery.pageSize!)))
 const adminColumns = [
   { title: '用户名', key: 'username', width: 190 },
   { title: '邮箱', key: 'email', width: 210 },
@@ -232,8 +238,8 @@ function isCurrentMembershipOwner(row: AdminUser): boolean {
   return currentMembership(row)?.tenantRole === 'owner'
 }
 
-function adminStatusVariant(status: AdminStatus): 'default' | 'secondary' {
-  return status === 'active' ? 'default' : 'secondary'
+function adminStatusVariant(status: AdminStatus): string {
+  return status === 'active' ? 'green' : 'red'
 }
 
 function adminStatusText(status: AdminStatus): string {
@@ -249,9 +255,9 @@ function tenantRoleText(role: string | null): string {
   return map[role] || role
 }
 
-function tenantRoleVariant(role: string | null): 'default' | 'secondary' | 'destructive' {
-  if (role === 'owner') return 'destructive'
-  return 'secondary'
+function tenantRoleVariant(role: string | null): string {
+  if (role === 'owner') return 'purple'
+  return 'blue'
 }
 
 function formatDate(date: string | null): string {
@@ -265,6 +271,7 @@ const loadAdminStats = async () => {
     adminStats.value = res
   } catch (error) {
     console.error('加载管理员统计失败:', error)
+    message.error('加载管理员统计失败')
   }
 }
 
@@ -284,6 +291,7 @@ const loadAdmins = async () => {
     adminTotal.value = res.total
   } catch (error) {
     console.error('加载管理员列表失败:', error)
+    message.error('加载管理员列表失败')
   } finally {
     adminLoading.value = false
   }
@@ -295,6 +303,7 @@ const loadAdminRolesForFilter = async () => {
     adminRolesForFilter.value = res.items
   } catch (error) {
     console.error('加载管理员角色失败:', error)
+    message.error('加载管理员角色失败')
   }
 }
 
@@ -313,12 +322,12 @@ const handleAdminReset = () => {
   loadAdmins()
 }
 
-const handleAdminPageChange = (newPage: number) => {
-  adminQuery.page = newPage
+const handleAdminPageChange = (page: number, _pageSize?: number) => {
+  adminQuery.page = page
   loadAdmins()
 }
 
-const handleAdminPageSizeChange = (size: number) => {
+const handleAdminPageSizeChange = (_current: number, size: number) => {
   adminQuery.pageSize = size
   adminQuery.page = 1
   loadAdmins()
@@ -488,7 +497,6 @@ const roleStatsCards = computed(() => [
   { label: '自定义角色', value: roleStats.value.customRoles, icon: UserCog, tone: 'success' },
 ])
 
-const roleTotalPages = computed(() => Math.max(1, Math.ceil(roleTotal.value / rolePageSize.value)))
 const roleColumns = [
   { title: '角色名称', key: 'name', width: 220 },
   { title: '描述', key: 'description', minWidth: 220 },
@@ -505,6 +513,7 @@ const loadRoleStats = async () => {
     roleStats.value = res
   } catch (error) {
     console.error('加载管理员角色统计失败:', error)
+    message.error('加载管理员角色统计失败')
   }
 }
 
@@ -520,6 +529,7 @@ const loadRoles = async () => {
     roleTotal.value = res.total
   } catch (error) {
     console.error('加载管理员角色列表失败:', error)
+    message.error('加载管理员角色列表失败')
   } finally {
     roleLoading.value = false
   }
@@ -531,6 +541,7 @@ const loadPermissionCatalog = async () => {
     permissionCatalog.value = res.permissions
   } catch (error) {
     console.error('加载权限目录失败:', error)
+    message.error('加载权限目录失败')
   }
 }
 
@@ -545,8 +556,8 @@ const handleRoleReset = () => {
   loadRoles()
 }
 
-const handleRolePageChange = (newPage: number) => {
-  rolePage.value = newPage
+const handleRolePageChange = (page: number, _pageSize?: number) => {
+  rolePage.value = page
   loadRoles()
 }
 
@@ -632,7 +643,7 @@ const handleDeleteRoleConfirm = async () => {
   }
 }
 
-const roleTypeVariant = (isSystem: boolean): 'destructive' | 'default' => (isSystem ? 'destructive' : 'default')
+const roleTypeVariant = (isSystem: boolean): string => (isSystem ? 'purple' : 'blue')
 
 const permissionsSummary = (permissions: string[]): string => {
   if (permissions.includes('*')) return '全部权限'
@@ -780,7 +791,7 @@ onMounted(() => {
                     </Tag>
                 </template>
                 <template v-else-if="column.key === 'mfa'">
-                    <Tag :color="row.mfaEnabled ? 'default' : 'outline'" class="text-xs">
+                    <Tag :color="row.mfaEnabled ? 'green' : 'default'" class="text-xs">
                       {{ row.mfaEnabled ? '已启用' : '未启用' }}
                     </Tag>
                 </template>
@@ -789,8 +800,8 @@ onMounted(() => {
                 <template v-else-if="column.key === 'actions'">
                     <div class="flex gap-1 flex-wrap">
                       <Button
-                        variant="link"
-                        size="sm"
+                        type="link"
+                        size="small"
                         class="h-auto p-0"
                         :disabled="isSelf(row) || isAccountOwner(row)"
                         @click="openEditDialog(row)"
@@ -798,8 +809,8 @@ onMounted(() => {
                         编辑
                       </Button>
                       <Button
-                        variant="link"
-                        size="sm"
+                        type="link"
+                        size="small"
                         class="h-auto p-0"
                         :disabled="isSelf(row) || isAccountOwner(row)"
                         @click="handleStatusToggle(row)"
@@ -807,8 +818,8 @@ onMounted(() => {
                         {{ row.status === 'active' ? '禁用' : '启用' }}
                       </Button>
                       <Button
-                        variant="link"
-                        size="sm"
+                        type="link"
+                        size="small"
                         class="h-auto p-0"
                         :disabled="isSelf(row) || !currentMembership(row) || isCurrentMembershipOwner(row)"
                         @click="openAssignRolesDialog(row)"
@@ -816,8 +827,8 @@ onMounted(() => {
                         分配角色
                       </Button>
                       <Button
-                        variant="link"
-                        size="sm"
+                        type="link"
+                        size="small"
                         class="h-auto p-0"
                         :disabled="isSelf(row) || isAccountOwner(row)"
                         @click="openResetPwdDialog(row)"
@@ -825,8 +836,8 @@ onMounted(() => {
                         重置密码
                       </Button>
                       <Button
-                        variant="link"
-                        size="sm"
+                        type="link"
+                        size="small"
                         class="h-auto p-0"
                         :disabled="isSelf(row) || isAccountOwner(row) || !row.mfaEnabled"
                         @click="openResetMfaDialog(row)"
@@ -834,8 +845,8 @@ onMounted(() => {
                         重置 MFA
                       </Button>
                       <Button
-                        variant="link"
-                        size="sm"
+                        type="link"
+                        size="small"
                         class="h-auto p-0 text-destructive disabled:text-muted-foreground"
                         :disabled="isSelf(row) || !currentMembership(row) || isCurrentMembershipOwner(row)"
                         @click="openRemoveDialog(row)"
@@ -849,22 +860,16 @@ onMounted(() => {
 
             <div class="flex items-center justify-between mt-4 pt-4 border-t">
               <span class="text-sm text-muted-foreground">共 {{ adminTotal }} 条</span>
-              <div class="flex items-center gap-1">
-                <Select :value="String(adminQuery.pageSize)" class="w-20" @update:value="handleAdminPageSizeChange(Number($event))">
-                    <SelectOption value="10">10</SelectOption>
-                    <SelectOption value="20">20</SelectOption>
-                    <SelectOption value="50">50</SelectOption>
-
-                </Select>
-                <span class="text-sm px-2">条/页</span>
-                <Button  size="small" :disabled="adminQuery.page! <= 1" @click="handleAdminPageChange(adminQuery.page! - 1)">
-                  上一页
-                </Button>
-                <span class="text-sm px-2">{{ adminQuery.page }} / {{ adminTotalPages }}</span>
-                <Button  size="small" :disabled="adminQuery.page! >= adminTotalPages" @click="handleAdminPageChange(adminQuery.page! + 1)">
-                  下一页
-                </Button>
-              </div>
+              <AntPagination
+                :current="adminQuery.page"
+                :page-size="adminQuery.pageSize"
+                :total="adminTotal"
+                :show-size-changer="true"
+                :page-size-options="['10', '20', '50']"
+                size="small"
+                @change="handleAdminPageChange"
+                @show-size-change="handleAdminPageSizeChange"
+              />
             </div>
           </div>
         </Card>
@@ -977,7 +982,7 @@ onMounted(() => {
                 </template>
                 <template v-else-if="column.key === 'adminCount'">{{ row.adminCount || 0 }}</template>
                 <template v-else-if="column.key === 'type'">
-                    <Tag :color="row.isSystem ? 'destructive' : 'default'" class="text-xs">
+                    <Tag :color="row.isSystem ? 'purple' : 'blue'" class="text-xs">
                       {{ row.isSystem ? '系统' : '自定义' }}
                     </Tag>
                 </template>
@@ -985,8 +990,8 @@ onMounted(() => {
                 <template v-else-if="column.key === 'actions'">
                     <div class="flex gap-2">
                       <Button
-                        variant="link"
-                        size="sm"
+                        type="link"
+                        size="small"
                         class="h-auto p-0"
                         :disabled="row.isSystem"
                         @click="openEditRoleDialog(row)"
@@ -994,8 +999,8 @@ onMounted(() => {
                         编辑
                       </Button>
                       <Button
-                        variant="link"
-                        size="sm"
+                        type="link"
+                        size="small"
                         class="h-auto p-0 text-destructive"
                         :disabled="row.isSystem"
                         @click="openDeleteRoleDialog(row)"
@@ -1009,15 +1014,14 @@ onMounted(() => {
 
             <div class="flex items-center justify-between mt-4 pt-4 border-t">
               <span class="text-sm text-muted-foreground">共 {{ roleTotal }} 条</span>
-              <div class="flex items-center gap-1">
-                <Button  size="small" :disabled="rolePage <= 1" @click="handleRolePageChange(rolePage - 1)">
-                  上一页
-                </Button>
-                <span class="text-sm px-2">{{ rolePage }} / {{ roleTotalPages }}</span>
-                <Button  size="small" :disabled="rolePage >= roleTotalPages" @click="handleRolePageChange(rolePage + 1)">
-                  下一页
-                </Button>
-              </div>
+              <AntPagination
+                :current="rolePage"
+                :page-size="rolePageSize"
+                :total="roleTotal"
+                :show-size-changer="false"
+                size="small"
+                @change="handleRolePageChange"
+              />
             </div>
           </div>
         </Card>
@@ -1030,28 +1034,25 @@ onMounted(() => {
         <div>
           <h3>编辑管理员</h3>
         </div>
-        <form @submit.prevent="handleEditSubmit">
-          <div class="grid gap-4 py-4">
-            <div class="grid gap-2">
-              <label>用户名</label>
+        <Form :model="editForm" layout="vertical" class="py-4" @finish="handleEditSubmit">
+          <div class="grid gap-4">
+            <FormItem label="用户名" name="username">
               <Input v-model:value="editForm.username" placeholder="请输入用户名" />
-            </div>
-            <div class="grid gap-2">
-              <label>邮箱</label>
+            </FormItem>
+            <FormItem label="邮箱" name="email">
               <Input v-model:value="editForm.email" placeholder="请输入邮箱" />
-            </div>
-            <div class="grid gap-2">
-              <label>手机号</label>
+            </FormItem>
+            <FormItem label="手机号" name="phone">
               <Input v-model:value="editForm.phone" placeholder="请输入手机号" />
-            </div>
+            </FormItem>
           </div>
-        </form>
-        <div>
-          <Button  @click="editDialogVisible = false">取消</Button>
-          <Button :disabled="editSubmitting" @click="handleEditSubmit">
-            {{ editSubmitting ? '提交中...' : '确定' }}
-          </Button>
-        </div>
+          <div class="flex justify-end gap-2 pt-2">
+            <Button html-type="button" @click="editDialogVisible = false">取消</Button>
+            <Button type="primary" html-type="submit" :loading="editSubmitting" :disabled="editSubmitting">
+              {{ editSubmitting ? '提交中...' : '确定' }}
+            </Button>
+          </div>
+        </Form>
       </div>
     </Modal>
 
@@ -1061,24 +1062,22 @@ onMounted(() => {
         <div>
           <h3>重置管理员密码</h3>
         </div>
-        <form @submit.prevent="handleResetPwdSubmit">
-          <div class="grid gap-4 py-4">
-            <div class="grid gap-2">
-              <label>新密码</label>
+        <Form :model="resetPwdForm" :rules="resetPwdFormRules" layout="vertical" class="py-4" @finish="handleResetPwdSubmit">
+          <div class="grid gap-4">
+            <FormItem label="新密码" name="newPassword">
               <Input v-model:value="resetPwdForm.newPassword" type="password" placeholder="请输入新密码" />
-            </div>
-            <div class="grid gap-2">
-              <label>确认密码</label>
+            </FormItem>
+            <FormItem label="确认密码" name="confirmPassword">
               <Input v-model:value="resetPwdForm.confirmPassword" type="password" placeholder="请确认新密码" />
-            </div>
+            </FormItem>
           </div>
-        </form>
-        <div>
-          <Button  @click="resetPwdDialogVisible = false">取消</Button>
-          <Button :disabled="resetPwdSubmitting" @click="handleResetPwdSubmit">
-            {{ resetPwdSubmitting ? '提交中...' : '确定' }}
-          </Button>
-        </div>
+          <div class="flex justify-end gap-2 pt-2">
+            <Button html-type="button" @click="resetPwdDialogVisible = false">取消</Button>
+            <Button type="primary" html-type="submit" :loading="resetPwdSubmitting" :disabled="resetPwdSubmitting">
+              {{ resetPwdSubmitting ? '提交中...' : '确定' }}
+            </Button>
+          </div>
+        </Form>
       </div>
     </Modal>
 
@@ -1093,7 +1092,7 @@ onMounted(() => {
         </div>
         <div>
           <Button :disabled="resetMfaSubmitting">取消</Button>
-          <Button :disabled="resetMfaSubmitting" @click="handleResetMfaConfirm">
+          <Button type="primary" :loading="resetMfaSubmitting" :disabled="resetMfaSubmitting" @click="handleResetMfaConfirm">
             {{ resetMfaSubmitting ? '处理中...' : '确认重置' }}
           </Button>
         </div>
@@ -1148,7 +1147,7 @@ onMounted(() => {
         </div>
         <div>
           <Button  @click="assignRolesDialogVisible = false">取消</Button>
-          <Button :disabled="assignRolesSubmitting" @click="handleAssignRolesSubmit">
+          <Button type="primary" :loading="assignRolesSubmitting" :disabled="assignRolesSubmitting" @click="handleAssignRolesSubmit">
             {{ assignRolesSubmitting ? '提交中...' : '确定' }}
           </Button>
         </div>
@@ -1167,8 +1166,10 @@ onMounted(() => {
         <div>
           <Button :disabled="removeSubmitting">取消</Button>
           <Button
+            type="primary"
+            danger
+            :loading="removeSubmitting"
             :disabled="removeSubmitting"
-            class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             @click="handleRemoveConfirm"
           >
             {{ removeSubmitting ? '处理中...' : '确认移除' }}
@@ -1183,18 +1184,15 @@ onMounted(() => {
         <div>
           <h3>{{ roleDialogTitle }}</h3>
         </div>
-        <form @submit.prevent="handleRoleSubmit">
-          <div class="grid gap-4 py-4">
-            <div class="grid gap-2">
-              <label>角色名称 <span class="text-destructive">*</span></label>
+        <Form :model="roleForm" :rules="roleFormRules" layout="vertical" class="py-4" @finish="handleRoleSubmit">
+          <div class="grid gap-4">
+            <FormItem label="角色名称" name="name">
               <Input v-model:value="roleForm.name" placeholder="请输入角色名称" />
-            </div>
-            <div class="grid gap-2">
-              <label>描述</label>
+            </FormItem>
+            <FormItem label="描述" name="description">
               <InputTextArea v-model:value="roleForm.description" :rows="2" placeholder="请输入角色描述" />
-            </div>
-            <div class="grid gap-2">
-              <label>权限配置</label>
+            </FormItem>
+            <FormItem label="权限配置">
               <div class="border rounded-lg p-3 max-h-80 overflow-y-auto">
                 <div
                   v-for="category in permissionCategories"
@@ -1218,15 +1216,15 @@ onMounted(() => {
                   </div>
                 </div>
               </div>
-            </div>
+            </FormItem>
           </div>
-        </form>
-        <div>
-          <Button  @click="roleDialogVisible = false">取消</Button>
-          <Button :disabled="roleDialogSubmitting" @click="handleRoleSubmit">
-            {{ roleDialogSubmitting ? '提交中...' : '确定' }}
-          </Button>
-        </div>
+          <div class="flex justify-end gap-2 pt-2">
+            <Button html-type="button" @click="roleDialogVisible = false">取消</Button>
+            <Button type="primary" html-type="submit" :loading="roleDialogSubmitting" :disabled="roleDialogSubmitting">
+              {{ roleDialogSubmitting ? '提交中...' : '确定' }}
+            </Button>
+          </div>
+        </Form>
       </div>
     </Modal>
 
@@ -1242,8 +1240,10 @@ onMounted(() => {
         <div>
           <Button :disabled="deleteRoleSubmitting">取消</Button>
           <Button
+            type="primary"
+            danger
+            :loading="deleteRoleSubmitting"
             :disabled="deleteRoleSubmitting"
-            class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             @click="handleDeleteRoleConfirm"
           >
             {{ deleteRoleSubmitting ? '处理中...' : '确认删除' }}

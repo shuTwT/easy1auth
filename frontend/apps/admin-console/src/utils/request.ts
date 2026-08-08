@@ -73,7 +73,6 @@ request.interceptors.response.use(
     const { data } = response
     if (data && typeof data === 'object' && typeof data.code === 'number') {
       if (data.code !== 0) {
-        message.error(data.msg || '请求失败')
         return Promise.reject(new Error(data.msg || '请求失败'))
       }
       return data.data
@@ -100,19 +99,12 @@ request.interceptors.response.use(
           clearSessionAndRedirect()
           break
         case 403:
-          message.error('没有权限访问')
           break
         case 404:
-          message.error('请求资源不存在')
           break
         case 500:
-          message.error('服务器错误')
           break
-        default:
-          message.error((response.data as { msg?: string } | undefined)?.msg || '请求失败')
       }
-    } else {
-      message.error('网络连接失败')
     }
     return Promise.reject(error)
   }

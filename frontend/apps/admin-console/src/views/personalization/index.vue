@@ -36,7 +36,7 @@
                         <Tag v-if="domain.status === 'verified'" color="processing" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">已验证</Tag>
                         <Tag v-else-if="domain.status === 'pending'" color="blue" class="bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20">待验证</Tag>
                         <Tag v-else-if="domain.status === 'verifying'" >验证中</Tag>
-                        <Tag v-else color="error">验证失败</Tag>
+                        <Tag v-else color="red">验证失败</Tag>
                       </div>
                   </template>
                   <template v-else-if="column.key === 'sslStatus'">
@@ -56,15 +56,13 @@
               </Table>
             </div>
 
-            <Alert class="bg-muted border">
-              <Info class="size-4" />
-              <h3 class="flex items-center gap-2 font-semibold">
-                阶段 6 域名管理说明
-              </h3>
-              <p class="mt-2 space-y-2">
-                <p>当前仅登记域名和验证令牌，不执行自动所有权验证。</p>
-                <p>TLS 证书由部署网关或证书控制面管理，Easy1Auth 不接收证书私钥。</p>
-              </p>
+            <Alert class="bg-muted border" type="info" show-icon title="阶段 6 域名管理说明">
+              <template #description>
+                <div class="space-y-1">
+                  <div>当前仅登记域名和验证令牌，不执行自动所有权验证。</div>
+                  <div>TLS 证书由部署网关或证书控制面管理，Easy1Auth 不接收证书私钥。</div>
+                </div>
+              </template>
             </Alert>
           </div>
 
@@ -132,7 +130,7 @@
                   <div class="grid gap-2">
                     <label class="text-sm font-medium">背景颜色</label>
                     <div class="flex items-center gap-3">
-                      <ColorPicker v-model="loginStyle.backgroundColor" :presets="colorPresets.map(c => c.value)" />
+                      <ColorPicker v-model:value="loginStyle.backgroundColor" value-format="hex" :presets="colorPresets.map(c => c.value)" />
                       <Input v-model:value="loginStyle.backgroundColor" placeholder="#f5f7fa" class="w-[200px]" />
                     </div>
                   </div>
@@ -140,7 +138,7 @@
                   <div class="grid gap-2">
                     <label class="text-sm font-medium">主题色</label>
                     <div class="flex items-center gap-3">
-                      <ColorPicker v-model="loginStyle.primaryColor" :presets="colorPresets.map(c => c.value)" />
+                      <ColorPicker v-model:value="loginStyle.primaryColor" value-format="hex" :presets="colorPresets.map(c => c.value)" />
                       <Input v-model:value="loginStyle.primaryColor" placeholder="#0369A1" class="w-[200px]" />
                     </div>
                     <div class="flex items-center gap-2 mt-3">
@@ -201,7 +199,7 @@
                 </div>
               </div>
 
-              <Button @click="handleSaveLoginStyle" :disabled="savingLoginStyle">
+              <Button type="primary" :loading="savingLoginStyle" :disabled="savingLoginStyle" @click="handleSaveLoginStyle">
                 保存设置
               </Button>
             </form>
@@ -211,7 +209,7 @@
             <div class="flex justify-between items-center mb-5">
               <h3 class="text-base font-semibold">模板管理</h3>
               <div class="flex gap-3">
-                <Button  @click="handleInitTemplates" :disabled="initingTemplates">
+              <Button type="primary" :loading="initingTemplates" :disabled="initingTemplates" @click="handleInitTemplates">
                   初始化默认模板
                 </Button>
                 <Button @click="showTemplateDialog = true">
@@ -305,11 +303,11 @@
               <label class="text-sm font-medium">验证方式</label>
               <RadioGroup v-model:value="domainForm.verificationMethod">
                 <div class="flex items-center gap-2">
-                  <RadioGroupItem value="dns" />
+                  <Radio value="dns" />
                   <label class="text-sm cursor-pointer">DNS记录验证</label>
                 </div>
                 <div class="flex items-center gap-2">
-                  <RadioGroupItem value="file" />
+                  <Radio value="file" />
                   <label class="text-sm cursor-pointer">文件验证</label>
                 </div>
               </RadioGroup>
@@ -318,7 +316,7 @@
         </form>
         <div>
           <Button  @click="showDomainDialog = false">取消</Button>
-          <Button @click="handleCreateDomain" :disabled="creatingDomain">添加</Button>
+          <Button type="primary" :loading="creatingDomain" :disabled="creatingDomain" @click="handleCreateDomain">添加</Button>
         </div>
       </div>
     </Modal>
@@ -348,7 +346,7 @@
         </form>
         <div>
           <Button  @click="showSSLDialog = false">取消</Button>
-          <Button @click="handleSaveSSL" :disabled="savingSSL">保存</Button>
+          <Button type="primary" :loading="savingSSL" :disabled="savingSSL" @click="handleSaveSSL">保存</Button>
         </div>
       </div>
     </Modal>
@@ -364,11 +362,11 @@
               <label class="text-sm font-medium">模板类型</label>
               <RadioGroup v-model:value="templateForm.type" :disabled="!!editingTemplate">
                 <div class="flex items-center gap-2">
-                  <RadioGroupItem value="email" />
+                  <Radio value="email" />
                   <label class="text-sm cursor-pointer">邮件</label>
                 </div>
                 <div class="flex items-center gap-2">
-                  <RadioGroupItem value="sms" />
+                  <Radio value="sms" />
                   <label class="text-sm cursor-pointer">短信</label>
                 </div>
               </RadioGroup>
@@ -400,7 +398,7 @@
         </form>
         <div>
           <Button  @click="showTemplateDialog = false">取消</Button>
-          <Button @click="handleSaveTemplate" :disabled="savingTemplate">保存</Button>
+          <Button type="primary" :loading="savingTemplate" :disabled="savingTemplate" @click="handleSaveTemplate">保存</Button>
         </div>
       </div>
     </Modal>
@@ -411,9 +409,7 @@
           <h3>域名验证</h3>
         </div>
         <div class="py-4">
-          <Alert class="mb-5">
-            <h3>请按照以下步骤完成验证</h3>
-          </Alert>
+          <Alert class="mb-5" type="info" show-icon title="请按照以下步骤完成验证" />
           <div v-if="verifyingDomain?.verificationMethod === 'dns'" class="space-y-3">
             <h4 class="font-semibold">DNS记录验证</h4>
             <p class="text-sm text-muted-foreground">在您的DNS服务商处添加以下TXT记录：</p>
@@ -436,17 +432,18 @@
         </div>
         <div>
           <Button  @click="showVerifyDialog = false">取消</Button>
-          <Button @click="handleVerifyDomainConfirm" :disabled="verifying">验证</Button>
+          <Button type="primary" :loading="verifying" :disabled="verifying" @click="handleVerifyDomainConfirm">验证</Button>
         </div>
       </div>
     </Modal>
+    <contextHolder />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed, reactive } from 'vue'
-import { Table, message } from 'antdv-next'
-import { Plus, Check, Info } from '@lucide/vue'
+import { Modal, Table, message } from 'antdv-next'
+import { Plus, Check } from '@lucide/vue'
 
 type UploadFile = { type: string; size: number }
 import { customDomainApi, type CustomDomain, type CreateDomainDto, type UpdateSSLDto } from '@/api/customDomain'
@@ -455,6 +452,8 @@ import { loginStyleApi, type UpdateLoginStyleDto } from '@/api/loginStyle'
 
 const activeTab = ref('domains')
 const templateType = ref('email')
+
+const [modal, contextHolder] = Modal.useModal()
 
 const domains = ref<CustomDomain[]>([])
 const domainsLoading = ref(false)
@@ -601,7 +600,14 @@ const handleSaveSSL = async () => {
 }
 
 const handleDeleteDomain = async (domain: CustomDomain) => {
-  if (!window.confirm('确定要删除该域名吗？')) return
+  const confirmed = await modal.confirm({
+    title: '删除域名',
+    content: '确定要删除该域名吗？',
+    okText: '删除',
+    cancelText: '取消',
+    okButtonProps: { danger: true },
+  })
+  if (!confirmed) return
 
   try {
     await customDomainApi.delete(domain.id)
@@ -618,6 +624,7 @@ const loadLoginStyle = async () => {
     Object.assign(loginStyle, response)
   } catch (error) {
     console.error('加载登录样式失败:', error)
+    message.error('加载登录样式失败')
   }
 }
 
@@ -679,6 +686,7 @@ const loadTemplates = async () => {
     templates.value = response
   } catch (error) {
     console.error('加载模板列表失败:', error)
+    message.error('加载消息模板失败')
     message.error('加载模板列表失败')
   } finally {
     templatesLoading.value = false
@@ -746,7 +754,14 @@ const handleSaveTemplate = async () => {
 }
 
 const handleDeleteTemplate = async (template: MessageTemplate) => {
-  if (!window.confirm('确定要删除该模板吗？')) return
+  const confirmed = await modal.confirm({
+    title: '删除消息模板',
+    content: '确定要删除该模板吗？',
+    okText: '删除',
+    cancelText: '取消',
+    okButtonProps: { danger: true },
+  })
+  if (!confirmed) return
 
   try {
     await messageTemplateApi.delete(template.id)

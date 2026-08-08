@@ -85,7 +85,7 @@
                   <div class="grid gap-2">
                     <label class="text-sm font-medium">背景颜色</label>
                     <div class="flex items-center gap-3">
-                      <ColorPicker v-model="settings.loginPage.backgroundColor" :presets="colorPresets.map(c => c.value)" />
+                      <ColorPicker v-model:value="settings.loginPage.backgroundColor" value-format="hex" :presets="colorPresets.map(c => c.value)" />
                       <Input v-model:value="settings.loginPage.backgroundColor" placeholder="#f5f7fa" class="w-[200px]" />
                     </div>
                   </div>
@@ -161,7 +161,7 @@
                   <div class="grid gap-2">
                     <label class="text-sm font-medium">主题色</label>
                     <div class="flex items-center gap-3">
-                      <ColorPicker v-model="settings.adminPanel.primaryColor" :presets="colorPresets.map(c => c.value)" />
+                      <ColorPicker v-model:value="settings.adminPanel.primaryColor" value-format="hex" :presets="colorPresets.map(c => c.value)" />
                       <Input v-model:value="settings.adminPanel.primaryColor" placeholder="#0369A1" class="w-[200px]" />
                     </div>
                     <div class="flex items-center gap-2 mt-3">
@@ -181,7 +181,7 @@
                   <div class="grid gap-2">
                     <label class="text-sm font-medium">头部颜色</label>
                     <div class="flex items-center gap-3">
-                      <ColorPicker v-model="settings.adminPanel.headerColor" :presets="colorPresets.map(c => c.value)" />
+                      <ColorPicker v-model:value="settings.adminPanel.headerColor" value-format="hex" :presets="colorPresets.map(c => c.value)" />
                       <Input v-model:value="settings.adminPanel.headerColor" placeholder="#ffffff" class="w-[200px]" />
                     </div>
                   </div>
@@ -189,7 +189,7 @@
                   <div class="grid gap-2">
                     <label class="text-sm font-medium">侧边栏颜色</label>
                     <div class="flex items-center gap-3">
-                      <ColorPicker v-model="settings.adminPanel.sidebarColor" :presets="colorPresets.map(c => c.value)" />
+                      <ColorPicker v-model:value="settings.adminPanel.sidebarColor" value-format="hex" :presets="colorPresets.map(c => c.value)" />
                       <Input v-model:value="settings.adminPanel.sidebarColor" placeholder="#0F172A" class="w-[200px]" />
                     </div>
                   </div>

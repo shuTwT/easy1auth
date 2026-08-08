@@ -2,7 +2,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
-import { message } from 'antdv-next'
+import { Modal, message } from 'antdv-next'
 import {
   ArrowLeft,
   Check,
@@ -74,12 +74,14 @@ const applicationId = computed(() => {
 
 const application = ref<Application | null>(null)
 const loading = ref(true)
-const loadError = ref('')
+const loadFailed = ref(false)
 const notFound = ref(false)
 const secretVisible = ref(false)
 const configSaving = ref(false)
 const loginSaving = ref(false)
 const redirectUriInput = ref('')
+
+const [modal, contextHolder] = Modal.useModal()
 
 const configForm = reactive<ConfigForm>({
   name: '',
@@ -190,7 +192,7 @@ const populateForms = (app: Application) => {
 
 const loadApplication = async () => {
   loading.value = true
-  loadError.value = ''
+  loadFailed.value = false
   notFound.value = false
 
   if (!applicationId.value) {
@@ -208,7 +210,8 @@ const loadApplication = async () => {
     if (axios.isAxiosError(error) && error.response?.status === 404) {
       notFound.value = true
     } else {
-      loadError.value = getApiErrorMessage(error, '加载应用详情失败')
+      loadFailed.value = true
+      message.error(getApiErrorMessage(error, '加载应用详情失败'))
     }
   } finally {
     loading.value = false
@@ -277,6 +280,7 @@ const saveConfig = async () => {
     message.success('应用配置已保存')
   } catch (error: unknown) {
     console.error('保存应用配置失败:', error)
+    message.error(getApiErrorMessage(error, '保存应用配置失败'))
   } finally {
     configSaving.value = false
   }
@@ -311,6 +315,7 @@ const saveLoginControl = async () => {
     message.success('登录控制已保存')
   } catch (error: unknown) {
     console.error('保存登录控制失败:', error)
+    message.error(getApiErrorMessage(error, '保存登录控制失败'))
   } finally {
     loginSaving.value = false
   }
@@ -318,7 +323,14 @@ const saveLoginControl = async () => {
 
 const regenerateSecret = async () => {
   if (!application.value) return
-  if (!window.confirm('重新生成密钥后，旧密钥将立即失效。确定要重新生成吗？')) return
+  const confirmed = await modal.confirm({
+    title: '重新生成客户端密钥',
+    content: '重新生成密钥后，旧密钥将立即失效。确定要重新生成吗？',
+    okText: '重新生成',
+    cancelText: '取消',
+    okButtonProps: { danger: true },
+  })
+  if (!confirmed) return
 
   try {
     const response = await applicationApi.regenerateSecret(applicationId.value)
@@ -327,6 +339,7 @@ const regenerateSecret = async () => {
     message.success('密钥重新生成成功，请立即复制并妥善保管')
   } catch (error: unknown) {
     console.error('重新生成密钥失败:', error)
+    message.error(getApiErrorMessage(error, '重新生成密钥失败'))
   }
 }
 
@@ -363,18 +376,18 @@ onMounted(loadApplication)
         <p>找不到对应的应用，可能已被删除或你没有访问权限。</p>
       </div>
       <div>
-        <Button type="button" @click="goBack">返回应用列表</Button>
+        <Button html-type="button" @click="goBack">返回应用列表</Button>
       </div>
     </Card>
 
-    <Card v-else-if="loadError" class="mx-auto max-w-lg">
+    <Card v-else-if="loadFailed" class="mx-auto max-w-lg">
       <div>
         <h3>加载失败</h3>
-        <p>{{ loadError }}</p>
+        <p>应用详情加载失败，请重试或返回应用列表。</p>
       </div>
       <div class="flex gap-2">
-        <Button type="button"  @click="loadApplication">重新加载</Button>
-        <Button type="button" @click="goBack">返回应用列表</Button>
+        <Button html-type="button" @click="loadApplication">重新加载</Button>
+        <Button html-type="button" @click="goBack">返回应用列表</Button>
       </div>
     </Card>
 
@@ -400,7 +413,7 @@ onMounted(loadApplication)
             <div class="min-w-0">
               <div class="flex flex-wrap items-center gap-2">
                 <h1 class="truncate text-2xl font-semibold tracking-tight">{{ application.name }}</h1>
-                <Tag :color="application.status === 'active' ? 'default' : 'secondary'">
+                <Tag :color="application.status === 'active' ? 'green' : 'orange'">
                   {{ statusLabels[application.status] }}
                 </Tag>
                 <Tag >{{ typeLabels[application.type] }}</Tag>
@@ -428,29 +441,30 @@ onMounted(loadApplication)
               <div class="grid gap-4 rounded-lg border bg-muted/30 p-4 md:grid-cols-2">
                 <div class="grid gap-2">
                   <label for="application-client-id" class="text-sm font-medium">AppID / Client ID</label>
-                  <div class="flex gap-2">
-                    <Input id="application-client-id" :model-value="application.clientId" readonly class="font-mono text-sm" />
-                    <Button type="button"  size="icon" aria-label="复制 AppID" @click="copyToClipboard(application.clientId)">
+                  <div class="flex min-h-10 items-center gap-2">
+                    <Input id="application-client-id" :value="application.clientId" readonly class="min-w-0 flex-1 font-mono text-sm" />
+                    <Button html-type="button" size="small" shape="circle" class="shrink-0" aria-label="复制 AppID" @click="copyToClipboard(application.clientId)">
                       <Copy data-icon="inline-start" />
                     </Button>
                   </div>
+                  <p class="min-h-4 text-xs text-transparent" aria-hidden="true">占位</p>
                 </div>
                 <div class="grid gap-2">
                   <label for="application-client-secret" class="text-sm font-medium">AppSecret / Client Secret</label>
-                  <div class="flex gap-2">
-                    <Input id="application-client-secret" :model-value="clientSecretDisplay" readonly class="font-mono text-sm" />
-                    <Button type="button"  size="icon" :aria-label="secretVisible ? '隐藏 AppSecret' : '显示 AppSecret'" @click="secretVisible = !secretVisible">
+                  <div class="flex min-h-10 items-center gap-2">
+                    <Input id="application-client-secret" :value="clientSecretDisplay" readonly class="min-w-0 flex-1 font-mono text-sm" />
+                    <Button html-type="button" size="small" shape="circle" class="shrink-0" :aria-label="secretVisible ? '隐藏 AppSecret' : '显示 AppSecret'" @click="secretVisible = !secretVisible">
                       <EyeOff v-if="secretVisible" data-icon="inline-start" />
                       <Eye v-else data-icon="inline-start" />
                     </Button>
-                    <Button type="button"  size="icon" aria-label="复制 AppSecret" @click="copyToClipboard(application.clientSecret ?? '')">
+                    <Button html-type="button" size="small" shape="circle" class="shrink-0" aria-label="复制 AppSecret" @click="copyToClipboard(application.clientSecret ?? '')">
                       <Copy data-icon="inline-start" />
                     </Button>
-                    <Button type="button"  size="icon" aria-label="重新生成 AppSecret" @click="regenerateSecret">
+                    <Button html-type="button" size="small" shape="circle" class="shrink-0" aria-label="重新生成 AppSecret" @click="regenerateSecret">
                       <RefreshCw data-icon="inline-start" />
                     </Button>
                   </div>
-                  <p class="text-xs text-muted-foreground">重新生成后，旧密钥会立即失效。</p>
+                  <p class="min-h-4 text-xs text-muted-foreground">重新生成后，旧密钥会立即失效。</p>
                 </div>
               </div>
 
@@ -458,7 +472,7 @@ onMounted(loadApplication)
                 <div class="grid gap-4 md:grid-cols-2">
                   <div class="grid gap-2">
                     <label for="application-name" class="text-sm font-medium">应用名称</label>
-                    <Input id="application-name" v-model="configForm.name" placeholder="请输入应用名称" />
+                    <Input id="application-name" v-model:value="configForm.name" placeholder="请输入应用名称" />
                   </div>
                   <div class="grid gap-2">
                     <label class="text-sm font-medium">应用类型</label>
@@ -466,7 +480,7 @@ onMounted(loadApplication)
                   </div>
                   <div class="grid gap-2">
                     <label for="application-logo" class="text-sm font-medium">应用 Logo</label>
-                    <Input id="application-logo" v-model="configForm.logo" placeholder="请输入 Logo URL" />
+                    <Input id="application-logo" v-model:value="configForm.logo" placeholder="请输入 Logo URL" />
                   </div>
                   <div class="grid gap-2">
                     <label class="text-sm font-medium">应用状态</label>
@@ -475,10 +489,10 @@ onMounted(loadApplication)
                 </div>
                 <div class="grid gap-2">
                   <label for="application-description" class="text-sm font-medium">应用描述</label>
-                  <InputTextArea id="application-description" v-model="configForm.description" :rows="4" placeholder="请输入应用描述" />
+                  <InputTextArea id="application-description" v-model:value="configForm.description" :rows="4" placeholder="请输入应用描述" />
                 </div>
                 <div class="flex justify-end">
-                  <Button type="submit" :disabled="configSaving">
+                  <Button type="primary" html-type="submit" :loading="configSaving">
                     <Check v-if="!configSaving" data-icon="inline-start" />
                     {{ configSaving ? '保存中...' : '保存配置' }}
                   </Button>
@@ -495,17 +509,20 @@ onMounted(loadApplication)
               <p>配置 OAuth 登录的回调地址、授权类型和令牌有效期。</p>
             </div>
             <div>
-              <Alert class="mb-6">
-                <h3>OAuth 登录配置</h3>
-                <p>新创建的应用需要配置回调地址和授权类型后才能正常使用 OAuth 登录</p>
-              </Alert>
+              <Alert
+                class="mb-6"
+                type="info"
+                show-icon
+                title="OAuth 登录配置"
+                description="新创建的应用需要配置回调地址和授权类型后才能正常使用 OAuth 登录"
+              />
 
               <form class="grid gap-6" @submit.prevent="saveLoginControl">
                 <div class="grid gap-2">
                   <label for="redirect-uri" class="text-sm font-medium">回调地址</label>
                   <div class="flex gap-2">
-                    <Input id="redirect-uri" v-model="redirectUriInput" class="flex-1" placeholder="https://example.com/oauth/callback" @keyup.enter.prevent="addRedirectUri" />
-                    <Button type="button"  @click="addRedirectUri">
+                    <Input id="redirect-uri" v-model:value="redirectUriInput" class="flex-1" placeholder="https://example.com/oauth/callback" @keyup.enter.prevent="addRedirectUri" />
+                    <Button html-type="button" @click="addRedirectUri">
                       <Plus data-icon="inline-start" />
                       添加
                     </Button>
@@ -552,7 +569,7 @@ onMounted(loadApplication)
                 </div>
 
                 <div class="flex justify-end">
-                  <Button type="submit" :disabled="loginSaving">
+                  <Button type="primary" html-type="submit" :loading="loginSaving">
                     <Check v-if="!loginSaving" data-icon="inline-start" />
                     {{ loginSaving ? '保存中...' : '保存登录控制' }}
                   </Button>
@@ -574,7 +591,7 @@ onMounted(loadApplication)
                   <span class="text-sm font-medium">{{ endpoint.label }}</span>
                   <code class="break-all text-xs text-muted-foreground">{{ endpoint.value }}</code>
                 </div>
-                <Button type="button"  size="small" class="shrink-0" @click="copyToClipboard(endpoint.value)">
+                <Button html-type="button" size="small" class="shrink-0" @click="copyToClipboard(endpoint.value)">
                   <Copy data-icon="inline-start" />
                   复制
                 </Button>
@@ -582,10 +599,13 @@ onMounted(loadApplication)
             </div>
           </Card>
 
-          <Alert v-if="!hasRedirectUri">
-            <h3>尚未配置回调地址</h3>
-            <p>请先在「登录控制」标签页配置回调地址</p>
-          </Alert>
+          <Alert
+            v-if="!hasRedirectUri"
+            type="warning"
+            show-icon
+            title="尚未配置回调地址"
+            description="请先在「登录控制」标签页配置回调地址"
+          />
 
           <Card>
             <div>
@@ -606,7 +626,7 @@ onMounted(loadApplication)
                     <p class="text-sm text-muted-foreground">{{ example.description }}</p>
                     <div class="relative">
                       <pre class="max-h-80 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-muted p-4 pr-14 font-mono text-xs leading-6">{{ example.code }}</pre>
-                      <Button type="text" html-type="button" size="icon" class="absolute right-2 top-2" :aria-label="`复制${example.title}`" @click="copyToClipboard(example.code)">
+                <Button type="text" html-type="button" size="small" shape="circle" class="absolute right-2 top-2" :aria-label="`复制${example.title}`" @click="copyToClipboard(example.code)">
                         <Copy data-icon="inline-start" />
                       </Button>
                     </div>
@@ -619,7 +639,7 @@ onMounted(loadApplication)
                     <p class="text-sm text-muted-foreground">{{ example.description }}</p>
                     <div class="relative">
                       <pre class="max-h-80 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-muted p-4 pr-14 font-mono text-xs leading-6">{{ example.code }}</pre>
-                      <Button type="text" html-type="button" size="icon" class="absolute right-2 top-2" :aria-label="`复制${example.title}`" @click="copyToClipboard(example.code)">
+                <Button type="text" html-type="button" size="small" shape="circle" class="absolute right-2 top-2" :aria-label="`复制${example.title}`" @click="copyToClipboard(example.code)">
                         <Copy data-icon="inline-start" />
                       </Button>
                     </div>
@@ -632,7 +652,7 @@ onMounted(loadApplication)
                     <p class="text-sm text-muted-foreground">{{ example.description }}</p>
                     <div class="relative">
                       <pre class="max-h-80 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-muted p-4 pr-14 font-mono text-xs leading-6">{{ example.code }}</pre>
-                      <Button type="text" html-type="button" size="icon" class="absolute right-2 top-2" :aria-label="`复制${example.title}`" @click="copyToClipboard(example.code)">
+                <Button type="text" html-type="button" size="small" shape="circle" class="absolute right-2 top-2" :aria-label="`复制${example.title}`" @click="copyToClipboard(example.code)">
                         <Copy data-icon="inline-start" />
                       </Button>
                     </div>
@@ -644,5 +664,6 @@ onMounted(loadApplication)
         </div>
       </div>
     </div>
+    <contextHolder />
   </div>
 </template>

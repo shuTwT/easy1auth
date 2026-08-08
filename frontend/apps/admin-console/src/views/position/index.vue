@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue'
-import { Table, message } from 'antdv-next'
+import { Form, FormItem, Modal, Pagination as AntPagination, Table, message } from 'antdv-next'
 import { Plus, Search, RefreshCw } from '@lucide/vue'
 import { positionApi } from '@/api/position'
 import type { Position, CreatePositionDto, UpdatePositionDto, PositionQueryDto, PositionStats } from '@/types/position'
@@ -11,6 +11,8 @@ const dialogVisible = ref(false)
 const dialogTitle = ref('新增岗位')
 const currentPosition = ref<Partial<Position>>({})
 const stats = ref<PositionStats | null>(null)
+
+const [modal, contextHolder] = Modal.useModal()
 
 const queryForm = reactive<PositionQueryDto>({
   page: 1,
@@ -31,7 +33,13 @@ const positionForm = reactive<CreatePositionDto & UpdatePositionDto>({
   maxCount: undefined
 })
 
-const levelSliderValue = ref([1])
+const positionFormRules = {
+  name: [{ required: true, message: '请输入岗位名称' }],
+  code: [{ required: true, message: '请输入岗位编码' }],
+  level: [{ required: true, message: '请选择岗位级别' }],
+}
+
+const submitting = ref(false)
 
 const loadPositions = async () => {
   loading.value = true
@@ -53,6 +61,7 @@ const loadStats = async () => {
     stats.value = res
   } catch (error) {
     console.error('加载统计数据失败:', error)
+    message.error('加载岗位统计数据失败')
   }
 }
 
@@ -81,7 +90,6 @@ const handleAdd = () => {
     sequence: '',
     maxCount: undefined
   })
-  levelSliderValue.value = [1]
   currentPosition.value = {}
   dialogVisible.value = true
 }
@@ -97,13 +105,18 @@ const handleEdit = (row: Position) => {
     sequence: row.sequence || '',
     maxCount: row.maxCount || undefined
   })
-  levelSliderValue.value = [row.level]
   currentPosition.value = row
   dialogVisible.value = true
 }
 
 const handleDelete = async (row: Position) => {
-  const confirmed = window.confirm('确定要删除该岗位吗？删除后无法恢复！')
+  const confirmed = await modal.confirm({
+    title: '删除岗位',
+    content: '确定要删除该岗位吗？删除后无法恢复！',
+    okText: '删除',
+    cancelText: '取消',
+    okButtonProps: { danger: true },
+  })
   if (!confirmed) return
 
   try {
@@ -118,12 +131,19 @@ const handleDelete = async (row: Position) => {
 }
 
 const handleSubmit = async () => {
+  submitting.value = true
   try {
+    const payload = {
+      ...positionForm,
+      name: positionForm.name.trim(),
+      code: positionForm.code.trim(),
+      level: positionForm.level ?? 1,
+    }
     if (currentPosition.value.id) {
-      await positionApi.update(currentPosition.value.id, positionForm)
+      await positionApi.update(currentPosition.value.id, payload)
       message.success('更新成功')
     } else {
-      await positionApi.create(positionForm as CreatePositionDto)
+      await positionApi.create(payload)
       message.success('创建成功')
     }
     dialogVisible.value = false
@@ -132,22 +152,25 @@ const handleSubmit = async () => {
   } catch (error: any) {
     console.error('保存岗位失败:', error)
     message.error(error.response?.data?.msg || '保存岗位失败')
+  } finally {
+    submitting.value = false
   }
 }
 
-const handlePageChange = (page: number) => {
+const handlePageChange = (page: number, ps?: number) => {
   queryForm.page = page
+  if (ps !== undefined) queryForm.pageSize = ps
   loadPositions()
 }
 
 
 const getLevelColor = (level?: number) => {
-  if (!level) return 'secondary'
-  if (level >= 9) return 'destructive'
-  if (level >= 7) return 'default'
-  if (level >= 5) return 'default'
-  if (level >= 3) return 'secondary'
-  return 'outline'
+  if (!level) return 'default'
+  if (level >= 9) return 'red'
+  if (level >= 7) return 'purple'
+  if (level >= 5) return 'blue'
+  if (level >= 3) return 'green'
+  return 'cyan'
 }
 
 const getLevelText = (level?: number) => {
@@ -159,8 +182,6 @@ const getLevelText = (level?: number) => {
   return '员工'
 }
 
-const totalPages = Math.ceil(total.value / queryForm.pageSize!)
-
 onMounted(() => {
   loadPositions()
   loadStats()
@@ -168,53 +189,57 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="position-management">
-    <div class="grid grid-cols-4 gap-5 mb-5">
+  <div class="p-6 min-h-[calc(100vh-64px)]">
+    <div class="flex justify-between items-start mb-6">
+      <div class="flex-1">
+        <h1 class="text-2xl font-bold text-foreground mb-2">岗位管理</h1>
+        <p class="text-sm text-muted-foreground">管理系统岗位，包括添加、编辑和删除</p>
+      </div>
+      <div class="flex gap-3">
+        <Button @click="handleAdd">
+          <Plus class="size-4 mr-2" />
+          新增岗位
+        </Button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
       <Card>
         <div class="pt-6">
-          <div class="stat-card">
-            <div class="stat-value">{{ stats?.totalPositions || 0 }}</div>
-            <div class="stat-label">岗位总数</div>
+          <div class="text-center">
+            <div class="text-2xl font-bold text-foreground">{{ stats?.totalPositions || 0 }}</div>
+            <div class="text-sm text-muted-foreground">岗位总数</div>
           </div>
         </div>
       </Card>
       <Card>
         <div class="pt-6">
-          <div class="stat-card">
-            <div class="stat-value">{{ stats?.filledPositions || 0 }}</div>
-            <div class="stat-label">已分配岗位</div>
+          <div class="text-center">
+            <div class="text-2xl font-bold text-foreground">{{ stats?.filledPositions || 0 }}</div>
+            <div class="text-sm text-muted-foreground">已分配岗位</div>
           </div>
         </div>
       </Card>
       <Card>
         <div class="pt-6">
-          <div class="stat-card">
-            <div class="stat-value">{{ stats?.vacantPositions || 0 }}</div>
-            <div class="stat-label">空缺岗位</div>
+          <div class="text-center">
+            <div class="text-2xl font-bold text-foreground">{{ stats?.vacantPositions || 0 }}</div>
+            <div class="text-sm text-muted-foreground">空缺岗位</div>
           </div>
         </div>
       </Card>
       <Card>
         <div class="pt-6">
-          <div class="stat-card">
-            <div class="stat-value">{{ stats?.averageLevel || 0 }}</div>
-            <div class="stat-label">平均级别</div>
+          <div class="text-center">
+            <div class="text-2xl font-bold text-foreground">{{ stats?.averageLevel || 0 }}</div>
+            <div class="text-sm text-muted-foreground">平均级别</div>
           </div>
         </div>
       </Card>
     </div>
 
     <Card>
-      <div>
-        <div class="flex justify-between items-center">
-          <h3>岗位管理</h3>
-          <Button @click="handleAdd">
-            <Plus class="w-4 h-4 mr-2" />
-            新增岗位
-          </Button>
-        </div>
-      </div>
-      <div>
+      <div class="pt-6">
         <div class="flex flex-wrap gap-4 mb-5">
           <div class="grid gap-2">
             <Input v-model:value="queryForm.name" placeholder="请输入岗位名称" class="w-48" />
@@ -233,11 +258,11 @@ onMounted(() => {
             </Select>
           </div>
           <Button @click="handleSearch">
-            <Search class="w-4 h-4 mr-2" />
+            <Search class="size-4 mr-2" />
             搜索
           </Button>
           <Button  @click="handleReset">
-            <RefreshCw class="w-4 h-4 mr-2" />
+            <RefreshCw class="size-4 mr-2" />
             重置
           </Button>
         </div>
@@ -250,7 +275,7 @@ onMounted(() => {
         ]" :data-source="positions" :loading="loading" row-key="id" :pagination="false" :scroll="{ x: 1050 }">
           <template #bodyCell="{ column, record: position }">
             <template v-if="column.key === 'code'">
-                <span style="font-family: monospace;">{{ position.code }}</span>
+                <span class="font-mono">{{ position.code }}</span>
             </template>
             <template v-else-if="column.key === 'description'">{{ position.description || '-' }}</template>
             <template v-else-if="column.key === 'level'">
@@ -263,104 +288,76 @@ onMounted(() => {
             </template>
             <template v-else-if="column.key === 'createdAt'">{{ new Date(position.createdAt).toLocaleString() }}</template>
             <template v-else-if="column.key === 'actions'">
-                <div class="flex justify-end gap-2">
-                  <Button size="small"  @click="handleEdit(position)">编辑</Button>
-                  <Button size="small" color="error" @click="handleDelete(position)">删除</Button>
+                <div class="flex justify-end gap-1">
+                  <Button type="link" size="small" class="h-auto p-0" @click="handleEdit(position)">编辑</Button>
+                  <Button type="link" size="small" class="h-auto p-0 text-destructive" @click="handleDelete(position)">删除</Button>
                 </div>
             </template>
           </template>
         </Table>
 
-        <div class="flex items-center justify-between mt-5">
+        <div class="flex items-center justify-between mt-4 pt-4 border-t">
           <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
-          <div class="flex items-center gap-1">
-            <Button  size="small" :disabled="queryForm.page! <= 1" @click="handlePageChange(queryForm.page! - 1)">
-              上一页
-            </Button>
-            <span class="text-sm px-2">{{ queryForm.page! }} / {{ totalPages || 1 }}</span>
-            <Button  size="small" :disabled="queryForm.page! >= totalPages" @click="handlePageChange(queryForm.page! + 1)">
-              下一页
-            </Button>
-          </div>
+          <AntPagination
+            :current="queryForm.page"
+            :page-size="queryForm.pageSize"
+            :total="total"
+            :show-size-changer="false"
+            size="small"
+            @change="handlePageChange"
+          />
         </div>
       </div>
     </Card>
 
     <Modal v-model:open="dialogVisible" :footer="null">
-      <div class="sm:max-w-lg">
+      <div class="max-w-lg">
         <div>
           <h3>{{ dialogTitle }}</h3>
         </div>
-        <form class="grid gap-4">
-          <div class="grid gap-2">
-            <label class="text-sm font-medium">岗位名称 <span class="text-destructive">*</span></label>
-            <Input v-model:value="positionForm.name" placeholder="请输入岗位名称" />
+        <Form :model="positionForm" :rules="positionFormRules" layout="vertical" class="py-4" @finish="handleSubmit">
+          <div class="grid gap-4">
+            <FormItem label="岗位名称" name="name">
+              <Input v-model:value="positionForm.name" placeholder="请输入岗位名称" />
+            </FormItem>
+            <FormItem label="岗位编码" name="code">
+              <Input v-model:value="positionForm.code"
+                placeholder="请输入岗位编码（大写字母和下划线）"
+                :disabled="!!currentPosition.id"
+              />
+            </FormItem>
+            <FormItem label="描述" name="description">
+              <InputTextArea v-model:value="positionForm.description"
+                placeholder="请输入岗位描述"
+                :rows="3"
+              />
+            </FormItem>
+            <FormItem label="岗位级别" name="level">
+              <Slider v-model:value="positionForm.level"
+                :min="1"
+                :max="10"
+                :step="1"
+              />
+              <div class="text-center mt-2">
+                <Tag :color="getLevelColor(positionForm.level)">
+                  {{ positionForm.level }} - {{ getLevelText(positionForm.level) }}
+                </Tag>
+              </div>
+            </FormItem>
+            <FormItem label="最大人数" name="maxCount">
+              <InputNumber v-model:value="positionForm.maxCount" :min="1" :max="999" />
+            </FormItem>
+            <FormItem label="排序" name="sequence">
+              <Input v-model:value="positionForm.sequence" placeholder="请输入排序标识" />
+            </FormItem>
           </div>
-          <div class="grid gap-2">
-            <label class="text-sm font-medium">岗位编码 <span class="text-destructive">*</span></label>
-            <Input v-model:value="positionForm.code"
-              placeholder="请输入岗位编码（大写字母和下划线）"
-              :disabled="!!currentPosition.id"
-            />
+          <div class="flex justify-end gap-2">
+            <Button @click="dialogVisible = false">取消</Button>
+            <Button type="primary" html-type="submit" :loading="submitting">确定</Button>
           </div>
-          <div class="grid gap-2">
-            <label class="text-sm font-medium">描述</label>
-            <InputTextArea v-model:value="positionForm.description"
-              placeholder="请输入岗位描述"
-              :rows="3"
-            />
-          </div>
-          <div class="grid gap-2">
-            <label class="text-sm font-medium">岗位级别 <span class="text-destructive">*</span></label>
-            <Slider v-model:value="levelSliderValue"
-              :min="1"
-              :max="10"
-              :step="1"
-              @update:value="positionForm.level = levelSliderValue[0]"
-            />
-            <div class="text-center mt-2">
-              <Tag :color="getLevelColor(positionForm.level)">
-                {{ positionForm.level }} - {{ getLevelText(positionForm.level) }}
-              </Tag>
-            </div>
-          </div>
-          <div class="grid gap-2">
-            <label class="text-sm font-medium">最大人数</label>
-            <InputNumber v-model:value="positionForm.maxCount" :min="1" :max="999" />
-          </div>
-          <div class="grid gap-2">
-            <label class="text-sm font-medium">排序</label>
-            <Input v-model:value="positionForm.sequence" placeholder="请输入排序标识" />
-          </div>
-        </form>
-        <div>
-          <Button  @click="dialogVisible = false">取消</Button>
-          <Button @click="handleSubmit">确定</Button>
-        </div>
+        </Form>
       </div>
     </Modal>
+    <contextHolder />
   </div>
 </template>
-
-<style scoped>
-.position-management {
-  padding: 20px;
-}
-
-.stat-card {
-  text-align: center;
-  padding: 10px 0;
-}
-
-.stat-value {
-  font-size: 28px;
-  font-weight: bold;
-  color: hsl(var(--primary));
-  margin-bottom: 5px;
-}
-
-.stat-label {
-  font-size: 14px;
-  color: hsl(var(--muted-foreground));
-}
-</style>

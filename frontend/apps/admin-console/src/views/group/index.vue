@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive, computed } from 'vue'
-import { Table, message } from 'antdv-next'
-import { Plus, Search, Users, UserCog, Pencil, Trash2 } from '@lucide/vue'
+import { Form, FormItem, Modal, Pagination as AntPagination, Table, message } from 'antdv-next'
+import { Plus, Search } from '@lucide/vue'
 import { groupApi } from '@/api/group'
 import { userApi } from '@/api/user'
 import type {
@@ -26,6 +26,8 @@ const currentGroupId = ref('')
 const stats = ref<GroupStats | null>(null)
 const viewMode = ref<'list' | 'tree'>('list')
 
+const [modal, contextHolder] = Modal.useModal()
+
 const queryForm = reactive<GroupQueryDto>({
   page: 1,
   pageSize: 10,
@@ -40,6 +42,10 @@ const groupForm = reactive<CreateGroupDto & UpdateGroupDto>({
   type: 'team',
   parentId: undefined
 })
+
+const groupFormRules = {
+  name: [{ required: true, message: '请输入用户组名称' }],
+}
 
 const memberForm = reactive({
   selectedUsers: [] as string[],
@@ -89,6 +95,7 @@ const loadTree = async () => {
     treeData.value = res
   } catch (error) {
     console.error('加载用户组树失败:', error)
+    message.error('加载用户组树失败')
   }
 }
 
@@ -98,6 +105,7 @@ const loadStats = async () => {
     stats.value = res
   } catch (error) {
     console.error('加载统计数据失败:', error)
+    message.error('加载用户组统计数据失败')
   }
 }
 
@@ -139,7 +147,14 @@ const handleEdit = (row: UserGroup) => {
 }
 
 const handleDelete = async (row: UserGroup) => {
-  if (!window.confirm('确定要删除该用户组吗？删除后无法恢复！')) {
+  const confirmed = await modal.confirm({
+    title: '删除用户组',
+    content: '确定要删除该用户组吗？删除后无法恢复！',
+    okText: '删除',
+    cancelText: '取消',
+    okButtonProps: { danger: true },
+  })
+  if (!confirmed) {
     return
   }
 
@@ -268,8 +283,9 @@ const handleRemoveAdmin = async (userId: string) => {
   }
 }
 
-const handlePageChange = (p: number) => {
+const handlePageChange = (p: number, ps?: number) => {
   queryForm.page = p
+  if (ps !== undefined) queryForm.pageSize = ps
   loadGroups()
 }
 
@@ -289,18 +305,18 @@ const getTypeText = (type: string) => {
   }
 }
 
-const getTypeVariant = (type: string): 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost' | 'link' => {
+const getTypeVariant = (type: string): string => {
   switch (type) {
     case 'team':
-      return 'default'
+      return 'blue'
     case 'department':
-      return 'secondary'
+      return 'green'
     case 'project':
-      return 'outline'
+      return 'purple'
     case 'organization':
-      return 'destructive'
+      return 'orange'
     default:
-      return 'ghost'
+      return 'default'
   }
 }
 
@@ -312,8 +328,15 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="p-5">
-    <div class="grid grid-cols-6 gap-5 mb-5">
+  <div class="p-6 min-h-[calc(100vh-64px)]">
+    <div class="flex justify-between items-start mb-6">
+      <div class="flex-1">
+        <h1 class="text-2xl font-bold text-foreground mb-2">用户组管理</h1>
+        <p class="text-sm text-muted-foreground">管理用户组，包括创建、编辑、删除和成员管理</p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-5 mb-6">
       <Card v-for="(stat, key) in [
         { label: '用户组总数', value: stats?.totalGroups || 0 },
         { label: '团队', value: stats?.teamGroups || 0 },
@@ -324,7 +347,7 @@ onMounted(() => {
       ]" :key="key">
         <div class="pt-4">
           <div class="text-center">
-            <div class="text-3xl font-bold text-primary mb-1">{{ stat.value }}</div>
+            <div class="text-2xl font-bold text-foreground mb-1">{{ stat.value }}</div>
             <div class="text-sm text-muted-foreground">{{ stat.label }}</div>
           </div>
         </div>
@@ -334,18 +357,18 @@ onMounted(() => {
     <Card>
       <div class="border-b">
         <div class="flex justify-between items-center">
-          <span class="font-semibold">用户组管理</span>
+          <span class="font-semibold">用户组列表</span>
           <div class="flex items-center gap-3">
             <div class="flex gap-0">
               <Button
-                :color="viewMode === 'list' ? 'default' : 'outline'"
+                :type="viewMode === 'list' ? 'primary' : 'default'"
                 class="rounded-r-none"
                 @click="viewMode = 'list'"
               >
                 列表视图
               </Button>
               <Button
-                :color="viewMode === 'tree' ? 'default' : 'outline'"
+                :type="viewMode === 'tree' ? 'primary' : 'default'"
                 class="rounded-l-none"
                 @click="viewMode = 'tree'"
               >
@@ -353,7 +376,7 @@ onMounted(() => {
               </Button>
             </div>
             <Button @click="handleAdd">
-              <Plus class="w-4 h-4 mr-1" />
+              <Plus class="size-4 mr-2" />
               新增用户组
             </Button>
           </div>
@@ -379,7 +402,7 @@ onMounted(() => {
             </div>
             <div class="flex gap-2">
               <Button @click="handleSearch">
-                <Search class="w-4 h-4 mr-1" />
+                <Search class="size-4 mr-2" />
                 搜索
               </Button>
               <Button  @click="handleReset">重置</Button>
@@ -409,21 +432,17 @@ onMounted(() => {
               <template v-else-if="column.key === 'children'">{{ row._count?.children || 0 }}</template>
               <template v-else-if="column.key === 'createdAt'"><span class="text-muted-foreground">{{ new Date(row.createdAt).toLocaleString() }}</span></template>
               <template v-else-if="column.key === 'actions'">
-                  <div class="flex gap-2">
-                    <Button size="small"  @click="handleEdit(row)">
-                      <Pencil class="w-3 h-3 mr-1" />
+                  <div class="flex gap-1">
+                    <Button type="link" size="small" class="h-auto p-0" @click="handleEdit(row)">
                       编辑
                     </Button>
-                    <Button size="small"  @click="handleManageMembers(row)">
-                      <Users class="w-3 h-3 mr-1" />
+                    <Button type="link" size="small" class="h-auto p-0" @click="handleManageMembers(row)">
                       成员
                     </Button>
-                    <Button size="small"  @click="handleManageAdmins(row)">
-                      <UserCog class="w-3 h-3 mr-1" />
+                    <Button type="link" size="small" class="h-auto p-0" @click="handleManageAdmins(row)">
                       管理员
                     </Button>
-                    <Button size="small" color="error" @click="handleDelete(row)">
-                      <Trash2 class="w-3 h-3 mr-1" />
+                    <Button type="link" size="small" class="h-auto p-0 text-destructive" @click="handleDelete(row)">
                       删除
                     </Button>
                   </div>
@@ -431,38 +450,27 @@ onMounted(() => {
             </template>
           </Table>
 
-          <div v-if="total > queryForm.pageSize!" class="flex items-center justify-between mt-4">
+          <div v-if="total > (queryForm.pageSize || 10)" class="flex items-center justify-between mt-4">
             <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
-            <div class="flex items-center gap-1">
-              <Button
-
-                size="sm"
-                :disabled="queryForm.page! <= 1"
-                @click="handlePageChange(queryForm.page! - 1)"
-              >
-                上一页
-              </Button>
-              <span class="text-sm px-2">{{ queryForm.page! }} / {{ Math.ceil(total / queryForm.pageSize!) }}</span>
-              <Button
-
-                size="sm"
-                :disabled="queryForm.page! >= Math.ceil(total / queryForm.pageSize!)"
-                @click="handlePageChange(queryForm.page! + 1)"
-              >
-                下一页
-              </Button>
-            </div>
+            <AntPagination
+              :current="queryForm.page"
+              :page-size="queryForm.pageSize"
+              :total="total"
+              :show-size-changer="false"
+              size="small"
+              @change="handlePageChange"
+            />
           </div>
         </div>
 
         <div v-else>
           <Tree
-            :data="treeData"
-            :props="{ children: 'children', label: 'name' }"
-            node-key="id"
-            :default-expand-all="true"
+            :tree-data="treeData"
+            :field-names="{ key: 'id', title: 'name', children: 'children' }"
+            default-expand-all
+            :selectable="false"
           >
-            <template #default="{ data }">
+            <template #titleRender="data">
               <div class="flex items-center justify-between w-full pr-3">
                 <div class="flex items-center gap-2">
                   <span class="font-medium">{{ data.name }}</span>
@@ -474,13 +482,13 @@ onMounted(() => {
                   </span>
                 </div>
                 <div class="flex gap-2">
-                  <Button type="link" size="small" class="p-0 h-auto" @click.stop="handleEdit({ id: data.id } as UserGroup)">
+                  <Button type="link" size="small" class="p-0 h-auto" @click.stop="handleEdit(data as UserGroup)">
                     编辑
                   </Button>
-                  <Button type="link" size="small" class="p-0 h-auto" @click.stop="handleManageMembers({ id: data.id } as UserGroup)">
+                  <Button type="link" size="small" class="p-0 h-auto" @click.stop="handleManageMembers(data as UserGroup)">
                     成员
                   </Button>
-                  <Button type="link" size="small" class="p-0 h-auto text-destructive" @click.stop="handleDelete({ id: data.id } as UserGroup)">
+                  <Button type="link" size="small" class="p-0 h-auto text-destructive" @click.stop="handleDelete(data as UserGroup)">
                     删除
                   </Button>
                 </div>
@@ -496,46 +504,40 @@ onMounted(() => {
         <div>
           <h3>{{ dialogTitle }}</h3>
         </div>
-        <form @submit.prevent="handleSubmit">
-          <div class="grid gap-4 py-4">
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">用户组名称 <span class="text-destructive">*</span></label>
+        <Form :model="groupForm" :rules="groupFormRules" layout="vertical" class="py-4" @finish="handleSubmit">
+          <div class="grid gap-4">
+            <FormItem label="用户组名称" name="name">
               <Input v-model:value="groupForm.name" placeholder="请输入用户组名称" />
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">描述</label>
+            </FormItem>
+            <FormItem label="描述" name="description">
               <InputTextArea v-model:value="groupForm.description" :rows="3" placeholder="请输入描述" />
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">类型 <span class="text-destructive">*</span></label>
+            </FormItem>
+            <FormItem label="类型" name="type">
               <Select v-model:value="groupForm.type">
-                  <SelectOption value="team">团队</SelectOption>
-                  <SelectOption value="department">部门</SelectOption>
-                  <SelectOption value="project">项目</SelectOption>
-                  <SelectOption value="organization">组织</SelectOption>
-
+                <SelectOption value="team">团队</SelectOption>
+                <SelectOption value="department">部门</SelectOption>
+                <SelectOption value="project">项目</SelectOption>
+                <SelectOption value="organization">组织</SelectOption>
               </Select>
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">父级用户组</label>
+            </FormItem>
+            <FormItem label="父级用户组" name="parentId">
               <Select v-model:value="groupForm.parentId">
-                  <SelectOption
-                    v-for="option in parentOptions"
-                    :key="option.value"
-                    :value="option.value"
-                    :disabled="option.disabled"
-                  >
-                    {{ option.label }}
-                  </SelectOption>
-
+                <SelectOption
+                  v-for="option in parentOptions"
+                  :key="option.value"
+                  :value="option.value"
+                  :disabled="option.disabled"
+                >
+                  {{ option.label }}
+                </SelectOption>
               </Select>
-            </div>
+            </FormItem>
           </div>
-        </form>
-        <div>
-          <Button  @click="dialogVisible = false">取消</Button>
-          <Button @click="handleSubmit">确定</Button>
-        </div>
+          <div class="flex justify-end gap-2">
+            <Button @click="dialogVisible = false">取消</Button>
+            <Button type="primary" html-type="submit">确定</Button>
+          </div>
+        </Form>
       </div>
     </Modal>
 
@@ -626,19 +628,9 @@ onMounted(() => {
         </div>
       </div>
     </Modal>
+    <contextHolder />
   </div>
 </template>
 
 <style scoped>
-@media (max-width: 1200px) {
-  .grid-cols-6 {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-@media (max-width: 768px) {
-  .grid-cols-6 {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
 </style>

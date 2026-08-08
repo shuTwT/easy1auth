@@ -77,6 +77,7 @@ async function loadPackages() {
     newTenantPackageId.value = packages.value.find(item => item.id > 0)?.id
   } catch (error) {
     console.error('加载可用租户套餐失败:', error)
+    message.error('加载可用租户套餐失败')
   }
 }
 
@@ -113,7 +114,7 @@ async function loadPackages() {
   gap: 8px;
   padding: 8px 16px;
   background: rgba(255, 255, 255, 0.8);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
@@ -124,31 +125,16 @@ async function loadPackages() {
 
 .tenant-selector:hover {
   background: white;
-  border-color: #0369A1;
+  border-color: var(--primary-color);
 }
 
 .tenant-name {
   font-size: 14px;
   font-weight: 500;
-  color: #0C4A6E;
+  color: var(--text-primary);
   max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.tenant-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  justify-content: space-between;
-}
-
-.create-tenant-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #0369A1;
 }
 </style>

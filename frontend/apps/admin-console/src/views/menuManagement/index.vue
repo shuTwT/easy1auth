@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { AppWindow, FolderTree, LockKeyhole, RefreshCw, Search, ShieldCheck } from '@lucide/vue'
 import { authorizationApi } from '@/api/authorization'
 import type { ManagementMenu } from '@/types/authorization'
-import { Tree as AntTree } from 'antdv-next'
+import { Empty, Spin, Tree as AntTree, message } from 'antdv-next'
 interface MenuTreeNode {
   id: string
   label: string
@@ -88,6 +88,7 @@ async function loadCatalog() {
     permissions.value = response.permissions
   } catch (error) {
     console.error('加载菜单权限目录失败:', error)
+    message.error('加载菜单权限目录失败')
   } finally {
     loading.value = false
   }
@@ -97,15 +98,15 @@ onMounted(loadCatalog)
 </script>
 
 <template>
-  <div class="flex flex-col gap-6 p-5 lg:p-6">
+  <div class="p-6 min-h-[calc(100vh-64px)] space-y-6">
     <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
       <div>
-        <div class="flex items-center gap-2"><FolderTree class="text-primary" /><h1 class="text-2xl font-semibold tracking-tight">菜单管理</h1></div>
+        <div class="flex items-center gap-2"><FolderTree class="size-5 text-primary" /><h1 class="text-2xl font-bold">菜单管理</h1></div>
         <p class="mt-1 text-sm text-muted-foreground">查看管理端菜单权限、层级和关联操作；菜单的可见范围由租户套餐授权决定。</p>
       </div>
       <div class="flex gap-2">
-        <Button  :disabled="loading" @click="loadCatalog"><RefreshCw data-icon="inline-start" :class="loading ? 'animate-spin' : ''" />刷新</Button>
-        <Button @click="router.push('/tenant-package')"><ShieldCheck data-icon="inline-start" />配置套餐权限</Button>
+        <Button  :disabled="loading" @click="loadCatalog"><RefreshCw class="size-4 mr-2" :class="loading ? 'animate-spin' : ''" />刷新</Button>
+        <Button @click="router.push('/tenant-package')"><ShieldCheck />配置套餐权限</Button>
       </div>
     </div>
 
@@ -122,8 +123,8 @@ onMounted(loadCatalog)
         <div class="relative w-full md:w-80"><Search class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" /><Input v-model:value="search" class="pl-9" placeholder="搜索菜单名称、编码或资源" /></div>
       </div>
       <div>
-        <div v-if="loading" class="flex min-h-48 items-center justify-center text-sm text-muted-foreground">加载中...</div>
-        <div v-else-if="filteredTree.length === 0" class="flex min-h-48 items-center justify-center text-sm text-muted-foreground">暂无匹配菜单</div>
+        <Spin v-if="loading" class="flex min-h-48 items-center justify-center" />
+        <Empty v-else-if="filteredTree.length === 0" class="flex min-h-48 flex-col items-center justify-center" description="暂无匹配菜单" />
         <AntTree v-else :tree-data="filteredTree" :field-names="{ key: 'id', title: 'label', children: 'children' }" :default-expand-all="true" :selectable="false" class="rounded-md border p-3">
           <template #titleRender="data">
             <div class="flex min-w-0 items-center gap-2 py-1">
@@ -131,7 +132,7 @@ onMounted(loadCatalog)
               <AppWindow v-else-if="data.type === 'menu'" class="shrink-0 text-primary" />
               <LockKeyhole v-else class="shrink-0 text-muted-foreground" />
               <span class="truncate text-sm font-medium">{{ data.label }}</span>
-              <Tag :color="data.type === 'menu' ? 'default' : data.type === 'directory' ? 'secondary' : 'outline'">{{ data.type === 'directory' ? '目录' : data.type === 'menu' ? '菜单' : '按钮' }}</Tag>
+              <Tag :color="data.type === 'menu' ? 'blue' : data.type === 'directory' ? 'purple' : 'green'">{{ data.type === 'directory' ? '目录' : data.type === 'menu' ? '菜单' : '按钮' }}</Tag>
               <Tag v-if="data.type !== 'action'" >{{ scopeLabel(data.scope) }}</Tag>
               <code class="ml-auto hidden truncate text-xs text-muted-foreground md:block">{{ data.code }}</code>
             </div>

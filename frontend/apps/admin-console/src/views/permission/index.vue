@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { Table, message } from 'antdv-next'
+import { Modal, Table, message, Pagination as AntPagination, Form, FormItem } from 'antdv-next'
 import { Search, Plus, List, Share2, RefreshCw, Lock, Menu, Settings2, Database } from '@lucide/vue'
 import { permissionApi } from '@/api/permission'
 import type { Permission, PermissionTree, PermissionStats, CreatePermissionDto, UpdatePermissionDto } from '@/types/permission'
@@ -14,6 +14,8 @@ const searchQuery = ref('')
 const filterType = ref('')
 const filterResource = ref('')
 const viewMode = ref<'list' | 'tree'>('list')
+
+const [modal, contextHolder] = Modal.useModal()
 
 const stats = ref<PermissionStats>({
   totalPermissions: 0,
@@ -36,6 +38,14 @@ const permissionForm = reactive<CreatePermissionDto & UpdatePermissionDto & { id
   parentId: undefined,
 })
 
+const permissionFormRules = {
+  name: [{ required: true, message: '请输入权限名称' }],
+  code: [{ required: true, message: '请输入权限编码' }],
+  type: [{ required: true, message: '请选择权限类型' }],
+  resource: [{ required: true, message: '请输入资源' }],
+  action: [{ required: true, message: '请输入操作' }],
+}
+
 const statsData = computed(() => [
   { label: '总权限数', value: stats.value.totalPermissions, icon: Lock, class: 'primary' },
   { label: '菜单权限', value: stats.value.menuPermissions, icon: Menu, class: 'danger' },
@@ -56,13 +66,13 @@ function getTypeLabel(type: string) {
   return map[type] || type
 }
 
-function getTypeVariant(type: string): 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost' | 'link' {
-  const map: Record<string, 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost' | 'link'> = {
-    menu: 'default',
-    operation: 'secondary',
-    data: 'outline'
+function getTypeVariant(type: string): string {
+  const map: Record<string, string> = {
+    menu: 'blue',
+    operation: 'green',
+    data: 'purple'
   }
-  return map[type] || 'secondary'
+  return map[type] || 'default'
 }
 
 async function loadStats() {
@@ -71,6 +81,7 @@ async function loadStats() {
     stats.value = res
   } catch (error) {
     console.error('加载统计信息失败:', error)
+    message.error('加载权限统计信息失败')
   }
 }
 
@@ -99,6 +110,7 @@ async function loadTree() {
     permissionTree.value = res
   } catch (error) {
     console.error('加载权限树失败:', error)
+    message.error('加载权限树失败')
   }
 }
 
@@ -159,18 +171,13 @@ async function handleSubmit() {
       })
       message.success('更新成功')
     } else {
-      if (!permissionForm.code || !permissionForm.resource || !permissionForm.action) {
-        message.error('请填写必填字段')
-        submitting.value = false
-        return
-      }
       await permissionApi.create({
-        name: permissionForm.name!,
-        code: permissionForm.code!,
+        name: permissionForm.name!.trim(),
+        code: permissionForm.code!.trim(),
         description: permissionForm.description,
         type: permissionForm.type,
-        resource: permissionForm.resource!,
-        action: permissionForm.action!,
+        resource: permissionForm.resource!.trim(),
+        action: permissionForm.action!.trim(),
         parentId: permissionForm.parentId,
       })
       message.success('创建成功')
@@ -187,7 +194,14 @@ async function handleSubmit() {
 }
 
 async function handleDelete(row: Permission) {
-  if (!window.confirm(`确定要删除权限 "${row.name}" 吗？`)) {
+  const confirmed = await modal.confirm({
+    title: '删除权限',
+    content: `确定要删除权限”${row.name}”吗？`,
+    okText: '删除',
+    cancelText: '取消',
+    okButtonProps: { danger: true },
+  })
+  if (!confirmed) {
     return
   }
   try {
@@ -201,7 +215,7 @@ async function handleDelete(row: Permission) {
   }
 }
 
-function handlePageChange(p: number) {
+function handlePageChange(p: number, _pageSize?: number) {
   page.value = p
   loadPermissions()
 }
@@ -217,35 +231,35 @@ onMounted(() => {
   <div class="p-6 min-h-[calc(100vh-64px)]">
     <div class="flex justify-between items-start mb-6">
       <div class="flex-1">
-        <h1 class="text-3xl font-bold text-foreground mb-2">权限管理</h1>
+        <h1 class="text-2xl font-bold text-foreground mb-2">权限管理</h1>
         <p class="text-sm text-muted-foreground">管理用户池权限，定义用户池的操作权限、菜单权限和数据权限</p>
       </div>
       <div>
         <Button @click="handleCreate">
-          <Plus class="w-4 h-4 mr-1" />
+          <Plus class="size-4 mr-2" />
           创建权限
         </Button>
       </div>
     </div>
 
-    <div class="grid grid-cols-4 gap-5 mb-6">
-      <Card v-for="(stat, index) in statsData" :key="index" class="cursor-pointer transition-all hover:-translate-y-1 hover:shadow-lg">
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
+      <Card v-for="(stat, index) in statsData" :key="index" class="transition-all hover:shadow-md">
         <div class="pt-4">
           <div class="flex items-center gap-4">
             <div
-              class="w-14 h-14 rounded-lg flex items-center justify-center text-white shrink-0"
+              class="size-11 rounded-lg flex items-center justify-center text-white shrink-0"
               :class="{
                 'bg-gradient-to-br from-primary to-primary/60': stat.class === 'primary',
                 'bg-gradient-to-br from-red-500 to-red-400': stat.class === 'danger',
-                'bg-gradient-to-br from-green-500 to-green-400': stat.class === 'success',
+                'bg-gradient-to-br from-emerald-500 to-emerald-400': stat.class === 'success',
                 'bg-gradient-to-br from-sky-500 to-sky-400': stat.class === 'info',
               }"
             >
-              <component :is="stat.icon" class="w-6 h-6" />
+              <component :is="stat.icon" class="size-5" />
             </div>
             <div>
-              <div class="text-3xl font-bold text-foreground leading-tight">{{ stat.value }}</div>
-              <div class="text-sm text-muted-foreground mt-1">{{ stat.label }}</div>
+              <div class="text-2xl font-bold text-foreground leading-tight">{{ stat.value }}</div>
+              <div class="text-xs text-muted-foreground mt-0.5">{{ stat.label }}</div>
             </div>
           </div>
         </div>
@@ -257,7 +271,7 @@ onMounted(() => {
         <div class="flex justify-between items-center">
           <div class="flex items-center gap-3">
             <div class="relative">
-              <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
               <Input v-model:value="searchQuery"
                 placeholder="搜索权限名称、编码、资源"
                 class="w-72 pl-8"
@@ -277,29 +291,29 @@ onMounted(() => {
 
             </Select>
             <Button @click="handleSearch">
-              <Search class="w-4 h-4 mr-1" />
+              <Search class="size-4 mr-2" />
               搜索
             </Button>
             <Button  @click="handleReset">
-              <RefreshCw class="w-4 h-4 mr-1" />
+              <RefreshCw class="size-4 mr-2" />
               重置
             </Button>
           </div>
           <div class="flex gap-0">
             <Button
-              :color="viewMode === 'list' ? 'default' : 'outline'"
+                :type="viewMode === 'list' ? 'primary' : 'default'"
               class="rounded-r-none"
               @click="viewMode = 'list'"
             >
-              <List class="w-4 h-4 mr-1" />
+              <List class="size-4 mr-2" />
               列表
             </Button>
             <Button
-              :color="viewMode === 'tree' ? 'default' : 'outline'"
+                :type="viewMode === 'tree' ? 'primary' : 'default'"
               class="rounded-l-none"
               @click="viewMode = 'tree'"
             >
-              <Share2 class="w-4 h-4 mr-1" />
+              <Share2 class="size-4 mr-2" />
               树形
             </Button>
           </div>
@@ -345,38 +359,27 @@ onMounted(() => {
               </template>
             </template>
           </Table>
-          <div v-if="total > pageSize" class="flex items-center justify-between mt-4">
+          <div class="flex items-center justify-between mt-4 pt-4 border-t">
             <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
-            <div class="flex items-center gap-1">
-              <Button
-
-                size="sm"
-                :disabled="page <= 1"
-                @click="handlePageChange(page - 1)"
-              >
-                上一页
-              </Button>
-              <span class="text-sm px-2">{{ page }} / {{ Math.ceil(total / pageSize) }}</span>
-              <Button
-
-                size="sm"
-                :disabled="page >= Math.ceil(total / pageSize)"
-                @click="handlePageChange(page + 1)"
-              >
-                下一页
-              </Button>
-            </div>
+            <AntPagination
+              :current="page"
+              :page-size="pageSize"
+              :total="total"
+              :show-size-changer="false"
+              size="small"
+              @change="handlePageChange"
+            />
           </div>
         </div>
 
         <div v-else>
           <Tree
-            :data="permissionTree"
-            :props="{ children: 'children', label: 'name' }"
-            node-key="id"
-            :default-expand-all="true"
+            :tree-data="permissionTree"
+            :field-names="{ key: 'id', title: 'name', children: 'children' }"
+            default-expand-all
+            :selectable="false"
           >
-            <template #default="{ data }">
+            <template #titleRender="data">
               <div class="flex items-center gap-2">
                 <Tag :color="getTypeVariant(data.type)" class="text-xs">
                   {{ getTypeLabel(data.type) }}
@@ -395,70 +398,50 @@ onMounted(() => {
         <div>
           <h3>{{ dialogTitle }}</h3>
         </div>
-        <form @submit.prevent="handleSubmit">
-          <div class="grid gap-4 py-4">
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">权限名称 <span class="text-destructive">*</span></label>
-              <Input v-model:value="permissionForm.name" placeholder="如: 查看用户" />
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">权限编码 <span class="text-destructive">*</span></label>
-              <Input v-model:value="permissionForm.code" placeholder="如: user:read" :disabled="isEdit" />
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">权限类型 <span class="text-destructive">*</span></label>
-              <Select v-model:value="permissionForm.type">
-                  <SelectOption value="menu">菜单权限</SelectOption>
-                  <SelectOption value="operation">操作权限</SelectOption>
-                  <SelectOption value="data">数据权限</SelectOption>
-
-              </Select>
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">资源 <span class="text-destructive">*</span></label>
-              <Input v-model:value="permissionForm.resource" placeholder="如: user" />
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">操作 <span class="text-destructive">*</span></label>
-              <Input v-model:value="permissionForm.action" placeholder="如: read" />
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">父级权限</label>
-              <TreeSelect
-                v-model="permissionForm.parentId"
-                :data="permissionTree"
-                :props="{ children: 'children', label: 'name', value: 'id' }"
-                placeholder="请选择父级权限"
-                clearable
-              />
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">描述</label>
-              <InputTextArea v-model:value="permissionForm.description" :rows="2" placeholder="请输入描述" />
-            </div>
+        <Form :model="permissionForm" :rules="permissionFormRules" layout="vertical" class="py-4" @finish="handleSubmit">
+          <FormItem label="权限名称" name="name">
+            <Input v-model:value="permissionForm.name" placeholder="如: 查看用户" />
+          </FormItem>
+          <FormItem label="权限编码" name="code">
+            <Input v-model:value="permissionForm.code" placeholder="如: user:read" :disabled="isEdit" />
+          </FormItem>
+          <FormItem label="权限类型" name="type">
+            <Select
+              v-model:value="permissionForm.type"
+              :options="[
+                { value: 'menu', label: '菜单权限' },
+                { value: 'operation', label: '操作权限' },
+                { value: 'data', label: '数据权限' },
+              ]"
+            />
+          </FormItem>
+          <FormItem label="资源" name="resource">
+            <Input v-model:value="permissionForm.resource" placeholder="如: user" />
+          </FormItem>
+          <FormItem label="操作" name="action">
+            <Input v-model:value="permissionForm.action" placeholder="如: read" />
+          </FormItem>
+          <FormItem label="父级权限" name="parentId">
+            <TreeSelect
+              v-model:value="permissionForm.parentId"
+              class="w-full"
+              :tree-data="permissionTree"
+              :field-names="{ children: 'children', label: 'name', value: 'id' }"
+              placeholder="请选择父级权限"
+              allow-clear
+              tree-default-expand-all
+            />
+          </FormItem>
+          <FormItem label="描述" name="description">
+            <InputTextArea v-model:value="permissionForm.description" :rows="2" placeholder="请输入描述" />
+          </FormItem>
+          <div class="flex justify-end gap-2">
+            <Button html-type="button" @click="dialogVisible = false">取消</Button>
+            <Button type="primary" html-type="submit" :loading="submitting">确定</Button>
           </div>
-        </form>
-        <div>
-          <Button  @click="dialogVisible = false">取消</Button>
-          <Button :disabled="submitting" @click="handleSubmit">
-            {{ submitting ? '提交中...' : '确定' }}
-          </Button>
-        </div>
+        </Form>
       </div>
     </Modal>
+    <contextHolder />
   </div>
 </template>
-
-<style scoped>
-@media (max-width: 1200px) {
-  .grid-cols-4 {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 768px) {
-  .grid-cols-4 {
-    grid-template-columns: 1fr;
-  }
-}
-</style>

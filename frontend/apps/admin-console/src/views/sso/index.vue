@@ -57,15 +57,15 @@ const getTypeText = (type: string) => {
 const getTypeVariant = (type: string) => {
   switch (type) {
     case 'web':
-      return 'default'
+      return 'blue'
     case 'spa':
-      return 'secondary'
+      return 'green'
     case 'native':
-      return 'outline'
+      return 'purple'
     case 'machine':
-      return 'secondary'
+      return 'orange'
     default:
-      return 'secondary'
+      return 'cyan'
   }
 }
 
@@ -74,7 +74,7 @@ const getStatusText = (status: string) => {
 }
 
 const getStatusVariant = (status: string) => {
-  return status === 'active' ? 'default' : 'destructive'
+  return status === 'active' ? 'green' : 'red'
 }
 
 const copyToClipboard = (text: string) => {
@@ -91,12 +91,19 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="sso-management p-5">
-    <div class="grid grid-cols-6 gap-5 mb-5">
+  <div class="p-6 min-h-[calc(100vh-64px)]">
+    <div class="flex justify-between items-start mb-6">
+      <div class="flex-1">
+        <h1 class="text-2xl font-bold text-foreground mb-2">单点登录配置</h1>
+        <p class="text-sm text-muted-foreground">管理 SSO 端点和应用集成配置</p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-5 mb-6">
       <Card>
         <div class="pt-6">
           <div class="text-center">
-            <div class="text-2xl font-bold text-primary mb-1">{{ stats.totalApps }}</div>
+            <div class="text-2xl font-bold text-foreground mb-1">{{ stats.totalApps }}</div>
             <div class="text-sm text-muted-foreground">应用总数</div>
           </div>
         </div>
@@ -104,7 +111,7 @@ onMounted(() => {
       <Card>
         <div class="pt-6">
           <div class="text-center">
-            <div class="text-2xl font-bold text-primary mb-1">{{ stats.activeApps }}</div>
+            <div class="text-2xl font-bold text-foreground mb-1">{{ stats.activeApps }}</div>
             <div class="text-sm text-muted-foreground">启用应用</div>
           </div>
         </div>
@@ -112,7 +119,7 @@ onMounted(() => {
       <Card>
         <div class="pt-6">
           <div class="text-center">
-            <div class="text-2xl font-bold text-primary mb-1">{{ stats.webApps }}</div>
+            <div class="text-2xl font-bold text-foreground mb-1">{{ stats.webApps }}</div>
             <div class="text-sm text-muted-foreground">Web应用</div>
           </div>
         </div>
@@ -120,7 +127,7 @@ onMounted(() => {
       <Card>
         <div class="pt-6">
           <div class="text-center">
-            <div class="text-2xl font-bold text-primary mb-1">{{ stats.spaApps }}</div>
+            <div class="text-2xl font-bold text-foreground mb-1">{{ stats.spaApps }}</div>
             <div class="text-sm text-muted-foreground">单页应用</div>
           </div>
         </div>
@@ -128,7 +135,7 @@ onMounted(() => {
       <Card>
         <div class="pt-6">
           <div class="text-center">
-            <div class="text-2xl font-bold text-primary mb-1">{{ stats.nativeApps }}</div>
+            <div class="text-2xl font-bold text-foreground mb-1">{{ stats.nativeApps }}</div>
             <div class="text-sm text-muted-foreground">原生应用</div>
           </div>
         </div>
@@ -136,7 +143,7 @@ onMounted(() => {
       <Card>
         <div class="pt-6">
           <div class="text-center">
-            <div class="text-2xl font-bold text-primary mb-1">{{ stats.machineApps }}</div>
+            <div class="text-2xl font-bold text-foreground mb-1">{{ stats.machineApps }}</div>
             <div class="text-sm text-muted-foreground">机器应用</div>
           </div>
         </div>
@@ -144,33 +151,31 @@ onMounted(() => {
     </div>
 
     <Card>
-      <div>
-        <h3>单点登录配置</h3>
-      </div>
-      <div>
-        <Alert class="mb-5">
-          <h3>单点登录说明</h3>
-          <p>
-            <p>单点登录（SSO）允许用户使用一个账号登录多个应用。系统支持 OAuth 2.0 和 OpenID Connect 协议。</p>
-            <p class="mt-3">
+      <div class="pt-6">
+        <Alert class="mb-5" type="info" show-icon title="单点登录说明">
+          <template #description>
+            <div>
+            <div>单点登录（SSO）允许用户使用一个账号登录多个应用。系统支持 OAuth 2.0 和 OpenID Connect 协议。</div>
+            <div class="mt-3">
               <strong>OAuth 2.0 授权端点：</strong>
               <Button type="link" size="small" class="p-0 h-auto" @click="copyToClipboard(`${baseUrl}/oauth2/authorize`)">
                 {{ baseUrl }}/oauth2/authorize
               </Button>
-            </p>
-            <p class="mt-1">
+            </div>
+            <div class="mt-1">
               <strong>Token 端点：</strong>
               <Button type="link" size="small" class="p-0 h-auto" @click="copyToClipboard(`${baseUrl}/oauth2/token`)">
                 {{ baseUrl }}/oauth2/token
               </Button>
-            </p>
-            <p class="mt-1">
+            </div>
+            <div class="mt-1">
               <strong>用户信息端点：</strong>
               <Button type="link" size="small" class="p-0 h-auto" @click="copyToClipboard(`${baseUrl}/oauth2/userinfo`)">
                 {{ baseUrl }}/oauth2/userinfo
               </Button>
-            </p>
-          </p>
+            </div>
+            </div>
+          </template>
         </Alert>
 
         <Table :columns="[
@@ -189,8 +194,8 @@ onMounted(() => {
             <template v-else-if="column.key === 'clientId'">
                 <div class="flex items-center gap-2">
                   <span class="font-mono text-xs">{{ item.clientId }}</span>
-                  <Button type="text" size="icon" class="h-6 w-6" @click="copyToClipboard(item.clientId)">
-                    <Copy class="w-3 h-3" />
+                  <Button type="text" size="small" shape="circle" aria-label="复制客户端 ID" class="h-6 w-6" @click="copyToClipboard(item.clientId)">
+                    <Copy class="size-3" />
                   </Button>
                 </div>
             </template>
@@ -214,8 +219,8 @@ onMounted(() => {
       </div>
     </Card>
 
-    <Card class="mt-5">
-      <div>
+    <Card class="mt-6">
+      <div class="pt-6">
         <h3>集成指南</h3>
       </div>
       <div>

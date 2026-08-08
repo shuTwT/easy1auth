@@ -113,6 +113,7 @@ async function loadProfile() {
     syncStore(profileResult)
   } catch (error) {
     console.error('加载个人资料失败:', error)
+    message.error('加载个人资料失败')
   } finally {
     loading.value = false
   }
@@ -132,6 +133,7 @@ async function saveProfile() {
     message.success('个人资料已更新')
   } catch (error) {
     console.error('更新个人资料失败:', error)
+    message.error('更新个人资料失败')
   } finally {
     saving.value = false
   }
@@ -173,6 +175,7 @@ async function sendEmailChangeCode() {
     message.success('验证码已发送到新邮箱')
   } catch (error) {
     console.error('发送邮箱换绑验证码失败:', error)
+    message.error('发送邮箱换绑验证码失败')
   } finally {
     emailSending.value = false
   }
@@ -191,6 +194,7 @@ async function verifyEmailChange() {
     await router.replace('/login')
   } catch (error) {
     console.error('验证邮箱换绑验证码失败:', error)
+    message.error('验证邮箱换绑验证码失败')
   } finally {
     emailVerifying.value = false
   }
@@ -227,23 +231,23 @@ onBeforeUnmount(() => {
             <Avatar :size="88" class="profile-avatar" :alt="`${displayName} 的头像`">
               {{ avatarLetter }}
             </Avatar>
-            <h2 class="mt-4 text-xl font-semibold text-slate-900">{{ displayName }}</h2>
-            <p class="mt-1 break-all text-sm text-slate-500">{{ profile.email }}</p>
+            <h2 class="mt-4 text-xl font-semibold text-foreground">{{ displayName }}</h2>
+            <p class="mt-1 break-all text-sm text-muted-foreground">{{ profile.email }}</p>
             <Tag color="success" class="!mt-3">
-              <span class="inline-flex items-center gap-1"><CheckCircle2 :size="13" />账户正常</span>
+              <span class="inline-flex items-center gap-1"><CheckCircle2 class="size-3" />账户正常</span>
             </Tag>
 
-            <dl class="mt-6 space-y-4 border-t border-slate-100 pt-5 text-left">
+            <dl class="mt-6 space-y-4 border-t border-border pt-5 text-left">
               <div class="profile-meta-row">
-                <dt><Building2 :size="17" />当前租户</dt>
+                <dt><Building2 class="size-4" />当前租户</dt>
                 <dd>{{ currentTenantName }}</dd>
               </div>
               <div class="profile-meta-row">
-                <dt><Clock3 :size="17" />最近登录</dt>
+                <dt><Clock3 class="size-4" />最近登录</dt>
                 <dd>{{ formatDate(profile.lastLoginAt) }}</dd>
               </div>
               <div class="profile-meta-row">
-                <dt><UserRound :size="17" />账户创建</dt>
+                <dt><UserRound class="size-4" />账户创建</dt>
                 <dd>{{ formatDate(profile.createdAt) }}</dd>
               </div>
             </dl>
@@ -251,7 +255,7 @@ onBeforeUnmount(() => {
         </Card>
 
         <Card title="账户标识" size="small">
-          <p class="break-all font-mono text-xs leading-5 text-slate-500">{{ profile.id }}</p>
+          <p class="break-all font-mono text-xs leading-5 text-muted-foreground">{{ profile.id }}</p>
         </Card>
       </aside>
 
@@ -259,8 +263,8 @@ onBeforeUnmount(() => {
         <Card class="profile-card">
           <template #title>
             <div>
-              <h2 class="text-base font-semibold text-slate-900">基本资料</h2>
-              <p class="mt-1 text-sm font-normal text-slate-500">这些信息用于识别您的管理员账户</p>
+              <h2 class="text-base font-semibold text-foreground">基本资料</h2>
+              <p class="mt-1 text-sm font-normal text-muted-foreground">这些信息用于识别您的管理员账户</p>
             </div>
           </template>
 
@@ -268,13 +272,13 @@ onBeforeUnmount(() => {
             <div class="grid gap-x-5 md:grid-cols-2">
               <FormItem label="用户名" name="username">
                 <Input v-model:value="form.username" autocomplete="username" :maxlength="100" placeholder="请输入用户名">
-                  <template #prefix><UserRound :size="16" class="text-slate-400" /></template>
+                  <template #prefix><UserRound class="size-4 text-muted-foreground" /></template>
                 </Input>
               </FormItem>
 
               <FormItem label="手机号" name="phone">
                 <Input v-model:value="form.phone" autocomplete="tel" :maxlength="32" placeholder="选填，用于账户联系">
-                  <template #prefix><Phone :size="16" class="text-slate-400" /></template>
+                  <template #prefix><Phone class="size-4 text-muted-foreground" /></template>
                 </Input>
               </FormItem>
             </div>
@@ -282,16 +286,16 @@ onBeforeUnmount(() => {
             <FormItem label="邮箱地址" extra="换绑邮箱需要验证新邮箱，成功后当前登录会话将失效。">
               <div class="flex flex-col gap-3 sm:flex-row">
                 <Input :value="profile.email" readonly class="min-w-0 flex-1">
-                  <template #prefix><Mail :size="16" class="text-slate-400" /></template>
+                  <template #prefix><Mail class="size-4 text-muted-foreground" /></template>
                 </Input>
                 <Button class="shrink-0" @click="openEmailChange">换绑邮箱</Button>
               </div>
             </FormItem>
 
-            <div class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-5">
-              <p class="text-xs text-slate-500">最近更新：{{ formatDate(profile.updatedAt) }}</p>
+            <div class="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
+              <p class="text-xs text-muted-foreground">最近更新：{{ formatDate(profile.updatedAt) }}</p>
               <Button type="primary" html-type="submit" :loading="saving" :disabled="!isDirty">
-                <Save :size="16" class="mr-1" />保存修改
+                <Save class="size-4 mr-1" />保存修改
               </Button>
             </div>
           </Form>
@@ -300,40 +304,40 @@ onBeforeUnmount(() => {
         <Card class="profile-card">
           <template #title>
             <div>
-              <h2 class="text-base font-semibold text-slate-900">账户安全</h2>
-              <p class="mt-1 text-sm font-normal text-slate-500">查看安全状态并进入安全设置完成敏感操作</p>
+              <h2 class="text-base font-semibold text-foreground">账户安全</h2>
+              <p class="mt-1 text-sm font-normal text-muted-foreground">查看安全状态并进入安全设置完成敏感操作</p>
             </div>
           </template>
 
-          <div class="divide-y divide-slate-100">
+          <div class="divide-y divide-border">
             <div class="security-row">
-              <div class="security-icon bg-sky-50 text-sky-700"><KeyRound :size="20" /></div>
+              <div class="security-icon bg-primary/10 text-primary"><KeyRound class="size-5" /></div>
               <div class="min-w-0 flex-1">
-                <h3 class="text-sm font-medium text-slate-900">登录密码</h3>
-                <p class="mt-1 text-sm text-slate-500">定期更换密码可以降低账户泄露风险</p>
+                <h3 class="text-sm font-medium text-foreground">登录密码</h3>
+                <p class="mt-1 text-sm text-muted-foreground">定期更换密码可以降低账户泄露风险</p>
               </div>
               <Tag color="success">已设置</Tag>
             </div>
 
             <div class="security-row">
-              <div class="security-icon" :class="mfaStatus.enabled ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'">
-                <Smartphone :size="20" />
+              <div class="security-icon" :class="mfaStatus.enabled ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'">
+                <Smartphone class="size-5" />
               </div>
               <div class="min-w-0 flex-1">
-                <h3 class="text-sm font-medium text-slate-900">多因素认证</h3>
-                <p class="mt-1 text-sm text-slate-500">{{ mfaStatus.enabled ? '登录时需要额外身份验证' : '建议启用身份验证器保护账户' }}</p>
+                <h3 class="text-sm font-medium text-foreground">多因素认证</h3>
+                <p class="mt-1 text-sm text-muted-foreground">{{ mfaStatus.enabled ? '登录时需要额外身份验证' : '建议启用身份验证器保护账户' }}</p>
               </div>
               <Tag :color="mfaStatus.enabled ? 'success' : 'warning'">{{ mfaLabel }}</Tag>
             </div>
 
             <div class="security-row">
-              <div class="security-icon bg-indigo-50 text-indigo-700"><ShieldCheck :size="20" /></div>
+              <div class="security-icon bg-indigo-500/10 text-indigo-500"><ShieldCheck class="size-5" /></div>
               <div class="min-w-0 flex-1">
-                <h3 class="text-sm font-medium text-slate-900">安全设置</h3>
-                <p class="mt-1 text-sm text-slate-500">修改密码、配置 MFA 和查看密码策略</p>
+                <h3 class="text-sm font-medium text-foreground">安全设置</h3>
+                <p class="mt-1 text-sm text-muted-foreground">修改密码、配置 MFA 和查看密码策略</p>
               </div>
               <Button type="link" class="!px-0" @click="router.push('/security')">
-                前往设置<ChevronRight :size="16" />
+                前往设置<ChevronRight class="size-4" />
               </Button>
             </div>
           </div>
@@ -346,9 +350,9 @@ onBeforeUnmount(() => {
         当前邮箱：<span class="font-medium">{{ profile?.email }}</span>
       </div>
       <div class="grid gap-2">
-        <label for="new-admin-email" class="text-sm font-medium text-slate-700">新邮箱地址</label>
+        <label for="new-admin-email" class="text-sm font-medium text-foreground">新邮箱地址</label>
         <Input id="new-admin-email" v-model:value="emailForm.email" autocomplete="email" :maxlength="320" placeholder="name@company.com">
-          <template #prefix><Mail :size="16" class="text-slate-400" /></template>
+          <template #prefix><Mail class="size-4 text-muted-foreground" /></template>
         </Input>
       </div>
       <Button type="primary" block :loading="emailSending" @click="sendEmailChangeCode">发送验证码</Button>
@@ -356,11 +360,11 @@ onBeforeUnmount(() => {
 
     <div v-else class="space-y-5 pt-2">
       <div>
-        <p class="text-sm text-slate-600">验证码已发送至</p>
-        <p class="mt-1 break-all font-medium text-slate-900">{{ emailForm.email }}</p>
+        <p class="text-sm text-muted-foreground">验证码已发送至</p>
+        <p class="mt-1 break-all font-medium text-foreground">{{ emailForm.email }}</p>
       </div>
       <div class="grid gap-2">
-        <label for="admin-email-code" class="text-sm font-medium text-slate-700">邮箱验证码</label>
+        <label for="admin-email-code" class="text-sm font-medium text-foreground">邮箱验证码</label>
         <Input id="admin-email-code" v-model:value="emailForm.code" inputmode="numeric" autocomplete="one-time-code" :maxlength="6" placeholder="请输入6位验证码" @press-enter="verifyEmailChange" />
       </div>
       <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
@@ -400,7 +404,7 @@ onBeforeUnmount(() => {
 .profile-avatar {
   margin-top: -44px;
   border: 4px solid white;
-  background: #e0f2fe;
+  background: var(--accent);
   color: var(--primary-dark);
   font-size: 30px;
   font-weight: 700;
@@ -416,13 +420,13 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #64748b;
+  color: var(--text-muted);
   font-size: 13px;
 }
 
 .profile-meta-row dd {
   margin-left: 25px;
-  color: #1e293b;
+  color: var(--text-primary);
   font-size: 14px;
   overflow-wrap: anywhere;
 }

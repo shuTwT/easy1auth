@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue'
-import { Table, message } from 'antdv-next'
+import { Form, FormItem, Modal, Pagination as AntPagination, Table, message, Upload as AUpload } from 'antdv-next'
 import { Plus, Upload, Download, Search, RefreshCw } from '@lucide/vue'
 import { userApi } from '@/api/user'
 import { roleApi } from '@/api/role'
@@ -25,6 +25,8 @@ const assignRoleLoading = ref(false)
 const importDialogVisible = ref(false)
 const importLoading = ref(false)
 const importResult = ref<any>(null)
+
+const [modal, contextHolder] = Modal.useModal()
 
 const queryForm = reactive<UserQueryDto>({
   page: 1,
@@ -52,6 +54,27 @@ const resetPasswordForm = reactive({
   newPassword: '',
   confirmPassword: ''
 })
+
+const userFormRules = {
+  username: [{ required: true, message: '请输入用户名' }],
+  email: [{ required: true, message: '请输入邮箱' }],
+  name: [{ required: true, message: '请输入姓名' }],
+}
+
+const resetPasswordFormRules = {
+  newPassword: [{ required: true, message: '请输入新密码' }],
+  confirmPassword: [
+    { required: true, message: '请确认新密码' },
+    {
+      validator: (_rule: unknown, value: string) => {
+        if (value !== resetPasswordForm.newPassword) {
+          return Promise.reject('两次输入的密码不一致')
+        }
+        return Promise.resolve()
+      },
+    },
+  ],
+}
 
 const loadUsers = async () => {
   loading.value = true
@@ -115,7 +138,13 @@ const handleEdit = (row: User) => {
 }
 
 const handleDelete = async (row: User) => {
-  const confirmed = window.confirm('确定要删除该用户吗？删除后无法恢复！')
+  const confirmed = await modal.confirm({
+    title: '删除用户',
+    content: '确定要删除该用户吗？删除后无法恢复！',
+    okText: '删除',
+    cancelText: '取消',
+    okButtonProps: { danger: true },
+  })
   if (!confirmed) return
 
   try {
@@ -152,10 +181,6 @@ const handleSubmit = async () => {
       await userApi.update(currentUser.value.id, userForm)
       message.success('更新成功')
     } else {
-      if (!userForm.password) {
-        message.warning('创建用户时必须设置密码')
-        return
-      }
       await userApi.create(userForm as CreateUserDto)
       message.success('创建成功')
     }
@@ -169,11 +194,6 @@ const handleSubmit = async () => {
 
 const handleResetPasswordSubmit = async () => {
   try {
-    if (resetPasswordForm.newPassword !== resetPasswordForm.confirmPassword) {
-      message.error('两次输入的密码不一致')
-      return
-    }
-
     await userApi.resetPassword(resetPasswordUserId.value, resetPasswordForm.newPassword)
     message.success('密码重置成功')
     resetPasswordDialogVisible.value = false
@@ -218,12 +238,13 @@ const handleAssignRoleSubmit = async () => {
   }
 }
 
-const handlePageChange = (page: number) => {
+const handlePageChange = (page: number, pageSize?: number) => {
   queryForm.page = page
+  if (pageSize !== undefined) queryForm.pageSize = pageSize
   loadUsers()
 }
 
-const handleSizeChange = (size: number) => {
+const handleSizeChange = (_current: number, size: number) => {
   queryForm.pageSize = size
   queryForm.page = 1
   loadUsers()
@@ -232,13 +253,13 @@ const handleSizeChange = (size: number) => {
 const getStatusVariant = (status: string) => {
   switch (status) {
     case 'active':
-      return 'default'
+      return 'green'
     case 'disabled':
-      return 'secondary'
+      return 'orange'
     case 'locked':
-      return 'destructive'
+      return 'red'
     default:
-      return 'outline'
+      return 'default'
   }
 }
 
@@ -293,8 +314,6 @@ const handleFileChange = async (file: any) => {
   }
 }
 
-const totalPages = () => Math.ceil(total.value / queryForm.pageSize!)
-
 const toggleRole = (roleId: string) => {
   const index = selectedRoleIds.value.indexOf(roleId)
   if (index > -1) {
@@ -314,11 +333,11 @@ const toggleRole = (roleId: string) => {
       </div>
       <div class="flex gap-3">
         <Button  @click="handleImport">
-          <Upload class="w-4 h-4 mr-2" />
+          <Upload class="size-4 mr-2" />
           导入用户
         </Button>
         <Button @click="handleAdd">
-          <Plus class="w-4 h-4 mr-2" />
+          <Plus class="size-4 mr-2" />
           新增用户
         </Button>
       </div>
@@ -350,11 +369,11 @@ const toggleRole = (roleId: string) => {
           </div>
           <div class="flex gap-2">
             <Button @click="handleSearch">
-              <Search class="w-4 h-4 mr-2" />
+              <Search class="size-4 mr-2" />
               搜索
             </Button>
             <Button  @click="handleReset">
-              <RefreshCw class="w-4 h-4 mr-2" />
+              <RefreshCw class="size-4 mr-2" />
               重置
             </Button>
           </div>
@@ -399,8 +418,8 @@ const toggleRole = (roleId: string) => {
                   <Button type="link" size="small" class="h-auto p-0" @click="handleAssignRole(row)">分配角色</Button>
                   <Button type="link" size="small" class="h-auto p-0" @click="handleResetPassword(row)">重置密码</Button>
                   <Button
-                    variant="link"
-                    size="sm"
+                    type="link"
+                    size="small"
                     class="h-auto p-0"
                     @click="handleStatusChange(row, row.status === 'active' ? 'disabled' : 'active')"
                   >
@@ -414,19 +433,16 @@ const toggleRole = (roleId: string) => {
 
         <div class="flex items-center justify-between mt-4 pt-4 border-t">
           <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
-          <div class="flex items-center gap-1">
-            <Select v-model:value="queryForm.pageSize!" class="w-20" @update:value="handleSizeChange(Number($event))">
-                <SelectOption :value="10">10</SelectOption>
-                <SelectOption :value="20">20</SelectOption>
-                <SelectOption :value="50">50</SelectOption>
-                <SelectOption :value="100">100</SelectOption>
-
-            </Select>
-            <span class="text-sm px-2">条/页</span>
-            <Button  size="small" :disabled="queryForm.page! <= 1" @click="handlePageChange(queryForm.page! - 1)">上一页</Button>
-            <span class="text-sm px-2">{{ queryForm.page! }} / {{ totalPages() }}</span>
-            <Button  size="small" :disabled="queryForm.page! >= totalPages()" @click="handlePageChange(queryForm.page! + 1)">下一页</Button>
-          </div>
+          <AntPagination
+            :current="queryForm.page"
+            :page-size="queryForm.pageSize"
+            :total="total"
+            :show-size-changer="true"
+            :page-size-options="['10', '20', '50', '100']"
+            size="small"
+            @change="handlePageChange"
+            @show-size-change="handleSizeChange"
+          />
         </div>
       </div>
     </Card>
@@ -436,46 +452,38 @@ const toggleRole = (roleId: string) => {
         <div>
           <h3>{{ dialogTitle }}</h3>
         </div>
-        <form>
-          <div class="grid gap-4 py-4">
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">用户名</label>
+        <Form :model="userForm" :rules="userFormRules" layout="vertical" class="py-4" @finish="handleSubmit">
+          <div class="grid gap-4">
+            <FormItem label="用户名" name="username">
               <Input v-model:value="userForm.username" placeholder="请输入用户名" :disabled="!!currentUser.id" />
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">邮箱</label>
+            </FormItem>
+            <FormItem label="邮箱" name="email">
               <Input v-model:value="userForm.email" placeholder="请输入邮箱" />
-            </div>
-            <div v-if="!currentUser.id" class="grid gap-2">
-              <label class="text-sm font-medium">密码</label>
+            </FormItem>
+            <FormItem v-if="!currentUser.id" label="密码" name="password" :rules="[{ required: true, message: '请输入密码' }]">
               <Input v-model:value="userForm.password" type="password" placeholder="请输入密码" />
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">姓名</label>
+            </FormItem>
+            <FormItem label="姓名" name="name">
               <Input v-model:value="userForm.name" placeholder="请输入姓名" />
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">手机号</label>
+            </FormItem>
+            <FormItem label="手机号" name="phone">
               <Input v-model:value="userForm.phone" placeholder="请输入手机号" />
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">部门</label>
+            </FormItem>
+            <FormItem label="部门" name="department">
               <Input v-model:value="userForm.department" placeholder="请输入部门" />
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">岗位</label>
+            </FormItem>
+            <FormItem label="岗位" name="position">
               <Input v-model:value="userForm.position" placeholder="请输入岗位" />
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">头像</label>
+            </FormItem>
+            <FormItem label="头像" name="avatar">
               <Input v-model:value="userForm.avatar" placeholder="请输入头像URL" />
-            </div>
+            </FormItem>
           </div>
-        </form>
-        <div>
-          <Button  @click="dialogVisible = false">取消</Button>
-          <Button @click="handleSubmit">确定</Button>
-        </div>
+          <div class="flex justify-end gap-2">
+            <Button @click="dialogVisible = false">取消</Button>
+            <Button type="primary" html-type="submit">确定</Button>
+          </div>
+        </Form>
       </div>
     </Modal>
 
@@ -484,22 +492,20 @@ const toggleRole = (roleId: string) => {
         <div>
           <h3>重置密码</h3>
         </div>
-        <form>
-          <div class="grid gap-4 py-4">
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">新密码</label>
+        <Form :model="resetPasswordForm" :rules="resetPasswordFormRules" layout="vertical" class="py-4" @finish="handleResetPasswordSubmit">
+          <div class="grid gap-4">
+            <FormItem label="新密码" name="newPassword">
               <Input v-model:value="resetPasswordForm.newPassword" type="password" placeholder="请输入新密码" />
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">确认密码</label>
+            </FormItem>
+            <FormItem label="确认密码" name="confirmPassword">
               <Input v-model:value="resetPasswordForm.confirmPassword" type="password" placeholder="请确认新密码" />
-            </div>
+            </FormItem>
           </div>
-        </form>
-        <div>
-          <Button  @click="resetPasswordDialogVisible = false">取消</Button>
-          <Button @click="handleResetPasswordSubmit">确定</Button>
-        </div>
+          <div class="flex justify-end gap-2">
+            <Button @click="resetPasswordDialogVisible = false">取消</Button>
+            <Button type="primary" html-type="submit">确定</Button>
+          </div>
+        </Form>
       </div>
     </Modal>
 
@@ -516,7 +522,7 @@ const toggleRole = (roleId: string) => {
                 <Tag
                   v-for="role in userRoles"
                   :key="role.id"
-                  :color="role.type === 'system' ? 'destructive' : 'default'"
+                  :color="role.type === 'system' ? 'purple' : 'blue'"
                 >
                   {{ role.name }}
                 </Tag>
@@ -536,7 +542,7 @@ const toggleRole = (roleId: string) => {
                     @update:checked="toggleRole(role.id)"
                   />
                   <Tag
-                    :color="role.type === 'system' ? 'destructive' : 'default'"
+                    :color="role.type === 'system' ? 'purple' : 'blue'"
                     class="text-xs"
                   >
                     {{ role.type === 'system' ? '系统' : '自定义' }}
@@ -561,26 +567,27 @@ const toggleRole = (roleId: string) => {
           <h3>导入用户</h3>
         </div>
         <div class="py-4">
-          <Alert class="mb-6">
-            <h3 class="font-semibold">导入说明</h3>
-            <p class="mt-2">
-              <p>1. 请先下载导入模板，按照模板格式填写用户信息</p>
-              <p>2. 必填字段：用户名、邮箱、姓名</p>
-              <p>3. 如果不填写密码，系统将使用默认密码：Password123</p>
-              <p>4. 文件格式：.xlsx 或 .xls</p>
-            </p>
+          <Alert class="mb-6" type="info" show-icon title="导入说明">
+            <template #description>
+              <div class="space-y-1">
+                <div>1. 请先下载导入模板，按照模板格式填写用户信息</div>
+                <div>2. 必填字段：用户名、邮箱、姓名</div>
+                <div>3. 如果不填写密码，系统将使用默认密码：Password123</div>
+                <div>4. 文件格式：.xlsx 或 .xls</div>
+              </div>
+            </template>
           </Alert>
 
           <div class="text-center mb-6">
             <Button @click="handleDownloadTemplate">
-              <Download class="w-4 h-4 mr-2" />
+              <Download class="size-4 mr-2" />
               下载导入模板
             </Button>
           </div>
 
           <Divider class="my-4" />
 
-          <UploadComponent
+          <AUpload
             drag
             accept=".xlsx,.xls"
             :auto-upload="false"
@@ -591,7 +598,7 @@ const toggleRole = (roleId: string) => {
               <p class="text-sm font-medium">将文件拖到此处，或<em class="text-primary not-italic">点击上传</em></p>
               <p class="text-xs text-muted-foreground mt-1">仅支持 xlsx/xls 文件</p>
             </template>
-          </UploadComponent>
+          </AUpload>
 
           <div v-if="importResult" class="mt-6">
             <Divider class="my-4" />
@@ -627,5 +634,6 @@ const toggleRole = (roleId: string) => {
         </div>
       </div>
     </Modal>
+    <contextHolder />
   </div>
 </template>

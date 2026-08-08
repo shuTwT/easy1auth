@@ -40,7 +40,7 @@ async function handlePasskeyLogin() {
     </button>
 
     <div class="passkey-tips">
-      <Alert type="info" show-icon message="Passkey 是一种更安全、更便捷的登录方式" description="支持指纹、面部识别或安全密钥" />
+      <Alert type="info" show-icon title="Passkey 是一种更安全、更便捷的登录方式" description="支持指纹、面部识别或安全密钥" />
     </div>
   </div>
 </template>

@@ -2,13 +2,13 @@
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
-import { CircleX, LoaderCircle } from '@lucide/vue'
+import { Spin, message } from 'antdv-next'
 import { useAuth } from '@/composables/useAuth'
 import { isSocialProviderType } from '@/types/socialIdentityProvider'
 const route = useRoute()
 const router = useRouter()
 const { handleSocialCallback } = useAuth()
-const errorMessage = ref('')
+const failed = ref(false)
 
 const firstValue = (value: unknown): string | undefined => {
   if (typeof value === 'string') return value
@@ -29,25 +29,30 @@ onMounted(async () => {
   const state = firstValue(route.query.state)
   const providerError = firstValue(route.query.error_description) ?? firstValue(route.query.error)
 
+  const showFailure = (detail: string) => {
+    failed.value = true
+    message.error(detail)
+  }
+
   if (providerError) {
-    errorMessage.value = providerError
+    showFailure(providerError)
     return
   }
 
   if (!isSocialProviderType(provider)) {
-    errorMessage.value = '不支持的社会化身份源'
+    showFailure('不支持的社会化身份源')
     return
   }
 
   if (!code) {
-    errorMessage.value = '授权回调缺少必要的授权码'
+    showFailure('授权回调缺少必要的授权码')
     return
   }
 
   try {
     await handleSocialCallback(provider, code, state)
   } catch (error) {
-    errorMessage.value = getErrorMessage(error)
+    showFailure(getErrorMessage(error))
   }
 })
 </script>
@@ -56,22 +61,17 @@ onMounted(async () => {
   <main class="flex min-h-[100dvh] items-center justify-center bg-muted/40 p-4">
     <Card class="w-full max-w-md">
       <div class="text-center">
-        <h3>{{ errorMessage ? '授权登录失败' : '正在完成授权' }}</h3>
+        <h3>{{ failed ? '授权登录失败' : '正在完成授权' }}</h3>
         <p>
-          {{ errorMessage ? '请返回登录页重新发起授权' : '正在验证第三方账号信息，请稍候' }}
+          {{ failed ? '请返回登录页重新发起授权' : '正在验证第三方账号信息，请稍候' }}
         </p>
       </div>
       <div class="flex flex-col gap-4">
-        <Alert v-if="errorMessage" color="error">
-          <CircleX />
-          <h3>无法完成登录</h3>
-          <p>{{ errorMessage }}</p>
-        </Alert>
-        <div v-else class="flex items-center justify-center gap-3 py-6 text-muted-foreground" aria-live="polite">
-          <LoaderCircle class="animate-spin" />
+        <div v-if="!failed" class="flex items-center justify-center gap-3 py-6 text-muted-foreground" aria-live="polite">
+          <Spin />
           <span>处理授权结果...</span>
         </div>
-        <Button v-if="errorMessage" @click="router.replace('/login')">
+        <Button v-if="failed" @click="router.replace('/login')">
           返回登录页
         </Button>
       </div>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue'
-import { Table, message } from 'antdv-next'
+import { Modal, Table, message, Pagination as AntPagination } from 'antdv-next'
 import { FileText, CheckCircle, XCircle, Clock, Search, RefreshCw, Download, Trash2 } from '@lucide/vue'
 import { auditApi } from '@/api/audit'
 import type { AuditLog, AuditLogQueryDto, AuditLogStats } from '@/types/audit'
@@ -10,6 +10,8 @@ const total = ref(0)
 const stats = ref<AuditLogStats | null>(null)
 const detailDialogVisible = ref(false)
 const currentLog = ref<AuditLog | null>(null)
+
+const [modal, contextHolder] = Modal.useModal()
 
 const queryForm = reactive<AuditLogQueryDto>({
   page: 1,
@@ -50,6 +52,7 @@ const loadStats = async () => {
     stats.value = res
   } catch (error) {
     console.error('加载统计数据失败:', error)
+    message.error('加载审计统计数据失败')
   }
 }
 
@@ -71,7 +74,7 @@ const handleReset = () => {
   loadLogs()
 }
 
-const handlePageChange = (page: number) => {
+const handlePageChange = (page: number, _pageSize?: number) => {
   queryForm.page = page
   loadLogs()
 }
@@ -99,7 +102,13 @@ const handleExport = async (format: 'csv' | 'json') => {
 }
 
 const handleCleanup = async () => {
-  const confirmed = window.confirm('确定要清理90天前的审计日志吗？此操作不可恢复！')
+  const confirmed = await modal.confirm({
+    title: '清理审计日志',
+    content: '确定要清理 90 天前的审计日志吗？此操作不可恢复！',
+    okText: '清理',
+    cancelText: '取消',
+    okButtonProps: { danger: true },
+  })
   if (!confirmed) return
 
   try {
@@ -127,16 +136,16 @@ const getTypeText = (type: string) => {
 }
 
 const getTypeVariant = (type: string) => {
-  const typeVariantMap: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-    auth: 'default',
-    user: 'secondary',
-    application: 'outline',
-    tenant: 'destructive',
-    role: 'secondary',
-    group: 'outline',
-    system: 'outline'
+  const typeVariantMap: Record<string, string> = {
+    auth: 'blue',
+    user: 'green',
+    application: 'purple',
+    tenant: 'red',
+    role: 'orange',
+    group: 'cyan',
+    system: 'default'
   }
-  return typeVariantMap[type] || 'secondary'
+  return typeVariantMap[type] || 'default'
 }
 
 const getActionText = (action: string) => {
@@ -168,14 +177,12 @@ const getStatusText = (status: string) => {
 }
 
 const getStatusVariant = (status: string) => {
-  return status === 'success' ? 'default' : 'destructive'
+  return status === 'success' ? 'green' : 'red'
 }
 
 const formatDate = (date: string) => {
   return new Date(date).toLocaleString()
 }
-
-const totalPages = () => Math.ceil(total.value / queryForm.pageSize!)
 
 onMounted(() => {
   loadLogs()
@@ -184,17 +191,23 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="audit-log-management p-5">
-    <div class="grid grid-cols-4 gap-5 mb-5">
+  <div class="p-6 min-h-[calc(100vh-64px)]">
+    <div class="flex justify-between items-start mb-6">
+      <div class="flex-1">
+        <h1 class="text-2xl font-bold text-foreground mb-2">审计日志</h1>
+        <p class="text-sm text-muted-foreground">查看系统操作记录和安全审计信息</p>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-5">
       <Card>
         <div class="pt-6">
           <div class="flex items-center">
-            <div class="w-15 h-15 rounded-lg flex items-center justify-center mr-4 bg-blue-500">
-              <FileText class="w-7 h-7 text-white" />
+            <div class="size-11 rounded-lg flex items-center justify-center mr-4 bg-primary">
+              <FileText class="size-5 text-white" />
             </div>
             <div>
-              <div class="text-2xl font-bold text-slate-800">{{ stats?.totalLogs || 0 }}</div>
-              <div class="text-sm text-slate-400">总日志数</div>
+              <div class="text-2xl font-bold text-foreground">{{ stats?.totalLogs || 0 }}</div>
+              <div class="text-sm text-muted-foreground">总日志数</div>
             </div>
           </div>
         </div>
@@ -202,12 +215,12 @@ onMounted(() => {
       <Card>
         <div class="pt-6">
           <div class="flex items-center">
-            <div class="w-15 h-15 rounded-lg flex items-center justify-center mr-4 bg-green-500">
-              <CheckCircle class="w-7 h-7 text-white" />
+            <div class="size-11 rounded-lg flex items-center justify-center mr-4 bg-emerald-500">
+              <CheckCircle class="size-5 text-white" />
             </div>
             <div>
-              <div class="text-2xl font-bold text-slate-800">{{ stats?.successLogs || 0 }}</div>
-              <div class="text-sm text-slate-400">成功日志</div>
+              <div class="text-2xl font-bold text-foreground">{{ stats?.successLogs || 0 }}</div>
+              <div class="text-sm text-muted-foreground">成功日志</div>
             </div>
           </div>
         </div>
@@ -215,12 +228,12 @@ onMounted(() => {
       <Card>
         <div class="pt-6">
           <div class="flex items-center">
-            <div class="w-15 h-15 rounded-lg flex items-center justify-center mr-4 bg-red-500">
-              <XCircle class="w-7 h-7 text-white" />
+            <div class="size-11 rounded-lg flex items-center justify-center mr-4 bg-destructive">
+              <XCircle class="size-5 text-white" />
             </div>
             <div>
-              <div class="text-2xl font-bold text-slate-800">{{ stats?.failedLogs || 0 }}</div>
-              <div class="text-sm text-slate-400">失败日志</div>
+              <div class="text-2xl font-bold text-foreground">{{ stats?.failedLogs || 0 }}</div>
+              <div class="text-sm text-muted-foreground">失败日志</div>
             </div>
           </div>
         </div>
@@ -228,12 +241,12 @@ onMounted(() => {
       <Card>
         <div class="pt-6">
           <div class="flex items-center">
-            <div class="w-15 h-15 rounded-lg flex items-center justify-center mr-4 bg-amber-500">
-              <Clock class="w-7 h-7 text-white" />
+            <div class="size-11 rounded-lg flex items-center justify-center mr-4 bg-amber-500">
+              <Clock class="size-5 text-white" />
             </div>
             <div>
-              <div class="text-2xl font-bold text-slate-800">{{ stats?.todayLogs || 0 }}</div>
-              <div class="text-sm text-slate-400">今日日志</div>
+              <div class="text-2xl font-bold text-foreground">{{ stats?.todayLogs || 0 }}</div>
+              <div class="text-sm text-muted-foreground">今日日志</div>
             </div>
           </div>
         </div>
@@ -242,29 +255,29 @@ onMounted(() => {
 
     <Card>
       <div class="flex flex-row items-center justify-between">
-        <h3>审计日志</h3>
+        <div></div>
         <div class="flex gap-2">
           <Button size="small" @click="handleExport('json')">
-            <Download class="w-4 h-4 mr-2" />
+            <Download class="size-4 mr-2" />
             导出JSON
           </Button>
           <Button size="small"  @click="handleExport('csv')">
-            <Download class="w-4 h-4 mr-2" />
+            <Download class="size-4 mr-2" />
             导出CSV
           </Button>
-          <Button size="small" color="error" @click="handleCleanup">
-            <Trash2 class="w-4 h-4 mr-2" />
+            <Button size="small" danger @click="handleCleanup">
+            <Trash2 class="size-4 mr-2" />
             清理日志
           </Button>
         </div>
       </div>
       <div>
         <div class="flex flex-wrap items-end gap-4 mb-5">
-          <div class="grid gap-1.5">
+          <div class="grid gap-2">
             <label>用户名</label>
             <Input v-model:value="queryForm.username" placeholder="请输入用户名" class="w-[150px]" />
           </div>
-          <div class="grid gap-1.5">
+          <div class="grid gap-2">
             <label>日志类型</label>
             <Select v-model:value="queryForm.type" class="w-[150px]" allow-clear>
                 <SelectOptGroup>
@@ -279,11 +292,11 @@ onMounted(() => {
 
             </Select>
           </div>
-          <div class="grid gap-1.5">
+          <div class="grid gap-2">
             <label>操作</label>
             <Input v-model:value="queryForm.action" placeholder="请输入操作" class="w-[150px]" />
           </div>
-          <div class="grid gap-1.5">
+          <div class="grid gap-2">
             <label>状态</label>
             <Select v-model:value="queryForm.status" class="w-[120px]" allow-clear>
                 <SelectOptGroup>
@@ -293,11 +306,11 @@ onMounted(() => {
 
             </Select>
           </div>
-          <div class="grid gap-1.5">
+          <div class="grid gap-2">
             <label>IP地址</label>
             <Input v-model:value="queryForm.ip" placeholder="请输入IP地址" class="w-[150px]" />
           </div>
-          <div class="grid gap-1.5">
+          <div class="grid gap-2">
             <label>时间范围</label>
             <div class="flex items-center gap-2">
               <Input v-model:value="queryForm.startDate" type="date" class="w-[140px]" />
@@ -307,11 +320,11 @@ onMounted(() => {
           </div>
           <div class="flex gap-2">
             <Button size="small" @click="handleSearch">
-              <Search class="w-4 h-4 mr-2" />
+              <Search class="size-4 mr-2" />
               搜索
             </Button>
             <Button size="small"  @click="handleReset">
-              <RefreshCw class="w-4 h-4 mr-2" />
+              <RefreshCw class="size-4 mr-2" />
               重置
             </Button>
           </div>
@@ -328,30 +341,33 @@ onMounted(() => {
             <template v-if="column.key === 'createdAt'">{{ formatDate(item.createdAt) }}</template>
             <template v-else-if="column.key === 'username'">{{ item.username || '-' }}</template>
             <template v-else-if="column.key === 'type'">
-                <Tag :color="getTypeVariant(item.type)" size="sm">
+            <Tag :color="getTypeVariant(item.type)">
                   {{ getTypeText(item.type) }}
                 </Tag>
             </template>
             <template v-else-if="column.key === 'action'">{{ getActionText(item.action) }}</template>
             <template v-else-if="column.key === 'status'">
-                <Tag :color="getStatusVariant(item.status)" size="sm">
+            <Tag :color="getStatusVariant(item.status)">
                   {{ getStatusText(item.status) }}
                 </Tag>
             </template>
             <template v-else-if="column.key === 'errorMessage'"><span class="text-muted-foreground">{{ item.errorMessage || '-' }}</span></template>
             <template v-else-if="column.key === 'actions'">
-                <Button type="link" size="small" @click="handleViewDetail(item)">详情</Button>
+                <Button type="link" size="small" class="h-auto p-0" @click="handleViewDetail(item)">详情</Button>
             </template>
           </template>
         </Table>
 
-        <div class="flex items-center justify-between mt-5">
+        <div class="flex items-center justify-between mt-4 pt-4 border-t">
           <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
-          <div class="flex items-center gap-2">
-            <Button  size="small" :disabled="queryForm.page! <= 1" @click="handlePageChange(queryForm.page! - 1)">上一页</Button>
-            <span class="text-sm px-2">{{ queryForm.page! }} / {{ totalPages() }}</span>
-            <Button  size="small" :disabled="queryForm.page! >= totalPages()" @click="handlePageChange(queryForm.page! + 1)">下一页</Button>
-          </div>
+          <AntPagination
+            :current="queryForm.page"
+            :page-size="queryForm.pageSize"
+            :total="total"
+            :show-size-changer="false"
+            size="small"
+            @change="handlePageChange"
+          />
         </div>
       </div>
     </Card>
@@ -381,7 +397,7 @@ onMounted(() => {
           <div class="space-y-1">
             <label class="text-muted-foreground">类型</label>
             <div class="text-sm">
-              <Tag :color="getTypeVariant(currentLog.type)" size="sm">
+          <Tag :color="getTypeVariant(currentLog.type)">
                 {{ getTypeText(currentLog.type) }}
               </Tag>
             </div>
@@ -417,7 +433,7 @@ onMounted(() => {
           <div class="space-y-1">
             <label class="text-muted-foreground">状态</label>
             <div class="text-sm">
-              <Tag :color="getStatusVariant(currentLog.status)" size="sm">
+          <Tag :color="getStatusVariant(currentLog.status)">
                 {{ getStatusText(currentLog.status) }}
               </Tag>
             </div>
@@ -436,5 +452,6 @@ onMounted(() => {
         </div>
       </div>
     </Modal>
+    <contextHolder />
   </div>
 </template>
