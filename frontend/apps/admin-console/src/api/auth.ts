@@ -8,8 +8,6 @@ import type {
   RegisterResponse,
   PasskeyLoginStartResponse,
   PasskeyLoginFinishRequest,
-  SocialLoginRequest,
-  SocialLoginResponse
 } from '@/types/auth'
 
 export const authApi = {
@@ -34,14 +32,6 @@ export const authApi = {
 
   passkeyLoginFinish(data: PasskeyLoginFinishRequest): Promise<LoginResponse> {
     return request.post('/auth/passkey/finish', data)
-  },
-
-  socialLogin(data: SocialLoginRequest): Promise<SocialLoginResponse> {
-    return request.post('/auth/social', data)
-  },
-
-  getSocialLoginUrl(provider: string): Promise<{ url: string }> {
-    return request.get(`/auth/social/${provider}/url`)
   },
 
   refreshToken(refreshToken: string): Promise<{ token: string; refreshToken: string }> {

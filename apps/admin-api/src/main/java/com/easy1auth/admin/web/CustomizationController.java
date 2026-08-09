@@ -6,7 +6,6 @@ import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.ManagementPermissionCode;
 import com.easy1auth.customization.*;
 import com.easy1auth.foundation.web.ApiResponse;
-import com.fasterxml.jackson.annotation.JsonAnySetter;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -19,44 +18,44 @@ public class CustomizationController {
         this.service = service;
     }
 
-    @TenantManagementPermission(value = ManagementPermissionCode.BRAND_READ)
-    @GetMapping("/api/brand-settings")
-    ApiResponse<?> brand() {
-        var e = service.brand();
-        return ApiResponse.ok(new BrandSettingsResponse(e.tenantId(), e.settings(), e.updatedAt()));
-    }
-
-    @TenantManagementPermission(value = ManagementPermissionCode.BRAND_UPDATE)
-    @PutMapping("/api/brand-settings")
-    ApiResponse<?> brandUpdate(@RequestBody BrandSettingsInput in) {
-        var e = service.updateBrand(in == null ? null : in.settings());
-        return ApiResponse.ok(new BrandSettingsResponse(e.tenantId(), e.settings(), e.updatedAt()), "品牌设置更新成功");
-    }
-
     @TenantManagementPermission(value = ManagementPermissionCode.LOGIN_STYLE_READ)
-    @GetMapping("/api/login-style")
-    ApiResponse<?> style() {
-        return ApiResponse.ok(service.style());
+    @GetMapping("/api/login-style/draft")
+    ApiResponse<?> styleDraft() {
+        return ApiResponse.ok(service.draft());
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.LOGIN_STYLE_UPDATE)
-    @PutMapping("/api/login-style")
-    ApiResponse<?> styleUpdate(@RequestBody CustomizationService.StyleInput in) {
-        return ApiResponse.ok(service.updateStyle(in), "登录样式更新成功");
+    @PutMapping("/api/login-style/draft")
+    ApiResponse<?> styleDraftUpdate(@RequestBody CustomizationService.DraftInput in) {
+        return ApiResponse.ok(service.updateDraft(in), "登录页草稿已保存");
+    }
+
+    @TenantManagementPermission(value = ManagementPermissionCode.LOGIN_STYLE_UPDATE)
+    @PostMapping("/api/login-style/publish")
+    ApiResponse<?> stylePublish() {
+        return ApiResponse.ok(service.publish(), "登录页配置已发布");
+    }
+
+    @TenantManagementPermission(value = ManagementPermissionCode.LOGIN_STYLE_UPDATE)
+    @PostMapping("/api/login-style/reset")
+    ApiResponse<?> styleReset() {
+        return ApiResponse.ok(service.resetDraft(), "登录页草稿已恢复默认");
     }
 
     @ManagementRouteClassification(ManagementRouteKind.PUBLIC)
     @GetMapping("/api/login-style/public")
     ApiResponse<?> publicStyle(@RequestParam(required = false) UUID tenantId) {
         if (tenantId == null)
-            return ApiResponse.ok(new PublicStyleView(null, null, null, "#f5f7fa", "#0369A1", "Easy1Auth", "企业级身份管理平台", List.of("password"), List.of()));
+            return ApiResponse.ok(new PublicStyleView(null, null, null, "#f5f7fa", "#0369A1", "Easy1Auth", "企业级身份管理平台", List.of("password"), List.of(), Map.of(), null, null));
         var style = service.publicStyle(tenantId);
-        return ApiResponse.ok(new PublicStyleView(style.logo(), style.logoDark(), style.backgroundImage(), style.backgroundColor(), style.primaryColor(), style.title(), style.subtitle(), style.loginMethods(), style.socialProviders()));
+        var legal = service.publishedLegalDocuments(tenantId);
+        return ApiResponse.ok(new PublicStyleView(style.logo(), style.logoDark(), style.backgroundImage(), style.backgroundColor(), style.primaryColor(), style.title(), style.subtitle(), style.loginMethods(), style.socialProviders(), service.publishedConfig(tenantId), legal.termsOfService(), legal.privacyPolicy()));
     }
 
     record PublicStyleView(String logo, String logoDark, String backgroundImage, String backgroundColor,
                            String primaryColor, String title, String subtitle, List<String> loginMethods,
-                           List<String> socialProviders) {
+                           List<String> socialProviders, Map<String, Object> config,
+                           String termsOfService, String privacyPolicy) {
     }
 
     @TenantManagementPermission(value = ManagementPermissionCode.CUSTOM_DOMAIN_LIST)
@@ -126,21 +125,4 @@ public class CustomizationController {
     public record DomainInput(String domain, String verificationMethod) {
     }
 
-    public static final class BrandSettingsInput {
-        private final Map<String, Object> fields = new LinkedHashMap<>();
-
-        @JsonAnySetter
-        public void set(String name, Object value) {
-            fields.put(name, value);
-        }
-
-        @SuppressWarnings("unchecked")
-        Map<String, Object> settings() {
-            Object nested = fields.get("brandSettings");
-            return nested instanceof Map<?, ?> map ? (Map<String, Object>) map : fields;
-        }
-    }
-
-    public record BrandSettingsResponse(UUID tenantId, Map<String, Object> brandSettings, java.time.Instant updatedAt) {
-    }
 }

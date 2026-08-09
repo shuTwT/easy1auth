@@ -93,21 +93,3 @@ export interface PasskeyLoginFinishRequest {
     type: string
   }
 }
-
-export interface SocialLoginRequest {
-  provider: string
-  code: string
-  state?: string
-}
-
-export interface SocialLoginResponse {
-  token: string
-  refreshToken: string
-  user: {
-    id: string
-    username: string
-    email: string
-    avatar?: string
-  }
-  isNewUser: boolean
-}

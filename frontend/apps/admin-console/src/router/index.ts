@@ -75,9 +75,9 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '角色管理', requiresAuth: true }
       },
       {
-        path: 'social-identity-provider',
-        name: 'SocialIdentityProvider',
-        component: () => import('@/views/socialIdentityProvider/index.vue'),
+        path: 'social-identity-source',
+        name: 'SocialIdentitySource',
+        component: () => import('@/views/socialIdentitySource/index.vue'),
         meta: { title: '社会化身份源', requiresAuth: true }
       },
       {
@@ -87,10 +87,22 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '企业身份源', requiresAuth: true }
       },
       {
-        path: 'brand-settings',
-        name: 'BrandSettings',
-        component: () => import('@/views/brandSettings/index.vue'),
-        meta: { title: '品牌设置', requiresAuth: true }
+        path: 'brand-login-style',
+        name: 'BrandLoginStyle',
+        component: () => import('@/views/personalization/LoginStyleBuilder.vue'),
+        meta: { title: '个性化登录页面', brandSection: 'loginStyle', requiresAuth: true }
+      },
+      {
+        path: 'message-service',
+        name: 'MessageService',
+        component: () => import('@/views/personalization/index.vue'),
+        meta: { title: '消息服务', brandSection: 'templates', requiresAuth: true }
+      },
+      {
+        path: 'custom-domain',
+        name: 'CustomDomain',
+        component: () => import('@/views/personalization/index.vue'),
+        meta: { title: '自定义域名', brandSection: 'domains', requiresAuth: true }
       },
       {
         path: 'security',
@@ -110,12 +122,8 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/adminUser/index.vue'),
         meta: { title: '管理员管理', requiresAuth: true }
       },
-      {
-        path: 'personalization',
-        name: 'Personalization',
-        component: () => import('@/views/personalization/index.vue'),
-        meta: { title: '个性化设置', requiresAuth: true }
-      },
+      // Keep the retired personalization URL as a compatibility redirect.
+      { path: 'personalization', redirect: '/brand-login-style' },
       {
         path: 'profile',
         name: 'Profile',
@@ -134,12 +142,6 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/login/index.vue'),
     meta: { title: '登录', requiresAuth: false }
   },
-  {
-    path: '/auth/callback/:provider',
-    name: 'SocialAuthCallback',
-    component: () => import('@/views/auth/callback.vue'),
-    meta: { title: '社会化登录', requiresAuth: false }
-  }
 ]
 
 const router = createRouter({

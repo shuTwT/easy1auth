@@ -41,6 +41,9 @@ import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 import org.springframework.http.MediaType;
+import org.springframework.security.web.authentication.AuthenticationFailureHandler;
+
+import java.nio.charset.StandardCharsets;
 
 import java.util.*;
 
@@ -106,7 +109,10 @@ public class SecurityConfiguration {
         var configurer = OAuth2AuthorizationServerConfigurer.authorizationServer();
         http.securityMatcher(configurer.getEndpointsMatcher())
                 .with(configurer, server -> server.registeredClientRepository(clients).authorizationService(authorizations).authorizationConsentService(consents)
-                        .authorizationEndpoint(endpoint -> endpoint.consentPage("/oauth-consent/start")).oidc(Customizer.withDefaults()))
+                        .authorizationEndpoint(endpoint -> endpoint
+                                .consentPage("/oauth-consent/start")
+                                .errorResponseHandler(oauthErrorResponseHandler()))
+                        .oidc(Customizer.withDefaults()))
                 .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()).ignoringRequestMatchers(configurer.getEndpointsMatcher()))
                 .addFilterAfter(issuerHostValidation, SecurityContextHolderFilter.class)
                 .addFilterAfter(tenantPrincipalValidation, IssuerHostValidationFilter.class)
@@ -123,11 +129,36 @@ public class SecurityConfiguration {
         return http.build();
     }
 
+    /**
+     * 返回授权请求的结构化错误，避免 redirect_uri 无效等错误进入 Spring Boot
+     * 默认的 Whitelabel Error Page。这里不能盲目重定向：当 redirect_uri 本身
+     * 不可信时，OAuth2 规范要求错误留在授权服务器，不能把错误发往请求方。
+     */
+    private static AuthenticationFailureHandler oauthErrorResponseHandler() {
+        return (request, response, exception) -> {
+            OAuth2Error error = exception instanceof OAuth2AuthenticationException oauth
+                    ? oauth.getError() : null;
+            String code = error == null || error.getErrorCode() == null ? "invalid_request" : error.getErrorCode();
+            String description = error == null ? null : error.getDescription();
+            if (description == null || description.isBlank()) description = exception.getMessage();
+            if (description == null || description.isBlank()) description = "OAuth2 授权请求无效";
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+            response.getWriter().write("{\"error\":\"" + json(code) + "\",\"error_description\":\""
+                    + json(description) + "\",\"path\":\"" + json(request.getRequestURI()) + "\"}");
+        };
+    }
+
+    private static String json(String value) {
+        return value.replace("\\", "\\\\").replace("\"", "\\\"").replace("\r", "\\r").replace("\n", "\\n");
+    }
+
     @Bean
     @Order(2)
     SecurityFilterChain applicationSecurity(HttpSecurity http, AuthenticationProvider provider) throws Exception {
         return http.authenticationProvider(provider)
-                .authorizeHttpRequests(auth -> auth.requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info", "/livez", "/readyz", "/auth-portal-api/**", "/oauth-login", "/oauth-login/mfa", "/oauth-consent/start", "/t/*/federation/**", "/error").permitAll().anyRequest().authenticated())
+                .authorizeHttpRequests(auth -> auth.requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info", "/livez", "/readyz", "/auth-portal-api/**", "/oauth-login", "/oauth-login/mfa", "/oauth-consent/start", "/t/*/social/**", "/error").permitAll().anyRequest().authenticated())
                 .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
                 .build();
     }

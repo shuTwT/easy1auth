@@ -135,8 +135,11 @@ public class SecurityPolicyService {
     @Transactional
     public Challenge issueEmailChallenge(String subjectType, UUID subject, UUID tenant, String purpose, String destination) {
         Instant now = Instant.now();
-        var recent = sql.createQuery(CHALLENGE).where(CHALLENGE.subjectType().eq(subjectType), CHALLENGE.subjectId().eq(subject), CHALLENGE.purpose().eq(purpose), CHALLENGE.factorType().eq("email"), CHALLENGE.createdAt().gt(now.minusSeconds(60))).select(CHALLENGE.id()).exists();
-        if (recent) throw new DomainException(ErrorCodeConstants.CODE_RATE_LIMITED);
+        var recentQuery = sql.createQuery(CHALLENGE).where(CHALLENGE.subjectType().eq(subjectType), CHALLENGE.purpose().eq(purpose), CHALLENGE.factorType().eq("email"), CHALLENGE.createdAt().gt(now.minusSeconds(60)));
+        if (subject != null) recentQuery.where(CHALLENGE.subjectId().eq(subject));
+        else if (destination != null) recentQuery.where(CHALLENGE.destination().eq(destination));
+        if (recentQuery.select(CHALLENGE.id()).exists())
+            throw new DomainException(ErrorCodeConstants.CODE_RATE_LIMITED);
         String token = randomToken(32), code = String.format(Locale.ROOT, "%06d", random.nextInt(1_000_000));
         var e = AuthenticationChallengeEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTokenHash(hash(token)).setSubjectType(subjectType).setSubjectId(subject).setTenantId(tenant).setPurpose(purpose).setDestination(destination).setFactorType("email").setCodeHash(hash(code)).setAttempts(0).setMaxAttempts(5).setExpiresAt(now.plusSeconds(600)).setConsumedAt(null).setCreatedAt(now).setLastSentAt(now));
         sql.saveCommand(e).setMode(SaveMode.INSERT_ONLY).execute();
@@ -159,6 +162,27 @@ public class SecurityPolicyService {
         if (sql.createUpdate(CHALLENGE).set(CHALLENGE.consumedAt(), Instant.now()).where(CHALLENGE.id().eq(row.id()), CHALLENGE.consumedAt().isNull()).execute() != 1)
             throw new DomainException(ErrorCodeConstants.MFA_CHALLENGE_REPLAYED);
         return new ConsumedEmailChallenge(row.subjectId(), row.destination());
+    }
+
+    /**
+     * 消费注册场景的邮箱验证码挑战。
+     *
+     * <p>与 {@link #consumeEmailChallenge} 的区别在于注册场景下 {@code subject_id}
+     * 为 null（用户尚未创建），因此不校验该字段。其余校验（过期、次数、重放）
+     * 与普通邮箱挑战一致。</p>
+     */
+    @Transactional
+    public ConsumedEmailChallenge consumeRegistrationEmailChallenge(String token, String code, String purpose) {
+        var row = sql.createQuery(CHALLENGE).where(CHALLENGE.tokenHash().eq(hash(token)), CHALLENGE.subjectType().eq("registration"), CHALLENGE.purpose().eq(purpose), CHALLENGE.factorType().eq("email")).select(CHALLENGE).forUpdate().fetchOneOrNull();
+        if (row == null || row.consumedAt() != null || row.expiresAt().isBefore(Instant.now()) || row.attempts() >= row.maxAttempts())
+            throw new DomainException(ErrorCodeConstants.MFA_CHALLENGE_INVALID);
+        if (row.codeHash() == null || !MessageDigest.isEqual(hash(code).getBytes(StandardCharsets.US_ASCII), row.codeHash().getBytes(StandardCharsets.US_ASCII))) {
+            sql.createUpdate(CHALLENGE).set(CHALLENGE.attempts(), CHALLENGE.attempts().plus(1)).where(CHALLENGE.id().eq(row.id())).execute();
+            throw new DomainException(ErrorCodeConstants.MFA_CODE_INVALID);
+        }
+        if (sql.createUpdate(CHALLENGE).set(CHALLENGE.consumedAt(), Instant.now()).where(CHALLENGE.id().eq(row.id()), CHALLENGE.consumedAt().isNull()).execute() != 1)
+            throw new DomainException(ErrorCodeConstants.MFA_CHALLENGE_REPLAYED);
+        return new ConsumedEmailChallenge(null, row.destination());
     }
 
     @Transactional

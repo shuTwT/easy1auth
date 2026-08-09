@@ -20,14 +20,13 @@ import {
 } from 'antdv-next'
 import { useUserStore } from '@/stores/user'
 import { authorizationApi } from '@/api/authorization'
-import { brandSettingsApi } from '@/api/brandSettings'
 import { tenantApi, type TenantPackageOption } from '@/api/tenant'
-import { setAdminTheme } from '@/config/antd'
 import type { ManagementMenu } from '@/types/authorization'
 import {
   Bell,
   Building2,
   ChevronDown,
+  Globe2,
   LayoutDashboard,
   Link2,
   Lock,
@@ -36,6 +35,7 @@ import {
   LogOut,
   Menu as MenuIcon,
   Monitor,
+  Mail,
   Package,
   Palette,
   PanelLeftClose,
@@ -45,7 +45,6 @@ import {
   UserRound,
   Users,
   BriefcaseBusiness,
-  WandSparkles,
 } from '@lucide/vue'
 
 interface SidebarMenuItem {
@@ -83,15 +82,17 @@ const menuIcons: Record<string, Component> = {
   permission: LockKeyhole,
   'admin-user': UserCog,
   application: Monitor,
-  'social-identity-provider': Link2,
+  'social-identity-source': Link2,
   'enterprise-identity-source': Building2,
   'identity-source-management': KeyRound,
   tenant: Building2,
   'tenant-package': Package,
   'menu-management': MenuIcon,
-  'brand-settings': Palette,
+  'brand-management': Palette,
+  'brand-login-style': Palette,
+  'message-service': Mail,
+  'custom-domain': Globe2,
   security: Lock,
-  personalization: WandSparkles,
   audit: ScrollText,
 }
 
@@ -244,21 +245,9 @@ async function loadAuthorizedMenus() {
   }
 }
 
-onMounted(async () => {
+onMounted(() => {
   updateMobile()
   window.addEventListener('resize', updateMobile)
-  try {
-    const response = await brandSettingsApi.get()
-    const panel = (response as any).brandSettings?.adminPanel
-    setAdminTheme(panel)
-    if (panel?.customCSS) {
-      const style = document.getElementById('custom-admin-styles') || document.head.appendChild(Object.assign(document.createElement('style'), { id: 'custom-admin-styles' }))
-      style.textContent = panel.customCSS
-    }
-  } catch (error) {
-    console.error('加载品牌设置失败:', error)
-    message.warning('加载品牌设置失败，已使用默认主题')
-  }
 })
 
 onBeforeUnmount(() => window.removeEventListener('resize', updateMobile))

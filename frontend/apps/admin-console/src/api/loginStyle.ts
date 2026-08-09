@@ -1,40 +1,22 @@
 import request from '@/utils/request'
+import type { LoginStyleConfig, LoginStyleLegalDocuments } from '@easy1auth/types'
 
-export interface LoginStyle {
-  id: string
-  logo?: string
-  logoDark?: string
-  backgroundImage?: string
-  backgroundColor: string
-  primaryColor: string
-  title: string
-  subtitle: string
-  customCSS?: string
-  loginMethods?: string[]
-  socialProviders?: string[]
-  createdAt: string
-  updatedAt: string
-}
+export type { LoginStyleLegalDocuments } from '@easy1auth/types'
 
-export interface UpdateLoginStyleDto {
-  logo?: string
-  logoDark?: string
-  backgroundImage?: string
-  backgroundColor?: string
-  primaryColor?: string
-  title?: string
-  subtitle?: string
-  customCSS?: string
-  loginMethods?: string[]
-  socialProviders?: string[]
+export interface LoginStyleDraftResponse {
+  config: LoginStyleConfig
+  legalDocuments: LoginStyleLegalDocuments
+  draftUpdatedAt: string
+  publishedAt?: string | null
 }
 
 export const loginStyleApi = {
-  get: ():Promise<LoginStyle> => request.get('/login-style'),
-  
-  update: (data: UpdateLoginStyleDto):Promise<LoginStyle> => 
-    request.put('/login-style', data),
-  
-  getPublic: (domain?: string):Promise<LoginStyle> => 
-    request.get('/login-style/public', { params: { domain } }),
+  getDraft: (): Promise<LoginStyleDraftResponse> => request.get('/login-style/draft'),
+
+  saveDraft: (data: { config: LoginStyleConfig; legalDocuments: LoginStyleLegalDocuments }): Promise<LoginStyleDraftResponse> =>
+    request.put('/login-style/draft', data),
+
+  publish: (): Promise<LoginStyleDraftResponse> => request.post('/login-style/publish'),
+
+  reset: (): Promise<LoginStyleDraftResponse> => request.post('/login-style/reset'),
 }

@@ -1,6 +1,7 @@
 import { shallowRef, computed, onScopeDispose } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'antdv-next'
+import axios from 'axios'
 import { authApi } from '@/api/auth'
 import { useUserStore } from '@/stores/user'
 import type {
@@ -8,6 +9,20 @@ import type {
   RegisterRequest,
   SendCodeRequest
 } from '@/types/auth'
+
+type ApiErrorResponse = {
+  msg?: string
+}
+
+function getAuthErrorMessage(error: unknown, fallback: string): string {
+  if (axios.isAxiosError<ApiErrorResponse>(error)) {
+    return error.response?.data?.msg || fallback
+  }
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+  return fallback
+}
 
 export function useAuth() {
   const router = useRouter()
@@ -51,15 +66,17 @@ export function useAuth() {
       message.success('登录成功')
       await router.push('/dashboard')
       return response
+    } catch (error: unknown) {
+      message.error(getAuthErrorMessage(error, '登录失败，请稍后重试'))
     } finally {
       loading.value = false
     }
   }
 
   async function verifyMfa(code: string) {
-    if (!mfaChallenge.value) throw new Error('MFA 挑战不存在或已过期')
     loading.value = true
     try {
+      if (!mfaChallenge.value) throw new Error('MFA 挑战不存在或已过期')
       const response = await authApi.verifyMfa(mfaChallenge.value, code)
       if (!response.token || !response.refreshToken || !response.user) throw new Error('MFA 登录响应无效')
       mfaChallenge.value = null
@@ -72,6 +89,8 @@ export function useAuth() {
       message.success('登录成功')
       await router.push('/dashboard')
       return response
+    } catch (error: unknown) {
+      message.error(getAuthErrorMessage(error, '身份验证失败，请重试'))
     } finally { loading.value = false }
   }
 
@@ -85,6 +104,8 @@ export function useAuth() {
       message.success('验证码已发送')
       startCountdown(60)
       return response
+    } catch (error: unknown) {
+      message.error(getAuthErrorMessage(error, '验证码发送失败，请稍后重试'))
     } finally {
       sendingCode.value = false
     }
@@ -128,6 +149,8 @@ export function useAuth() {
       message.success('注册成功')
       await router.push('/dashboard')
       return response
+    } catch (error: unknown) {
+      message.error(getAuthErrorMessage(error, '注册失败，请稍后重试'))
     } finally {
       loading.value = false
     }
@@ -178,41 +201,12 @@ export function useAuth() {
       message.success('登录成功')
       await router.push('/dashboard')
       return loginResponse
-    } catch (error: any) {
-      if (error.name === 'NotAllowedError') {
+    } catch (error: unknown) {
+      if (error instanceof DOMException && error.name === 'NotAllowedError') {
         message.error('用户取消或认证超时')
-      }
-      throw error
-    } finally {
-      loading.value = false
-    }
-  }
-
-  async function socialLogin(provider: string) {
-    loading.value = true
-    try {
-      const { url } = await authApi.getSocialLoginUrl(provider)
-      window.location.href = url
-    } finally {
-      loading.value = false
-    }
-  }
-
-  async function handleSocialCallback(provider: string, code: string, state?: string) {
-    loading.value = true
-    try {
-      const response = await authApi.socialLogin({ provider, code, state })
-      userStore.setSession(response.token, response.refreshToken)
-      userStore.setUserInfo(response.user)
-      
-      if (response.isNewUser) {
-        message.success('注册成功，欢迎使用')
       } else {
-        message.success('登录成功')
+        message.error(getAuthErrorMessage(error, 'Passkey 登录失败，请重试'))
       }
-      
-      await router.push('/dashboard')
-      return response
     } finally {
       loading.value = false
     }
@@ -227,9 +221,7 @@ export function useAuth() {
     sendCode,
     register,
     passkeyLogin,
-    socialLogin,
-    handleSocialCallback
-    ,mfaChallenge
+    mfaChallenge
     ,emailChallenge
     ,verifyMfa
   }

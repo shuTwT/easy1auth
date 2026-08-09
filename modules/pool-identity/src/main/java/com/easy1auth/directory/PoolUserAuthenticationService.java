@@ -2,7 +2,6 @@ package com.easy1auth.directory;
 
 import com.easy1auth.directory.model.*;
 import org.babyfish.jimmer.sql.JSqlClient;
-import org.babyfish.jimmer.sql.ast.Predicate;
 import org.jspecify.annotations.Nullable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -34,7 +33,7 @@ public class PoolUserAuthenticationService {
         String key = login.strip().toLowerCase();
         var policy = security.policy(tenant);
         protection.assertAllowed("pool_user", key, tenant);
-        var user = sql.createQuery(USER).where(USER.tenantId().eq(tenant), USER.status().eq("active"), Predicate.or(USER.username().eq(login), USER.email().eq(login.toLowerCase()))).select(USER).fetchOneOrNull();
+        var user = sql.createQuery(USER).where(USER.tenantId().eq(tenant), USER.status().eq("active"), USER.email().eq(login.toLowerCase())).select(USER).fetchOneOrNull();
         if (user == null || user.passwordHash() == null || !passwords.matches(password, user.passwordHash())) {
             protection.failed("pool_user", key, tenant, policy.loginAttemptLimit(), policy.lockoutSeconds());
             return null;

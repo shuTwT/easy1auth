@@ -44,6 +44,24 @@ public interface LoginStyleEntity extends BaseEntity, BaseTenantEntity {
     @Column(name = "social_providers")
     List<String> socialProviders();
 
+    @Serialized
+    @Column(name = "draft_config")
+    Map<String, Object> draftConfig();
+
+    @Serialized
+    @Column(name = "published_config")
+    Map<String, Object> publishedConfig();
+
+    @Column(name = "registration_enabled")
+    boolean registrationEnabled();
+
+    @Column(name = "draft_updated_at")
+    Instant draftUpdatedAt();
+
+    @Nullable
+    @Column(name = "published_at")
+    Instant publishedAt();
+
     @Column(name = "created_at")
     Instant createdAt();
 

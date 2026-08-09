@@ -30,6 +30,26 @@ export const authPortalApi = {
       method: 'POST', body: JSON.stringify({ username, password }), headers: csrfToken ? { 'X-XSRF-TOKEN': csrfToken } : undefined
     })
   },
+  registerSendCode(email: string, csrfToken?: string) {
+    return request<{ token: string; expiresIn: number }>('/auth-portal-api/register/send-code', {
+      method: 'POST', body: JSON.stringify({ email }), headers: csrfToken ? { 'X-XSRF-TOKEN': csrfToken } : undefined
+    })
+  },
+  registerVerify(token: string, code: string, csrfToken?: string) {
+    return request<{ status: 'success'; redirectUrl?: string }>('/auth-portal-api/register/verify', {
+      method: 'POST', body: JSON.stringify({ token, code }), headers: csrfToken ? { 'X-XSRF-TOKEN': csrfToken } : undefined
+    })
+  },
+  emailLoginSendCode(email: string, csrfToken?: string) {
+    return request<{ token: string; expiresIn: number }>('/auth-portal-api/login/email/send-code', {
+      method: 'POST', body: JSON.stringify({ email }), headers: csrfToken ? { 'X-XSRF-TOKEN': csrfToken } : undefined
+    })
+  },
+  emailLoginVerify(token: string, code: string, csrfToken?: string) {
+    return request<{ status: 'success'; redirectUrl?: string }>('/auth-portal-api/login/email/verify', {
+      method: 'POST', body: JSON.stringify({ token, code }), headers: csrfToken ? { 'X-XSRF-TOKEN': csrfToken } : undefined
+    })
+  },
   verifyMfa(code: string, csrfToken?: string) {
     return request<{ status: 'success'; redirectUrl?: string }>('/auth-portal-api/mfa', {
       method: 'POST', body: JSON.stringify({ code }), headers: csrfToken ? { 'X-XSRF-TOKEN': csrfToken } : undefined

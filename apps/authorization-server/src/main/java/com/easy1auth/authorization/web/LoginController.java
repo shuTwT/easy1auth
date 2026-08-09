@@ -1,10 +1,14 @@
 package com.easy1auth.authorization.web;
 
-import com.easy1auth.federation.FederationService;
+import com.easy1auth.customization.CustomizationService;
+import com.easy1auth.directory.PoolUserService;
+import com.easy1auth.directory.model.PoolUserEntityTable;
+import com.easy1auth.social.SocialIdentityService;
 import com.easy1auth.security.SecurityPolicyService;
 import com.easy1auth.authorization.config.SecurityConfiguration;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.babyfish.jimmer.sql.JSqlClient;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -23,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.*;
 
 /**
@@ -37,24 +42,42 @@ import java.util.*;
 public class LoginController {
     /** 负责签发和校验 pool_user 的 TOTP 多因素认证挑战。 */
     private final SecurityPolicyService security;
-    /** 负责发起和处理第三方身份源的联邦登录。 */
-    private final FederationService federation;
+    /** 负责发起和处理社会化身份源登录。 */
+    private final SocialIdentityService socialIdentity;
     /** 用于校验 pool_user 用户名和密码的认证提供者。 */
     private final AuthenticationProvider poolUsers;
     /** 保存并消费登录/授权交互状态，同时提供门户页面所需上下文。 */
     private final AuthorizationInteractionService interactions;
+    /** 查询租户登录样式，用于判断是否开放自助注册。 */
+    private final CustomizationService customization;
+    /** 创建 pool_user，复用管理端创建逻辑完成自助注册。 */
+    private final PoolUserService poolUsersService;
+    /** 查询 pool_user，用于注册前邮箱占用检查和用户名冲突检查。 */
+    private final JSqlClient sql;
+    /** 发送注册和登录验证码邮件。 */
+    private final org.springframework.mail.javamail.JavaMailSender mail;
+    /** 验证码邮件的发件人地址。 */
+    private final String mailFrom;
     /** 将认证后的 SecurityContext 持久化到 HTTP Session。 */
     private final HttpSessionSecurityContextRepository securityContexts = new HttpSessionSecurityContextRepository();
     /** 保存 OAuth 授权请求，以便登录完成后继续原始请求。 */
     private final HttpSessionRequestCache requestCache = new HttpSessionRequestCache();
 
     /** 创建授权门户控制器及其依赖服务。 */
-    LoginController(SecurityPolicyService security, FederationService federation, AuthenticationProvider poolUsers,
-                    AuthorizationInteractionService interactions) {
+    LoginController(SecurityPolicyService security, SocialIdentityService socialIdentity, AuthenticationProvider poolUsers,
+                    AuthorizationInteractionService interactions, CustomizationService customization,
+                    PoolUserService poolUsersService, JSqlClient sql,
+                    org.springframework.mail.javamail.JavaMailSender mail,
+                    @org.springframework.beans.factory.annotation.Value("${easy1auth.mail.from:no-reply@easy1auth.local}") String mailFrom) {
         this.security = security;
-        this.federation = federation;
+        this.socialIdentity = socialIdentity;
         this.poolUsers = poolUsers;
         this.interactions = interactions;
+        this.customization = customization;
+        this.poolUsersService = poolUsersService;
+        this.sql = sql;
+        this.mail = mail;
+        this.mailFrom = mailFrom;
     }
 
     /**
@@ -102,6 +125,151 @@ public class LoginController {
             interactions.setLoginError(request);
             return ResponseEntity.ok(new ApiError(ErrorCodeConstants.LOGIN_FAILED.code(), ErrorCodeConstants.LOGIN_FAILED.message()));
         }
+    }
+
+    /**
+     * 注册第一步：校验邮箱并发送验证码。
+     *
+     * <p>校验租户注册开关、邮箱格式和邮箱是否已被注册。邮箱已注册时返回警告，
+     * 不发送验证码；未注册则生成 6 位验证码并通过邮件发送，返回不透明的挑战
+     * token 供第二步验证使用。</p>
+     */
+    @PostMapping(value = "/auth-portal-api/register/send-code", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    ResponseEntity<?> registerSendCode(@RequestBody EmailInput input, HttpServletRequest request) {
+        UUID tenant = interactions.requireTenant(request);
+        if (input == null || blank(input.email()))
+            return ResponseEntity.ok(new ApiError(ErrorCodeConstants.REGISTRATION_INPUT_INVALID.code(), ErrorCodeConstants.REGISTRATION_INPUT_INVALID.message()));
+        var style = customization.publicStyle(tenant);
+        if (!style.registrationEnabled())
+            return ResponseEntity.ok(new ApiError(ErrorCodeConstants.REGISTRATION_DISABLED.code(), ErrorCodeConstants.REGISTRATION_DISABLED.message()));
+        String email = input.email().strip().toLowerCase();
+        if (!email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"))
+            return ResponseEntity.ok(new ApiError(ErrorCodeConstants.REGISTRATION_INPUT_INVALID.code(), ErrorCodeConstants.REGISTRATION_INPUT_INVALID.message()));
+        var existing = sql.createQuery(PoolUserEntityTable.$).where(PoolUserEntityTable.$.tenantId().eq(tenant), PoolUserEntityTable.$.email().eq(email)).select(PoolUserEntityTable.$.id()).fetchOneOrNull();
+        if (existing != null)
+            return ResponseEntity.ok(new ApiError(ErrorCodeConstants.REGISTRATION_EMAIL_EXISTS.code(), ErrorCodeConstants.REGISTRATION_EMAIL_EXISTS.message()));
+        com.easy1auth.security.SecurityPolicyService.Challenge challenge;
+        try {
+            challenge = security.issueEmailChallenge("registration", null, tenant, "register", email);
+        } catch (com.easy1auth.foundation.error.DomainException ex) {
+            return ResponseEntity.ok(new ApiError(ex.code(), ex.getMessage()));
+        }
+        mail.send(simpleMessage(email, "Easy1Auth 注册验证码", "您的注册验证码是 " + challenge.code() + "，10分钟内有效。"));
+        return ResponseEntity.ok(new ChallengeResult(challenge.token(), challenge.expiresIn()));
+    }
+
+    /**
+     * 注册第二步：校验验证码并完成注册。
+     *
+     * <p>验证码校验通过后创建 pool_user（无密码，登录标识为邮箱），username 自动
+     * 生成，注册成功后立即建立会话并跳转。</p>
+     */
+    @PostMapping(value = "/auth-portal-api/register/verify", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    ResponseEntity<?> registerVerify(@RequestBody VerifyInput input, HttpServletRequest request, HttpServletResponse response) {
+        UUID tenant = interactions.requireTenant(request);
+        if (input == null || blank(input.token()) || blank(input.code()))
+            return ResponseEntity.ok(new ApiError(ErrorCodeConstants.REGISTRATION_INPUT_INVALID.code(), ErrorCodeConstants.REGISTRATION_INPUT_INVALID.message()));
+        com.easy1auth.security.SecurityPolicyService.ConsumedEmailChallenge consumed;
+        try {
+            consumed = security.consumeRegistrationEmailChallenge(input.token(), input.code(), "register");
+        } catch (com.easy1auth.foundation.error.DomainException ex) {
+            return ResponseEntity.ok(new ApiError(ErrorCodeConstants.VERIFICATION_CODE_INVALID.code(), ErrorCodeConstants.VERIFICATION_CODE_INVALID.message()));
+        }
+        String email = consumed.destination();
+        if (email == null || sql.createQuery(PoolUserEntityTable.$).where(PoolUserEntityTable.$.tenantId().eq(tenant), PoolUserEntityTable.$.email().eq(email)).select(PoolUserEntityTable.$.id()).fetchOneOrNull() != null)
+            return ResponseEntity.ok(new ApiError(ErrorCodeConstants.REGISTRATION_EMAIL_EXISTS.code(), ErrorCodeConstants.REGISTRATION_EMAIL_EXISTS.message()));
+        String username = generateUsername(tenant, email);
+        var created = poolUsersService.create(tenant, new PoolUserService.Input(username, email, null, null, email.substring(0, email.indexOf('@')), null, "active", null, null, Map.of()));
+        var authorities = List.of(new SimpleGrantedAuthority("ROLE_POOL_USER"), new SimpleGrantedAuthority("TENANT_" + tenant));
+        var auth = UsernamePasswordAuthenticationToken.authenticated(org.springframework.security.core.userdetails.User.withUsername(created.id().toString()).password("").authorities(authorities).build(), null, authorities);
+        saveAuthentication(auth, request, response);
+        interactions.clearLoginError(request);
+        return ResponseEntity.ok(new LoginResult("success", continueUrl(request, response), 0));
+    }
+
+    /**
+     * 邮箱验证码登录第一步：发送验证码。
+     *
+     * <p>用户存在且 status=active 时发送验证码；不存在时返回假 token 防止邮箱探测。
+     * 无论用户是否存在，响应结构一致。</p>
+     */
+    @PostMapping(value = "/auth-portal-api/login/email/send-code", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    ResponseEntity<?> emailLoginSendCode(@RequestBody EmailInput input, HttpServletRequest request) {
+        UUID tenant = interactions.requireTenant(request);
+        if (input == null || blank(input.email()))
+            return ResponseEntity.ok(new ApiError(ErrorCodeConstants.LOGIN_INPUT_INVALID.code(), ErrorCodeConstants.LOGIN_INPUT_INVALID.message()));
+        String email = input.email().strip().toLowerCase();
+        var user = sql.createQuery(PoolUserEntityTable.$).where(PoolUserEntityTable.$.tenantId().eq(tenant), PoolUserEntityTable.$.email().eq(email), PoolUserEntityTable.$.status().eq("active")).select(PoolUserEntityTable.$).fetchOneOrNull();
+        if (user == null)
+            return ResponseEntity.ok(new ChallengeResult(security.decoyChallengeToken(), 600));
+        com.easy1auth.security.SecurityPolicyService.Challenge challenge;
+        try {
+            challenge = security.issueEmailChallenge("pool_user", user.id(), tenant, "email_login", email);
+        } catch (com.easy1auth.foundation.error.DomainException ex) {
+            return ResponseEntity.ok(new ApiError(ex.code(), ex.getMessage()));
+        }
+        mail.send(simpleMessage(email, "Easy1Auth 登录验证码", "您的登录验证码是 " + challenge.code() + "，10分钟内有效。"));
+        return ResponseEntity.ok(new ChallengeResult(challenge.token(), challenge.expiresIn()));
+    }
+
+    /**
+     * 邮箱验证码登录第二步：校验验证码并完成登录。
+     *
+     * <p>验证码校验通过后建立会话并跳转，与密码登录成功的行为一致。</p>
+     */
+    @PostMapping(value = "/auth-portal-api/login/email/verify", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    ResponseEntity<?> emailLoginVerify(@RequestBody VerifyInput input, HttpServletRequest request, HttpServletResponse response) {
+        UUID tenant = interactions.requireTenant(request);
+        if (input == null || blank(input.token()) || blank(input.code()))
+            return ResponseEntity.ok(new ApiError(ErrorCodeConstants.LOGIN_INPUT_INVALID.code(), ErrorCodeConstants.LOGIN_INPUT_INVALID.message()));
+        com.easy1auth.security.SecurityPolicyService.ConsumedEmailChallenge consumed;
+        try {
+            consumed = security.consumeEmailChallenge(input.token(), input.code(), "pool_user", "email_login");
+        } catch (com.easy1auth.foundation.error.DomainException ex) {
+            return ResponseEntity.ok(new ApiError(ErrorCodeConstants.VERIFICATION_CODE_INVALID.code(), ErrorCodeConstants.VERIFICATION_CODE_INVALID.message()));
+        }
+        var user = sql.createQuery(PoolUserEntityTable.$).where(PoolUserEntityTable.$.tenantId().eq(tenant), PoolUserEntityTable.$.id().eq(consumed.subjectId()), PoolUserEntityTable.$.status().eq("active")).select(PoolUserEntityTable.$).fetchOneOrNull();
+        if (user == null)
+            return ResponseEntity.ok(new ApiError(ErrorCodeConstants.LOGIN_FAILED.code(), ErrorCodeConstants.LOGIN_FAILED.message()));
+        sql.createUpdate(PoolUserEntityTable.$).set(PoolUserEntityTable.$.lastLoginAt(), Instant.now()).set(PoolUserEntityTable.$.updatedAt(), Instant.now()).where(PoolUserEntityTable.$.id().eq(user.id()), PoolUserEntityTable.$.tenantId().eq(tenant)).execute();
+        var authorities = List.of(new SimpleGrantedAuthority("ROLE_POOL_USER"), new SimpleGrantedAuthority("TENANT_" + tenant));
+        var auth = UsernamePasswordAuthenticationToken.authenticated(org.springframework.security.core.userdetails.User.withUsername(user.id().toString()).password("").authorities(authorities).build(), null, authorities);
+        saveAuthentication(auth, request, response);
+        interactions.clearLoginError(request);
+        return ResponseEntity.ok(new LoginResult("success", continueUrl(request, response), 0));
+    }
+
+    /**
+     * 根据邮箱前缀生成唯一用户名。
+     *
+     * <p>取邮箱 @ 前缀作为基础用户名；若已被占用则追加随机后缀，确保满足
+     * {@code (tenant_id, username)} 唯一约束。</p>
+     */
+    private String generateUsername(UUID tenant, String email) {
+        String base = email.substring(0, email.indexOf('@'));
+        if (base.isBlank()) base = "user";
+        base = base.replaceAll("[^a-zA-Z0-9._-]", "").strip();
+        if (base.isBlank()) base = "user";
+        String candidate = base;
+        int attempts = 0;
+        var table = PoolUserEntityTable.$;
+        while (attempts < 10) {
+            var conflict = sql.createQuery(table).where(table.tenantId().eq(tenant), table.username().eq(candidate)).select(table.id()).fetchOneOrNull();
+            if (conflict == null) return candidate;
+            candidate = base + "_" + UUID.randomUUID().toString().substring(0, 8);
+            attempts++;
+        }
+        return base + "_" + UUID.randomUUID().toString().substring(0, 8);
+    }
+
+    /** 构造一封简单文本邮件。 */
+    private org.springframework.mail.SimpleMailMessage simpleMessage(String to, String subject, String text) {
+        var msg = new org.springframework.mail.SimpleMailMessage();
+        msg.setFrom(mailFrom);
+        msg.setTo(to);
+        msg.setSubject(subject);
+        msg.setText(text);
+        return msg;
     }
 
     /**
@@ -165,28 +333,28 @@ public class LoginController {
         return ResponseEntity.ok(continuation);
     }
 
-    /** 发起指定租户和身份源的联邦登录，并将回调地址交给身份源。 */
-    @GetMapping("/t/{tenant}/federation/{provider}/authorize")
-    void federationStart(@PathVariable UUID tenant, @PathVariable UUID provider, HttpServletRequest request, HttpServletResponse response) throws IOException {
+    /** 发起指定租户和身份源的社会化登录，并将回调地址交给身份源。 */
+    @GetMapping("/t/{tenant}/social/{sourceId}/authorize")
+    void socialStart(@PathVariable UUID tenant, @PathVariable UUID sourceId, HttpServletRequest request, HttpServletResponse response) throws IOException {
         UUID interactionTenant = interactions.requireTenant(request);
         if (!tenant.equals(interactionTenant)) throw new com.easy1auth.foundation.error.DomainException(ErrorCodeConstants.AUTH_INTERACTION_MISMATCH_CLIENT_TENANT);
         String authorizePath = request.getRequestURL().toString();
         String callback = authorizePath.endsWith("/authorize")
                 ? authorizePath.substring(0, authorizePath.length() - "/authorize".length()) + "/callback"
                 : authorizePath + "/callback";
-        response.sendRedirect(federation.authorize(tenant, provider, callback).authorizeUrl());
+        response.sendRedirect(socialIdentity.authorize(tenant, sourceId, callback).authorizeUrl());
     }
 
     /**
-     * 处理联邦身份源回调，建立 pool_user 会话后继续原始 OAuth 请求。
+     * 处理社会化身份源回调，建立 pool_user 会话后继续原始 OAuth 请求。
      *
-     * <p>租户一致性和 code/state 的校验由联邦服务负责；控制器只负责将返回的用户
+     * <p>租户一致性和 code/state 的校验由社会化身份源服务负责；控制器只负责将返回的用户
      * 映射为当前授权服务器使用的 Spring Security 身份。</p>
      */
-    @GetMapping("/t/{tenant}/federation/{provider}/callback")
-    void federationCallback(@PathVariable UUID tenant, @PathVariable UUID provider, @RequestParam String code, @RequestParam String state, HttpServletRequest request, HttpServletResponse response) throws IOException {
+    @GetMapping("/t/{tenant}/social/{sourceId}/callback")
+    void socialCallback(@PathVariable UUID tenant, @PathVariable UUID sourceId, @RequestParam String code, @RequestParam String state, HttpServletRequest request, HttpServletResponse response) throws IOException {
         String callback = request.getRequestURL().toString();
-        var result = federation.callback(tenant, provider, code, state, callback);
+        var result = socialIdentity.callback(tenant, sourceId, code, state, callback);
         var authorities = List.of(new SimpleGrantedAuthority("ROLE_POOL_USER"), new SimpleGrantedAuthority("TENANT_" + tenant));
         var auth = UsernamePasswordAuthenticationToken.authenticated(org.springframework.security.core.userdetails.User.withUsername(result.poolUserId().toString()).password("").authorities(authorities).build(), null, authorities);
         saveAuthentication(auth, request, response);
@@ -226,12 +394,18 @@ public class LoginController {
 
     /** 密码登录请求体。 */
     public record LoginInput(String username, String password) { }
+    /** 邮箱输入请求体，用于发送验证码。 */
+    public record EmailInput(String email) { }
+    /** 验证码校验请求体。 */
+    public record VerifyInput(String token, String code) { }
     /** MFA 验证请求体。 */
     public record MfaInput(String code) { }
     /** 授权确认操作请求体，action 取值为 approve 或 deny。 */
     public record ConsentInput(String action) { }
     /** 登录结果；MFA 阶段返回剩余有效秒数，成功时返回继续地址。 */
     public record LoginResult(String status, String redirectUrl, int expiresIn) { }
+    /** 验证码挑战结果，返回不透明 token 和有效秒数。 */
+    public record ChallengeResult(String token, int expiresIn) { }
     /** 门户接口统一错误响应。 */
     public record ApiError(int code, String message) { }
 }

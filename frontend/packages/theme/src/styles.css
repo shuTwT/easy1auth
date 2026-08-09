@@ -1,10 +1,16 @@
 :root {
   --easy1auth-primary: #0369A1;
   --easy1auth-primary-dark: #075985;
-  --easy1auth-background: #F5F7FA;
-  --easy1auth-text: #0F172A;
-  --easy1auth-muted: #64748B;
-  --easy1auth-border: #E2E8F0;
+  --easy1auth-primary-light: #0EA5E9;
+  --easy1auth-primary-soft: #E0F2FE;
+  --easy1auth-success: #15803D;
+  --easy1auth-warning: #B45309;
+  --easy1auth-danger: #B91C1C;
+  --easy1auth-background: #F4F8FB;
+  --easy1auth-text: #102A43;
+  --easy1auth-muted: #52677D;
+  --easy1auth-border: #D7E2EC;
   --easy1auth-card: #FFFFFF;
-  --easy1auth-radius: 1.25rem;
+  --easy1auth-radius: 0.875rem;
+  --easy1auth-shadow: 0 20px 48px rgba(16, 42, 67, 0.14);
 }

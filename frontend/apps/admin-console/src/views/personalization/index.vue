@@ -1,20 +1,14 @@
 <template>
   <div class="personalization-settings p-6 min-h-[calc(100vh-64px)]">
     <div class="mb-6">
-      <h1 class="text-2xl font-bold text-foreground mb-2">个性化设置</h1>
-      <p class="text-sm text-muted-foreground">自定义域名、登录页面样式和消息模板</p>
+      <h1 class="text-2xl font-bold text-foreground mb-2">{{ pageTitle }}</h1>
+      <p class="text-sm text-muted-foreground">{{ pageDescription }}</p>
     </div>
 
     <Card>
       <div class="pt-6">
         <div>
-          <div class="mb-6">
-            <Button :type="activeTab === 'domains' ? 'primary' : 'default'" @click="activeTab = 'domains'">自定义域名</Button>
-            <Button :type="activeTab === 'loginStyle' ? 'primary' : 'default'" @click="activeTab = 'loginStyle'">登录页面</Button>
-            <Button :type="activeTab === 'templates' ? 'primary' : 'default'" @click="activeTab = 'templates'">消息模板</Button>
-          </div>
-
-          <div v-show="activeTab === 'domains'" class="px-2">
+          <div v-if="section === 'domains'" class="px-2">
             <div class="flex justify-between items-center mb-5">
               <h3 class="text-base font-semibold">域名管理</h3>
               <Button @click="showDomainDialog = true">
@@ -66,146 +60,7 @@
             </Alert>
           </div>
 
-          <div v-show="activeTab === 'loginStyle'" class="px-2">
-            <form class="max-w-[800px]">
-              <div class="mb-8 pb-6 border-b">
-                <h3 class="text-base font-semibold mb-5">基础信息</h3>
-                <div class="grid gap-4">
-                  <div class="grid gap-2">
-                    <label class="text-sm font-medium">页面标题</label>
-                    <Input v-model:value="loginStyle.title" placeholder="请输入登录页面标题" />
-                  </div>
-                  <div class="grid gap-2">
-                    <label class="text-sm font-medium">页面副标题</label>
-                    <Input v-model:value="loginStyle.subtitle" placeholder="请输入登录页面副标题" />
-                  </div>
-                </div>
-              </div>
-
-              <div class="mb-8 pb-6 border-b">
-                <h3 class="text-base font-semibold mb-5">品牌元素</h3>
-                <div class="grid gap-4">
-                  <div class="grid gap-2">
-                    <label class="text-sm font-medium">Logo</label>
-                    <div class="flex flex-col gap-3">
-                      <Upload
-                        :http-request="(options: { file: { raw: File } }) => handleLogoUpload(options, 'logo')"
-                        :before-upload="beforeLogoUpload"
-                        accept="image/*"
-                        :show-file-list="false"
-                      >
-                        <img v-if="loginStyle.logo" :src="loginStyle.logo" class="w-[120px] h-[120px] object-contain rounded-lg border-2 border-dashed border-border hover:border-primary transition-colors cursor-pointer" />
-                        <div v-else class="w-[120px] h-[120px] flex flex-col items-center justify-center border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary transition-colors">
-                          <Plus class="size-8 text-muted-foreground mb-2" />
-                          <span class="text-xs text-muted-foreground">上传Logo</span>
-                        </div>
-                      </Upload>
-                      <Button v-if="loginStyle.logo" type="link" class="text-destructive justify-start p-0 h-auto" @click="loginStyle.logo = undefined">
-                        删除Logo
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div class="grid gap-2">
-                    <label class="text-sm font-medium">背景图片</label>
-                    <div class="flex flex-col gap-3">
-                      <Upload
-                        :http-request="(options: { file: { raw: File } }) => handleLogoUpload(options, 'backgroundImage')"
-                        :before-upload="beforeBgUpload"
-                        accept="image/*"
-                        :show-file-list="false"
-                      >
-                        <img v-if="loginStyle.backgroundImage" :src="loginStyle.backgroundImage" class="w-full max-w-[400px] h-[200px] object-cover rounded-lg border-2 border-dashed border-border hover:border-primary transition-colors cursor-pointer" />
-                        <div v-else class="w-full max-w-[400px] h-[200px] flex flex-col items-center justify-center border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary transition-colors">
-                          <Plus class="size-8 text-muted-foreground mb-2" />
-                          <span class="text-xs text-muted-foreground">上传背景图片</span>
-                        </div>
-                      </Upload>
-                      <Button v-if="loginStyle.backgroundImage" type="link" class="text-destructive justify-start p-0 h-auto" @click="loginStyle.backgroundImage = undefined">
-                        删除背景图片
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div class="grid gap-2">
-                    <label class="text-sm font-medium">背景颜色</label>
-                    <div class="flex items-center gap-3">
-                      <ColorPicker v-model:value="loginStyle.backgroundColor" value-format="hex" :presets="colorPresets.map(c => c.value)" />
-                      <Input v-model:value="loginStyle.backgroundColor" placeholder="#f5f7fa" class="w-[200px]" />
-                    </div>
-                  </div>
-
-                  <div class="grid gap-2">
-                    <label class="text-sm font-medium">主题色</label>
-                    <div class="flex items-center gap-3">
-                      <ColorPicker v-model:value="loginStyle.primaryColor" value-format="hex" :presets="colorPresets.map(c => c.value)" />
-                      <Input v-model:value="loginStyle.primaryColor" placeholder="#0369A1" class="w-[200px]" />
-                    </div>
-                    <div class="flex items-center gap-2 mt-3">
-                      <span class="text-sm text-muted-foreground">预设颜色：</span>
-                      <div
-                        v-for="color in colorPresets"
-                        :key="color.value"
-                        class="w-7 h-7 rounded flex items-center justify-center cursor-pointer transition-transform hover:scale-110 border-2 border-transparent"
-                        :style="{ backgroundColor: color.value }"
-                        @click="loginStyle.primaryColor = color.value"
-                      >
-                        <Check v-if="loginStyle.primaryColor === color.value" class="size-3.5 text-white" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="mb-8 pb-6 border-b">
-                <h3 class="text-base font-semibold mb-5">登录方式</h3>
-                <div class="grid gap-2">
-                  <label class="text-sm font-medium">启用方式</label>
-                  <div class="flex flex-wrap gap-4">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                      <Checkbox
-                        :checked="loginStyle.loginMethods?.includes('password')"
-                        @update:checked="toggleLoginMethod('password')"
-                      />
-                      <span class="text-sm">账号密码</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                      <Checkbox
-                        :checked="loginStyle.loginMethods?.includes('email')"
-                        @update:checked="toggleLoginMethod('email')"
-                      />
-                      <span class="text-sm">邮箱验证码</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                      <Checkbox
-                        :checked="loginStyle.loginMethods?.includes('passkey')"
-                        @update:checked="toggleLoginMethod('passkey')"
-                      />
-                      <span class="text-sm">Passkey</span>
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              <div class="mb-8">
-                <h3 class="text-base font-semibold mb-5">自定义样式</h3>
-                <div class="grid gap-2">
-                  <label class="text-sm font-medium">自定义CSS</label>
-                  <InputTextArea v-model:value="loginStyle.customCSS"
-                    :rows="8"
-                    placeholder="请输入自定义CSS样式"
-                    class="font-mono text-[13px] leading-relaxed bg-muted/50"
-                  />
-                </div>
-              </div>
-
-              <Button type="primary" :loading="savingLoginStyle" :disabled="savingLoginStyle" @click="handleSaveLoginStyle">
-                保存设置
-              </Button>
-            </form>
-          </div>
-
-          <div v-show="activeTab === 'templates'" class="px-2">
+          <div v-else-if="section === 'templates'" class="px-2">
             <div class="flex justify-between items-center mb-5">
               <h3 class="text-base font-semibold">模板管理</h3>
               <div class="flex gap-3">
@@ -443,14 +298,22 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, reactive } from 'vue'
 import { Modal, Table, message } from 'antdv-next'
-import { Plus, Check } from '@lucide/vue'
+import { Plus } from '@lucide/vue'
+import { useRoute } from 'vue-router'
 
-type UploadFile = { type: string; size: number }
 import { customDomainApi, type CustomDomain, type CreateDomainDto, type UpdateSSLDto } from '@/api/customDomain'
 import { messageTemplateApi, type MessageTemplate, type CreateTemplateDto } from '@/api/messageTemplate'
-import { loginStyleApi, type UpdateLoginStyleDto } from '@/api/loginStyle'
 
-const activeTab = ref('domains')
+const route = useRoute()
+const section = computed(() => String(route.meta.brandSection ?? 'domains'))
+const pageTitle = computed(() => ({
+  templates: '消息服务',
+  domains: '自定义域名',
+} as Record<string, string>)[section.value] ?? '品牌管理')
+const pageDescription = computed(() => ({
+  templates: '统一管理邮箱和短信通知模板',
+  domains: '登记租户使用的登录域名并查看其状态',
+} as Record<string, string>)[section.value] ?? '')
 const templateType = ref('email')
 
 const [modal, contextHolder] = Modal.useModal()
@@ -476,16 +339,6 @@ const showVerifyDialog = ref(false)
 const verifying = ref(false)
 const verifyingDomain = ref<CustomDomain | null>(null)
 
-const loginStyle = reactive<UpdateLoginStyleDto>({
-  title: 'Easy1Auth',
-  subtitle: '企业级身份管理平台',
-  backgroundColor: '#f5f7fa',
-  primaryColor: '#0369A1',
-  loginMethods: ['password', 'email', 'passkey'],
-})
-
-const savingLoginStyle = ref(false)
-
 const templates = ref<MessageTemplate[]>([])
 const templatesLoading = ref(false)
 const showTemplateDialog = ref(false)
@@ -504,29 +357,8 @@ const initingTemplates = ref(false)
 const emailTemplates = computed(() => templates.value.filter(t => t.type === 'email'))
 const smsTemplates = computed(() => templates.value.filter(t => t.type === 'sms'))
 
-const colorPresets = [
-  { name: '默认蓝', value: '#0369A1' },
-  { name: '翠绿', value: '#10B981' },
-  { name: '紫罗兰', value: '#7C3AED' },
-  { name: '橙红', value: '#F97316' },
-  { name: '玫红', value: '#EC4899' },
-  { name: '青色', value: '#06B6D4' },
-]
-
 const formatDate = (date: string) => {
   return new Date(date).toLocaleString('zh-CN')
-}
-
-const toggleLoginMethod = (method: string) => {
-  if (!loginStyle.loginMethods) {
-    loginStyle.loginMethods = []
-  }
-  const index = loginStyle.loginMethods.indexOf(method)
-  if (index > -1) {
-    loginStyle.loginMethods.splice(index, 1)
-  } else {
-    loginStyle.loginMethods.push(method)
-  }
 }
 
 const loadDomains = async () => {
@@ -616,67 +448,6 @@ const handleDeleteDomain = async (domain: CustomDomain) => {
   } catch (error: any) {
     message.error(error.response?.data?.msg || '删除域名失败')
   }
-}
-
-const loadLoginStyle = async () => {
-  try {
-    const response = await loginStyleApi.get()
-    Object.assign(loginStyle, response)
-  } catch (error) {
-    console.error('加载登录样式失败:', error)
-    message.error('加载登录样式失败')
-  }
-}
-
-const handleSaveLoginStyle = async () => {
-  savingLoginStyle.value = true
-  try {
-    await loginStyleApi.update(loginStyle)
-    message.success('保存成功')
-  } catch (error: any) {
-    message.error(error.response?.data?.msg || '保存失败')
-  } finally {
-    savingLoginStyle.value = false
-  }
-}
-
-const beforeLogoUpload = (file: UploadFile) => {
-  const isImage = file.type.startsWith('image/')
-  const isLt2M = file.size / 1024 / 1024 < 2
-  if (!isImage) {
-    message.error('只能上传图片文件!')
-    return false
-  }
-  if (!isLt2M) {
-    message.error('图片大小不能超过 2MB!')
-    return false
-  }
-  return true
-}
-
-const beforeBgUpload = (file: UploadFile) => {
-  const isImage = file.type.startsWith('image/')
-  const isLt5M = file.size / 1024 / 1024 < 5
-  if (!isImage) {
-    message.error('只能上传图片文件!')
-    return false
-  }
-  if (!isLt5M) {
-    message.error('图片大小不能超过 5MB!')
-    return false
-  }
-  return true
-}
-
-const handleLogoUpload = (options: { file: { raw: File } }, field: 'logo' | 'logoDark' | 'backgroundImage') => {
-  return new Promise<void>((resolve) => {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      (loginStyle as any)[field] = e.target?.result as string
-      resolve()
-    }
-    reader.readAsDataURL(options.file.raw)
-  })
 }
 
 const loadTemplates = async () => {
@@ -773,8 +544,7 @@ const handleDeleteTemplate = async (template: MessageTemplate) => {
 }
 
 onMounted(() => {
-  loadDomains()
-  loadLoginStyle()
-  loadTemplates()
+  if (section.value === 'domains') loadDomains()
+  if (section.value === 'templates') loadTemplates()
 })
 </script>

@@ -3,6 +3,7 @@ package com.easy1auth.authorization.web;
 import com.easy1auth.customization.CustomizationService;
 import com.easy1auth.customization.model.LoginStyleEntity;
 import com.easy1auth.foundation.error.DomainException;
+import com.easy1auth.social.SocialIdentityService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -51,11 +52,14 @@ public class AuthorizationInteractionService {
     private final CustomizationService customization;
     /** 查询 OAuth 客户端所属租户和展示名称。 */
     private final JdbcClient db;
+    /** 查询社会化身份源详情，供登录页渲染按钮。 */
+    private final SocialIdentityService socialIdentity;
 
     /** 创建授权交互服务。 */
-    public AuthorizationInteractionService(CustomizationService customization, JdbcClient db) {
+    public AuthorizationInteractionService(CustomizationService customization, JdbcClient db, SocialIdentityService socialIdentity) {
         this.customization = customization;
         this.db = db;
+        this.socialIdentity = socialIdentity;
     }
 
     /**
@@ -100,7 +104,7 @@ public class AuthorizationInteractionService {
         LoginStyleEntity style = customization.publicStyle(tenant);
         boolean mfa = session != null && session.getAttribute("EASY1AUTH_MFA_CHALLENGE") != null;
         String error = session == null ? null : (String) session.getAttribute(LOGIN_ERROR);
-        return new Context(mfa ? "mfa" : "login", tenant.toString(), publicStyle(style), error, csrfToken(request));
+        return new Context(mfa ? "mfa" : "login", tenant.toString(), publicStyle(style, tenant), error, csrfToken(request));
     }
 
     /**
@@ -147,7 +151,7 @@ public class AuthorizationInteractionService {
         session.setAttribute(CONSENT_ID, interactionId);
         session.removeAttribute(CONSENT_ACTION);
         session.setAttribute(EXPIRES_AT, Instant.now().plusSeconds(INTERACTION_TTL_SECONDS).toEpochMilli());
-        return new ConsentStart(interactionId, tenant.toString(), publicStyle(style), clientId,
+        return new ConsentStart(interactionId, tenant.toString(), publicStyle(style, tenant), clientId,
                 clientName(clientId), values(canonical, "scope"));
     }
 
@@ -165,7 +169,7 @@ public class AuthorizationInteractionService {
         String clientId = first(consent, "client_id");
         if (clientId == null) return ConsentContext.expired();
         LoginStyleEntity style = customization.publicStyle(tenant);
-        return new ConsentContext("consent", tenant.toString(), publicStyle(style), clientId,
+        return new ConsentContext("consent", tenant.toString(), publicStyle(style, tenant), clientId,
                 clientName(clientId), values(consent, "scope"), csrfToken(request));
     }
 
@@ -299,9 +303,26 @@ public class AuthorizationInteractionService {
         return Arrays.stream(keys).allMatch(key -> Arrays.equals(left.get(key), right.get(key)));
     }
 
-    /** 将数据库中的登录样式转换为只包含公开字段的响应对象。 */
-    private static PublicStyle publicStyle(LoginStyleEntity style) {
-        return new PublicStyle(style.logo(), style.logoDark(), style.backgroundImage(), style.backgroundColor(), style.primaryColor(), style.title(), style.subtitle(), style.loginMethods(), style.socialProviders());
+    /** 将数据库中的登录样式转换为只包含公开字段的响应对象，并附带登录页需要的社会化身份源详情。 */
+    private PublicStyle publicStyle(LoginStyleEntity style, UUID tenant) {
+        List<String> providerIds = style.socialProviders();
+        List<SocialSourceSummary> sources = List.of();
+        if (providerIds != null && !providerIds.isEmpty()) {
+            var active = socialIdentity.listActive(tenant);
+            var byId = new LinkedHashMap<String, SocialIdentityService.SourceView>();
+            for (var s : active) byId.put(s.id().toString(), s);
+            var filtered = new ArrayList<SocialSourceSummary>();
+            for (var id : providerIds) {
+                var s = byId.get(id);
+                if (s != null) filtered.add(new SocialSourceSummary(s.id().toString(), s.type(), s.name()));
+            }
+            sources = filtered;
+        }
+        var legal = customization.publishedLegalDocuments(tenant);
+        return new PublicStyle(style.logo(), style.logoDark(), style.backgroundImage(), style.backgroundColor(),
+                style.primaryColor(), style.title(), style.subtitle(), style.loginMethods(), style.socialProviders(),
+                sources, style.registrationEnabled(), customization.publishedConfig(tenant),
+                legal.termsOfService(), legal.privacyPolicy());
     }
 
     /** 从当前请求中读取 Spring Security 注入的 CSRF Token。 */
@@ -313,7 +334,12 @@ public class AuthorizationInteractionService {
     /** 登录页或授权页公开展示的品牌样式。 */
     public record PublicStyle(String logo, String logoDark, String backgroundImage, String backgroundColor,
                               String primaryColor, String title, String subtitle, List<String> loginMethods,
-                              List<String> socialProviders) { }
+                              List<String> socialProviders, List<SocialSourceSummary> socialSources,
+                              boolean registrationEnabled, Map<String, Object> config,
+                              String termsOfService, String privacyPolicy) { }
+
+    /** 登录页渲染社交登录按钮所需的最小身份源信息。 */
+    public record SocialSourceSummary(String id, String type, String name) { }
 
     /** 登录页上下文，包含当前状态、租户、样式、错误提示和 CSRF Token。 */
     public record Context(String status, String tenantId, PublicStyle style, String message, String csrfToken) {

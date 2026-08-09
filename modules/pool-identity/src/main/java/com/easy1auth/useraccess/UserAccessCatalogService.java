@@ -17,7 +17,10 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.Types;
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 
 @Service
@@ -255,7 +258,9 @@ public class UserAccessCatalogService {
                 .execute());
         if (existingCodes.size() == PRESETS.size()) return;
 
-        Instant now = Instant.now();
+        // PostgreSQL's timestamptz parameter needs an explicit JDBC type. Passing
+        // an Instant without one makes the driver unable to infer the SQL type.
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         PRESETS.stream().filter(p -> !existingCodes.contains(p.code())).forEach(p -> db.sql("""
                         insert into pool_permission
                             (id, tenant_id, code, name, type, resource, action, created_at, updated_at)
@@ -270,8 +275,8 @@ public class UserAccessCatalogService {
                 .param("type", p.type())
                 .param("resource", p.resource())
                 .param("action", p.action())
-                .param("createdAt", now)
-                .param("updatedAt", now)
+                .param("createdAt", now, Types.TIMESTAMP_WITH_TIMEZONE)
+                .param("updatedAt", now, Types.TIMESTAMP_WITH_TIMEZONE)
                 .update());
     }
 

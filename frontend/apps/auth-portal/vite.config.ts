@@ -11,9 +11,9 @@ export default defineConfig({
     port: 18851,
     host: true,
     proxy: {
-      '/auth-portal-api': { target: 'http://localhost:18850', changeOrigin: true },
-      '/oauth-consent/start': { target: 'http://localhost:18850', changeOrigin: true },
-      '/t': { target: 'http://localhost:18850', changeOrigin: true }
+      '/auth-portal-api': { target: 'http://localhost:18850', changeOrigin: false },
+      '/oauth-consent/start': { target: 'http://localhost:18850', changeOrigin: false },
+      '/t': { target: 'http://localhost:18850', changeOrigin: false }
     }
   },
   build: { outDir: 'dist', emptyOutDir: true }

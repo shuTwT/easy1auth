@@ -11,6 +11,7 @@ import com.easy1auth.tenant.TenantContextHolder;
 import com.easy1auth.tenant.TenantUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import org.babyfish.jimmer.sql.JSqlClient;
 import org.babyfish.jimmer.sql.ast.LikeMode;
 import org.babyfish.jimmer.sql.ast.mutation.SaveMode;
@@ -168,6 +169,7 @@ public class EnterpriseIdentityService {
     public record Stats(long totalSources, long activeSources, long inactiveSources) {
     }
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public record FeishuEventResponse(String challenge) {
     }
 
