@@ -52,6 +52,5 @@ public class RegistrationCodeService {
      * @param code      明文验证码（一次性返回）
      * @param expiresAt 过期时间
      */
-    public record IssuedCode(String email, String code, Instant expiresAt) {
-    }
+    
 }

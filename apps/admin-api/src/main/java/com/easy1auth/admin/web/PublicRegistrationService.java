@@ -43,6 +43,5 @@ class PublicRegistrationService {
      * @param identity 注册成功的管理账号身份（含访问凭证）
      * @param tenant   为新账号自动创建的默认租户摘要
      */
-    record RegistrationResult(AuthenticatedAdmin identity, TenantSummary tenant) {
-    }
+    
 }

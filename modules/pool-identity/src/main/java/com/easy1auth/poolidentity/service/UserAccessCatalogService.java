@@ -568,9 +568,7 @@ public class UserAccessCatalogService {
      * @param dataScope   数据范围：all / department / department_and_sub / self
      * @param parentId    父角色 ID（可为 null，表示顶级角色）
      */
-    public record RoleInput(String name, String code, String description, String type, Map<String, Boolean> permissions,
-                            String dataScope, UUID parentId) {
-    }
+    
 
     /**
      * 角色统计视图。
@@ -580,8 +578,7 @@ public class UserAccessCatalogService {
      * @param customRoles 自定义（custom）角色数
      * @param totalUsers  已分配角色的去重用户数
      */
-    public record RoleStats(long totalRoles, long systemRoles, long customRoles, long totalUsers) {
-    }
+    
 
     /**
      * 权限统计视图。
@@ -591,8 +588,7 @@ public class UserAccessCatalogService {
      * @param operationPermissions operation（操作）类权限数
      * @param dataPermissions   data（数据）类权限数
      */
-    public record PermissionStats(long totalPermissions, long menuPermissions, long operationPermissions, long dataPermissions) {
-    }
+    
 
     /**
      * 权限创建/更新入参。
@@ -605,9 +601,7 @@ public class UserAccessCatalogService {
      * @param resource    权限对应的资源标识
      * @param action      权限对应的动作（如 read / create / delete）
      */
-    public record PermissionInput(String code, String name, String description, String type, UUID parentId,
-                                  String resource, String action) {
-    }
+    
 
     /**
      * 角色详情视图。
@@ -626,10 +620,7 @@ public class UserAccessCatalogService {
      * @param userCount   分配该角色的用户数
      * @param parent      父角色摘要（可为 null）
      */
-    public record RoleView(UUID id, UUID tenantId, String name, String code, String description, String type,
-                           Map<String, Boolean> permissions, String dataScope, UUID parentId, Instant createdAt,
-                           Instant updatedAt, long userCount, ParentSummary parent) {
-    }
+    
 
     /**
      * 角色下的用户视图。
@@ -637,8 +628,7 @@ public class UserAccessCatalogService {
      * @param users 用户列表
      * @param total 用户总数
      */
-    public record RoleUsers(List<PoolUserView> users, int total) {
-    }
+    
 
     /**
      * 角色树节点视图。
@@ -651,9 +641,7 @@ public class UserAccessCatalogService {
      * @param userCount   分配该角色的用户数
      * @param children    子角色节点列表
      */
-    public record RoleTree(UUID id, String name, String code, String description, String type, long userCount,
-                           List<RoleTree> children) {
-    }
+    
 
     /**
      * 权限详情视图。
@@ -671,10 +659,7 @@ public class UserAccessCatalogService {
      * @param updatedAt   最后更新时间
      * @param parent      父权限摘要（可为 null）
      */
-    public record PermissionView(UUID id, UUID tenantId, String code, String name, String description, String type,
-                                 String resource, String action, UUID parentId, Instant createdAt, Instant updatedAt,
-                                 ParentSummary parent) {
-    }
+    
 
     /**
      * 父节点摘要视图。
@@ -683,8 +668,7 @@ public class UserAccessCatalogService {
      * @param name 父节点名称
      * @param code 父节点编码
      */
-    public record ParentSummary(UUID id, String name, String code) {
-    }
+    
 
     /**
      * 权限树节点视图。
@@ -698,9 +682,7 @@ public class UserAccessCatalogService {
      * @param action      权限对应的动作
      * @param children    子权限节点列表
      */
-    public record PermissionTree(UUID id, String code, String name, String description, String type, String resource,
-                                 String action, List<PermissionTree> children) {
-    }
+    
 
     /** 角色树的可变构建节点（组装完成后转为不可变的 {@link RoleTree}）。 */
     private static final class MutableRoleTree {
@@ -739,6 +721,5 @@ public class UserAccessCatalogService {
      * @param resource 资源标识
      * @param action   动作
      */
-    private record PermissionSeed(String code, String name, String type, String resource, String action) {
-    }
+    
 }

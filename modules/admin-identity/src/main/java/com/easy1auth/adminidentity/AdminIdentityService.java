@@ -376,6 +376,5 @@ public class AdminIdentityService implements ActiveAdminAccountLocker {
      * @param id    新会话 ID
      * @param token 明文刷新令牌（仅本次返回）
      */
-    private record IssuedRefresh(UUID id, String token) {
-    }
+    
 }

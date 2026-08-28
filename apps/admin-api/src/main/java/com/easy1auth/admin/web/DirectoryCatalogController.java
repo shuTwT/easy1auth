@@ -3,6 +3,8 @@ package com.easy1auth.admin.web;
 import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.ManagementPermissionCode;
 import com.easy1auth.poolidentity.service.DirectoryCatalogService;
+import com.easy1auth.poolidentity.service.GroupInput;
+import com.easy1auth.poolidentity.service.PositionInput;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
 import org.springframework.web.bind.annotation.*;
 
@@ -58,14 +60,14 @@ public class DirectoryCatalogController {
     /** 创建用户组。 */
     @TenantManagementPermission(value = ManagementPermissionCode.GROUP_CREATE)
     @PostMapping("/api/groups")
-    ApiResponse<?> createGroup(@RequestBody DirectoryCatalogService.GroupInput in) {
+    ApiResponse<?> createGroup(@RequestBody GroupInput in) {
         return ApiResponse.ok(catalog.createGroup(in), "用户组创建成功");
     }
 
     /** 更新指定用户组的信息。 */
     @TenantManagementPermission(value = ManagementPermissionCode.GROUP_UPDATE)
     @PutMapping("/api/groups/{id}")
-    ApiResponse<?> updateGroup(@PathVariable UUID id, @RequestBody DirectoryCatalogService.GroupInput in) {
+    ApiResponse<?> updateGroup(@PathVariable UUID id, @RequestBody GroupInput in) {
         return ApiResponse.ok(catalog.updateGroup(id, in), "用户组更新成功");
     }
 
@@ -143,14 +145,14 @@ public class DirectoryCatalogController {
     /** 创建岗位。 */
     @TenantManagementPermission(value = ManagementPermissionCode.POSITION_CREATE)
     @PostMapping("/api/positions")
-    ApiResponse<?> createPosition(@RequestBody DirectoryCatalogService.PositionInput in) {
+    ApiResponse<?> createPosition(@RequestBody PositionInput in) {
         return ApiResponse.ok(catalog.createPosition(in), "岗位创建成功");
     }
 
     /** 更新指定岗位的信息。 */
     @TenantManagementPermission(value = ManagementPermissionCode.POSITION_UPDATE)
     @PutMapping("/api/positions/{id}")
-    ApiResponse<?> updatePosition(@PathVariable UUID id, @RequestBody DirectoryCatalogService.PositionInput in) {
+    ApiResponse<?> updatePosition(@PathVariable UUID id, @RequestBody PositionInput in) {
         return ApiResponse.ok(catalog.updatePosition(id, in), "岗位更新成功");
     }
 

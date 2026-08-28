@@ -57,14 +57,14 @@ public class UserAccessCatalogController {
     /** 创建目录用户角色。 */
     @TenantManagementPermission(value = ManagementPermissionCode.USER_ROLE_CREATE)
     @PostMapping("/api/roles")
-    ApiResponse<?> createRole(@RequestBody UserAccessCatalogService.RoleInput in) {
+    ApiResponse<?> createRole(@RequestBody com.easy1auth.poolidentity.service.RoleInput in) {
         return ApiResponse.ok(service.createRole(in), "角色创建成功");
     }
 
     /** 更新指定目录用户角色的信息。 */
     @TenantManagementPermission(value = ManagementPermissionCode.USER_ROLE_UPDATE)
     @PutMapping("/api/roles/{id}")
-    ApiResponse<?> updateRole(@PathVariable UUID id, @RequestBody UserAccessCatalogService.RoleInput in) {
+    ApiResponse<?> updateRole(@PathVariable UUID id, @RequestBody com.easy1auth.poolidentity.service.RoleInput in) {
         return ApiResponse.ok(service.updateRole(id, in), "角色更新成功");
     }
 
@@ -146,14 +146,14 @@ public class UserAccessCatalogController {
     /** 创建数据权限。 */
     @TenantManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_CREATE)
     @PostMapping("/api/permissions")
-    ApiResponse<?> createPermission(@RequestBody UserAccessCatalogService.PermissionInput in) {
+    ApiResponse<?> createPermission(@RequestBody com.easy1auth.poolidentity.service.PermissionInput in) {
         return ApiResponse.ok(service.createPermission(in), "创建权限成功");
     }
 
     /** 更新指定数据权限。 */
     @TenantManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_UPDATE)
     @PutMapping("/api/permissions/{id}")
-    ApiResponse<?> updatePermission(@PathVariable UUID id, @RequestBody UserAccessCatalogService.PermissionInput in) {
+    ApiResponse<?> updatePermission(@PathVariable UUID id, @RequestBody com.easy1auth.poolidentity.service.PermissionInput in) {
         return ApiResponse.ok(service.updatePermission(id, in), "更新权限成功");
     }
 

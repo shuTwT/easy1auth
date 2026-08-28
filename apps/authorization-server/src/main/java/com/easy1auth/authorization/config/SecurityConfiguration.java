@@ -241,7 +241,7 @@ public class SecurityConfiguration {
                 if (user.position() != null) {
                     context.getClaims().claim("position", user.position());
                 }
-                context.getClaims().claim("roles", new ArrayList<>(access.rolesForUser(tenant, userId).stream().map(UserAccessCatalogService.RoleView::code).toList())).claim("groups", new ArrayList<>(directory.groupsForUser(tenant, userId).stream().map(DirectoryCatalogService.GroupView::name).toList()));
+                context.getClaims().claim("roles", new ArrayList<>(access.rolesForUser(tenant, userId).stream().map(com.easy1auth.poolidentity.service.RoleView::code).toList())).claim("groups", new ArrayList<>(directory.groupsForUser(tenant, userId).stream().map(com.easy1auth.poolidentity.service.GroupView::name).toList()));
             } catch (IllegalArgumentException ignored) {
             }
         };
