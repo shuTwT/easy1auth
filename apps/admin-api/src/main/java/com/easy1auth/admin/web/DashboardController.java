@@ -5,7 +5,7 @@ import com.easy1auth.adminaccess.ManagementPermissionCode;
 import com.easy1auth.application.ApplicationService;
 import com.easy1auth.poolidentity.service.PoolUserService;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
-import com.easy1auth.tenant.TenantService;
+import com.easy1auth.tenant.service.TenantService;
 import org.jspecify.annotations.Nullable;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;

@@ -1,6 +1,8 @@
 package com.easy1auth.poolidentity.service;
 
 import com.easy1auth.poolidentity.model.PoolUserEntityTable;
+import com.easy1auth.security.service.LoginProtectionService;
+import com.easy1auth.security.service.SecurityPolicyService;
 import org.babyfish.jimmer.sql.JSqlClient;
 import org.babyfish.jimmer.sql.ast.Predicate;
 import org.jspecify.annotations.Nullable;
@@ -11,8 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.Locale;
 import java.util.UUID;
-
-import com.easy1auth.security.*;
 
 /**
  * pool_user 认证服务：为第三方授权登录场景提供用户身份认证。

@@ -6,7 +6,7 @@ import com.easy1auth.admin.security.PlatformManagementPermission;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
 import com.easy1auth.tenant.TenantPackageMutation;
-import com.easy1auth.tenant.TenantPackageService;
+import com.easy1auth.tenant.service.TenantPackageService;
 import com.easy1auth.tenant.TenantPackageView;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;

@@ -8,13 +8,13 @@ import com.easy1auth.adminidentity.*;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
 import com.easy1auth.tenant.WebFramework;
-import com.easy1auth.tenant.TenantService;
+import com.easy1auth.tenant.service.TenantService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.transaction.annotation.Transactional;
 import com.easy1auth.admin.config.RegistrationProperties;
-import com.easy1auth.security.SecurityPolicyService;
+import com.easy1auth.security.service.SecurityPolicyService;
 import com.easy1auth.audit.DeliveryService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 

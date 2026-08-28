@@ -1,4 +1,4 @@
-package com.easy1auth.security;
+package com.easy1auth.security.service;
 
 import com.easy1auth.infrastructure.foundation.id.UuidV7;
 import com.easy1auth.security.model.*;

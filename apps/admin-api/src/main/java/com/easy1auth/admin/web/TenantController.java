@@ -8,6 +8,7 @@ import com.easy1auth.adminaccess.PlatformAuthorizationResolver;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
 import com.easy1auth.infrastructure.foundation.web.PageData;
 import com.easy1auth.tenant.*;
+import com.easy1auth.tenant.service.TenantService;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;

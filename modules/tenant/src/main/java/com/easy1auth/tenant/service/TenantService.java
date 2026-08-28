@@ -1,8 +1,10 @@
-package com.easy1auth.tenant;
+package com.easy1auth.tenant.service;
 
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.security.ActiveAdminAccountLocker;
+import com.easy1auth.tenant.*;
 import com.easy1auth.tenant.model.TenantEntity;
+import com.easy1auth.tenant.repository.TenantRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

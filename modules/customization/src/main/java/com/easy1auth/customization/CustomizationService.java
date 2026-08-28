@@ -4,7 +4,7 @@ import com.easy1auth.customization.model.*;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.id.UuidV7;
 import com.easy1auth.infrastructure.foundation.error.ErrorCode;
-import com.easy1auth.social.SocialIdentityService;
+import com.easy1auth.social.service.SocialIdentityService;
 import org.babyfish.jimmer.sql.JSqlClient;
 import org.babyfish.jimmer.sql.ast.mutation.SaveMode;
 import org.springframework.stereotype.Service;

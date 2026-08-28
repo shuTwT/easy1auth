@@ -4,8 +4,8 @@ import com.easy1auth.customization.CustomizationService;
 import com.easy1auth.poolidentity.service.PoolUserService;
 import com.easy1auth.poolidentity.model.PoolUserEntityTable;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
-import com.easy1auth.social.SocialIdentityService;
-import com.easy1auth.security.SecurityPolicyService;
+import com.easy1auth.social.service.SocialIdentityService;
+import com.easy1auth.security.service.SecurityPolicyService;
 import com.easy1auth.authorization.config.SecurityConfiguration;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -159,7 +159,7 @@ public class LoginController {
         if (existing != null) {
             return ResponseEntity.ok(new ApiError(ErrorCodeConstants.REGISTRATION_EMAIL_EXISTS.code(), ErrorCodeConstants.REGISTRATION_EMAIL_EXISTS.message()));
         }
-        com.easy1auth.security.SecurityPolicyService.Challenge challenge;
+        SecurityPolicyService.Challenge challenge;
         try {
             challenge = security.issueEmailChallenge("registration", null, tenant, "register", email);
         } catch (DomainException ex) {
@@ -181,7 +181,7 @@ public class LoginController {
         if (input == null || blank(input.token()) || blank(input.code())) {
             return ResponseEntity.ok(new ApiError(ErrorCodeConstants.REGISTRATION_INPUT_INVALID.code(), ErrorCodeConstants.REGISTRATION_INPUT_INVALID.message()));
         }
-        com.easy1auth.security.SecurityPolicyService.ConsumedEmailChallenge consumed;
+        SecurityPolicyService.ConsumedEmailChallenge consumed;
         try {
             consumed = security.consumeRegistrationEmailChallenge(input.token(), input.code(), "register");
         } catch (DomainException ex) {
@@ -217,7 +217,7 @@ public class LoginController {
         if (user == null) {
             return ResponseEntity.ok(new ChallengeResult(security.decoyChallengeToken(), 600));
         }
-        com.easy1auth.security.SecurityPolicyService.Challenge challenge;
+        SecurityPolicyService.Challenge challenge;
         try {
             challenge = security.issueEmailChallenge("pool_user", user.id(), tenant, "email_login", email);
         } catch (DomainException ex) {
@@ -238,7 +238,7 @@ public class LoginController {
         if (input == null || blank(input.token()) || blank(input.code())) {
             return ResponseEntity.ok(new ApiError(ErrorCodeConstants.LOGIN_INPUT_INVALID.code(), ErrorCodeConstants.LOGIN_INPUT_INVALID.message()));
         }
-        com.easy1auth.security.SecurityPolicyService.ConsumedEmailChallenge consumed;
+        SecurityPolicyService.ConsumedEmailChallenge consumed;
         try {
             consumed = security.consumeEmailChallenge(input.token(), input.code(), "pool_user", "email_login");
         } catch (DomainException ex) {

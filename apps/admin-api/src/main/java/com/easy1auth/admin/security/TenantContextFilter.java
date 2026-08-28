@@ -4,6 +4,7 @@ import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.trace.TraceIdFilter;
 import com.easy1auth.tenant.WebFramework;
 import com.easy1auth.tenant.*;
+import com.easy1auth.tenant.service.TenantService;
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
 import org.springframework.security.core.Authentication;

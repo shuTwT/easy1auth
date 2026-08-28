@@ -1,4 +1,4 @@
-package com.easy1auth.security;
+package com.easy1auth.security.service;
 
 import org.springframework.stereotype.Component;
 

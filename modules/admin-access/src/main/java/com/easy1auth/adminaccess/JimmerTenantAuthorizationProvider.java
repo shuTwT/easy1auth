@@ -5,7 +5,7 @@ import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.tenant.TenantAuthorization;
 import com.easy1auth.tenant.TenantAuthorizationProvider;
 import com.easy1auth.tenant.TenantAuthorizationRequest;
-import com.easy1auth.tenant.TenantPackageService;
+import com.easy1auth.tenant.service.TenantPackageService;
 import com.easy1auth.tenant.TenantPackageView;
 import org.babyfish.jimmer.sql.JSqlClient;
 import org.springframework.stereotype.Component;

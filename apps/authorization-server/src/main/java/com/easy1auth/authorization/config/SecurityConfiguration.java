@@ -6,10 +6,11 @@ import com.easy1auth.poolidentity.service.PoolUserAuthenticationService;
 import com.easy1auth.poolidentity.service.PoolUserService;
 import com.easy1auth.oauth2.*;
 import com.easy1auth.poolidentity.service.UserAccessCatalogService;
-import com.easy1auth.security.SecurityPolicyService;
+import com.easy1auth.security.service.SecurityPolicyService;
 import com.easy1auth.authorization.security.IssuerHostValidationFilter;
 import com.easy1auth.authorization.security.TenantPrincipalValidationFilter;
 import com.easy1auth.authorization.web.AuthorizationInteractionService;
+import com.easy1auth.security.service.PoolUserDeviceService;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
@@ -83,7 +84,7 @@ public class SecurityConfiguration {
      * 并按策略在需要时附加 MFA_REQUIRED，供登录流程进入多因素认证。</p>
      */
     @Bean
-    AuthenticationProvider poolUserAuthenticationProvider(PoolUserAuthenticationService users, SecurityPolicyService security, com.easy1auth.security.PoolUserDeviceService devices) {
+    AuthenticationProvider poolUserAuthenticationProvider(PoolUserAuthenticationService users, SecurityPolicyService security, PoolUserDeviceService devices) {
         return new AuthenticationProvider() {
             @Override
             public Authentication authenticate(Authentication authentication) throws AuthenticationException {

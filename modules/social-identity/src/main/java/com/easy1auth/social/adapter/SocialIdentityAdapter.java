@@ -1,4 +1,6 @@
-package com.easy1auth.social;
+package com.easy1auth.social.adapter;
+
+import com.easy1auth.social.service.SocialIdentityService;
 
 import java.net.URI;
 import java.util.Map;
