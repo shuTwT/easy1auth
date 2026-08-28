@@ -34,17 +34,23 @@ abstract class AbstractSocialIdentityAdapter implements SocialIdentityAdapter {
         try {
             var body = new StringBuilder();
             for (var e : form.entrySet()) {
-                if (body.length() > 0) body.append('&');
+                if (body.length() > 0) {
+                    body.append('&');
+                }
                 body.append(enc(e.getKey())).append('=').append(enc(e.getValue()));
             }
             var builder = HttpRequest.newBuilder(URI.create(url))
                     .timeout(Duration.ofSeconds(10))
                     .header("Content-Type", "application/x-www-form-urlencoded")
                     .header("Accept", "application/json");
-            if (authorization != null) builder.header("Authorization", authorization);
+            if (authorization != null) {
+                builder.header("Authorization", authorization);
+            }
             var req = builder.POST(HttpRequest.BodyPublishers.ofString(body.toString())).build();
             var res = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
-            if (res.statusCode() != 200 || res.body().length() > 1_000_000) throw new IOException();
+            if (res.statusCode() != 200 || res.body().length() > 1_000_000) {
+                throw new IOException();
+            }
             return json.readValue(res.body(), new TypeReference<>() { });
         } catch (DomainException ex) {
             throw ex;
@@ -62,7 +68,9 @@ abstract class AbstractSocialIdentityAdapter implements SocialIdentityAdapter {
                     .header("Accept", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(body))).build();
             var res = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
-            if (res.statusCode() != 200 || res.body().length() > 1_000_000) throw new IOException();
+            if (res.statusCode() != 200 || res.body().length() > 1_000_000) {
+                throw new IOException();
+            }
             return json.readValue(res.body(), new TypeReference<>() { });
         } catch (DomainException ex) {
             throw ex;
@@ -80,7 +88,9 @@ abstract class AbstractSocialIdentityAdapter implements SocialIdentityAdapter {
                     .header("Authorization", "Bearer " + bearer)
                     .GET().build();
             var res = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
-            if (res.statusCode() != 200 || res.body().length() > 1_000_000) throw new IOException();
+            if (res.statusCode() != 200 || res.body().length() > 1_000_000) {
+                throw new IOException();
+            }
             return json.readValue(res.body(), new TypeReference<>() { });
         } catch (DomainException ex) {
             throw ex;

@@ -79,14 +79,22 @@ public class UserAccessCatalogService {
     @Transactional
     public RoleView updateRole(UUID tenant, UUID id, RoleInput in) {
         var old = roleEntity(tenant, id);
-        if ("system".equals(old.type())) throw new DomainException(ErrorCodeConstants.SYSTEM_ROLE_IMMUTABLE_UPDATE);
+        if ("system".equals(old.type())) {
+            throw new DomainException(ErrorCodeConstants.SYSTEM_ROLE_IMMUTABLE_UPDATE);
+        }
         String name = in.name() == null ? old.name() : in.name(), scope = in.dataScope() == null ? old.dataScope() : in.dataScope();
         validateRole(name, old.code(), scope);
         validateRoleParent(tenant, id, in.parentId());
         var u = sql.createUpdate(ROLE).set(ROLE.name(), name).set(ROLE.dataScope(), scope).set(ROLE.updatedAt(), Instant.now()).where(ROLE.id().eq(id), ROLE.tenantId().eq(tenant));
-        if (in.description() != null) u.set(ROLE.description(), in.description());
-        if (in.permissions() != null) u.set(ROLE.permissions(), in.permissions());
-        if (in.parentId() != null) u.set(ROLE.parentId(), in.parentId());
+        if (in.description() != null) {
+            u.set(ROLE.description(), in.description());
+        }
+        if (in.permissions() != null) {
+            u.set(ROLE.permissions(), in.permissions());
+        }
+        if (in.parentId() != null) {
+            u.set(ROLE.parentId(), in.parentId());
+        }
         u.execute();
         return role(tenant, id);
     }
@@ -94,11 +102,15 @@ public class UserAccessCatalogService {
     @Transactional
     public void deleteRole(UUID tenant, UUID id) {
         var role = roleEntity(tenant, id);
-        if ("system".equals(role.type())) throw new DomainException(ErrorCodeConstants.SYSTEM_ROLE_IMMUTABLE_DELETE);
-        if (assignmentCount(tenant, id) > 0)
+        if ("system".equals(role.type())) {
+            throw new DomainException(ErrorCodeConstants.SYSTEM_ROLE_IMMUTABLE_DELETE);
+        }
+        if (assignmentCount(tenant, id) > 0) {
             throw new DomainException(ErrorCodeConstants.ROLE_HAS_USERS);
-        if (sql.createQuery(ROLE).where(ROLE.tenantId().eq(tenant), ROLE.parentId().eq(id)).select(ROLE.id()).exists())
+        }
+        if (sql.createQuery(ROLE).where(ROLE.tenantId().eq(tenant), ROLE.parentId().eq(id)).select(ROLE.id()).exists()) {
             throw new DomainException(ErrorCodeConstants.ROLE_HAS_CHILDREN);
+        }
         sql.createDelete(ROLE).where(ROLE.id().eq(id), ROLE.tenantId().eq(tenant)).execute();
     }
 
@@ -110,8 +122,11 @@ public class UserAccessCatalogService {
         List<MutableRoleTree> roots = new ArrayList<>();
         nodes.values().forEach(n -> {
             var p = n.role.parentId() == null ? null : nodes.get(n.role.parentId());
-            if (p == null) roots.add(n);
-            else p.children.add(n);
+            if (p == null) {
+                roots.add(n);
+            } else {
+                p.children.add(n);
+            }
         });
         return roots.stream().map(MutableRoleTree::freeze).toList();
     }
@@ -129,7 +144,9 @@ public class UserAccessCatalogService {
     public RoleUsers roleUsers(UUID tenant, UUID roleId, String search) {
         roleEntity(tenant, roleId);
         var userIds = sql.createQuery(ASSIGNMENT).where(ASSIGNMENT.id().tenantId().eq(tenant), ASSIGNMENT.id().roleId().eq(roleId)).select(ASSIGNMENT.id().userId()).execute();
-        if (userIds.isEmpty()) return new RoleUsers(List.of(), 0);
+        if (userIds.isEmpty()) {
+            return new RoleUsers(List.of(), 0);
+        }
         var users = sql.createQuery(USER).where(USER.tenantId().eq(tenant), USER.id().in(userIds))
                 .whereIf(search != null, () -> Predicate.or(USER.username().ilike(search, LikeMode.ANYWHERE), USER.email().ilike(search, LikeMode.ANYWHERE), USER.name().ilike(search, LikeMode.ANYWHERE)))
                 .orderBy(USER.createdAt().desc()).select(USER).execute().stream().map(this::userView).toList();
@@ -168,9 +185,15 @@ public class UserAccessCatalogService {
     @Transactional(readOnly = true)
     public String effectiveDataScope(UUID tenant, UUID userId) {
         var scopes = rolesForUser(tenant, userId).stream().map(RoleView::dataScope).collect(java.util.stream.Collectors.toSet());
-        if (scopes.contains("all")) return "all";
-        if (scopes.contains("department_and_sub")) return "department_and_sub";
-        if (scopes.contains("department")) return "department";
+        if (scopes.contains("all")) {
+            return "all";
+        }
+        if (scopes.contains("department_and_sub")) {
+            return "department_and_sub";
+        }
+        if (scopes.contains("department")) {
+            return "department";
+        }
         return "self";
     }
 
@@ -209,8 +232,12 @@ public class UserAccessCatalogService {
         validatePermission(name, old.code(), type, resource, action);
         validatePermissionParent(tenant, id, in.parentId());
         var u = sql.createUpdate(PERMISSION).set(PERMISSION.name(), name).set(PERMISSION.type(), type).set(PERMISSION.resource(), resource).set(PERMISSION.action(), action).set(PERMISSION.updatedAt(), Instant.now()).where(PERMISSION.id().eq(id), PERMISSION.tenantId().eq(tenant));
-        if (in.description() != null) u.set(PERMISSION.description(), in.description());
-        if (in.parentId() != null) u.set(PERMISSION.parentId(), in.parentId());
+        if (in.description() != null) {
+            u.set(PERMISSION.description(), in.description());
+        }
+        if (in.parentId() != null) {
+            u.set(PERMISSION.parentId(), in.parentId());
+        }
         u.execute();
         return permission(tenant, id);
     }
@@ -218,8 +245,9 @@ public class UserAccessCatalogService {
     @Transactional
     public void deletePermission(UUID tenant, UUID id) {
         permissionEntity(tenant, id);
-        if (sql.createQuery(PERMISSION).where(PERMISSION.tenantId().eq(tenant), PERMISSION.parentId().eq(id)).select(PERMISSION.id()).exists())
+        if (sql.createQuery(PERMISSION).where(PERMISSION.tenantId().eq(tenant), PERMISSION.parentId().eq(id)).select(PERMISSION.id()).exists()) {
             throw new DomainException(ErrorCodeConstants.PERMISSION_HAS_CHILDREN);
+        }
         sql.createDelete(PERMISSION).where(PERMISSION.id().eq(id), PERMISSION.tenantId().eq(tenant)).execute();
     }
 
@@ -232,8 +260,11 @@ public class UserAccessCatalogService {
         List<MutablePermissionTree> roots = new ArrayList<>();
         nodes.values().forEach(n -> {
             var p = n.permission.parentId() == null ? null : nodes.get(n.permission.parentId());
-            if (p == null) roots.add(n);
-            else p.children.add(n);
+            if (p == null) {
+                roots.add(n);
+            } else {
+                p.children.add(n);
+            }
         });
         return roots.stream().map(MutablePermissionTree::freeze).toList();
     }
@@ -256,7 +287,9 @@ public class UserAccessCatalogService {
                 .where(PERMISSION.tenantId().eq(tenant), PERMISSION.code().in(presetCodes))
                 .select(PERMISSION.code())
                 .execute());
-        if (existingCodes.size() == PRESETS.size()) return;
+        if (existingCodes.size() == PRESETS.size()) {
+            return;
+        }
 
         // PostgreSQL's timestamptz parameter needs an explicit JDBC type. Passing
         // an Instant without one makes the driver unable to infer the SQL type.
@@ -305,13 +338,17 @@ public class UserAccessCatalogService {
     }
 
     private ParentSummary roleParent(UUID tenant, UUID id) {
-        if (id == null) return null;
+        if (id == null) {
+            return null;
+        }
         var p = sql.createQuery(ROLE).where(ROLE.id().eq(id), ROLE.tenantId().eq(tenant)).select(ROLE).fetchOneOrNull();
         return p == null ? null : new ParentSummary(p.id(), p.name(), p.code());
     }
 
     private ParentSummary permissionParent(UUID tenant, UUID id) {
-        if (id == null) return null;
+        if (id == null) {
+            return null;
+        }
         var p = sql.createQuery(PERMISSION).where(PERMISSION.id().eq(id), PERMISSION.tenantId().eq(tenant)).select(PERMISSION).fetchOneOrNull();
         return p == null ? null : new ParentSummary(p.id(), p.name(), p.code());
     }
@@ -321,37 +358,49 @@ public class UserAccessCatalogService {
     }
 
     private void validateRoleParent(UUID tenant, UUID self, UUID parent) {
-        if (parent == null) return;
-        if (parent.equals(self)) throw new DomainException(ErrorCodeConstants.ROLE_PARENT_SELF);
+        if (parent == null) {
+            return;
+        }
+        if (parent.equals(self)) {
+            throw new DomainException(ErrorCodeConstants.ROLE_PARENT_SELF);
+        }
         var p = roleEntity(tenant, parent);
         Set<UUID> seen = new HashSet<>();
         while (p.parentId() != null) {
-            if (!seen.add(p.id()) || p.parentId().equals(self))
+            if (!seen.add(p.id()) || p.parentId().equals(self)) {
                 throw new DomainException(ErrorCodeConstants.ROLE_CYCLE);
+            }
             p = roleEntity(tenant, p.parentId());
         }
     }
 
     private void validatePermissionParent(UUID tenant, UUID self, UUID parent) {
-        if (parent == null) return;
-        if (parent.equals(self)) throw new DomainException(ErrorCodeConstants.PERMISSION_PARENT_SELF);
+        if (parent == null) {
+            return;
+        }
+        if (parent.equals(self)) {
+            throw new DomainException(ErrorCodeConstants.PERMISSION_PARENT_SELF);
+        }
         var p = permissionEntity(tenant, parent);
         Set<UUID> seen = new HashSet<>();
         while (p.parentId() != null) {
-            if (!seen.add(p.id()) || p.parentId().equals(self))
+            if (!seen.add(p.id()) || p.parentId().equals(self)) {
                 throw new DomainException(ErrorCodeConstants.PERMISSION_CYCLE);
+            }
             p = permissionEntity(tenant, p.parentId());
         }
     }
 
     private void validateRole(String name, String code, String scope) {
-        if (name == null || name.isBlank() || code == null || code.isBlank() || !Set.of("all", "department", "department_and_sub", "self").contains(scope == null ? "self" : scope))
+        if (name == null || name.isBlank() || code == null || code.isBlank() || !Set.of("all", "department", "department_and_sub", "self").contains(scope == null ? "self" : scope)) {
             throw new DomainException(ErrorCodeConstants.ROLE_INVALID);
+        }
     }
 
     private void validatePermission(String name, String code, String type, String resource, String action) {
-        if (name == null || code == null || resource == null || action == null || !Set.of("menu", "operation", "data").contains(type == null ? "operation" : type))
+        if (name == null || code == null || resource == null || action == null || !Set.of("menu", "operation", "data").contains(type == null ? "operation" : type)) {
             throw new DomainException(ErrorCodeConstants.PERMISSION_INVALID);
+        }
     }
 
     @Transactional(readOnly = true)

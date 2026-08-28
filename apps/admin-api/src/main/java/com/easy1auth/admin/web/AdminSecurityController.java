@@ -61,8 +61,9 @@ public class AdminSecurityController {
     public ApiResponse<?> verifyEmailChange(@AuthenticationPrincipal Jwt jwt, @RequestBody EmailVerifyRequest input) {
         UUID accountId = id(jwt);
         var challenge = security.consumeEmailChallenge(input.challengeToken(), input.code(), "admin", "email_change");
-        if (!accountId.equals(challenge.subjectId()) || challenge.destination() == null)
+        if (!accountId.equals(challenge.subjectId()) || challenge.destination() == null) {
             throw new com.easy1auth.foundation.error.DomainException(ErrorCodeConstants.EMAIL_CHANGE_CHALLENGE_INVALID);
+        }
         var account = identities.changeOwnEmail(accountId, challenge.destination());
         return ApiResponse.ok(new EmailChangeResponse(account.email()), "邮箱换绑成功，请重新登录");
     }
@@ -70,8 +71,9 @@ public class AdminSecurityController {
     @ManagementRouteClassification(ManagementRouteKind.AUTHENTICATED_SELF)
     @PostMapping("/change-password")
     public ApiResponse<Void> change(@AuthenticationPrincipal Jwt jwt, @RequestBody ChangePassword input) {
-        if (!Objects.equals(input.newPassword(), input.confirmPassword()))
+        if (!Objects.equals(input.newPassword(), input.confirmPassword())) {
             throw new com.easy1auth.foundation.error.DomainException(ErrorCodeConstants.PASSWORD_CONFIRM_MISMATCH);
+        }
         security.validatePassword(input.newPassword(), SecurityPolicyService.adminPolicy());
         identities.changePassword(id(jwt), input.currentPassword(), input.newPassword());
         return ApiResponse.ok(null, "密码修改成功，请重新登录");

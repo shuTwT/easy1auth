@@ -56,34 +56,44 @@ public class SecurityPolicyService {
     }
 
     public void validatePassword(String password, Policy p) {
-        if (password == null || password.length() < p.minLength() || password.length() > 128 || (p.requireUpper() && !password.matches(".*[A-Z].*")) || (p.requireLower() && !password.matches(".*[a-z].*")) || (p.requireNumber() && !password.matches(".*\\d.*")) || (p.requireSpecial() && !password.matches(".*[^A-Za-z0-9].*")))
+        if (password == null || password.length() < p.minLength() || password.length() > 128 || (p.requireUpper() && !password.matches(".*[A-Z].*")) || (p.requireLower() && !password.matches(".*[a-z].*")) || (p.requireNumber() && !password.matches(".*\\d.*")) || (p.requireSpecial() && !password.matches(".*[^A-Za-z0-9].*"))) {
             throw new DomainException(ErrorCodeConstants.PASSWORD_WEAK);
+        }
     }
 
     @Transactional(readOnly = true)
     public void rejectReusedPassword(String subjectType, UUID subject, String candidate, String currentHash, org.springframework.security.crypto.password.PasswordEncoder encoder, int count) {
-        if (currentHash != null && encoder.matches(candidate, currentHash))
+        if (currentHash != null && encoder.matches(candidate, currentHash)) {
             throw new DomainException(ErrorCodeConstants.PASSWORD_REUSED_CURRENT);
-        if (count <= 0) return;
+        }
+        if (count <= 0) {
+            return;
+        }
         var hashes = sql.createQuery(HISTORY).where(HISTORY.subjectType().eq(subjectType), HISTORY.subjectId().eq(subject)).orderBy(HISTORY.createdAt().desc()).select(HISTORY.passwordHash()).limit(count).execute();
-        if (hashes.stream().anyMatch(h -> encoder.matches(candidate, h)))
+        if (hashes.stream().anyMatch(h -> encoder.matches(candidate, h))) {
             throw new DomainException(ErrorCodeConstants.PASSWORD_REUSED_RECENT);
+        }
     }
 
     @Transactional
     public void rememberPassword(String subjectType, UUID subject, String oldHash, int count) {
-        if (oldHash == null || count <= 0) return;
+        if (oldHash == null || count <= 0) {
+            return;
+        }
         var e = PasswordHistoryEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setSubjectType(subjectType).setSubjectId(subject).setPasswordHash(oldHash).setCreatedAt(Instant.now()));
         sql.saveCommand(e).setMode(SaveMode.INSERT_ONLY).execute();
         var ids = sql.createQuery(HISTORY).where(HISTORY.subjectType().eq(subjectType), HISTORY.subjectId().eq(subject)).orderBy(HISTORY.createdAt().desc()).select(HISTORY.id()).execute();
-        if (ids.size() > count)
+        if (ids.size() > count) {
             sql.createDelete(HISTORY).where(HISTORY.id().in(ids.subList(count, ids.size()))).execute();
+        }
     }
 
     @Transactional
     public Setup setupTotp(String subjectType, UUID subject, UUID tenant, String label) {
         var old = findFactor(subjectType, subject, "totp");
-        if (old != null && old.enabled()) throw new DomainException(ErrorCodeConstants.MFA_ALREADY_ENABLED);
+        if (old != null && old.enabled()) {
+            throw new DomainException(ErrorCodeConstants.MFA_ALREADY_ENABLED);
+        }
         String secret = totp.secret();
         UUID id = old == null ? UuidV7.randomUuid() : old.id();
         Instant now = Instant.now();
@@ -104,8 +114,9 @@ public class SecurityPolicyService {
     public void enableTotp(String subjectType, UUID subject, String code) {
         var f = requireFactor(subjectType, subject, "totp");
         String secret = cipher.decrypt(aad(subjectType, subject, "totp"), f.encryptedSecret());
-        if (!totp.verify(secret, code, Instant.now(), f.lastTotpStep()))
+        if (!totp.verify(secret, code, Instant.now(), f.lastTotpStep())) {
             throw new DomainException(ErrorCodeConstants.MFA_CODE_INVALID);
+        }
         sql.createUpdate(FACTOR).set(FACTOR.enabled(), true).set(FACTOR.lastTotpStep(), totp.step(Instant.now())).set(FACTOR.updatedAt(), Instant.now()).where(FACTOR.id().eq(f.id())).execute();
     }
 
@@ -118,11 +129,14 @@ public class SecurityPolicyService {
     @Transactional
     public boolean verifyTotp(String subjectType, UUID subject, String code) {
         var f = requireFactor(subjectType, subject, "totp");
-        if (!f.enabled()) throw new DomainException(ErrorCodeConstants.MFA_NOT_ENABLED);
+        if (!f.enabled()) {
+            throw new DomainException(ErrorCodeConstants.MFA_NOT_ENABLED);
+        }
         String secret = cipher.decrypt(aad(subjectType, subject, "totp"), f.encryptedSecret());
         Instant now = Instant.now();
-        if (!totp.verify(secret, code, now, f.lastTotpStep()))
+        if (!totp.verify(secret, code, now, f.lastTotpStep())) {
             throw new DomainException(ErrorCodeConstants.MFA_CODE_INVALID);
+        }
         sql.createUpdate(FACTOR).set(FACTOR.lastTotpStep(), totp.step(now)).set(FACTOR.updatedAt(), now).where(FACTOR.id().eq(f.id()), Predicate.or(FACTOR.lastTotpStep().isNull(), FACTOR.lastTotpStep().lt(totp.step(now)))).execute();
         return true;
     }
@@ -136,10 +150,14 @@ public class SecurityPolicyService {
     public Challenge issueEmailChallenge(String subjectType, UUID subject, UUID tenant, String purpose, String destination) {
         Instant now = Instant.now();
         var recentQuery = sql.createQuery(CHALLENGE).where(CHALLENGE.subjectType().eq(subjectType), CHALLENGE.purpose().eq(purpose), CHALLENGE.factorType().eq("email"), CHALLENGE.createdAt().gt(now.minusSeconds(60)));
-        if (subject != null) recentQuery.where(CHALLENGE.subjectId().eq(subject));
-        else if (destination != null) recentQuery.where(CHALLENGE.destination().eq(destination));
-        if (recentQuery.select(CHALLENGE.id()).exists())
+        if (subject != null) {
+            recentQuery.where(CHALLENGE.subjectId().eq(subject));
+        } else if (destination != null) {
+            recentQuery.where(CHALLENGE.destination().eq(destination));
+        }
+        if (recentQuery.select(CHALLENGE.id()).exists()) {
             throw new DomainException(ErrorCodeConstants.CODE_RATE_LIMITED);
+        }
         String token = randomToken(32), code = String.format(Locale.ROOT, "%06d", random.nextInt(1_000_000));
         var e = AuthenticationChallengeEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTokenHash(hash(token)).setSubjectType(subjectType).setSubjectId(subject).setTenantId(tenant).setPurpose(purpose).setDestination(destination).setFactorType("email").setCodeHash(hash(code)).setAttempts(0).setMaxAttempts(5).setExpiresAt(now.plusSeconds(600)).setConsumedAt(null).setCreatedAt(now).setLastSentAt(now));
         sql.saveCommand(e).setMode(SaveMode.INSERT_ONLY).execute();
@@ -153,14 +171,16 @@ public class SecurityPolicyService {
     @Transactional
     public ConsumedEmailChallenge consumeEmailChallenge(String token, String code, String subjectType, String purpose) {
         var row = sql.createQuery(CHALLENGE).where(CHALLENGE.tokenHash().eq(hash(token)), CHALLENGE.subjectType().eq(subjectType), CHALLENGE.purpose().eq(purpose), CHALLENGE.factorType().eq("email")).select(CHALLENGE).forUpdate().fetchOneOrNull();
-        if (row == null || row.subjectId() == null || row.consumedAt() != null || row.expiresAt().isBefore(Instant.now()) || row.attempts() >= row.maxAttempts())
+        if (row == null || row.subjectId() == null || row.consumedAt() != null || row.expiresAt().isBefore(Instant.now()) || row.attempts() >= row.maxAttempts()) {
             throw new DomainException(ErrorCodeConstants.MFA_CHALLENGE_INVALID);
+        }
         if (row.codeHash() == null || !MessageDigest.isEqual(hash(code).getBytes(StandardCharsets.US_ASCII), row.codeHash().getBytes(StandardCharsets.US_ASCII))) {
             sql.createUpdate(CHALLENGE).set(CHALLENGE.attempts(), CHALLENGE.attempts().plus(1)).where(CHALLENGE.id().eq(row.id())).execute();
             throw new DomainException(ErrorCodeConstants.MFA_CODE_INVALID);
         }
-        if (sql.createUpdate(CHALLENGE).set(CHALLENGE.consumedAt(), Instant.now()).where(CHALLENGE.id().eq(row.id()), CHALLENGE.consumedAt().isNull()).execute() != 1)
+        if (sql.createUpdate(CHALLENGE).set(CHALLENGE.consumedAt(), Instant.now()).where(CHALLENGE.id().eq(row.id()), CHALLENGE.consumedAt().isNull()).execute() != 1) {
             throw new DomainException(ErrorCodeConstants.MFA_CHALLENGE_REPLAYED);
+        }
         return new ConsumedEmailChallenge(row.subjectId(), row.destination());
     }
 
@@ -174,21 +194,25 @@ public class SecurityPolicyService {
     @Transactional
     public ConsumedEmailChallenge consumeRegistrationEmailChallenge(String token, String code, String purpose) {
         var row = sql.createQuery(CHALLENGE).where(CHALLENGE.tokenHash().eq(hash(token)), CHALLENGE.subjectType().eq("registration"), CHALLENGE.purpose().eq(purpose), CHALLENGE.factorType().eq("email")).select(CHALLENGE).forUpdate().fetchOneOrNull();
-        if (row == null || row.consumedAt() != null || row.expiresAt().isBefore(Instant.now()) || row.attempts() >= row.maxAttempts())
+        if (row == null || row.consumedAt() != null || row.expiresAt().isBefore(Instant.now()) || row.attempts() >= row.maxAttempts()) {
             throw new DomainException(ErrorCodeConstants.MFA_CHALLENGE_INVALID);
+        }
         if (row.codeHash() == null || !MessageDigest.isEqual(hash(code).getBytes(StandardCharsets.US_ASCII), row.codeHash().getBytes(StandardCharsets.US_ASCII))) {
             sql.createUpdate(CHALLENGE).set(CHALLENGE.attempts(), CHALLENGE.attempts().plus(1)).where(CHALLENGE.id().eq(row.id())).execute();
             throw new DomainException(ErrorCodeConstants.MFA_CODE_INVALID);
         }
-        if (sql.createUpdate(CHALLENGE).set(CHALLENGE.consumedAt(), Instant.now()).where(CHALLENGE.id().eq(row.id()), CHALLENGE.consumedAt().isNull()).execute() != 1)
+        if (sql.createUpdate(CHALLENGE).set(CHALLENGE.consumedAt(), Instant.now()).where(CHALLENGE.id().eq(row.id()), CHALLENGE.consumedAt().isNull()).execute() != 1) {
             throw new DomainException(ErrorCodeConstants.MFA_CHALLENGE_REPLAYED);
+        }
         return new ConsumedEmailChallenge(null, row.destination());
     }
 
     @Transactional
     public Challenge issueTotpChallenge(String subjectType, UUID subject, UUID tenant, String purpose) {
         var factor = requireFactor(subjectType, subject, "totp");
-        if (!factor.enabled()) throw new DomainException(ErrorCodeConstants.MFA_NOT_ENABLED);
+        if (!factor.enabled()) {
+            throw new DomainException(ErrorCodeConstants.MFA_NOT_ENABLED);
+        }
         String token = randomToken(32);
         Instant now = Instant.now();
         var e = AuthenticationChallengeEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTokenHash(hash(token)).setSubjectType(subjectType).setSubjectId(subject).setTenantId(tenant).setPurpose(purpose).setFactorType("totp").setCodeHash(null).setAttempts(0).setMaxAttempts(5).setExpiresAt(now.plusSeconds(600)).setConsumedAt(null).setCreatedAt(now).setLastSentAt(null));
@@ -199,16 +223,18 @@ public class SecurityPolicyService {
     @Transactional
     public UUID consumeTotpChallenge(String token, String code, String subjectType, String purpose) {
         var row = sql.createQuery(CHALLENGE).where(CHALLENGE.tokenHash().eq(hash(token)), CHALLENGE.subjectType().eq(subjectType), CHALLENGE.purpose().eq(purpose), CHALLENGE.factorType().eq("totp")).select(CHALLENGE).forUpdate().fetchOneOrNull();
-        if (row == null || row.consumedAt() != null || row.expiresAt().isBefore(Instant.now()) || row.attempts() >= row.maxAttempts() || row.subjectId() == null)
+        if (row == null || row.consumedAt() != null || row.expiresAt().isBefore(Instant.now()) || row.attempts() >= row.maxAttempts() || row.subjectId() == null) {
             throw new DomainException(ErrorCodeConstants.MFA_CHALLENGE_INVALID);
+        }
         try {
             verifyTotp(row.subjectType(), row.subjectId(), code);
         } catch (DomainException ex) {
             sql.createUpdate(CHALLENGE).set(CHALLENGE.attempts(), CHALLENGE.attempts().plus(1)).where(CHALLENGE.id().eq(row.id())).execute();
             throw ex;
         }
-        if (sql.createUpdate(CHALLENGE).set(CHALLENGE.consumedAt(), Instant.now()).where(CHALLENGE.id().eq(row.id()), CHALLENGE.consumedAt().isNull()).execute() != 1)
+        if (sql.createUpdate(CHALLENGE).set(CHALLENGE.consumedAt(), Instant.now()).where(CHALLENGE.id().eq(row.id()), CHALLENGE.consumedAt().isNull()).execute() != 1) {
             throw new DomainException(ErrorCodeConstants.MFA_CHALLENGE_REPLAYED);
+        }
         return row.subjectId();
     }
 
@@ -224,7 +250,9 @@ public class SecurityPolicyService {
 
     private AuthenticationFactorEntity requireFactor(String type, UUID subject, String factor) {
         var f = findFactor(type, subject, factor);
-        if (f == null) throw new DomainException(ErrorCodeConstants.MFA_NOT_CONFIGURED);
+        if (f == null) {
+            throw new DomainException(ErrorCodeConstants.MFA_NOT_CONFIGURED);
+        }
         return f;
     }
 
@@ -251,8 +279,9 @@ public class SecurityPolicyService {
     }
 
     private static void validate(Policy p) {
-        if (p == null || p.minLength() < 8 || p.minLength() > 128 || p.historyCount() < 0 || p.historyCount() > 24 || p.loginAttemptLimit() < 1 || p.lockoutSeconds() < 60)
+        if (p == null || p.minLength() < 8 || p.minLength() > 128 || p.historyCount() < 0 || p.historyCount() > 24 || p.loginAttemptLimit() < 1 || p.lockoutSeconds() < 60) {
             throw new DomainException(ErrorCodeConstants.SECURITY_POLICY_INVALID);
+        }
     }
 
     private static String aad(String type, UUID id, String factor) {

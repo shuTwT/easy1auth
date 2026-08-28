@@ -12,16 +12,18 @@ public final class TenantIssuerContext {
 
     public static UUID tenantId() {
         var context = AuthorizationServerContextHolder.getContext();
-        if (context == null || context.getIssuer() == null)
+        if (context == null || context.getIssuer() == null) {
             throw new DomainException(ErrorCodeConstants.OAUTH_TENANT_REQUIRED);
+        }
         return tenantId(context.getIssuer());
     }
 
     public static UUID tenantId(String issuer) {
         String path = URI.create(issuer).getPath();
         String[] parts = path.split("/");
-        if (parts.length < 3 || !"t".equals(parts[parts.length - 2]))
+        if (parts.length < 3 || !"t".equals(parts[parts.length - 2])) {
             throw new DomainException(ErrorCodeConstants.OAUTH_ISSUER_INVALID_FORMAT);
+        }
         try {
             return UUID.fromString(parts[parts.length - 1]);
         } catch (IllegalArgumentException ex) {

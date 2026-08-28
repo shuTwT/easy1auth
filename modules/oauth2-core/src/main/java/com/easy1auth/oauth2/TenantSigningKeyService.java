@@ -33,8 +33,9 @@ public class TenantSigningKeyService {
         this.sql = sql;
         this.tenants = tenants;
         this.json = json;
-        if (secret.getBytes(StandardCharsets.UTF_8).length < 32)
+        if (secret.getBytes(StandardCharsets.UTF_8).length < 32) {
             throw new IllegalStateException("OAUTH2_KEY_ENCRYPTION_SECRET must contain at least 32 UTF-8 bytes");
+        }
         try {
             this.encryptionKey = MessageDigest.getInstance("SHA-256").digest(secret.getBytes(StandardCharsets.UTF_8));
         } catch (GeneralSecurityException ex) {
@@ -45,10 +46,14 @@ public class TenantSigningKeyService {
     @Transactional
     public RSAKey active(UUID tenant) {
         var existing = find(tenant);
-        if (existing != null) return decode(existing);
+        if (existing != null) {
+            return decode(existing);
+        }
         tenants.lockForSecurityMaterial(tenant);
         existing = find(tenant);
-        if (existing != null) return decode(existing);
+        if (existing != null) {
+            return decode(existing);
+        }
         try {
             KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
             generator.initialize(2048);

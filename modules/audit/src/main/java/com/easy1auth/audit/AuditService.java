@@ -50,7 +50,9 @@ public class AuditService {
     @Transactional
     public int cleanup(int days) {
         UUID tenant = TenantContextHolder.requireTenantId();
-        if (days < 30) throw new DomainException(ErrorCodeConstants.AUDIT_RETENTION_INVALID);
+        if (days < 30) {
+            throw new DomainException(ErrorCodeConstants.AUDIT_RETENTION_INVALID);
+        }
         return sql.createDelete(EVENT).where(EVENT.tenantId().eq(tenant), EVENT.createdAt().lt(Instant.now().minus(Duration.ofDays(days)))).execute();
     }
 
@@ -63,7 +65,9 @@ public class AuditService {
     }
 
     private static Map<String, Object> redact(Map<String, Object> in) {
-        if (in == null) return Map.of();
+        if (in == null) {
+            return Map.of();
+        }
         Map<String, Object> out = new LinkedHashMap<>();
         in.forEach((k, v) -> out.put(k, SECRET_KEYS.stream().anyMatch(x -> x.equalsIgnoreCase(k)) ? "[REDACTED]" : v));
         return out;

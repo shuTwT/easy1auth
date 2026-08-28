@@ -2,12 +2,14 @@ package com.easy1auth.directory;
 
 import com.easy1auth.directory.model.*;
 import org.babyfish.jimmer.sql.JSqlClient;
+import org.babyfish.jimmer.sql.ast.Predicate;
 import org.jspecify.annotations.Nullable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Locale;
 import java.util.UUID;
 
 import com.easy1auth.security.*;
@@ -29,11 +31,17 @@ public class PoolUserAuthenticationService {
 
     @Transactional
     public PoolPrincipal authenticate(UUID tenant, String login, String password) {
-        if (login == null || password == null) return null;
-        String key = login.strip().toLowerCase();
+        if (login == null || password == null) {
+            return null;
+        }
+        String key = login.strip().toLowerCase(Locale.ROOT);
         var policy = security.policy(tenant);
         protection.assertAllowed("pool_user", key, tenant);
-        var user = sql.createQuery(USER).where(USER.tenantId().eq(tenant), USER.status().eq("active"), USER.email().eq(login.toLowerCase())).select(USER).fetchOneOrNull();
+        var user = sql.createQuery(USER)
+                .where(USER.tenantId().eq(tenant), USER.status().eq("active"),
+                        Predicate.or(USER.username().lower().eq(key), USER.email().lower().eq(key)))
+                .select(USER)
+                .fetchOneOrNull();
         if (user == null || user.passwordHash() == null || !passwords.matches(password, user.passwordHash())) {
             protection.failed("pool_user", key, tenant, policy.loginAttemptLimit(), policy.lockoutSeconds());
             return null;

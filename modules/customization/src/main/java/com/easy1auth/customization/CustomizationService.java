@@ -3,6 +3,7 @@ package com.easy1auth.customization;
 import com.easy1auth.customization.model.*;
 import com.easy1auth.foundation.error.DomainException;
 import com.easy1auth.foundation.id.UuidV7;
+import com.easy1auth.social.SocialIdentityService;
 import org.babyfish.jimmer.sql.JSqlClient;
 import org.babyfish.jimmer.sql.ast.mutation.SaveMode;
 import org.springframework.stereotype.Service;
@@ -21,10 +22,12 @@ public class CustomizationService {
     private static final CustomDomainEntityTable DOMAIN = CustomDomainEntityTable.$;
     private static final MessageTemplateEntityTable TEMPLATE = MessageTemplateEntityTable.$;
     private final JSqlClient sql;
+    private final SocialIdentityService socialIdentity;
     private final SecureRandom random = new SecureRandom();
 
-    public CustomizationService(JSqlClient sql) {
+    public CustomizationService(JSqlClient sql, SocialIdentityService socialIdentity) {
         this.sql = sql;
+        this.socialIdentity = socialIdentity;
     }
 
     @Transactional
@@ -42,7 +45,7 @@ public class CustomizationService {
         var style = style();
         var legal = legalDocuments();
         Map<String, Object> config = config(style.draftConfig(), style);
-        return new DraftView(config,
+        return new DraftView(config, style.draftSocialProviders(),
                 new LegalDocumentsInput(firstNonNull(legal.draftTermsOfService(), legal.termsOfService()), firstNonNull(legal.draftPrivacyPolicy(), legal.privacyPolicy())),
                 style.draftUpdatedAt(), style.publishedAt());
     }
@@ -53,13 +56,16 @@ public class CustomizationService {
         LegalDocumentsInput nextLegal = normalizeLegal(input == null ? null : input.legalDocuments());
         var oldStyle = style();
         var oldLegal = legalDocuments();
+        List<String> nextSocialProviders = socialProviders(input == null || input.socialProviderIds() == null
+                ? oldStyle.draftSocialProviders() : input.socialProviderIds());
+        requireSocialProviders(nextConfig, nextSocialProviders);
         Instant now = Instant.now();
         var nextStyle = LoginStyleEntityDraft.$.produce(d -> d
                 .setId(oldStyle.id())
                 .setLogo(oldStyle.logo()).setLogoDark(oldStyle.logoDark()).setBackgroundImage(oldStyle.backgroundImage())
                 .setBackgroundColor(oldStyle.backgroundColor()).setPrimaryColor(oldStyle.primaryColor())
                 .setTitle(oldStyle.title()).setSubtitle(oldStyle.subtitle()).setCustomCss(oldStyle.customCss())
-                .setLoginMethods(oldStyle.loginMethods()).setSocialProviders(oldStyle.socialProviders())
+                .setLoginMethods(oldStyle.loginMethods()).setSocialProviders(oldStyle.socialProviders()).setDraftSocialProviders(nextSocialProviders)
                 .setDraftConfig(nextConfig).setPublishedConfig(oldStyle.publishedConfig())
                 .setRegistrationEnabled(oldStyle.registrationEnabled()).setDraftUpdatedAt(now)
                 .setPublishedAt(oldStyle.publishedAt()).setCreatedAt(oldStyle.createdAt()).setUpdatedAt(now));
@@ -70,7 +76,7 @@ public class CustomizationService {
                 .setUpdatedAt(now));
         sql.saveCommand(nextStyle).setMode(SaveMode.UPSERT).execute();
         sql.saveCommand(nextLegalEntity).setMode(SaveMode.UPSERT).execute();
-        return new DraftView(nextConfig, nextLegal, now, oldStyle.publishedAt());
+        return new DraftView(nextConfig, nextSocialProviders, nextLegal, now, oldStyle.publishedAt());
     }
 
     @Transactional
@@ -81,13 +87,15 @@ public class CustomizationService {
         LegalDocumentsInput nextLegal = normalizeLegal(new LegalDocumentsInput(
                 firstNonNull(oldLegal.draftTermsOfService(), oldLegal.termsOfService()),
                 firstNonNull(oldLegal.draftPrivacyPolicy(), oldLegal.privacyPolicy())));
+        List<String> nextSocialProviders = socialProviders(oldStyle.draftSocialProviders());
+        requireSocialProviders(nextConfig, nextSocialProviders);
         LegacyStyle legacy = legacyStyle(nextConfig);
         Instant now = Instant.now();
         var nextStyle = LoginStyleEntityDraft.$.produce(d -> d
                 .setId(oldStyle.id()).setLogo(legacy.logo()).setLogoDark(legacy.logoDark()).setBackgroundImage(legacy.backgroundImage())
                 .setBackgroundColor(legacy.backgroundColor()).setPrimaryColor(legacy.primaryColor()).setTitle(legacy.title())
                 .setSubtitle(legacy.subtitle()).setCustomCss(legacy.customCss()).setLoginMethods(legacy.loginMethods())
-                .setSocialProviders(oldStyle.socialProviders()).setDraftConfig(nextConfig).setPublishedConfig(nextConfig)
+                .setSocialProviders(nextSocialProviders).setDraftSocialProviders(nextSocialProviders).setDraftConfig(nextConfig).setPublishedConfig(nextConfig)
                 .setRegistrationEnabled(legacy.registrationEnabled()).setDraftUpdatedAt(now).setPublishedAt(now)
                 .setCreatedAt(oldStyle.createdAt()).setUpdatedAt(now));
         var nextLegalEntity = LegalDocumentSettingEntityDraft.$.produce(d -> d
@@ -97,12 +105,12 @@ public class CustomizationService {
                 .setUpdatedAt(now));
         sql.saveCommand(nextStyle).setMode(SaveMode.UPSERT).execute();
         sql.saveCommand(nextLegalEntity).setMode(SaveMode.UPSERT).execute();
-        return new DraftView(nextConfig, nextLegal, now, now);
+        return new DraftView(nextConfig, nextSocialProviders, nextLegal, now, now);
     }
 
     @Transactional
     public DraftView resetDraft() {
-        return updateDraft(new DraftInput(defaultConfig(), new LegalDocumentsInput(null, null)));
+        return updateDraft(new DraftInput(defaultConfig(), List.of(), new LegalDocumentsInput(null, null)));
     }
 
     @Transactional
@@ -111,7 +119,7 @@ public class CustomizationService {
         if (e == null) {
             Instant now = Instant.now();
             Map<String, Object> defaults = defaultConfig();
-            e = LoginStyleEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setLogo(null).setLogoDark(null).setBackgroundImage(null).setBackgroundColor("#f5f7fa").setPrimaryColor("#0369A1").setTitle("Easy1Auth").setSubtitle("企业级身份管理平台").setCustomCss(null).setLoginMethods(List.of("password")).setSocialProviders(List.of()).setDraftConfig(defaults).setPublishedConfig(defaults).setRegistrationEnabled(true).setDraftUpdatedAt(now).setPublishedAt(now).setCreatedAt(now).setUpdatedAt(now));
+            e = LoginStyleEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setLogo(null).setLogoDark(null).setBackgroundImage(null).setBackgroundColor("#f5f7fa").setPrimaryColor("#0369A1").setTitle("Easy1Auth").setSubtitle("企业级身份管理平台").setCustomCss(null).setLoginMethods(List.of("password")).setSocialProviders(List.of()).setDraftSocialProviders(List.of()).setDraftConfig(defaults).setPublishedConfig(defaults).setRegistrationEnabled(true).setDraftUpdatedAt(now).setPublishedAt(now).setCreatedAt(now).setUpdatedAt(now));
             sql.saveCommand(e).setMode(SaveMode.INSERT_IF_ABSENT).execute();
         }
         return e;
@@ -123,7 +131,7 @@ public class CustomizationService {
         if (e == null) {
             Instant now = Instant.now();
             Map<String, Object> defaults = defaultConfig();
-            e = LoginStyleEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTenantId(tenant).setLogo(null).setLogoDark(null).setBackgroundImage(null).setBackgroundColor("#f5f7fa").setPrimaryColor("#0369A1").setTitle("Easy1Auth").setSubtitle("企业级身份管理平台").setCustomCss(null).setLoginMethods(List.of("password")).setSocialProviders(List.of()).setDraftConfig(defaults).setPublishedConfig(defaults).setRegistrationEnabled(true).setDraftUpdatedAt(now).setPublishedAt(now).setCreatedAt(now).setUpdatedAt(now));
+            e = LoginStyleEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTenantId(tenant).setLogo(null).setLogoDark(null).setBackgroundImage(null).setBackgroundColor("#f5f7fa").setPrimaryColor("#0369A1").setTitle("Easy1Auth").setSubtitle("企业级身份管理平台").setCustomCss(null).setLoginMethods(List.of("password")).setSocialProviders(List.of()).setDraftSocialProviders(List.of()).setDraftConfig(defaults).setPublishedConfig(defaults).setRegistrationEnabled(true).setDraftUpdatedAt(now).setPublishedAt(now).setCreatedAt(now).setUpdatedAt(now));
             sql.saveCommand(e).setMode(SaveMode.INSERT_IF_ABSENT).execute();
         }
         return e;
@@ -132,14 +140,18 @@ public class CustomizationService {
     @Transactional(readOnly = true)
     public Map<String, Object> publishedConfig(UUID tenant) {
         var style = sql.createQuery(STYLE).where(STYLE.tenantId().eq(tenant)).select(STYLE).fetchOneOrNull();
-        if (style == null) return defaultConfig();
+        if (style == null) {
+            return defaultConfig();
+        }
         return config(style.publishedConfig(), style);
     }
 
     @Transactional(readOnly = true)
     public PublishedLegalDocuments publishedLegalDocuments(UUID tenant) {
         var legal = sql.createQuery(LEGAL_DOCUMENT).where(LEGAL_DOCUMENT.tenantId().eq(tenant)).select(LEGAL_DOCUMENT).fetchOneOrNull();
-        if (legal == null) return new PublishedLegalDocuments(null, null);
+        if (legal == null) {
+            return new PublishedLegalDocuments(null, null);
+        }
         return new PublishedLegalDocuments(firstNonNull(legal.publishedTermsOfService(), legal.termsOfService()), firstNonNull(legal.publishedPrivacyPolicy(), legal.privacyPolicy()));
     }
 
@@ -152,7 +164,9 @@ public class CustomizationService {
     public CustomDomainEntity addDomain(String value, String method) {
         String domain = normalizeDomain(value);
         String m = method == null ? "dns" : method;
-        if (!Set.of("dns", "file").contains(m)) throw invalid(ErrorCodeConstants.DOMAIN_METHOD_INVALID);
+        if (!Set.of("dns", "file").contains(m)) {
+            throw invalid(ErrorCodeConstants.DOMAIN_METHOD_INVALID);
+        }
         byte[] b = new byte[24];
         random.nextBytes(b);
         Instant now = Instant.now();
@@ -163,8 +177,9 @@ public class CustomizationService {
 
     @Transactional
     public void deleteDomain(UUID id) {
-        if (!sql.createQuery(DOMAIN).where(DOMAIN.id().eq(id)).select(DOMAIN.id()).exists() || sql.deleteById(CustomDomainEntity.class, id).getTotalAffectedRowCount() != 1)
+        if (!sql.createQuery(DOMAIN).where(DOMAIN.id().eq(id)).select(DOMAIN.id()).exists() || sql.deleteById(CustomDomainEntity.class, id).getTotalAffectedRowCount() != 1) {
             throw new DomainException(ErrorCodeConstants.DOMAIN_NOT_FOUND);
+        }
     }
 
     public void verificationUnavailable() {
@@ -178,8 +193,9 @@ public class CustomizationService {
 
     @Transactional
     public MessageTemplateEntity saveTemplate(UUID id, TemplateInput in) {
-        if (in == null || !Set.of("email", "sms").contains(in.type()) || in.code() == null || !in.code().matches("[a-z0-9_]{2,100}") || in.name() == null || in.name().isBlank() || in.content() == null || in.content().isBlank())
+        if (in == null || !Set.of("email", "sms").contains(in.type()) || in.code() == null || !in.code().matches("[a-z0-9_]{2,100}") || in.name() == null || in.name().isBlank() || in.content() == null || in.content().isBlank()) {
             throw invalid(ErrorCodeConstants.MESSAGE_TEMPLATE_INVALID);
+        }
         validateVariables(in.content(), in.variables());
         Instant now = Instant.now();
         if (id == null) {
@@ -189,7 +205,9 @@ public class CustomizationService {
         }
         template(id);
         int updated = sql.createUpdate(TEMPLATE).set(TEMPLATE.type(), in.type()).set(TEMPLATE.code(), in.code()).set(TEMPLATE.name(), in.name().strip()).set(TEMPLATE.subject(), in.subject()).set(TEMPLATE.content(), in.content()).set(TEMPLATE.variables(), in.variables() == null ? Map.of() : in.variables()).set(TEMPLATE.defaultTemplate(), Boolean.TRUE.equals(in.isDefault())).set(TEMPLATE.status(), in.status() == null ? "active" : in.status()).set(TEMPLATE.updatedAt(), now).where(TEMPLATE.id().eq(id)).execute();
-        if (updated != 1) throw templateMissing();
+        if (updated != 1) {
+            throw templateMissing();
+        }
         return template(id);
     }
 
@@ -263,10 +281,18 @@ public class CustomizationService {
     private static Map<String, Object> normalizeConfig(Map<String, Object> input, boolean strictCss) {
         Map<String, Object> root = defaultConfig();
         if (input != null) {
-            if (input.get("global") instanceof Map<?, ?> value) object(root, "global").putAll(stringMap(value));
-            if (input.get("standard") instanceof Map<?, ?> value) object(root, "standard").putAll(stringMap(value));
-            if (input.get("qr") instanceof Map<?, ?> value) object(root, "qr").putAll(stringMap(value));
-            if (input.containsKey("schemaVersion")) root.put("schemaVersion", 1);
+            if (input.get("global") instanceof Map<?, ?> value) {
+                object(root, "global").putAll(stringMap(value));
+            }
+            if (input.get("standard") instanceof Map<?, ?> value) {
+                object(root, "standard").putAll(stringMap(value));
+            }
+            if (input.get("qr") instanceof Map<?, ?> value) {
+                object(root, "qr").putAll(stringMap(value));
+            }
+            if (input.containsKey("schemaVersion")) {
+                root.put("schemaVersion", 1);
+            }
         }
         Map<String, Object> global = object(root, "global");
         global.put("title", text(global.get("title"), "Easy1Auth", 200));
@@ -341,7 +367,9 @@ public class CustomizationService {
 
     private static String text(Object value, String fallback, int max) {
         String result = Objects.toString(value, fallback).strip();
-        if (result.isEmpty() || result.length() > max) throw invalid(ErrorCodeConstants.STYLE_TEXT_INVALID);
+        if (result.isEmpty() || result.length() > max) {
+            throw invalid(ErrorCodeConstants.STYLE_TEXT_INVALID);
+        }
         return result;
     }
 
@@ -351,7 +379,9 @@ public class CustomizationService {
 
     private static String httpsUrl(Object value) {
         String url = nullableString(value);
-        if (url != null) CustomizationService.url(url);
+        if (url != null) {
+            CustomizationService.url(url);
+        }
         return url;
     }
 
@@ -361,27 +391,65 @@ public class CustomizationService {
 
     private static double number(Object value, double fallback, double min, double max) {
         double result = value instanceof Number n ? n.doubleValue() : fallback;
-        if (result < min || result > max) throw invalid(ErrorCodeConstants.STYLE_CONFIG_INVALID);
+        if (result < min || result > max) {
+            throw invalid(ErrorCodeConstants.STYLE_CONFIG_INVALID);
+        }
         return result;
     }
 
     private static String css(Object value, boolean strict) {
         String result = nullableString(value);
-        if (result == null) return null;
+        if (result == null) {
+            return null;
+        }
         String normalized = result.toLowerCase(Locale.ROOT);
         boolean unsafe = normalized.contains("<script") || normalized.contains("javascript:") || normalized.contains("@import") || result.contains("{") || result.contains("}");
         if (unsafe) {
-            if (strict) throw invalid(ErrorCodeConstants.STYLE_CONFIG_INVALID);
+            if (strict) {
+                throw invalid(ErrorCodeConstants.STYLE_CONFIG_INVALID);
+            }
             return null;
         }
         return result;
     }
 
     private static List<String> normalizeMethods(Object value) {
-        if (!(value instanceof Collection<?> values)) return List.of("password", "email");
+        if (!(value instanceof Collection<?> values)) {
+            return List.of("password", "email");
+        }
         List<String> result = values.stream().map(Objects::toString).map(method -> "oidc".equals(method) ? "social" : method)
                 .filter(Set.of("password", "email", "social")::contains).distinct().toList();
         return result.isEmpty() ? List.of("password") : result;
+    }
+
+    private List<String> socialProviders(Collection<String> values) {
+        if (values == null || values.isEmpty()) {
+            return List.of();
+        }
+        LinkedHashSet<String> ids = new LinkedHashSet<>();
+        for (String value : values) {
+            try {
+                ids.add(UUID.fromString(Objects.requireNonNull(value).trim()).toString());
+            } catch (RuntimeException ex) {
+                throw invalid(ErrorCodeConstants.SOCIAL_PROVIDER_INVALID);
+            }
+        }
+        Set<String> activeIds = socialIdentity.listActive().stream().map(source -> source.id().toString()).collect(java.util.stream.Collectors.toSet());
+        if (!activeIds.containsAll(ids)) {
+            throw invalid(ErrorCodeConstants.SOCIAL_PROVIDER_INVALID);
+        }
+        return List.copyOf(ids);
+    }
+
+    private static void requireSocialProviders(Map<String, Object> config, List<String> providers) {
+        Object standardValue = config.get("standard");
+        if (!(standardValue instanceof Map<?, ?> standard)) {
+            return;
+        }
+        Object methodsValue = standard.get("methods");
+        if (methodsValue instanceof Collection<?> methods && methods.stream().map(Objects::toString).anyMatch("social"::equals) && providers.isEmpty()) {
+            throw invalid(ErrorCodeConstants.SOCIAL_PROVIDER_INVALID);
+        }
     }
 
     private static String firstNonNull(String first, String second) {
@@ -391,8 +459,9 @@ public class CustomizationService {
     @Transactional
     public void deleteTemplate(UUID id) {
         template(id);
-        if (sql.deleteById(MessageTemplateEntity.class, id).getTotalAffectedRowCount() != 1)
+        if (sql.deleteById(MessageTemplateEntity.class, id).getTotalAffectedRowCount() != 1) {
             throw new DomainException(ErrorCodeConstants.MESSAGE_TEMPLATE_NOT_FOUND);
+        }
     }
 
     private MessageTemplateEntity template(UUID id) {
@@ -405,10 +474,13 @@ public class CustomizationService {
 
     private static void rejectDangerous(String... values) {
         for (String value : values) {
-            if (value == null) continue;
+            if (value == null) {
+                continue;
+            }
             String normalized = value.toLowerCase(Locale.ROOT);
-            if (normalized.contains("<script") || normalized.contains("javascript:"))
+            if (normalized.contains("<script") || normalized.contains("javascript:")) {
                 throw invalid(ErrorCodeConstants.LEGAL_DOCUMENT_CONTENT_UNSAFE);
+            }
         }
     }
 
@@ -419,15 +491,19 @@ public class CustomizationService {
     private static void validateVariables(String content, Map<String, String> vars) {
         var allowed = vars == null ? Set.<String>of() : vars.keySet();
         var matcher = java.util.regex.Pattern.compile("\\{\\{([A-Za-z][A-Za-z0-9_]*)}}").matcher(content);
-        while (matcher.find()) if (!allowed.contains(matcher.group(1)))
-            throw invalid(ErrorCodeConstants.TEMPLATE_VARIABLE_UNKNOWN);
+        while (matcher.find()) {
+            if (!allowed.contains(matcher.group(1))) {
+                throw invalid(ErrorCodeConstants.TEMPLATE_VARIABLE_UNKNOWN);
+            }
+        }
     }
 
     private static String normalizeDomain(String value) {
         try {
             String d = IDN.toASCII(Objects.toString(value, "").strip().toLowerCase(Locale.ROOT));
-            if (d.length() > 253 || !d.matches("(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}"))
+            if (d.length() > 253 || !d.matches("(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}")) {
                 throw new IllegalArgumentException();
+            }
             return d;
         } catch (RuntimeException ex) {
             throw invalid(ErrorCodeConstants.DOMAIN_INVALID);
@@ -435,10 +511,14 @@ public class CustomizationService {
     }
 
     private static void url(String v) {
-        if (v == null || v.isBlank()) return;
+        if (v == null || v.isBlank()) {
+            return;
+        }
         try {
             URI u = URI.create(v);
-            if (!"https".equalsIgnoreCase(u.getScheme()) || u.getHost() == null) throw new IllegalArgumentException();
+            if (!"https".equalsIgnoreCase(u.getScheme()) || u.getHost() == null) {
+                throw new IllegalArgumentException();
+            }
         } catch (RuntimeException ex) {
             throw invalid(ErrorCodeConstants.ASSET_URL_INVALID);
         }
@@ -446,7 +526,9 @@ public class CustomizationService {
 
     private static String color(String value, String old) {
         String v = value == null ? old : value;
-        if (!v.matches("#[0-9A-Fa-f]{6}")) throw invalid(ErrorCodeConstants.COLOR_INVALID);
+        if (!v.matches("#[0-9A-Fa-f]{6}")) {
+            throw invalid(ErrorCodeConstants.COLOR_INVALID);
+        }
         return v;
     }
 
@@ -454,10 +536,10 @@ public class CustomizationService {
         return new DomainException(errorCode);
     }
 
-    public record DraftInput(Map<String, Object> config, LegalDocumentsInput legalDocuments) {
+    public record DraftInput(Map<String, Object> config, List<String> socialProviderIds, LegalDocumentsInput legalDocuments) {
     }
 
-    public record DraftView(Map<String, Object> config, LegalDocumentsInput legalDocuments,
+    public record DraftView(Map<String, Object> config, List<String> socialProviderIds, LegalDocumentsInput legalDocuments,
                             Instant draftUpdatedAt, Instant publishedAt) {
     }
 

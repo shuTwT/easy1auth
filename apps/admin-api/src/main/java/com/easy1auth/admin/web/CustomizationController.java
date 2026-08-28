@@ -45,8 +45,9 @@ public class CustomizationController {
     @ManagementRouteClassification(ManagementRouteKind.PUBLIC)
     @GetMapping("/api/login-style/public")
     ApiResponse<?> publicStyle(@RequestParam(required = false) UUID tenantId) {
-        if (tenantId == null)
+        if (tenantId == null) {
             return ApiResponse.ok(new PublicStyleView(null, null, null, "#f5f7fa", "#0369A1", "Easy1Auth", "企业级身份管理平台", List.of("password"), List.of(), Map.of(), null, null));
+        }
         var style = service.publicStyle(tenantId);
         var legal = service.publishedLegalDocuments(tenantId);
         return ApiResponse.ok(new PublicStyleView(style.logo(), style.logoDark(), style.backgroundImage(), style.backgroundColor(), style.primaryColor(), style.title(), style.subtitle(), style.loginMethods(), style.socialProviders(), service.publishedConfig(tenantId), legal.termsOfService(), legal.privacyPolicy()));

@@ -59,13 +59,17 @@ public class AdminAccessService {
     @Transactional
     public AdminRoleView update(TenantContext c, UUID id, String name, String description, List<String> permissions) {
         var old = findEntityFetched(c.tenantId(), id);
-        if (old.systemRole()) throw immutable();
+        if (old.systemRole()) {
+            throw immutable();
+        }
         var n = name == null ? old.name() : name;
         validateName(n);
         var codes = permissions == null ? catalog.validate(old.permissions().stream().map(ManagementPermissionEntity::code).toList(), ManagementPermissionScope.TENANT) : catalog.validate(permissions, ManagementPermissionScope.TENANT);
         requireGrantable(c, codes);
         var update = sql.createUpdate(ROLE).set(ROLE.name(), n.strip()).set(ROLE.updatedAt(), Instant.now()).where(ROLE.id().eq(id), ROLE.tenantId().eq(c.tenantId()));
-        if (description != null) update.set(ROLE.description(), description);
+        if (description != null) {
+            update.set(ROLE.description(), description);
+        }
         update.execute();
         replacePermissions(id, codes);
         return find(c.tenantId(), id);
@@ -73,7 +77,9 @@ public class AdminAccessService {
 
     @Transactional
     public void delete(UUID id) {
-        if (findEntity(id).systemRole()) throw immutable();
+        if (findEntity(id).systemRole()) {
+            throw immutable();
+        }
         sql.deleteById(AdminRoleEntity.class, id);
     }
 
@@ -114,8 +120,9 @@ public class AdminAccessService {
         if ("disabled".equals(status)) {
             identities.lockActive(account);
             var activeMemberships = sql.createQuery(MEMBERSHIP).where(MEMBERSHIP.accountId().eq(account), MEMBERSHIP.status().eq("active")).select(MEMBERSHIP.id()).forUpdate().execute();
-            if (!activeMemberships.isEmpty())
+            if (!activeMemberships.isEmpty()) {
                 throw new DomainException(ErrorCodeConstants.ADMINISTRATOR_TRANSFER_REQUIRED);
+            }
         }
         identities.updateStatus(actor, account, status);
     }
@@ -193,7 +200,9 @@ public class AdminAccessService {
 
     private AdminAccountEntity findAccount(UUID account) {
         var entity = sql.findById(AdminAccountEntity.class, account);
-        if (entity == null) throw new DomainException(ErrorCodeConstants.ADMIN_ACCOUNT_NOT_FOUND);
+        if (entity == null) {
+            throw new DomainException(ErrorCodeConstants.ADMIN_ACCOUNT_NOT_FOUND);
+        }
         return entity;
     }
 
@@ -238,13 +247,15 @@ public class AdminAccessService {
     }
 
     private void validateName(String name) {
-        if (name == null || name.isBlank() || name.length() > 100)
+        if (name == null || name.isBlank() || name.length() > 100) {
             throw new DomainException(ErrorCodeConstants.ROLE_NAME_INVALID);
+        }
     }
 
     private void requireGrantable(TenantContext c, List<ManagementPermissionCode> permissions) {
-        if (permissions.stream().map(ManagementPermissionCode::value).anyMatch(code -> !c.permissions().contains(code)))
+        if (permissions.stream().map(ManagementPermissionCode::value).anyMatch(code -> !c.permissions().contains(code))) {
             throw new DomainException(ErrorCodeConstants.PERMISSION_ESCALATION);
+        }
     }
 
     private void replacePermissions(UUID role, List<ManagementPermissionCode> permissions) {

@@ -2,6 +2,8 @@
 import { computed, onMounted, ref } from 'vue'
 import { message, Modal } from 'antdv-next'
 import { Palette } from '@lucide/vue'
+import { socialIdentitySourceApi } from '@/api/socialIdentitySource'
+import type { SocialIdentitySource } from '@/types/socialIdentitySource'
 import PreviewToolbar from './PreviewToolbar.vue'
 import LoginStylePreview from './LoginStylePreview.vue'
 import StyleInspector from './StyleInspector.vue'
@@ -18,7 +20,9 @@ const activeTab = ref<BuilderTab>('global')
 const device = ref<'desktop' | 'mobile'>('desktop')
 const fullscreen = ref(false)
 const inspectorOpen = ref(false)
-const { config, legalDocuments, loading, saving, publishing, resetting, dirty, status, publishedAt, load, markDirty, save, publish, reset } = useLoginStyleDraft()
+const { config, socialProviderIds, legalDocuments, loading, saving, publishing, resetting, dirty, status, publishedAt, load, markDirty, save, publish, reset } = useLoginStyleDraft()
+const socialSources = ref<SocialIdentitySource[]>([])
+const socialSourcesLoading = ref(false)
 
 const publishedText = computed(() => publishedAt.value ? `最近发布：${new Date(publishedAt.value).toLocaleString('zh-CN')}` : '尚未发布，将使用默认样式')
 
@@ -42,6 +46,10 @@ function validate() {
   }
   if (!config.value.standard.methods.length) {
     message.error('至少启用一种常规登录方式')
+    return false
+  }
+  if (config.value.standard.methods.includes('social') && !socialProviderIds.value.length) {
+    message.error('启用社会化登录后，至少选择一个已启用身份源')
     return false
   }
   if ((config.value.global.customCss ?? '').match(/<script|javascript:|[{}]|@import/i)) {
@@ -74,8 +82,20 @@ async function resetDraft() {
   catch (error) { message.error(error instanceof Error ? error.message : '恢复默认失败') }
 }
 
+async function loadSocialSources() {
+  socialSourcesLoading.value = true
+  try {
+    const response = await socialIdentitySourceApi.getList({ status: 'active', page: 1, pageSize: 100 })
+    socialSources.value = response.items.filter(source => source.status === 'active')
+  } catch (error) {
+    message.error('加载社会化身份源失败')
+  } finally {
+    socialSourcesLoading.value = false
+  }
+}
+
 onMounted(async () => {
-  try { await load() }
+  try { await Promise.all([load(), loadSocialSources()]) }
   catch (error) { message.error(error instanceof Error ? error.message : '加载登录页草稿失败') }
 })
 </script>
@@ -100,7 +120,7 @@ onMounted(async () => {
       <button class="inspector-toggle" type="button" @click="inspectorOpen = !inspectorOpen">{{ inspectorOpen ? '关闭配置' : '打开配置' }}</button>
       <section class="inspector-column" :class="{ open: inspectorOpen }">
         <div class="mobile-inspector-header"><strong>配置面板</strong><button type="button" @click="inspectorOpen = false">×</button></div>
-        <StyleInspector :config="config" :legal-documents="legalDocuments" :tab="activeTab" @change="markDirty" />
+        <StyleInspector :config="config" :legal-documents="legalDocuments" :social-provider-ids="socialProviderIds" :social-sources="socialSources" :social-sources-loading="socialSourcesLoading" :tab="activeTab" @change="markDirty" @update:social-provider-ids="socialProviderIds = $event; markDirty()" />
       </section>
     </main>
 

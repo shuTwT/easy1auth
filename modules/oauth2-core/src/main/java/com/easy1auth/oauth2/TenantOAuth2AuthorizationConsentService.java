@@ -34,7 +34,8 @@ public class TenantOAuth2AuthorizationConsentService implements OAuth2Authorizat
     }
 
     private void requireClient(String id) {
-        if (clients.findById(id) == null)
+        if (clients.findById(id) == null) {
             throw new IllegalArgumentException("OAuth consent does not belong to requested tenant");
+        }
     }
 }

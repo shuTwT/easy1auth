@@ -8,6 +8,7 @@ import com.easy1auth.security.SecurityPolicyService;
 import com.easy1auth.authorization.config.SecurityConfiguration;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import org.babyfish.jimmer.sql.JSqlClient;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +26,7 @@ import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -40,6 +42,7 @@ import java.util.*;
  */
 @RestController
 public class LoginController {
+    private static final String SOCIAL_PENDING_IDENTITY = "EASY1AUTH_SOCIAL_PENDING_IDENTITY";
     /** 负责签发和校验 pool_user 的 TOTP 多因素认证挑战。 */
     private final SecurityPolicyService security;
     /** 负责发起和处理社会化身份源登录。 */
@@ -89,8 +92,9 @@ public class LoginController {
      */
     @GetMapping(value = "/auth-portal-api/interaction", produces = MediaType.APPLICATION_JSON_VALUE)
     ResponseEntity<?> interaction(HttpServletRequest request) {
-        if (request.getSession(false) != null && request.getSession(false).getAttribute(AuthorizationInteractionService.CONSENT_REQUEST) != null)
+        if (request.getSession(false) != null && request.getSession(false).getAttribute(AuthorizationInteractionService.CONSENT_REQUEST) != null) {
             return ResponseEntity.ok(interactions.consentContext(request));
+        }
         return ResponseEntity.ok(interactions.loginContext(request));
     }
 
@@ -103,8 +107,9 @@ public class LoginController {
     @PostMapping(value = "/auth-portal-api/login", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     ResponseEntity<?> passwordLogin(@RequestBody LoginInput input, HttpServletRequest request, HttpServletResponse response) {
         UUID tenant = interactions.requireTenant(request);
-        if (input == null || blank(input.username()) || input.password() == null)
+        if (input == null || blank(input.username()) || input.password() == null) {
             return ResponseEntity.ok(new ApiError(ErrorCodeConstants.LOGIN_INPUT_INVALID.code(), ErrorCodeConstants.LOGIN_INPUT_INVALID.message()));
+        }
         var token = UsernamePasswordAuthenticationToken.unauthenticated(input.username(), input.password());
         token.setDetails(new SecurityConfiguration.PoolLoginDetails(tenant.toString(), userAgent(request), request.getRemoteAddr()));
         try {
@@ -118,6 +123,7 @@ public class LoginController {
                 SecurityContextHolder.clearContext();
                 return ResponseEntity.ok(new LoginResult("mfa_required", null, challenge.expiresIn()));
             }
+            bindPendingSocialIdentity(request, UUID.fromString(authentication.getName()));
             saveAuthentication(authentication, request, response);
             interactions.clearLoginError(request);
             return ResponseEntity.ok(new LoginResult("success", continueUrl(request, response), 0));
@@ -137,17 +143,21 @@ public class LoginController {
     @PostMapping(value = "/auth-portal-api/register/send-code", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     ResponseEntity<?> registerSendCode(@RequestBody EmailInput input, HttpServletRequest request) {
         UUID tenant = interactions.requireTenant(request);
-        if (input == null || blank(input.email()))
+        if (input == null || blank(input.email())) {
             return ResponseEntity.ok(new ApiError(ErrorCodeConstants.REGISTRATION_INPUT_INVALID.code(), ErrorCodeConstants.REGISTRATION_INPUT_INVALID.message()));
+        }
         var style = customization.publicStyle(tenant);
-        if (!style.registrationEnabled())
+        if (!style.registrationEnabled()) {
             return ResponseEntity.ok(new ApiError(ErrorCodeConstants.REGISTRATION_DISABLED.code(), ErrorCodeConstants.REGISTRATION_DISABLED.message()));
+        }
         String email = input.email().strip().toLowerCase();
-        if (!email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"))
+        if (!email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
             return ResponseEntity.ok(new ApiError(ErrorCodeConstants.REGISTRATION_INPUT_INVALID.code(), ErrorCodeConstants.REGISTRATION_INPUT_INVALID.message()));
+        }
         var existing = sql.createQuery(PoolUserEntityTable.$).where(PoolUserEntityTable.$.tenantId().eq(tenant), PoolUserEntityTable.$.email().eq(email)).select(PoolUserEntityTable.$.id()).fetchOneOrNull();
-        if (existing != null)
+        if (existing != null) {
             return ResponseEntity.ok(new ApiError(ErrorCodeConstants.REGISTRATION_EMAIL_EXISTS.code(), ErrorCodeConstants.REGISTRATION_EMAIL_EXISTS.message()));
+        }
         com.easy1auth.security.SecurityPolicyService.Challenge challenge;
         try {
             challenge = security.issueEmailChallenge("registration", null, tenant, "register", email);
@@ -167,8 +177,9 @@ public class LoginController {
     @PostMapping(value = "/auth-portal-api/register/verify", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     ResponseEntity<?> registerVerify(@RequestBody VerifyInput input, HttpServletRequest request, HttpServletResponse response) {
         UUID tenant = interactions.requireTenant(request);
-        if (input == null || blank(input.token()) || blank(input.code()))
+        if (input == null || blank(input.token()) || blank(input.code())) {
             return ResponseEntity.ok(new ApiError(ErrorCodeConstants.REGISTRATION_INPUT_INVALID.code(), ErrorCodeConstants.REGISTRATION_INPUT_INVALID.message()));
+        }
         com.easy1auth.security.SecurityPolicyService.ConsumedEmailChallenge consumed;
         try {
             consumed = security.consumeRegistrationEmailChallenge(input.token(), input.code(), "register");
@@ -176,8 +187,9 @@ public class LoginController {
             return ResponseEntity.ok(new ApiError(ErrorCodeConstants.VERIFICATION_CODE_INVALID.code(), ErrorCodeConstants.VERIFICATION_CODE_INVALID.message()));
         }
         String email = consumed.destination();
-        if (email == null || sql.createQuery(PoolUserEntityTable.$).where(PoolUserEntityTable.$.tenantId().eq(tenant), PoolUserEntityTable.$.email().eq(email)).select(PoolUserEntityTable.$.id()).fetchOneOrNull() != null)
+        if (email == null || sql.createQuery(PoolUserEntityTable.$).where(PoolUserEntityTable.$.tenantId().eq(tenant), PoolUserEntityTable.$.email().eq(email)).select(PoolUserEntityTable.$.id()).fetchOneOrNull() != null) {
             return ResponseEntity.ok(new ApiError(ErrorCodeConstants.REGISTRATION_EMAIL_EXISTS.code(), ErrorCodeConstants.REGISTRATION_EMAIL_EXISTS.message()));
+        }
         String username = generateUsername(tenant, email);
         var created = poolUsersService.create(tenant, new PoolUserService.Input(username, email, null, null, email.substring(0, email.indexOf('@')), null, "active", null, null, Map.of()));
         var authorities = List.of(new SimpleGrantedAuthority("ROLE_POOL_USER"), new SimpleGrantedAuthority("TENANT_" + tenant));
@@ -196,12 +208,14 @@ public class LoginController {
     @PostMapping(value = "/auth-portal-api/login/email/send-code", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     ResponseEntity<?> emailLoginSendCode(@RequestBody EmailInput input, HttpServletRequest request) {
         UUID tenant = interactions.requireTenant(request);
-        if (input == null || blank(input.email()))
+        if (input == null || blank(input.email())) {
             return ResponseEntity.ok(new ApiError(ErrorCodeConstants.LOGIN_INPUT_INVALID.code(), ErrorCodeConstants.LOGIN_INPUT_INVALID.message()));
+        }
         String email = input.email().strip().toLowerCase();
         var user = sql.createQuery(PoolUserEntityTable.$).where(PoolUserEntityTable.$.tenantId().eq(tenant), PoolUserEntityTable.$.email().eq(email), PoolUserEntityTable.$.status().eq("active")).select(PoolUserEntityTable.$).fetchOneOrNull();
-        if (user == null)
+        if (user == null) {
             return ResponseEntity.ok(new ChallengeResult(security.decoyChallengeToken(), 600));
+        }
         com.easy1auth.security.SecurityPolicyService.Challenge challenge;
         try {
             challenge = security.issueEmailChallenge("pool_user", user.id(), tenant, "email_login", email);
@@ -220,8 +234,9 @@ public class LoginController {
     @PostMapping(value = "/auth-portal-api/login/email/verify", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     ResponseEntity<?> emailLoginVerify(@RequestBody VerifyInput input, HttpServletRequest request, HttpServletResponse response) {
         UUID tenant = interactions.requireTenant(request);
-        if (input == null || blank(input.token()) || blank(input.code()))
+        if (input == null || blank(input.token()) || blank(input.code())) {
             return ResponseEntity.ok(new ApiError(ErrorCodeConstants.LOGIN_INPUT_INVALID.code(), ErrorCodeConstants.LOGIN_INPUT_INVALID.message()));
+        }
         com.easy1auth.security.SecurityPolicyService.ConsumedEmailChallenge consumed;
         try {
             consumed = security.consumeEmailChallenge(input.token(), input.code(), "pool_user", "email_login");
@@ -229,12 +244,14 @@ public class LoginController {
             return ResponseEntity.ok(new ApiError(ErrorCodeConstants.VERIFICATION_CODE_INVALID.code(), ErrorCodeConstants.VERIFICATION_CODE_INVALID.message()));
         }
         var user = sql.createQuery(PoolUserEntityTable.$).where(PoolUserEntityTable.$.tenantId().eq(tenant), PoolUserEntityTable.$.id().eq(consumed.subjectId()), PoolUserEntityTable.$.status().eq("active")).select(PoolUserEntityTable.$).fetchOneOrNull();
-        if (user == null)
+        if (user == null) {
             return ResponseEntity.ok(new ApiError(ErrorCodeConstants.LOGIN_FAILED.code(), ErrorCodeConstants.LOGIN_FAILED.message()));
+        }
         sql.createUpdate(PoolUserEntityTable.$).set(PoolUserEntityTable.$.lastLoginAt(), Instant.now()).set(PoolUserEntityTable.$.updatedAt(), Instant.now()).where(PoolUserEntityTable.$.id().eq(user.id()), PoolUserEntityTable.$.tenantId().eq(tenant)).execute();
-        var authorities = List.of(new SimpleGrantedAuthority("ROLE_POOL_USER"), new SimpleGrantedAuthority("TENANT_" + tenant));
-        var auth = UsernamePasswordAuthenticationToken.authenticated(org.springframework.security.core.userdetails.User.withUsername(user.id().toString()).password("").authorities(authorities).build(), null, authorities);
-        saveAuthentication(auth, request, response);
+            var authorities = List.of(new SimpleGrantedAuthority("ROLE_POOL_USER"), new SimpleGrantedAuthority("TENANT_" + tenant));
+            var auth = UsernamePasswordAuthenticationToken.authenticated(org.springframework.security.core.userdetails.User.withUsername(user.id().toString()).password("").authorities(authorities).build(), null, authorities);
+            bindPendingSocialIdentity(request, user.id());
+            saveAuthentication(auth, request, response);
         interactions.clearLoginError(request);
         return ResponseEntity.ok(new LoginResult("success", continueUrl(request, response), 0));
     }
@@ -247,15 +264,21 @@ public class LoginController {
      */
     private String generateUsername(UUID tenant, String email) {
         String base = email.substring(0, email.indexOf('@'));
-        if (base.isBlank()) base = "user";
+        if (base.isBlank()) {
+            base = "user";
+        }
         base = base.replaceAll("[^a-zA-Z0-9._-]", "").strip();
-        if (base.isBlank()) base = "user";
+        if (base.isBlank()) {
+            base = "user";
+        }
         String candidate = base;
         int attempts = 0;
         var table = PoolUserEntityTable.$;
         while (attempts < 10) {
             var conflict = sql.createQuery(table).where(table.tenantId().eq(tenant), table.username().eq(candidate)).select(table.id()).fetchOneOrNull();
-            if (conflict == null) return candidate;
+            if (conflict == null) {
+                return candidate;
+            }
             candidate = base + "_" + UUID.randomUUID().toString().substring(0, 8);
             attempts++;
         }
@@ -280,18 +303,27 @@ public class LoginController {
      */
     @PostMapping(value = "/auth-portal-api/mfa", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     ResponseEntity<?> verifyMfa(@RequestBody MfaInput input, HttpServletRequest request, HttpServletResponse response) {
-        if (input == null || blank(input.code())) return ResponseEntity.ok(new ApiError(ErrorCodeConstants.MFA_INPUT_INVALID.code(), ErrorCodeConstants.MFA_INPUT_INVALID.message()));
+        if (input == null || blank(input.code())) {
+            return ResponseEntity.ok(new ApiError(ErrorCodeConstants.MFA_INPUT_INVALID.code(), ErrorCodeConstants.MFA_INPUT_INVALID.message()));
+        }
         var session = request.getSession(false);
-        if (session == null) return ResponseEntity.ok(new ApiError(ErrorCodeConstants.MFA_EXPIRED.code(), ErrorCodeConstants.MFA_EXPIRED.message()));
+        if (session == null) {
+            return ResponseEntity.ok(new ApiError(ErrorCodeConstants.MFA_EXPIRED.code(), ErrorCodeConstants.MFA_EXPIRED.message()));
+        }
         String challenge = (String) session.getAttribute("EASY1AUTH_MFA_CHALLENGE");
         UUID expected = uuid(session.getAttribute("EASY1AUTH_MFA_USER"));
         UUID tenant = uuid(session.getAttribute("EASY1AUTH_MFA_TENANT"));
-        if (challenge == null || expected == null || tenant == null) return ResponseEntity.ok(new ApiError(ErrorCodeConstants.MFA_EXPIRED.code(), ErrorCodeConstants.MFA_EXPIRED.message()));
+        if (challenge == null || expected == null || tenant == null) {
+            return ResponseEntity.ok(new ApiError(ErrorCodeConstants.MFA_EXPIRED.code(), ErrorCodeConstants.MFA_EXPIRED.message()));
+        }
         try {
             UUID actual = security.consumeTotpChallenge(challenge, input.code(), "pool_user", "oidc_login");
-            if (!actual.equals(expected)) return ResponseEntity.ok(new ApiError(ErrorCodeConstants.MFA_FAILED.code(), ErrorCodeConstants.MFA_FAILED.message()));
+            if (!actual.equals(expected)) {
+                return ResponseEntity.ok(new ApiError(ErrorCodeConstants.MFA_FAILED.code(), ErrorCodeConstants.MFA_FAILED.message()));
+            }
             var authorities = List.of(new SimpleGrantedAuthority("ROLE_POOL_USER"), new SimpleGrantedAuthority("TENANT_" + tenant), new SimpleGrantedAuthority("MFA_VERIFIED"));
             var auth = UsernamePasswordAuthenticationToken.authenticated(org.springframework.security.core.userdetails.User.withUsername(actual.toString()).password("").authorities(authorities).build(), null, authorities);
+            bindPendingSocialIdentity(request, actual);
             saveAuthentication(auth, request, response);
             session.removeAttribute("EASY1AUTH_MFA_CHALLENGE");
             session.removeAttribute("EASY1AUTH_MFA_USER");
@@ -328,7 +360,9 @@ public class LoginController {
      */
     @PostMapping(value = "/auth-portal-api/consent", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     ResponseEntity<?> consentAction(@RequestBody ConsentInput input, HttpServletRequest request) {
-        if (input == null) return ResponseEntity.ok(new ApiError(ErrorCodeConstants.AUTH_INPUT_INVALID.code(), ErrorCodeConstants.AUTH_INPUT_INVALID.message()));
+        if (input == null) {
+            return ResponseEntity.ok(new ApiError(ErrorCodeConstants.AUTH_INPUT_INVALID.code(), ErrorCodeConstants.AUTH_INPUT_INVALID.message()));
+        }
         var continuation = interactions.consumeConsent(request, input.action());
         return ResponseEntity.ok(continuation);
     }
@@ -337,28 +371,52 @@ public class LoginController {
     @GetMapping("/t/{tenant}/social/{sourceId}/authorize")
     void socialStart(@PathVariable UUID tenant, @PathVariable UUID sourceId, HttpServletRequest request, HttpServletResponse response) throws IOException {
         UUID interactionTenant = interactions.requireTenant(request);
-        if (!tenant.equals(interactionTenant)) throw new com.easy1auth.foundation.error.DomainException(ErrorCodeConstants.AUTH_INTERACTION_MISMATCH_CLIENT_TENANT);
-        String authorizePath = request.getRequestURL().toString();
-        String callback = authorizePath.endsWith("/authorize")
-                ? authorizePath.substring(0, authorizePath.length() - "/authorize".length()) + "/callback"
-                : authorizePath + "/callback";
-        response.sendRedirect(socialIdentity.authorize(tenant, sourceId, callback).authorizeUrl());
+        if (!tenant.equals(interactionTenant)) {
+            throw new com.easy1auth.foundation.error.DomainException(ErrorCodeConstants.AUTH_INTERACTION_MISMATCH_CLIENT_TENANT);
+        }
+        response.sendRedirect(socialIdentity.authorize(tenant, sourceId, socialCallbackUrl(request)).authorizeUrl());
     }
 
     /**
-     * 处理社会化身份源回调，建立 pool_user 会话后继续原始 OAuth 请求。
+     * 前端回调页提交飞书授权码。服务端校验 state 后，已绑定用户直接登录；未绑定用户
+     * 则将已验证的外部身份暂存于当前 Session，等待用户创建新账号或认证已有账号。
      *
-     * <p>租户一致性和 code/state 的校验由社会化身份源服务负责；控制器只负责将返回的用户
-     * 映射为当前授权服务器使用的 Spring Security 身份。</p>
+     * <p>飞书重定向先进入前端页面，页面可将失败原因以 toast 展示，避免供应商错误页直出。</p>
      */
-    @GetMapping("/t/{tenant}/social/{sourceId}/callback")
-    void socialCallback(@PathVariable UUID tenant, @PathVariable UUID sourceId, @RequestParam String code, @RequestParam String state, HttpServletRequest request, HttpServletResponse response) throws IOException {
-        String callback = request.getRequestURL().toString();
-        var result = socialIdentity.callback(tenant, sourceId, code, state, callback);
-        var authorities = List.of(new SimpleGrantedAuthority("ROLE_POOL_USER"), new SimpleGrantedAuthority("TENANT_" + tenant));
-        var auth = UsernamePasswordAuthenticationToken.authenticated(org.springframework.security.core.userdetails.User.withUsername(result.poolUserId().toString()).password("").authorities(authorities).build(), null, authorities);
-        saveAuthentication(auth, request, response);
-        response.sendRedirect(continueUrl(request, response));
+    @PostMapping(value = "/auth-portal-api/social/callback", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    ResponseEntity<?> socialCallback(@RequestBody SocialCallbackInput input, HttpServletRequest request, HttpServletResponse response) {
+        UUID tenant = interactions.requireTenant(request);
+        if (input == null || blank(input.code()) || blank(input.state())) {
+            return ResponseEntity.ok(new ApiError(ErrorCodeConstants.AUTH_INPUT_INVALID.code(), ErrorCodeConstants.AUTH_INPUT_INVALID.message()));
+        }
+        var result = socialIdentity.callback(input.code(), input.state(), socialCallbackUrl(request));
+        if (!tenant.equals(result.tenantId())) {
+            throw new com.easy1auth.foundation.error.DomainException(ErrorCodeConstants.AUTH_INTERACTION_MISMATCH_CLIENT_TENANT);
+        }
+        if (result.poolUserId() != null) {
+            saveAuthentication(poolUserAuthentication(result.poolUserId(), tenant, false), request, response);
+            interactions.clearLoginError(request);
+            return ResponseEntity.ok(SocialCallbackResult.success(continueUrl(request, response)));
+        }
+        request.getSession(true).setAttribute(SOCIAL_PENDING_IDENTITY, result.identity());
+        var identity = result.identity();
+        return ResponseEntity.ok(SocialCallbackResult.unbound(identity.name(), identity.email(), identity.username(),
+                identity.email() != null && !identity.email().isBlank()));
+    }
+
+    /** 用户确认后创建新 pool_user，并绑定当前 Session 中已验证的外部身份。 */
+    @PostMapping(value = "/auth-portal-api/social/provision", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    ResponseEntity<?> socialProvision(@RequestBody SocialProvisionInput input, HttpServletRequest request, HttpServletResponse response) {
+        UUID tenant = interactions.requireTenant(request);
+        var identity = pendingSocialIdentity(request, tenant);
+        if (input == null || blank(input.username())) {
+            return ResponseEntity.ok(new ApiError(ErrorCodeConstants.AUTH_INPUT_INVALID.code(), ErrorCodeConstants.AUTH_INPUT_INVALID.message()));
+        }
+        UUID userId = socialIdentity.provision(identity, input.username().strip());
+        clearPendingSocialIdentity(request);
+        saveAuthentication(poolUserAuthentication(userId, tenant, false), request, response);
+        interactions.clearLoginError(request);
+        return ResponseEntity.ok(new LoginResult("success", continueUrl(request, response), 0));
     }
 
     /** 将认证结果写入当前请求和 HTTP Session，供后续请求复用。 */
@@ -369,6 +427,49 @@ public class LoginController {
         securityContexts.saveContext(context, request, response);
     }
 
+    private void bindPendingSocialIdentity(HttpServletRequest request, UUID poolUserId) {
+        HttpSession session = request.getSession(false);
+        if (session == null || !(session.getAttribute(SOCIAL_PENDING_IDENTITY) instanceof SocialIdentityService.PendingIdentity identity)) {
+            return;
+        }
+        UUID tenant = interactions.requireTenant(request);
+        if (!tenant.equals(identity.tenantId())) {
+            throw new com.easy1auth.foundation.error.DomainException(ErrorCodeConstants.AUTH_INTERACTION_MISMATCH_CLIENT_TENANT);
+        }
+        socialIdentity.bind(identity, poolUserId);
+        session.removeAttribute(SOCIAL_PENDING_IDENTITY);
+    }
+
+    private SocialIdentityService.PendingIdentity pendingSocialIdentity(HttpServletRequest request, UUID tenant) {
+        HttpSession session = request.getSession(false);
+        if (session == null || !(session.getAttribute(SOCIAL_PENDING_IDENTITY) instanceof SocialIdentityService.PendingIdentity identity)
+                || !tenant.equals(identity.tenantId())) {
+            throw new com.easy1auth.foundation.error.DomainException(ErrorCodeConstants.AUTH_INTERACTION_EXPIRED_LOGIN);
+        }
+        return identity;
+    }
+
+    private void clearPendingSocialIdentity(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.removeAttribute(SOCIAL_PENDING_IDENTITY);
+        }
+    }
+
+    private static Authentication poolUserAuthentication(UUID userId, UUID tenant, boolean mfaVerified) {
+        var authorities = new ArrayList<SimpleGrantedAuthority>(List.of(
+                new SimpleGrantedAuthority("ROLE_POOL_USER"), new SimpleGrantedAuthority("TENANT_" + tenant)));
+        if (mfaVerified) {
+            authorities.add(new SimpleGrantedAuthority("MFA_VERIFIED"));
+        }
+        return UsernamePasswordAuthenticationToken.authenticated(org.springframework.security.core.userdetails.User.withUsername(userId.toString()).password("").authorities(authorities).build(), null, authorities);
+    }
+
+    private static String socialCallbackUrl(HttpServletRequest request) {
+        URI requestUri = URI.create(request.getRequestURL().toString());
+        return requestUri.resolve(request.getContextPath() + "/oauth-login/social/callback").toString();
+    }
+
     /**
      * 取得登录前被 Spring Security 保存的请求地址。
      *
@@ -376,7 +477,9 @@ public class LoginController {
      */
     private String continueUrl(HttpServletRequest request, HttpServletResponse response) {
         SavedRequest saved = requestCache.getRequest(request, response);
-        if (saved == null) return "/";
+        if (saved == null) {
+            return "/";
+        }
         requestCache.removeRequest(request, response);
         return saved.getRedirectUrl();
     }
@@ -402,6 +505,15 @@ public class LoginController {
     public record MfaInput(String code) { }
     /** 授权确认操作请求体，action 取值为 approve 或 deny。 */
     public record ConsentInput(String action) { }
+    /** 飞书前端回调提交的授权码与防 CSRF state。 */
+    public record SocialCallbackInput(String code, String state) { }
+    /** 用户确认创建新账号时提供的本地用户名。 */
+    public record SocialProvisionInput(String username) { }
+    /** 前端根据 status 显示继续登录或账户确认界面。 */
+    public record SocialCallbackResult(String status, String redirectUrl, String name, String email, String suggestedUsername, boolean canProvision) {
+        static SocialCallbackResult success(String redirectUrl) { return new SocialCallbackResult("success", redirectUrl, null, null, null, false); }
+        static SocialCallbackResult unbound(String name, String email, String suggestedUsername, boolean canProvision) { return new SocialCallbackResult("unbound", null, name, email, suggestedUsername, canProvision); }
+    }
     /** 登录结果；MFA 阶段返回剩余有效秒数，成功时返回继续地址。 */
     public record LoginResult(String status, String redirectUrl, int expiresIn) { }
     /** 验证码挑战结果，返回不透明 token 和有效秒数。 */

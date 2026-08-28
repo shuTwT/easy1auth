@@ -25,7 +25,7 @@ import java.util.*;
  * 社会化身份源服务：管理身份源 CRUD，并编排社交登录 authorize/callback 流程。
  *
  * <p>厂商协议（授权 URL、token 交换、用户信息拉取）委托给 {@link SocialIdentityAdapter}，
- * 厂商无关逻辑（state/nonce 生成、事务存取、绑定 upsert、JIT 开户）在本类内统一处理。</p>
+ * 厂商无关逻辑（state/nonce 生成、事务存取、账户确认后的绑定）在本类内统一处理。</p>
  */
 @Service
 public class SocialIdentityService {
@@ -45,7 +45,9 @@ public class SocialIdentityService {
         this.cipher = cipher;
         this.users = users;
         Map<String, SocialIdentityAdapter> map = new LinkedHashMap<>();
-        for (var a : adapterList) map.put(a.type(), a);
+        for (var a : adapterList) {
+            map.put(a.type(), a);
+        }
         this.adapters = Map.copyOf(map);
     }
 
@@ -90,22 +92,36 @@ public class SocialIdentityService {
         validate(in, false);
         var u = sql.createUpdate(SOURCE).set(SOURCE.updatedAt(), Instant.now())
                 .where(SOURCE.tenantId().eq(tenant), SOURCE.id().eq(id));
-        if (in.name() != null) u.set(SOURCE.name(), in.name().strip());
-        if (in.type() != null) u.set(SOURCE.type(), in.type());
-        if (in.mode() != null) u.set(SOURCE.mode(), in.mode());
-        if (in.clientId() != null) u.set(SOURCE.clientId(), in.clientId().strip());
-        if (in.clientSecret() != null && !in.clientSecret().isBlank())
+        if (in.name() != null) {
+            u.set(SOURCE.name(), in.name().strip());
+        }
+        if (in.type() != null) {
+            u.set(SOURCE.type(), in.type());
+        }
+        if (in.mode() != null) {
+            u.set(SOURCE.mode(), in.mode());
+        }
+        if (in.clientId() != null) {
+            u.set(SOURCE.clientId(), in.clientId().strip());
+        }
+        if (in.clientSecret() != null && !in.clientSecret().isBlank()) {
             u.set(SOURCE.encryptedClientSecret(), cipher.encrypt("social:" + tenant + ":" + id, in.clientSecret()));
-        if (in.jitProvisioning() != null) u.set(SOURCE.jitProvisioning(), in.jitProvisioning());
-        if (in.status() != null) u.set(SOURCE.status(), status(in.status()));
+        }
+        if (in.jitProvisioning() != null) {
+            u.set(SOURCE.jitProvisioning(), in.jitProvisioning());
+        }
+        if (in.status() != null) {
+            u.set(SOURCE.status(), status(in.status()));
+        }
         u.execute();
         return get(tenant, id);
     }
 
     @Transactional
     public void delete(UUID tenant, UUID id) {
-        if (sql.createDelete(SOURCE).where(SOURCE.tenantId().eq(tenant), SOURCE.id().eq(id)).execute() != 1)
+        if (sql.createDelete(SOURCE).where(SOURCE.tenantId().eq(tenant), SOURCE.id().eq(id)).execute() != 1) {
             throw missing();
+        }
     }
 
     /** 查询租户下已启用的身份源（供登录页渲染按钮用）。 */
@@ -121,7 +137,9 @@ public class SocialIdentityService {
     @Transactional
     public AuthorizationStart authorize(UUID tenant, UUID sourceId, String redirectUri) {
         var s = entity(tenant, sourceId);
-        if (!"active".equals(s.status())) throw new DomainException(ErrorCodeConstants.SOCIAL_SOURCE_DISABLED);
+        if (!"active".equals(s.status())) {
+            throw new DomainException(ErrorCodeConstants.SOCIAL_SOURCE_DISABLED);
+        }
         var adapter = adapter(s.type());
         URI callback = safeRedirect(redirectUri);
         String state = token(32), nonce = token(32);
@@ -142,11 +160,14 @@ public class SocialIdentityService {
     }
 
     @Transactional
-    public LoginResult callback(UUID tenant, UUID sourceId, String code, String state, String redirectUri) {
-        var tx = sql.createQuery(TX).where(TX.tenantId().eq(tenant), TX.sourceId().eq(sourceId), TX.stateHash().eq(hash(state)))
+    public CallbackResult callback(String code, String state, String redirectUri) {
+        var tx = sql.createQuery(TX).where(TX.stateHash().eq(hash(state)))
                 .select(TX).forUpdate().fetchOneOrNull();
-        if (tx == null || tx.consumedAt() != null || tx.expiresAt().isBefore(Instant.now()) || !Objects.equals(tx.returnUri(), redirectUri))
+        if (tx == null || tx.consumedAt() != null || tx.expiresAt().isBefore(Instant.now()) || !Objects.equals(tx.returnUri(), redirectUri)) {
             throw new DomainException(ErrorCodeConstants.SOCIAL_TRANSACTION_INVALID);
+        }
+        UUID tenant = tx.tenantId();
+        UUID sourceId = tx.sourceId();
         var s = entity(tenant, sourceId);
         var adapter = adapter(s.type());
         String secret = cipher.decrypt("social:" + tenant + ":" + sourceId, s.encryptedClientSecret());
@@ -157,29 +178,52 @@ public class SocialIdentityService {
         var binding = sql.createQuery(BINDING)
                 .where(BINDING.tenantId().eq(tenant), BINDING.sourceId().eq(sourceId), BINDING.subject().eq(info.subject()))
                 .select(BINDING).fetchOneOrNull();
-        boolean created = false;
-        UUID userId;
+        UUID userId = null;
         if (binding != null) {
             userId = binding.poolUserId();
             sql.createUpdate(BINDING).set(BINDING.lastLoginAt(), Instant.now()).where(BINDING.id().eq(binding.id())).execute();
-        } else {
-            if (!s.jitProvisioning()) throw new DomainException(ErrorCodeConstants.SOCIAL_BINDING_REQUIRED);
-            String email = info.email();
-            if (email == null) throw new DomainException(ErrorCodeConstants.SOCIAL_VERIFIED_EMAIL_REQUIRED);
-            String name = info.name() != null ? info.name() : email;
-            String username = sanitizeUsername(s.type() + "_" + info.subject());
-            var user = users.create(tenant, new PoolUserService.Input(username, email, null, null, name, info.avatar(),
-                    null, null, null, Map.of("federated", true, "social_type", s.type())));
-            userId = user.id();
-            created = true;
-            var e = SocialIdentityBindingEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTenantId(tenant)
-                    .setSourceId(sourceId).setPoolUserId(userId).setSourceType(s.type()).setSubject(info.subject())
-                    .setClaims(Map.of("name", name, "email", email, "username", info.username() != null ? info.username() : ""))
-                    .setCreatedAt(Instant.now()).setLastLoginAt(Instant.now()));
-            sql.saveCommand(e).setMode(SaveMode.INSERT_ONLY).execute();
         }
         sql.createUpdate(TX).set(TX.consumedAt(), Instant.now()).where(TX.id().eq(tx.id()), TX.consumedAt().isNull()).execute();
-        return new LoginResult(userId, created);
+        var identity = new PendingIdentity(tenant, sourceId, s.type(), info.subject(), info.username(),
+                info.name(), info.email(), info.avatar());
+        return new CallbackResult(tenant, sourceId, userId, identity);
+    }
+
+    /** 用户明确确认后，创建一个新的 pool_user 并绑定已验证的社会化身份。 */
+    @Transactional
+    public UUID provision(PendingIdentity identity, String username) {
+        if (identity == null || blank(identity.email())) {
+            throw new DomainException(ErrorCodeConstants.SOCIAL_EMAIL_REQUIRED);
+        }
+        String name = blank(identity.name()) ? identity.email() : identity.name();
+        var user = users.create(identity.tenantId(), new PoolUserService.Input(username, identity.email(), null, null,
+                name, identity.avatar(), null, null, null, Map.of("federated", true, "social_type", identity.sourceType())));
+        bind(identity, user.id());
+        return user.id();
+    }
+
+    /** 将已验证的社会化身份绑定到已通过本地认证的 pool_user。 */
+    @Transactional
+    public void bind(PendingIdentity identity, UUID poolUserId) {
+        if (identity == null || poolUserId == null) {
+            throw new DomainException(ErrorCodeConstants.SOCIAL_TRANSACTION_INVALID);
+        }
+        var existing = sql.createQuery(BINDING)
+                .where(BINDING.tenantId().eq(identity.tenantId()), BINDING.sourceId().eq(identity.sourceId()), BINDING.subject().eq(identity.subject()))
+                .select(BINDING).fetchOneOrNull();
+        if (existing != null) {
+            if (!existing.poolUserId().equals(poolUserId)) {
+                throw new DomainException(ErrorCodeConstants.SOCIAL_BINDING_CONFLICT);
+            }
+            sql.createUpdate(BINDING).set(BINDING.lastLoginAt(), Instant.now()).where(BINDING.id().eq(existing.id())).execute();
+            return;
+        }
+        var binding = SocialIdentityBindingEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTenantId(identity.tenantId())
+                .setSourceId(identity.sourceId()).setPoolUserId(poolUserId).setSourceType(identity.sourceType()).setSubject(identity.subject())
+                .setClaims(Map.of("name", Objects.toString(identity.name(), ""), "email", Objects.toString(identity.email(), ""),
+                        "username", Objects.toString(identity.username(), "")))
+                .setCreatedAt(Instant.now()).setLastLoginAt(Instant.now()));
+        sql.saveCommand(binding).setMode(SaveMode.INSERT_ONLY).execute();
     }
 
     // ==================== TenantContextHolder 便捷重载 ====================
@@ -208,7 +252,9 @@ public class SocialIdentityService {
 
     private SocialIdentityAdapter adapter(String type) {
         var a = adapters.get(type);
-        if (a == null) throw new DomainException(ErrorCodeConstants.SOCIAL_TYPE_NOT_SUPPORTED);
+        if (a == null) {
+            throw new DomainException(ErrorCodeConstants.SOCIAL_TYPE_NOT_SUPPORTED);
+        }
         return a;
     }
 
@@ -220,16 +266,21 @@ public class SocialIdentityService {
     private DomainException missing() { return new DomainException(ErrorCodeConstants.SOCIAL_SOURCE_NOT_FOUND); }
 
     private void validate(Input i, boolean create) {
-        if (i == null || (create && (blank(i.name()) || blank(i.type()) || blank(i.clientId()) || blank(i.clientSecret()))))
+        if (i == null || (create && (blank(i.name()) || blank(i.type()) || blank(i.clientId()) || blank(i.clientSecret())))) {
             throw new DomainException(ErrorCodeConstants.SOCIAL_SOURCE_INVALID);
-        if (i.type() != null && !adapters.containsKey(i.type()))
+        }
+        if (i.type() != null && !adapters.containsKey(i.type())) {
             throw new DomainException(ErrorCodeConstants.SOCIAL_TYPE_NOT_SUPPORTED);
-        if (i.status() != null) status(i.status());
+        }
+        if (i.status() != null) {
+            status(i.status());
+        }
     }
 
     private static String status(String s) {
-        if (!Set.of("active", "disabled").contains(s))
+        if (!Set.of("active", "disabled").contains(s)) {
             throw new DomainException(ErrorCodeConstants.SOCIAL_STATUS_INVALID);
+        }
         return s;
     }
 
@@ -241,8 +292,9 @@ public class SocialIdentityService {
     private static URI safeRedirect(String v) {
         try {
             URI u = URI.create(v);
-            if (!u.isAbsolute() || u.getFragment() != null || !("https".equals(u.getScheme()) || "http".equals(u.getScheme())))
+            if (!u.isAbsolute() || u.getFragment() != null || !("https".equals(u.getScheme()) || "http".equals(u.getScheme()))) {
                 throw new IllegalArgumentException();
+            }
             return u;
         } catch (RuntimeException ex) {
             throw new DomainException(ErrorCodeConstants.SOCIAL_REDIRECT_INVALID);
@@ -271,7 +323,9 @@ public class SocialIdentityService {
 
     private static String sanitizeUsername(String raw) {
         String clean = raw.replaceAll("[^A-Za-z0-9]", "");
-        if (clean.length() > 80) clean = clean.substring(0, 80);
+        if (clean.length() > 80) {
+            clean = clean.substring(0, 80);
+        }
         return clean.isBlank() ? "social_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12) : clean;
     }
 
@@ -286,5 +340,8 @@ public class SocialIdentityService {
 
     public record AuthorizationStart(String authorizeUrl, String state, int expiresIn) { }
 
-    public record LoginResult(UUID poolUserId, boolean isNewUser) { }
+    public record CallbackResult(UUID tenantId, UUID sourceId, UUID poolUserId, PendingIdentity identity) { }
+
+    public record PendingIdentity(UUID tenantId, UUID sourceId, String sourceType, String subject,
+                                  String username, String name, String email, String avatar) implements java.io.Serializable { }
 }

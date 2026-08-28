@@ -44,8 +44,9 @@ public class PoolUserImportController {
     @TenantManagementPermission(value = ManagementPermissionCode.USER_IMPORT)
     @PostMapping
     ApiResponse<?> upload(@RequestParam("file") MultipartFile file) throws IOException {
-        if (file.isEmpty() || file.getSize() > MAX_FILE_SIZE)
+        if (file.isEmpty() || file.getSize() > MAX_FILE_SIZE) {
             throw new DomainException(ErrorCodeConstants.IMPORT_FILE_INVALID);
+        }
         List<ImportError> errors = new ArrayList<>();
         List<ImportedUser> imported = new ArrayList<>();
         int total = 0;
@@ -54,9 +55,13 @@ public class PoolUserImportController {
             var formatter = new DataFormatter();
             for (int rowIndex = 1; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
                 var row = sheet.getRow(rowIndex);
-                if (row == null) continue;
+                if (row == null) {
+                    continue;
+                }
                 String username = value(row, 0, formatter), email = value(row, 1, formatter), password = value(row, 2, formatter), phone = value(row, 3, formatter), name = value(row, 4, formatter), department = value(row, 5, formatter), position = value(row, 6, formatter);
-                if (StreamSupport.empty(username, email, name)) continue;
+                if (StreamSupport.empty(username, email, name)) {
+                    continue;
+                }
                 total++;
                 try {
                     var user = users.create(new PoolUserService.Input(username, email, blank(password), blank(phone), name, null, null, blank(department), blank(position), null));

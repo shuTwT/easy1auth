@@ -30,7 +30,9 @@ public final class ProductionConfigurationValidation implements ApplicationRunne
         SecretPolicy.require("SECURITY_DATA_ENCRYPTION_SECRET",
                 environment.getProperty("easy1auth.security.data-encryption-secret"), 32);
         String mailUser = environment.getProperty("spring.mail.username");
-        if (mailUser == null || mailUser.isBlank()) throw new IllegalStateException("MAIL_USERNAME is required");
+        if (mailUser == null || mailUser.isBlank()) {
+            throw new IllegalStateException("MAIL_USERNAME is required");
+        }
         SecretPolicy.require("MAIL_PASSWORD", environment.getProperty("spring.mail.password"), 12);
         if (registration.fromAddress() == null || registration.fromAddress().length() > 320
                 || !registration.fromAddress().matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {

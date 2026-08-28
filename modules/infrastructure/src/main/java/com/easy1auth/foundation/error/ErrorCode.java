@@ -33,8 +33,12 @@ public final class ErrorCode {
 
     @Override
     public boolean equals(Object other) {
-        if (this == other) return true;
-        if (!(other instanceof ErrorCode that)) return false;
+        if (this == other) {
+            return true;
+        }
+        if (!(other instanceof ErrorCode that)) {
+            return false;
+        }
         return code == that.code && message.equals(that.message);
     }
 

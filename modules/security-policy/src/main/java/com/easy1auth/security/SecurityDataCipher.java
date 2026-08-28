@@ -16,8 +16,9 @@ public final class SecurityDataCipher {
     private final SecureRandom random = new SecureRandom();
 
     public SecurityDataCipher(@Value("${easy1auth.security.data-encryption-secret:}") String secret) {
-        if (secret.getBytes(StandardCharsets.UTF_8).length < 32)
+        if (secret.getBytes(StandardCharsets.UTF_8).length < 32) {
             throw new IllegalStateException("SECURITY_DATA_ENCRYPTION_SECRET must contain at least 32 UTF-8 bytes");
+        }
         try {
             key = MessageDigest.getInstance("SHA-256").digest(secret.getBytes(StandardCharsets.UTF_8));
         } catch (GeneralSecurityException ex) {

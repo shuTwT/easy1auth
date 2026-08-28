@@ -32,16 +32,19 @@ abstract class WechatAdapter extends AbstractSocialIdentityAdapter {
                 "code", code,
                 "grant_type", "authorization_code");
         var token = postForm(TOKEN, form, null);
-        if (token.get("errcode") != null && ((Number) token.get("errcode")).intValue() != 0)
+        if (token.get("errcode") != null && ((Number) token.get("errcode")).intValue() != 0) {
             throw new DomainException(ErrorCodeConstants.SOCIAL_TOKEN_EXCHANGE_FAILED);
+        }
         String accessToken = string(token.get("access_token"));
         String openid = string(token.get("openid"));
-        if (accessToken == null || openid == null)
+        if (accessToken == null || openid == null) {
             throw new DomainException(ErrorCodeConstants.SOCIAL_TOKEN_EXCHANGE_FAILED);
+        }
         // snsapi_login / snsapi_userinfo 可拉用户信息；snsapi_base 只有 openid。
         var user = getJson(USERINFO + "?access_token=" + enc(accessToken) + "&openid=" + enc(openid), null);
-        if (user.get("errcode") != null && ((Number) user.get("errcode")).intValue() != 0)
+        if (user.get("errcode") != null && ((Number) user.get("errcode")).intValue() != 0) {
             throw new DomainException(ErrorCodeConstants.SOCIAL_USERINFO_FAILED);
+        }
         String unionid = string(user.get("unionid"));
         String subject = unionid != null ? unionid : openid; // 优先 unionid 跨应用去重
         String nickname = string(user.get("nickname"));

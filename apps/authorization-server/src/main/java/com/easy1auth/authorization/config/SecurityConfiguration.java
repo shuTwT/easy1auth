@@ -9,7 +9,6 @@ import com.easy1auth.security.SecurityPolicyService;
 import com.easy1auth.authorization.security.IssuerHostValidationFilter;
 import com.easy1auth.authorization.security.TenantPrincipalValidationFilter;
 import com.easy1auth.authorization.web.AuthorizationInteractionService;
-import com.easy1auth.authorization.web.ConsentInteractionFilter;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
@@ -50,11 +49,6 @@ import java.util.*;
 @Configuration
 public class SecurityConfiguration {
     @Bean
-    ConsentInteractionFilter consentInteractionFilter(AuthorizationInteractionService interactions) {
-        return new ConsentInteractionFilter(interactions);
-    }
-
-    @Bean
     PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder(12);
     }
@@ -82,14 +76,17 @@ public class SecurityConfiguration {
                 String tenant = details == null ? null : details.tenant();
                 try {
                     var principal = users.authenticate(UUID.fromString(tenant), authentication.getName(), String.valueOf(authentication.getCredentials()));
-                    if (principal == null) throw new BadCredentialsException("用户名或密码错误");
+                    if (principal == null) {
+                        throw new BadCredentialsException("用户名或密码错误");
+                    }
                     devices.seen(principal.tenantId(), principal.id(), details.userAgent(), details.ip());
                     var authorities = new ArrayList<GrantedAuthority>();
                     authorities.add(new SimpleGrantedAuthority("ROLE_POOL_USER"));
                     authorities.add(new SimpleGrantedAuthority("TENANT_" + principal.tenantId()));
                     var mfa = security.status("pool_user", principal.id());
-                    if (mfa.enabled() || security.policy(principal.tenantId()).mfaRequired())
+                    if (mfa.enabled() || security.policy(principal.tenantId()).mfaRequired()) {
                         authorities.add(new SimpleGrantedAuthority("MFA_REQUIRED"));
+                    }
                     return UsernamePasswordAuthenticationToken.authenticated(org.springframework.security.core.userdetails.User.withUsername(principal.id().toString()).password("").authorities(authorities).build(), null, authorities);
                 } catch (IllegalArgumentException ex) {
                     throw new BadCredentialsException("租户或凭据无效");
@@ -105,7 +102,7 @@ public class SecurityConfiguration {
 
     @Bean
     @Order(1)
-    SecurityFilterChain authorizationServerSecurity(HttpSecurity http, RegisteredClientRepository clients, OAuth2AuthorizationService authorizations, OAuth2AuthorizationConsentService consents, IssuerHostValidationFilter issuerHostValidation, TenantPrincipalValidationFilter tenantPrincipalValidation, ConsentInteractionFilter consentInteractionFilter, AuthorizationInteractionService interactions) throws Exception {
+    SecurityFilterChain authorizationServerSecurity(HttpSecurity http, RegisteredClientRepository clients, OAuth2AuthorizationService authorizations, OAuth2AuthorizationConsentService consents, IssuerHostValidationFilter issuerHostValidation, TenantPrincipalValidationFilter tenantPrincipalValidation, AuthorizationInteractionService interactions) throws Exception {
         var configurer = OAuth2AuthorizationServerConfigurer.authorizationServer();
         http.securityMatcher(configurer.getEndpointsMatcher())
                 .with(configurer, server -> server.registeredClientRepository(clients).authorizationService(authorizations).authorizationConsentService(consents)
@@ -116,10 +113,6 @@ public class SecurityConfiguration {
                 .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()).ignoringRequestMatchers(configurer.getEndpointsMatcher()))
                 .addFilterAfter(issuerHostValidation, SecurityContextHolderFilter.class)
                 .addFilterAfter(tenantPrincipalValidation, IssuerHostValidationFilter.class)
-                // Authorization Server 在 http.build() 时才注册授权端点过滤器，不能在这里
-                // 直接以 OAuth2AuthorizationEndpointFilter 作为 addFilterBefore 的定位目标。
-                // 租户校验之后、授权端点处理之前执行即可完成 consent 请求的服务端重建。
-                .addFilterAfter(consentInteractionFilter, TenantPrincipalValidationFilter.class)
                 .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
                 .oauth2ResourceServer(resource -> resource.jwt(Customizer.withDefaults()))
                 .exceptionHandling(errors -> errors.defaultAuthenticationEntryPointFor((request, response, exception) -> {
@@ -140,8 +133,12 @@ public class SecurityConfiguration {
                     ? oauth.getError() : null;
             String code = error == null || error.getErrorCode() == null ? "invalid_request" : error.getErrorCode();
             String description = error == null ? null : error.getDescription();
-            if (description == null || description.isBlank()) description = exception.getMessage();
-            if (description == null || description.isBlank()) description = "OAuth2 授权请求无效";
+            if (description == null || description.isBlank()) {
+                description = exception.getMessage();
+            }
+            if (description == null || description.isBlank()) {
+                description = "OAuth2 授权请求无效";
+            }
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
             response.setCharacterEncoding(StandardCharsets.UTF_8.name());
@@ -191,13 +188,21 @@ public class SecurityConfiguration {
                 UUID userId = UUID.fromString(context.getPrincipal().getName());
                 var user = users.get(tenant, userId);
                 context.getClaims().subject(userId.toString()).claim("subject_type", "pool_user").claim("name", user.name()).claim("preferred_username", user.username());
-                if (user.email() != null)
+                if (user.email() != null) {
                     context.getClaims().claim("email", user.email()).claim("email_verified", user.emailVerified());
-                if (user.phone() != null)
+                }
+                if (user.phone() != null) {
                     context.getClaims().claim("phone_number", user.phone()).claim("phone_number_verified", user.phoneVerified());
-                if (user.avatar() != null) context.getClaims().claim("picture", user.avatar());
-                if (user.department() != null) context.getClaims().claim("department", user.department());
-                if (user.position() != null) context.getClaims().claim("position", user.position());
+                }
+                if (user.avatar() != null) {
+                    context.getClaims().claim("picture", user.avatar());
+                }
+                if (user.department() != null) {
+                    context.getClaims().claim("department", user.department());
+                }
+                if (user.position() != null) {
+                    context.getClaims().claim("position", user.position());
+                }
                 context.getClaims().claim("roles", new ArrayList<>(access.rolesForUser(tenant, userId).stream().map(UserAccessCatalogService.RoleView::code).toList())).claim("groups", new ArrayList<>(directory.groupsForUser(tenant, userId).stream().map(DirectoryCatalogService.GroupView::name).toList()));
             } catch (IllegalArgumentException ignored) {
             }

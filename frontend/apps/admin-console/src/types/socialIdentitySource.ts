@@ -3,16 +3,15 @@ export type SocialSourceType = (typeof SOCIAL_SOURCE_TYPES)[number]
 
 export interface SocialIdentitySource {
   id: string; tenantId: string; name: string; type: SocialSourceType; mode: string | null
-  clientId: string; clientSecret?: string | null; jitProvisioning: boolean
+  clientId: string; clientSecret?: string | null
   status: 'active' | 'disabled'; createdAt: string; updatedAt: string
 }
 export interface CreateSocialIdentitySourceDto {
   name: string; type: SocialSourceType; mode?: string | null; clientId: string; clientSecret: string
-  jitProvisioning?: boolean
 }
 export interface UpdateSocialIdentitySourceDto {
   name?: string; type?: SocialSourceType; mode?: string | null
-  clientId?: string; clientSecret?: string; jitProvisioning?: boolean
+  clientId?: string; clientSecret?: string
   status?: 'active' | 'disabled'
 }
 export interface SocialIdentitySourceListResponse { items: SocialIdentitySource[]; total: number; page: number; pageSize: number }

@@ -49,9 +49,12 @@ public class AuthController {
     @ManagementRouteClassification(ManagementRouteKind.AUTHENTICATION)
     @PostMapping("/login")
     public ApiResponse<LoginResponse> login(@RequestBody LoginRequest request, HttpServletRequest http) {
-        if ("email".equals(request.loginType())) return emailLogin(request, http);
-        if (!"password".equals(request.loginType()))
+        if ("email".equals(request.loginType())) {
+            return emailLogin(request, http);
+        }
+        if (!"password".equals(request.loginType())) {
             throw new DomainException(ErrorCodeConstants.LOGIN_TYPE_UNSUPPORTED);
+        }
         var result = identities.authenticate(request.username(), request.password(), jwt.refreshTtl(), WebFramework.getUserAgent(http), http.getRemoteAddr());
         if (result.account().mfaEnabled()) {
             identities.logout(result.refreshToken());
@@ -86,7 +89,9 @@ public class AuthController {
         if ("register".equals(request.type())) {
             var issued = registrationCodes.issue(request.email());
             delivery.enqueueEmail(null, issued.email(), "Easy1Auth 注册验证码", "您的验证码是 " + issued.code() + "，10分钟内有效。", "registration:" + issued.email() + ":" + java.time.Instant.now().getEpochSecond() / 60);
-            if (registration.exposeCode()) code = issued.code();
+            if (registration.exposeCode()) {
+                code = issued.code();
+            }
         } else if ("login".equals(request.type())) {
             challengeToken = security.decoyChallengeToken();
             var account = identities.activeAccountByEmail(request.email());
@@ -94,7 +99,9 @@ public class AuthController {
                 var challenge = security.issueEmailChallenge("admin", account.get().id(), null, "login", account.get().email());
                 challengeToken = challenge.token();
                 delivery.enqueueEmail(null, account.get().email(), "Easy1Auth 登录验证码", "您的登录验证码是 " + challenge.code() + "，10分钟内有效。", "email-login:" + account.get().id() + ":" + java.time.Instant.now().getEpochSecond() / 60);
-                if (registration.exposeCode()) code = challenge.code();
+                if (registration.exposeCode()) {
+                    code = challenge.code();
+                }
             }
         } else {
             throw new DomainException(ErrorCodeConstants.CODE_TYPE_UNSUPPORTED);
@@ -112,16 +119,20 @@ public class AuthController {
     @ManagementRouteClassification(ManagementRouteKind.AUTHENTICATION)
     @PostMapping("/logout")
     public ApiResponse<Void> logout(@RequestBody(required = false) RefreshRequest request, @AuthenticationPrincipal Jwt principal) {
-        if (request != null && request.refreshToken() != null) identities.logout(request.refreshToken());
-        else identities.logoutAllAndInvalidate(UUID.fromString(principal.getSubject()));
+        if (request != null && request.refreshToken() != null) {
+            identities.logout(request.refreshToken());
+        } else {
+            identities.logoutAllAndInvalidate(UUID.fromString(principal.getSubject()));
+        }
         return ApiResponse.ok(null, "退出成功");
     }
 
     private ApiResponse<LoginResponse> emailLogin(LoginRequest request, HttpServletRequest http) {
         var challenge = security.consumeEmailChallenge(request.challengeToken(), request.code(), "admin", "login");
         var account = identities.account(challenge.subjectId());
-        if (challenge.destination() == null || !account.email().equalsIgnoreCase(challenge.destination()))
+        if (challenge.destination() == null || !account.email().equalsIgnoreCase(challenge.destination())) {
             throw new DomainException(ErrorCodeConstants.MFA_CHALLENGE_INVALID);
+        }
         if (account.mfaEnabled()) {
             var totp = security.issueTotpChallenge("admin", account.id(), null, "login");
             return ApiResponse.ok(LoginResponse.mfa(totp.token(), totp.expiresIn()));
@@ -134,7 +145,9 @@ public class AuthController {
         var memberships = tenants.list(account.id());
         UUID current = account.lastTenantId();
         boolean currentAccessible = current != null && memberships.stream().map(t -> t.id()).anyMatch(current::equals);
-        if (!currentAccessible) current = memberships.isEmpty() ? null : memberships.getFirst().id();
+        if (!currentAccessible) {
+            current = memberships.isEmpty() ? null : memberships.getFirst().id();
+        }
         return LoginResponse.success(tokens.issue(account), refresh, new LoginUser(account.id(), account.username(), account.email(), null, current), memberships);
     }
 

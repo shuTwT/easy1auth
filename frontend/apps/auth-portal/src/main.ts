@@ -9,6 +9,7 @@ const router = createRouter({
   routes: [
     { path: '/', redirect: '/oauth-login' },
     { path: '/oauth-login', component: App },
+    { path: '/oauth-login/social/callback', component: App },
     { path: '/oauth-consent', component: App },
     { path: '/:pathMatch(.*)*', redirect: '/oauth-login' }
   ]

@@ -20,10 +20,12 @@ public class RegistrationCodeService {
     @Transactional
     public IssuedCode issue(String email) {
         String normalizedEmail = AdminIdentityNormalizer.normalizeEmail(email);
-        if (normalizedEmail == null || !normalizedEmail.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$") || normalizedEmail.length() > 320)
+        if (normalizedEmail == null || !normalizedEmail.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$") || normalizedEmail.length() > 320) {
             throw new DomainException(ErrorCodeConstants.EMAIL_INVALID);
-        if (repository.exists("__never__", normalizedEmail))
+        }
+        if (repository.exists("__never__", normalizedEmail)) {
             throw new DomainException(ErrorCodeConstants.ADMIN_EXISTS_EMAIL);
+        }
         String code = "%06d".formatted(RANDOM.nextInt(1_000_000));
         repository.issueRegistrationCode(UuidV7.randomUuid(), normalizedEmail, TokenHash.sha256(code), Instant.now().plus(Duration.ofMinutes(10)));
         return new IssuedCode(normalizedEmail, code, Instant.now().plus(Duration.ofMinutes(10)));

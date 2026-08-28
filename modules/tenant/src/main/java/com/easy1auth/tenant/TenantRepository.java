@@ -22,7 +22,9 @@ class TenantRepository {
 
     List<TenantState> listForAccount(UUID accountId) {
         var memberships = sql.createQuery(MEMBERSHIP).where(MEMBERSHIP.accountId().eq(accountId), MEMBERSHIP.status().eq("active")).select(MEMBERSHIP).execute();
-        if (memberships.isEmpty()) return List.of();
+        if (memberships.isEmpty()) {
+            return List.of();
+        }
         var byTenant = new HashMap<UUID, String>();
         memberships.forEach(m -> byTenant.put(m.tenantId(), m.membershipRole()));
         return sql.createQuery(TENANT).where(TENANT.id().in(byTenant.keySet())).orderBy(TENANT.createdAt().desc()).select(TENANT.fetch(TenantEntityFetcher.$.allScalarFields().packageInfo(TenantPackageEntityFetcher.$.allScalarFields()))).execute().stream().map(t -> new TenantState(t, byTenant.get(t.id()))).toList();
@@ -38,9 +40,13 @@ class TenantRepository {
 
     Optional<MembershipState> activeMembership(UUID accountId, UUID tenantId) {
         var membership = sql.createQuery(MEMBERSHIP).where(MEMBERSHIP.accountId().eq(accountId), MEMBERSHIP.tenantId().eq(tenantId), MEMBERSHIP.status().eq("active")).select(MEMBERSHIP).fetchOptional();
-        if (membership.isEmpty()) return Optional.empty();
+        if (membership.isEmpty()) {
+            return Optional.empty();
+        }
         var tenant = sql.createQuery(TENANT).where(TENANT.id().eq(tenantId), TENANT.status().eq("active")).select(TENANT.fetch(TenantEntityFetcher.$.allScalarFields().packageInfo(TenantPackageEntityFetcher.$.allScalarFields()))).fetchOptional();
-        if (tenant.isEmpty()) return Optional.empty();
+        if (tenant.isEmpty()) {
+            return Optional.empty();
+        }
         var tenantPackage = tenant.get().packageInfo();
         return Optional.of(new MembershipState(membership.get().id(), membership.get().membershipRole(), tenant.get().isSystem(), tenantPackage == null ? null : tenantPackage.id()));
     }

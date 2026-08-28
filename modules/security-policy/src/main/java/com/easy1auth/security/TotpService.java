@@ -25,7 +25,9 @@ public final class TotpService {
                 out.append(BASE32[(buffer >> (bits -= 5)) & 31]);
             }
         }
-        if (bits > 0) out.append(BASE32[(buffer << (5 - bits)) & 31]);
+        if (bits > 0) {
+            out.append(BASE32[(buffer << (5 - bits)) & 31]);
+        }
         return out.toString();
     }
 
@@ -34,10 +36,15 @@ public final class TotpService {
     }
 
     public boolean verify(String secret, String code, Instant now, Long lastUsed) {
-        if (code == null || !code.matches("\\d{6}")) return false;
+        if (code == null || !code.matches("\\d{6}")) {
+            return false;
+        }
         long current = step(now);
-        for (long s = current - 1; s <= current + 1; s++)
-            if ((lastUsed == null || s > lastUsed) && code(secret, s).equals(code)) return true;
+        for (long s = current - 1; s <= current + 1; s++) {
+            if ((lastUsed == null || s > lastUsed) && code(secret, s).equals(code)) {
+                return true;
+            }
+        }
         return false;
     }
 
@@ -65,10 +72,14 @@ public final class TotpService {
         byte[] out = new byte[value.length() * 5 / 8];
         for (char ch : value.toUpperCase(Locale.ROOT).toCharArray()) {
             int v = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567".indexOf(ch);
-            if (v < 0) continue;
+            if (v < 0) {
+                continue;
+            }
             buffer = (buffer << 5) | v;
             bits += 5;
-            if (bits >= 8) out[pos++] = (byte) (buffer >> (bits -= 8));
+            if (bits >= 8) {
+                out[pos++] = (byte) (buffer >> (bits -= 8));
+            }
         }
         return Arrays.copyOf(out, pos);
     }

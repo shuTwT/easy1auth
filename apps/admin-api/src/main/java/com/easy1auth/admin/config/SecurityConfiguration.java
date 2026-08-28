@@ -40,8 +40,9 @@ public class SecurityConfiguration {
         var decoder = NimbusJwtDecoder.withSecretKey(key(properties)).macAlgorithm(org.springframework.security.oauth2.jose.jws.MacAlgorithm.HS256).build();
         OAuth2TokenValidator<Jwt> issuer = JwtValidators.createDefaultWithIssuer(properties.issuer());
         OAuth2TokenValidator<Jwt> application = jwt -> {
-            if (!jwt.getAudience().contains(properties.audience()) || !"admin".equals(jwt.getClaimAsString("subject_type")))
+            if (!jwt.getAudience().contains(properties.audience()) || !"admin".equals(jwt.getClaimAsString("subject_type"))) {
                 return OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", "Wrong admin token audience or subject type", null));
+            }
             try {
                 identities.validateTokenSubject(java.util.UUID.fromString(jwt.getSubject()), jwt.getClaim("security_version"));
                 return OAuth2TokenValidatorResult.success();
@@ -68,8 +69,9 @@ public class SecurityConfiguration {
     }
 
     private static SecretKeySpec key(AdminJwtProperties properties) {
-        if (properties.secret() == null || properties.secret().getBytes(StandardCharsets.UTF_8).length < 32)
+        if (properties.secret() == null || properties.secret().getBytes(StandardCharsets.UTF_8).length < 32) {
             throw new IllegalStateException("ADMIN_JWT_SECRET must contain at least 32 UTF-8 bytes");
+        }
         return new SecretKeySpec(properties.secret().getBytes(StandardCharsets.UTF_8), "HmacSHA256");
     }
 }

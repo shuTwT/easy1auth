@@ -56,6 +56,7 @@ Vite 将 `/api` 代理到 `http://localhost:18848`，配置见 `frontend/vite.co
 ### 前端约定
 
 - [antdv-next组件库文档](https://antdv-next.com/llms.txt)
+- 在处理前端antdv-next相关问题时必需调用`antdv-next`skill，禁止猜测
 - `@/*` 别名指向 `frontend/src/`，同时配置于 `tsconfig.json` 和 `vite.config.ts`。
   基础色为 `neutral`。
 - 自定义共享组件放在 `frontend/src/components/common/`。
@@ -80,6 +81,10 @@ Vite 将 `/api` 代理到 `http://localhost:18848`，配置见 `frontend/vite.co
 - 登录页位于 `/login`，不使用主布局，是独立页面。
 - OAuth2 授权页位于 `/oauth2/authorize`，不使用主布局。
 - 路由守卫检查 `localStorage.getItem('token')`；无 Token 时重定向到 `/login`。
+
+### 后端约定
+
+- 在使用`jimmer`时需要调用`context7`来查询文档，禁止使用已有记忆进行猜测
 
 ## 当前缺失项
 
@@ -108,3 +113,8 @@ Vite 将 `/api` 代理到 `http://localhost:18848`，配置见 `frontend/vite.co
 - 租户：一个管理员`admin_user`拥有多个租户，可切换。租户绑定租户套餐，租户套餐有权限和套餐内容(用户数等)
 - 角色：不要混淆`pool_user`的角色和`admin_user`的角色。两者不是同一个角色管理，两者对应的权限列表也是不同的。
 - 品牌管理：登录样式指的是`pool_user`对应的登录页的样式，而不是`admin_user`登录页的样式。
+
+## 部署
+
+- 控制台域名: `console.easy1auth.shhsu.com`
+- 授权服务域名: `auth.easy1auth.shhsu.com`

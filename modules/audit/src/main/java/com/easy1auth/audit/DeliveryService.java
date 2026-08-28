@@ -66,15 +66,18 @@ public class DeliveryService {
     @Transactional
     public void delete(UUID id) {
         var old = entity(id);
-        if (sql.createDelete(HOOK).where(HOOK.id().eq(id), HOOK.tenantId().eq(old.tenantId())).execute() != 1)
+        if (sql.createDelete(HOOK).where(HOOK.id().eq(id), HOOK.tenantId().eq(old.tenantId())).execute() != 1) {
             throw missing();
+        }
     }
 
     @Transactional
     public void enqueueEvent(UUID tenant, String event, Map<String, Object> payload, String key) {
-        for (var hook : sql.createQuery(HOOK).where(HOOK.tenantId().eq(tenant), HOOK.status().eq("active")).select(HOOK).execute())
-            if (hook.events().contains(event) || hook.events().contains("*"))
+        for (var hook : sql.createQuery(HOOK).where(HOOK.tenantId().eq(tenant), HOOK.status().eq("active")).select(HOOK).execute()) {
+            if (hook.events().contains(event) || hook.events().contains("*")) {
                 enqueue(tenant, "webhook", hook.url(), event, payload, hook.id(), key + ":" + hook.id(), hook.maxRetries());
+            }
+        }
     }
 
     @Transactional
@@ -86,8 +89,9 @@ public class DeliveryService {
     public List<DeliveryOutboxEntity> claim(int limit) {
         Instant now = Instant.now();
         var rows = sql.createQuery(OUT).where(Predicate.or(OUT.status().eq("pending"), Predicate.and(OUT.status().eq("processing"), OUT.leaseUntil().lt(now))), OUT.availableAt().le(now)).orderBy(OUT.availableAt()).select(OUT).limit(Math.min(50, Math.max(1, limit))).forUpdate().execute();
-        for (var row : rows)
+        for (var row : rows) {
             sql.createUpdate(OUT).set(OUT.status(), "processing").set(OUT.leaseUntil(), now.plusSeconds(60)).where(OUT.id().eq(row.id())).execute();
+        }
         return rows;
     }
 
@@ -130,19 +134,25 @@ public class DeliveryService {
     }
 
     private static void validate(SubscriptionInput in) {
-        if (in == null || in.name() == null || in.name().isBlank() || in.events() == null || in.events().isEmpty())
+        if (in == null || in.name() == null || in.name().isBlank() || in.events() == null || in.events().isEmpty()) {
             throw new DomainException(ErrorCodeConstants.WEBHOOK_INVALID);
+        }
         try {
             URI u = URI.create(in.url());
-            if (!"https".equals(u.getScheme()) || u.getHost() == null) throw new IllegalArgumentException();
-            for (var a : java.net.InetAddress.getAllByName(u.getHost()))
-                if (a.isAnyLocalAddress() || a.isLoopbackAddress() || a.isLinkLocalAddress() || a.isSiteLocalAddress())
+            if (!"https".equals(u.getScheme()) || u.getHost() == null) {
+                throw new IllegalArgumentException();
+            }
+            for (var a : java.net.InetAddress.getAllByName(u.getHost())) {
+                if (a.isAnyLocalAddress() || a.isLoopbackAddress() || a.isLinkLocalAddress() || a.isSiteLocalAddress()) {
                     throw new IllegalArgumentException();
+                }
+            }
         } catch (Exception ex) {
             throw new DomainException(ErrorCodeConstants.WEBHOOK_URL_FORBIDDEN);
         }
-        if (in.maxRetries() != null && (in.maxRetries() < 0 || in.maxRetries() > 20))
+        if (in.maxRetries() != null && (in.maxRetries() < 0 || in.maxRetries() > 20)) {
             throw new DomainException(ErrorCodeConstants.WEBHOOK_RETRY_INVALID);
+        }
     }
 
     private String token(int n) {
@@ -160,8 +170,9 @@ public class DeliveryService {
     }
 
     private static String status(String v) {
-        if (!Set.of("active", "disabled").contains(v))
+        if (!Set.of("active", "disabled").contains(v)) {
             throw new DomainException(ErrorCodeConstants.WEBHOOK_STATUS_INVALID);
+        }
         return v;
     }
 

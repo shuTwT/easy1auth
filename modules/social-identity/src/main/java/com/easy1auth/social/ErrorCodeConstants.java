@@ -12,7 +12,8 @@ public interface ErrorCodeConstants {
     ErrorCode SOCIAL_REDIRECT_INVALID = new ErrorCode(18006, "社交登录回调地址无效");
     ErrorCode SOCIAL_STATUS_INVALID = new ErrorCode(18007, "身份源状态无效");
     ErrorCode SOCIAL_TRANSACTION_INVALID = new ErrorCode(18008, "社交登录事务无效或已过期");
-    ErrorCode SOCIAL_VERIFIED_EMAIL_REQUIRED = new ErrorCode(18009, "JIT 创建需要已验证邮箱");
+    ErrorCode SOCIAL_EMAIL_REQUIRED = new ErrorCode(18009, "创建新用户需要身份源提供邮箱");
     ErrorCode SOCIAL_TYPE_NOT_SUPPORTED = new ErrorCode(18010, "不支持的社会化身份源类型");
     ErrorCode SOCIAL_API_ERROR = new ErrorCode(18011, "社交平台返回错误");
+    ErrorCode SOCIAL_BINDING_CONFLICT = new ErrorCode(18012, "该外部身份已绑定其他用户");
 }

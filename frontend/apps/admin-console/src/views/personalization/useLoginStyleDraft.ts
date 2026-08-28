@@ -52,6 +52,7 @@ function normalizeLegal(value?: LoginStyleLegalDocuments | null): LoginStyleLega
 
 export function useLoginStyleDraft() {
   const config = ref<LoginStyleConfig>(clone(DEFAULT_LOGIN_STYLE_CONFIG))
+  const socialProviderIds = ref<string[]>([])
   const legalDocuments = ref<LoginStyleLegalDocuments>(normalizeLegal())
   const draftUpdatedAt = ref<string | null>(null)
   const publishedAt = ref<string | null>(null)
@@ -64,6 +65,7 @@ export function useLoginStyleDraft() {
 
   function apply(response: LoginStyleDraftResponse) {
     config.value = mergeConfig(response.config)
+    socialProviderIds.value = [...(response.socialProviderIds ?? [])]
     legalDocuments.value = normalizeLegal(response.legalDocuments)
     draftUpdatedAt.value = response.draftUpdatedAt ?? null
     publishedAt.value = response.publishedAt ?? null
@@ -86,7 +88,7 @@ export function useLoginStyleDraft() {
   async function save() {
     saving.value = true
     try {
-      apply(await loginStyleApi.saveDraft({ config: clone(config.value), legalDocuments: clone(legalDocuments.value) }))
+      apply(await loginStyleApi.saveDraft({ config: clone(config.value), socialProviderIds: [...socialProviderIds.value], legalDocuments: clone(legalDocuments.value) }))
     } finally {
       saving.value = false
     }
@@ -110,5 +112,5 @@ export function useLoginStyleDraft() {
     }
   }
 
-  return { config, legalDocuments, draftUpdatedAt, publishedAt, loading, saving, publishing, resetting, dirty, status, load, markDirty, save, publish, reset }
+  return { config, socialProviderIds, legalDocuments, draftUpdatedAt, publishedAt, loading, saving, publishing, resetting, dirty, status, load, markDirty, save, publish, reset }
 }

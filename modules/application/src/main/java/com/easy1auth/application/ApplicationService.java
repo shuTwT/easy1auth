@@ -40,9 +40,12 @@ public class ApplicationService {
         var normalized = normalize(input, true);
         int limit = tenants.lockForAppQuota(tenant);
         long count = sql.createQuery(APP).select(APP.id()).fetchUnlimitedCount();
-        if (count >= limit) throw new DomainException(ErrorCodeConstants.TENANT_APP_LIMIT);
-        if (sql.createQuery(APP).where(APP.name().eq(normalized.name())).select(APP.id()).exists())
+        if (count >= limit) {
+            throw new DomainException(ErrorCodeConstants.TENANT_APP_LIMIT);
+        }
+        if (sql.createQuery(APP).where(APP.name().eq(normalized.name())).select(APP.id()).exists()) {
             throw new DomainException(ErrorCodeConstants.APPLICATION_NAME_EXISTS);
+        }
         UUID id = UuidV7.randomUuid();
         String clientId = "app_" + id.toString().replace("-", "");
         String secret = isPublic(normalized.type()) ? null : secret();
@@ -84,15 +87,17 @@ public class ApplicationService {
         UUID tenant = TenantContextHolder.requireTenantId();
         var old = entity(id);
         var normalized = normalizeForUpdate(old, input);
-        if (!old.name().equals(normalized.name()) && sql.createQuery(APP).where(APP.name().eq(normalized.name()), APP.id().ne(id)).select(APP.id()).exists())
+        if (!old.name().equals(normalized.name()) && sql.createQuery(APP).where(APP.name().eq(normalized.name()), APP.id().ne(id)).select(APP.id()).exists()) {
             throw new DomainException(ErrorCodeConstants.APPLICATION_NAME_EXISTS);
+        }
         String oneTimeSecret = null;
         var update = sql.createUpdate(APP).set(APP.name(), normalized.name()).set(APP.logo(), normalized.logo()).set(APP.description(), normalized.description()).set(APP.type(), normalized.type()).set(APP.redirectUris(), normalized.redirectUris()).set(APP.postLogoutRedirectUris(), normalized.postLogoutRedirectUris()).set(APP.allowedGrantTypes(), normalized.allowedGrantTypes()).set(APP.scopes(), normalized.scopes()).set(APP.requirePkce(), normalized.requirePkce()).set(APP.requireConsent(), normalized.requireConsent()).set(APP.accessTokenLifetime(), normalized.accessTokenLifetime()).set(APP.refreshTokenLifetime(), normalized.refreshTokenLifetime()).set(APP.updatedAt(), Instant.now()).where(APP.id().eq(id), APP.tenantId().eq(tenant));
         if (isPublic(old.type()) && !isPublic(normalized.type())) {
             oneTimeSecret = secret();
             update.set(APP.clientSecretHash(), passwords.encode(oneTimeSecret));
-        } else if (!isPublic(old.type()) && isPublic(normalized.type()))
+        } else if (!isPublic(old.type()) && isPublic(normalized.type())) {
             update.set(APP.clientSecretHash(), (String) null);
+        }
         update.execute();
         return view(entity(id), oneTimeSecret);
     }
@@ -100,14 +105,17 @@ public class ApplicationService {
     @Transactional
     public void delete(UUID id) {
         UUID tenant = TenantContextHolder.requireTenantId();
-        if (sql.createDelete(APP).where(APP.id().eq(id), APP.tenantId().eq(tenant)).execute() != 1) throw missing();
+        if (sql.createDelete(APP).where(APP.id().eq(id), APP.tenantId().eq(tenant)).execute() != 1) {
+            throw missing();
+        }
     }
 
     @Transactional
     public ApplicationView status(UUID id, String status) {
         UUID tenant = TenantContextHolder.requireTenantId();
-        if (!Set.of("active", "disabled").contains(status))
+        if (!Set.of("active", "disabled").contains(status)) {
             throw new DomainException(ErrorCodeConstants.APPLICATION_STATUS_INVALID);
+        }
         entity(id);
         sql.createUpdate(APP).set(APP.status(), status).set(APP.updatedAt(), Instant.now()).where(APP.id().eq(id), APP.tenantId().eq(tenant)).execute();
         return get(id);
@@ -117,8 +125,9 @@ public class ApplicationService {
     public SecretView regenerateSecret(UUID id) {
         UUID tenant = TenantContextHolder.requireTenantId();
         var app = entity(id);
-        if (isPublic(app.type()))
+        if (isPublic(app.type())) {
             throw new DomainException(ErrorCodeConstants.PUBLIC_CLIENT_HAS_NO_SECRET);
+        }
         String secret = secret();
         sql.createUpdate(APP).set(APP.clientSecretHash(), passwords.encode(secret)).set(APP.updatedAt(), Instant.now()).where(APP.id().eq(id), APP.tenantId().eq(tenant)).execute();
         return new SecretView(secret);
@@ -154,8 +163,9 @@ public class ApplicationService {
     private static void uri(String value) {
         try {
             URI u = URI.create(value);
-            if (!u.isAbsolute() || u.getHost() == null || u.getFragment() != null || !("https".equalsIgnoreCase(u.getScheme()) || "http".equalsIgnoreCase(u.getScheme())))
+            if (!u.isAbsolute() || u.getHost() == null || u.getFragment() != null || !("https".equalsIgnoreCase(u.getScheme()) || "http".equalsIgnoreCase(u.getScheme()))) {
                 throw new IllegalArgumentException();
+            }
         } catch (RuntimeException ex) {
             throw new DomainException(ErrorCodeConstants.REDIRECT_URI_INVALID);
         }
@@ -166,26 +176,33 @@ public class ApplicationService {
     }
 
     private static ApplicationInput normalize(ApplicationInput in, boolean creating) {
-        if (in == null || in.name() == null || in.name().isBlank())
+        if (in == null || in.name() == null || in.name().isBlank()) {
             throw new DomainException(ErrorCodeConstants.APPLICATION_NAME_REQUIRED);
+        }
         String type = in.type() == null ? "web" : in.type();
-        if (!TYPES.contains(type)) throw new DomainException(ErrorCodeConstants.APPLICATION_TYPE_INVALID);
+        if (!TYPES.contains(type)) {
+            throw new DomainException(ErrorCodeConstants.APPLICATION_TYPE_INVALID);
+        }
         List<String> redirects = copy(in.redirectUris());
         redirects.forEach(ApplicationService::uri);
         List<String> logout = copy(in.postLogoutRedirectUris());
         logout.forEach(ApplicationService::uri);
         List<String> grants = in.allowedGrantTypes() == null ? defaultGrants(type) : copy(in.allowedGrantTypes());
-        if (grants.isEmpty() || !GRANTS.containsAll(grants))
+        if (grants.isEmpty() || !GRANTS.containsAll(grants)) {
             throw new DomainException(ErrorCodeConstants.GRANT_TYPE_INVALID);
-        if (isPublic(type) && grants.contains("client_credentials"))
+        }
+        if (isPublic(type) && grants.contains("client_credentials")) {
             throw new DomainException(ErrorCodeConstants.PUBLIC_CLIENT_GRANT_INVALID);
+        }
         List<String> scopes = in.scopes() == null ? List.of("openid", "profile", "email", "phone") : copy(in.scopes());
         int access = in.accessTokenLifetime() == null ? 900 : in.accessTokenLifetime(), refresh = in.refreshTokenLifetime() == null ? 2592000 : in.refreshTokenLifetime();
-        if (access < 60 || access > 86400 || refresh < 300 || refresh > 31536000)
+        if (access < 60 || access > 86400 || refresh < 300 || refresh > 31536000) {
             throw new DomainException(ErrorCodeConstants.TOKEN_LIFETIME_INVALID);
+        }
         boolean pkce = in.requirePkce() != null ? in.requirePkce() : grants.contains("authorization_code");
-        if (isPublic(type) && grants.contains("authorization_code") && !pkce)
+        if (isPublic(type) && grants.contains("authorization_code") && !pkce) {
             throw new DomainException(ErrorCodeConstants.PKCE_REQUIRED);
+        }
         return new ApplicationInput(in.name().strip(), in.logo(), in.description(), type, redirects, logout, grants, scopes, pkce, in.requireConsent() == null || in.requireConsent(), access, refresh);
     }
 
@@ -194,7 +211,9 @@ public class ApplicationService {
     }
 
     private static ApplicationInput normalizeForUpdate(OAuthApplicationEntity old, ApplicationInput in) {
-        if (in == null) return from(old);
+        if (in == null) {
+            return from(old);
+        }
         return normalize(new ApplicationInput(in.name() == null ? old.name() : in.name(), in.logo() == null ? old.logo() : in.logo(), in.description() == null ? old.description() : in.description(), in.type() == null ? old.type() : in.type(), in.redirectUris() == null ? old.redirectUris() : in.redirectUris(), in.postLogoutRedirectUris() == null ? old.postLogoutRedirectUris() : in.postLogoutRedirectUris(), in.allowedGrantTypes() == null ? old.allowedGrantTypes() : in.allowedGrantTypes(), in.scopes() == null ? old.scopes() : in.scopes(), in.requirePkce() == null ? old.requirePkce() : in.requirePkce(), in.requireConsent() == null ? old.requireConsent() : in.requireConsent(), in.accessTokenLifetime() == null ? old.accessTokenLifetime() : in.accessTokenLifetime(), in.refreshTokenLifetime() == null ? old.refreshTokenLifetime() : in.refreshTokenLifetime()), false);
     }
 

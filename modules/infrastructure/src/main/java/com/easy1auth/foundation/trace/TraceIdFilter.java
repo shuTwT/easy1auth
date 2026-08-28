@@ -21,7 +21,9 @@ public final class TraceIdFilter implements Filter {
             throws IOException, ServletException {
         var http = (HttpServletRequest) request;
         var traceId = http.getHeader(HEADER);
-        if (traceId == null || traceId.isBlank() || traceId.length() > 128) traceId = UuidV7.randomUuid().toString();
+        if (traceId == null || traceId.isBlank() || traceId.length() > 128) {
+            traceId = UuidV7.randomUuid().toString();
+        }
         ((HttpServletResponse) response).setHeader(HEADER, traceId);
         try (var ignored = MDC.putCloseable("traceId", traceId)) {
             chain.doFilter(request, response);

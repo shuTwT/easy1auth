@@ -16,8 +16,9 @@ public class IssuerHostValidationFilter extends OncePerRequestFilter {
 
     public IssuerHostValidationFilter(@Value("${easy1auth.oauth2.issuer-base}") String issuerBase) {
         this.allowed = URI.create(issuerBase);
-        if (allowed.getScheme() == null || allowed.getHost() == null || allowed.getPath() != null && !allowed.getPath().isBlank() && !"/".equals(allowed.getPath()))
+        if (allowed.getScheme() == null || allowed.getHost() == null || allowed.getPath() != null && !allowed.getPath().isBlank() && !"/".equals(allowed.getPath())) {
             throw new IllegalStateException("OAUTH2_ISSUER_BASE must be an absolute origin without a path");
+        }
     }
 
     @Override
@@ -30,7 +31,9 @@ public class IssuerHostValidationFilter extends OncePerRequestFilter {
         String[] parts = request.getRequestURI().split("/");
         boolean tenantValid = parts.length > 2;
         try {
-            if (tenantValid) UUID.fromString(parts[2]);
+            if (tenantValid) {
+                UUID.fromString(parts[2]);
+            }
         } catch (IllegalArgumentException ex) {
             tenantValid = false;
         }

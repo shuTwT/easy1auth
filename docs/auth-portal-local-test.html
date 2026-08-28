@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Easy1Auth auth-portal 本地接入测试</title>
+    <style>
+      :root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      body { margin: 0; background: #f1f5f9; color: #0f172a; }
+      main { max-width: 760px; margin: 40px auto; padding: 0 20px; }
+      .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 28px; box-shadow: 0 8px 30px #0f172a12; }
+      h1 { margin: 0 0 8px; font-size: 24px; }
+      .hint { margin: 0 0 24px; color: #64748b; line-height: 1.6; }
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      label { display: grid; gap: 7px; font-size: 14px; font-weight: 600; }
+      label.full { grid-column: 1 / -1; }
+      input { box-sizing: border-box; width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 11px; font: inherit; }
+      input:focus { outline: 2px solid #7dd3fc; border-color: #0284c7; }
+      .check { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+      .check input { width: auto; }
+      button { margin-top: 22px; border: 0; border-radius: 8px; padding: 11px 16px; background: #0369a1; color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+      button:hover { background: #075985; }
+      .preview { margin-top: 22px; padding: 13px; border-radius: 8px; background: #f8fafc; color: #334155; font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; }
+      .error { min-height: 20px; margin-top: 12px; color: #b91c1c; font-size: 14px; }
+      code { background: #f1f5f9; border-radius: 4px; padding: 2px 5px; }
+      @media (max-width: 620px) { .grid { grid-template-columns: 1fr; } label.full { grid-column: auto; } main { margin: 20px auto; } .card { padding: 20px; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="card">
+        <h1>auth-portal 本地第三方接入测试</h1>
+        <p class="hint">填写已在管理端创建的 OAuth 应用信息，点击按钮后会在新标签页打开登录和授权流程。开发环境请保持 <code>pnpm dev:auth</code>（18851）和授权服务（18850）运行。</p>
+
+        <form id="form">
+          <div class="grid">
+            <label class="full">auth-portal 地址
+              <input id="portal" type="url" value="http://localhost:18851" required />
+            </label>
+            <label>租户 ID（UUID）
+              <input id="tenant" placeholder="例如 00000000-0000-0000-0000-000000000000" required />
+            </label>
+            <label>client_id
+              <input id="clientId" placeholder="管理端 OAuth 应用中的 Client ID" required />
+            </label>
+            <label class="full">redirect_uri
+              <input id="redirectUri" type="url" value="http://localhost:3000/callback" required />
+            </label>
+            <label>scope
+              <input id="scope" value="openid profile email" required />
+            </label>
+            <label>state（留空自动生成）
+              <input id="state" placeholder="用于校验回调来源" />
+            </label>
+            <label class="check full"><input id="pkce" type="checkbox" checked /> 使用 PKCE（推荐，需客户端支持授权码 + code_verifier）</label>
+          </div>
+          <div id="error" class="error" role="alert"></div>
+          <button type="submit">打开 auth-portal 授权页</button>
+        </form>
+        <div id="preview" class="preview">授权地址将在这里预览</div>
+      </section>
+    </main>
+
+    <script>
+      const $ = (id) => document.getElementById(id)
+      const random = (length = 32) => {
+        const bytes = new Uint8Array(length)
+        crypto.getRandomValues(bytes)
+        return [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('')
+      }
+      const base64Url = (buffer) => btoa(String.fromCharCode(...new Uint8Array(buffer)))
+        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+      const sha256 = async (value) => crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))
+      const remember = (key, value) => {
+        try { sessionStorage.setItem(key, value) } catch (_) { /* file:// 页面可能没有可用的 Storage */ }
+      }
+
+      function buildUrl(values, verifier, challenge) {
+        const base = values.portal.replace(/\/$/, '')
+        const url = new URL(`${base}/t/${encodeURIComponent(values.tenant)}/oauth2/authorize`)
+        url.search = new URLSearchParams({
+          client_id: values.clientId,
+          redirect_uri: values.redirectUri,
+          response_type: 'code',
+          scope: values.scope,
+          state: values.state,
+          ...(values.pkce ? { code_challenge: challenge, code_challenge_method: 'S256' } : {})
+        })
+        return url.toString()
+      }
+
+      $('form').addEventListener('submit', async (event) => {
+        event.preventDefault()
+        $('error').textContent = ''
+        const values = {
+          portal: $('portal').value.trim(), tenant: $('tenant').value.trim(),
+          clientId: $('clientId').value.trim(), redirectUri: $('redirectUri').value.trim(),
+          scope: $('scope').value.trim(), state: $('state').value.trim() || random(16),
+          pkce: $('pkce').checked
+        }
+        try {
+          new URL(values.portal); new URL(values.redirectUri)
+          let verifier; let challenge
+          if (values.pkce) {
+            verifier = random(48)
+            challenge = base64Url(await sha256(verifier))
+            remember('easy1auth_pkce_verifier', verifier)
+          }
+          remember('easy1auth_oauth_state', values.state)
+          const url = buildUrl(values, verifier, challenge)
+          $('preview').textContent = url
+          window.location.assign(url)
+        } catch (error) {
+          $('error').textContent = error instanceof Error ? error.message : '参数无效，请检查后重试'
+        }
+      })
+    </script>
+  </body>
+</html>

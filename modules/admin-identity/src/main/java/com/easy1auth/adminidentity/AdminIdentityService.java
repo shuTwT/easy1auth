@@ -32,7 +32,9 @@ public class AdminIdentityService implements ActiveAdminAccountLocker {
 
     @Transactional
     public AuthenticatedAdmin authenticate(String login, String password, Duration refreshTtl, String userAgent, String ip) {
-        if (login == null || password == null) throw invalidCredentials();
+        if (login == null || password == null) {
+            throw invalidCredentials();
+        }
         String key = AdminIdentityNormalizer.normalizeLogin(login);
         protection.assertAllowed("admin", key, null);
         var found = repository.findCredential(key);
@@ -41,7 +43,9 @@ public class AdminIdentityService implements ActiveAdminAccountLocker {
             throw invalidCredentials();
         }
         var row = found.get();
-        if (!"active".equals(row.account().status())) throw new DomainException(ErrorCodeConstants.ADMIN_DISABLED);
+        if (!"active".equals(row.account().status())) {
+            throw new DomainException(ErrorCodeConstants.ADMIN_DISABLED);
+        }
         if (!passwords.matches(password, row.passwordHash())) {
             protection.failed("admin", key, null, 5, 1800);
             throw invalidCredentials();
@@ -55,9 +59,12 @@ public class AdminIdentityService implements ActiveAdminAccountLocker {
     public AuthenticatedAdmin register(String username, String email, String password, String code, Duration refreshTtl, String userAgent, String ip) {
         var identity = AdminIdentityNormalizer.normalize(username, email);
         validateCredentials(identity.username(), identity.email(), password);
-        if (code == null || code.isBlank() || !repository.consumeRegistrationCode(identity.email(), TokenHash.sha256(code)))
+        if (code == null || code.isBlank() || !repository.consumeRegistrationCode(identity.email(), TokenHash.sha256(code))) {
             throw new DomainException(ErrorCodeConstants.VERIFICATION_CODE_INVALID);
-        if (repository.exists(identity.username(), identity.email())) throw adminExists();
+        }
+        if (repository.exists(identity.username(), identity.email())) {
+            throw adminExists();
+        }
         var account = createAccount(identity, password);
         return new AuthenticatedAdmin(account, issueRefresh(account, refreshTtl, userAgent, ip).token());
     }
@@ -66,25 +73,31 @@ public class AdminIdentityService implements ActiveAdminAccountLocker {
     public AdminAccount createAdministrator(String username, String email, String password) {
         var identity = AdminIdentityNormalizer.normalize(username, email);
         validateCredentials(identity.username(), identity.email(), password);
-        if (repository.exists(identity.username(), identity.email())) throw adminExists();
+        if (repository.exists(identity.username(), identity.email())) {
+            throw adminExists();
+        }
         return createAccount(identity, password);
     }
 
     @Transactional(readOnly = true)
     public AdminAccount validateTokenSubject(UUID accountId, long securityVersion) {
         var account = repository.findActive(accountId).orElseThrow(() -> new DomainException(ErrorCodeConstants.ADMIN_SESSION_INVALID));
-        if (account.securityVersion() != securityVersion)
+        if (account.securityVersion() != securityVersion) {
             throw new DomainException(ErrorCodeConstants.ADMIN_SESSION_INVALID);
+        }
         return account;
     }
 
     @Transactional
     public RefreshSession rotate(String token, Duration ttl, String userAgent, String ip) {
-        if (token == null || token.isBlank()) throw invalidRefresh();
+        if (token == null || token.isBlank()) {
+            throw invalidRefresh();
+        }
         var old = repository.lockSession(TokenHash.sha256(token)).orElseThrow(AdminIdentityService::invalidRefresh);
         var account = old.account();
-        if (!"active".equals(account.status()) || account.securityVersion() != old.sessionSecurityVersion())
+        if (!"active".equals(account.status()) || account.securityVersion() != old.sessionSecurityVersion()) {
             throw invalidRefresh();
+        }
         var replacement = issueRefresh(account, ttl, userAgent, ip);
         repository.rotate(old.id(), replacement.id());
         return new RefreshSession(old.id(), account, replacement.token());
@@ -92,7 +105,9 @@ public class AdminIdentityService implements ActiveAdminAccountLocker {
 
     @Transactional
     public void logout(String refreshToken) {
-        if (refreshToken != null && !refreshToken.isBlank()) repository.revoke(TokenHash.sha256(refreshToken));
+        if (refreshToken != null && !refreshToken.isBlank()) {
+            repository.revoke(TokenHash.sha256(refreshToken));
+        }
     }
 
     @Transactional
@@ -133,9 +148,12 @@ public class AdminIdentityService implements ActiveAdminAccountLocker {
     public String prepareOwnEmailChange(UUID id, String email) {
         var account = account(id);
         String normalized = validatedEmail(email);
-        if (account.email().equalsIgnoreCase(normalized))
+        if (account.email().equalsIgnoreCase(normalized)) {
             throw new DomainException(ErrorCodeConstants.EMAIL_UNCHANGED);
-        if (repository.emailExistsForOtherAccount(id, normalized)) throw adminExists();
+        }
+        if (repository.emailExistsForOtherAccount(id, normalized)) {
+            throw adminExists();
+        }
         return normalized;
     }
 
@@ -151,9 +169,12 @@ public class AdminIdentityService implements ActiveAdminAccountLocker {
 
     @Transactional
     public AdminAccount updateStatus(UUID actor, UUID id, String status) {
-        if (actor.equals(id)) throw new DomainException(ErrorCodeConstants.SELF_STATUS_CHANGE);
-        if (!java.util.Set.of("active", "disabled").contains(status))
+        if (actor.equals(id)) {
+            throw new DomainException(ErrorCodeConstants.SELF_STATUS_CHANGE);
+        }
+        if (!java.util.Set.of("active", "disabled").contains(status)) {
             throw new DomainException(ErrorCodeConstants.STATUS_INVALID);
+        }
         var account = repository.updateStatus(id, status);
         repository.revokeAll(id);
         return account;
@@ -171,8 +192,9 @@ public class AdminIdentityService implements ActiveAdminAccountLocker {
     public void changePassword(UUID id, String current, String replacement) {
         var account = repository.findActive(id).orElseThrow(AdminIdentityService::invalidCredentials);
         var credential = repository.findCredential(account.username()).orElseThrow(AdminIdentityService::invalidCredentials);
-        if (!passwords.matches(current, credential.passwordHash()))
+        if (!passwords.matches(current, credential.passwordHash())) {
             throw new DomainException(ErrorCodeConstants.CURRENT_PASSWORD_INVALID);
+        }
         security.validatePassword(replacement, SecurityPolicyService.adminPolicy());
         security.rejectReusedPassword("admin", id, replacement, credential.passwordHash(), passwords, SecurityPolicyService.adminPolicy().historyCount());
         repository.resetPassword(id, passwords.encode(replacement));
@@ -246,28 +268,35 @@ public class AdminIdentityService implements ActiveAdminAccountLocker {
     }
 
     private static void validateProfile(String username, String email, String phone) {
-        if (username == null || username.isBlank() || username.length() > 100)
+        if (username == null || username.isBlank() || username.length() > 100) {
             throw new DomainException(ErrorCodeConstants.USERNAME_INVALID);
-        if (email == null || !email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$") || email.length() > 320)
+        }
+        if (email == null || !email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$") || email.length() > 320) {
             throw new DomainException(ErrorCodeConstants.EMAIL_INVALID);
-        if (phone != null && !phone.isBlank() && (phone.strip().length() > 32 || !phone.strip().matches("^\\+?[0-9][0-9 -]{5,31}$")))
+        }
+        if (phone != null && !phone.isBlank() && (phone.strip().length() > 32 || !phone.strip().matches("^\\+?[0-9][0-9 -]{5,31}$"))) {
             throw new DomainException(ErrorCodeConstants.PHONE_INVALID);
+        }
     }
 
     private static String validatedEmail(String email) {
         String normalized = AdminIdentityNormalizer.normalizeEmail(email);
-        if (normalized == null || !normalized.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$") || normalized.length() > 320)
+        if (normalized == null || !normalized.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$") || normalized.length() > 320) {
             throw new DomainException(ErrorCodeConstants.EMAIL_INVALID);
+        }
         return normalized;
     }
 
     private static void validatePassword(String password) {
-        if (password == null || password.length() < 8 || password.length() > 128 || !password.matches(".*[a-z].*") || !password.matches(".*[A-Z].*") || !password.matches(".*\\d.*"))
+        if (password == null || password.length() < 8 || password.length() > 128 || !password.matches(".*[a-z].*") || !password.matches(".*[A-Z].*") || !password.matches(".*\\d.*")) {
             throw new DomainException(ErrorCodeConstants.PASSWORD_WEAK);
+        }
     }
 
     private static void assertNotActor(UUID actor, UUID account, com.easy1auth.foundation.error.ErrorCode errorCode) {
-        if (actor != null && actor.equals(account)) throw new DomainException(errorCode);
+        if (actor != null && actor.equals(account)) {
+            throw new DomainException(errorCode);
+        }
     }
 
     private static DomainException adminExists() {

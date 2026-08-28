@@ -7,7 +7,7 @@ import java.util.Map;
  * 社会化身份源适配器：每个预定义社交厂商一个实现，端点写死在常量内。
  *
  * <p>适配器只负责厂商协议相关的两件事：拼授权 URL、换 token 并拉取用户信息。
- * state/nonce 生成、事务存取、绑定 upsert、JIT 开户等厂商无关逻辑由 {@link SocialIdentityService} 统一处理。</p>
+ * state/nonce 生成、事务存取和身份绑定等厂商无关逻辑由 {@link SocialIdentityService} 统一处理。</p>
  */
 public interface SocialIdentityAdapter {
 
@@ -50,7 +50,7 @@ public interface SocialIdentityAdapter {
     /** 授权 URL 拼接结果。 */
     record AuthorizeResult(URI authorizeUrl) { }
 
-    /** 适配器产出的标准化远程用户信息，由 service 层据此做 JIT 开户与绑定。 */
+    /** 适配器产出的标准化远程用户信息，由 service 层据此完成账户确认与绑定。 */
     record RemoteUserInfo(String subject, String username, String name, String email, boolean emailVerified,
                           String avatar, Map<String, Object> rawClaims) { }
 }

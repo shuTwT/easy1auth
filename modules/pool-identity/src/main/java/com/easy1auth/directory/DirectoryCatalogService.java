@@ -69,8 +69,12 @@ public class DirectoryCatalogService {
         validateParent(tenant, id, in.parentId());
         var update = sql.createUpdate(GROUP).set(GROUP.name(), name).set(GROUP.type(), type).set(GROUP.updatedAt(), Instant.now())
                 .where(GROUP.id().eq(id), GROUP.tenantId().eq(tenant));
-        if (in.description() != null) update.set(GROUP.description(), in.description());
-        if (in.parentId() != null) update.set(GROUP.parentId(), in.parentId());
+        if (in.description() != null) {
+            update.set(GROUP.description(), in.description());
+        }
+        if (in.parentId() != null) {
+            update.set(GROUP.parentId(), in.parentId());
+        }
         update.execute();
         return group(tenant, id);
     }
@@ -78,8 +82,9 @@ public class DirectoryCatalogService {
     @Transactional
     public void deleteGroup(UUID tenant, UUID id) {
         rejectEnterpriseManaged(groupEntity(tenant, id));
-        if (sql.createQuery(GROUP).where(GROUP.tenantId().eq(tenant), GROUP.parentId().eq(id)).select(GROUP.id()).exists())
+        if (sql.createQuery(GROUP).where(GROUP.tenantId().eq(tenant), GROUP.parentId().eq(id)).select(GROUP.id()).exists()) {
             throw new DomainException(ErrorCodeConstants.GROUP_HAS_CHILDREN);
+        }
         sql.createDelete(GROUP).where(GROUP.id().eq(id), GROUP.tenantId().eq(tenant)).execute();
     }
 
@@ -91,8 +96,11 @@ public class DirectoryCatalogService {
         List<MutableGroupTree> roots = new ArrayList<>();
         nodes.values().forEach(n -> {
             var parent = n.entity.parentId() == null ? null : nodes.get(n.entity.parentId());
-            if (parent == null) roots.add(n);
-            else parent.children.add(n);
+            if (parent == null) {
+                roots.add(n);
+            } else {
+                parent.children.add(n);
+            }
         });
         return roots.stream().map(MutableGroupTree::freeze).toList();
     }
@@ -167,11 +175,21 @@ public class DirectoryCatalogService {
         String code = in.code() == null ? old.code() : in.code();
         validatePosition(name, code);
         var u = sql.createUpdate(POSITION).set(POSITION.name(), name).set(POSITION.code(), code).set(POSITION.updatedAt(), Instant.now()).where(POSITION.id().eq(id), POSITION.tenantId().eq(tenant));
-        if (in.description() != null) u.set(POSITION.description(), in.description());
-        if (in.departmentId() != null) u.set(POSITION.departmentId(), in.departmentId());
-        if (in.level() != null) u.set(POSITION.level(), in.level());
-        if (in.sequence() != null) u.set(POSITION.sequence(), in.sequence());
-        if (in.maxCount() != null) u.set(POSITION.maxCount(), in.maxCount());
+        if (in.description() != null) {
+            u.set(POSITION.description(), in.description());
+        }
+        if (in.departmentId() != null) {
+            u.set(POSITION.departmentId(), in.departmentId());
+        }
+        if (in.level() != null) {
+            u.set(POSITION.level(), in.level());
+        }
+        if (in.sequence() != null) {
+            u.set(POSITION.sequence(), in.sequence());
+        }
+        if (in.maxCount() != null) {
+            u.set(POSITION.maxCount(), in.maxCount());
+        }
         u.execute();
         return position(tenant, id);
     }
@@ -200,7 +218,9 @@ public class DirectoryCatalogService {
     @Transactional
     public void replaceUserGroups(UUID tenant, UUID userId, Collection<UUID> groupIds) {
         userEntity(tenant, userId);
-        for (UUID groupId : groupIds) groupEntity(tenant, groupId);
+        for (UUID groupId : groupIds) {
+            groupEntity(tenant, groupId);
+        }
         sql.createDelete(MEMBER).where(MEMBER.id().tenantId().eq(tenant), MEMBER.id().userId().eq(userId)).execute();
         groupIds.forEach(groupId -> insertMember(tenant, userId, groupId));
     }
@@ -210,13 +230,17 @@ public class DirectoryCatalogService {
         userIds.forEach(id -> userEntity(tenant, id));
         for (UUID userId : userIds) {
             if (admins) {
-                if (add) insertAdmin(tenant, groupId, userId);
-                else
+                if (add) {
+                    insertAdmin(tenant, groupId, userId);
+                } else {
                     sql.createDelete(ADMIN).where(ADMIN.id().tenantId().eq(tenant), ADMIN.id().groupId().eq(groupId), ADMIN.id().userId().eq(userId)).execute();
+                }
             } else {
-                if (add) insertMember(tenant, userId, groupId);
-                else
+                if (add) {
+                    insertMember(tenant, userId, groupId);
+                } else {
                     sql.createDelete(MEMBER).where(MEMBER.id().tenantId().eq(tenant), MEMBER.id().groupId().eq(groupId), MEMBER.id().userId().eq(userId)).execute();
+                }
             }
         }
     }
@@ -244,7 +268,9 @@ public class DirectoryCatalogService {
     }
 
     private List<PoolUserView> userViews(UUID tenant, Collection<UUID> ids) {
-        if (ids.isEmpty()) return List.of();
+        if (ids.isEmpty()) {
+            return List.of();
+        }
         return sql.createQuery(USER).where(USER.tenantId().eq(tenant), USER.id().in(ids)).select(USER).execute().stream().map(this::userView).toList();
     }
 
@@ -277,30 +303,38 @@ public class DirectoryCatalogService {
     }
 
     private void validateParent(UUID tenant, UUID self, UUID parent) {
-        if (parent == null) return;
-        if (parent.equals(self)) throw new DomainException(ErrorCodeConstants.GROUP_PARENT_SELF);
+        if (parent == null) {
+            return;
+        }
+        if (parent.equals(self)) {
+            throw new DomainException(ErrorCodeConstants.GROUP_PARENT_SELF);
+        }
         var current = groupEntity(tenant, parent);
         Set<UUID> seen = new HashSet<>();
         while (current.parentId() != null) {
-            if (!seen.add(current.id()) || current.parentId().equals(self))
+            if (!seen.add(current.id()) || current.parentId().equals(self)) {
                 throw new DomainException(ErrorCodeConstants.GROUP_CYCLE);
+            }
             current = groupEntity(tenant, current.parentId());
         }
     }
 
     private void validateGroup(String name, String type) {
-        if (name == null || name.isBlank() || !Set.of("team", "department", "project", "organization").contains(type == null ? "team" : type))
+        if (name == null || name.isBlank() || !Set.of("team", "department", "project", "organization").contains(type == null ? "team" : type)) {
             throw new DomainException(ErrorCodeConstants.GROUP_INVALID);
+        }
     }
 
     private void validatePosition(String name, String code) {
-        if (name == null || name.isBlank() || code == null || code.isBlank())
+        if (name == null || name.isBlank() || code == null || code.isBlank()) {
             throw new DomainException(ErrorCodeConstants.POSITION_INVALID);
+        }
     }
 
     private static void rejectEnterpriseManaged(UserGroupEntity group) {
-        if (group.enterpriseIdentitySourceId() != null)
+        if (group.enterpriseIdentitySourceId() != null) {
             throw new DomainException(ErrorCodeConstants.ENTERPRISE_IDENTITY_MANAGED_DEPARTMENT);
+        }
     }
 
     private static long countType(List<UserGroupEntity> groups, String type) {

@@ -92,15 +92,24 @@ public class EnterpriseIdentityService {
         var old = source(tenant, id);
         validate(input, false);
         var update = sql.createUpdate(SOURCE).set(SOURCE.updatedAt(), Instant.now()).where(SOURCE.id().eq(id), SOURCE.tenantId().eq(tenant));
-        if (input.name() != null) update.set(SOURCE.name(), input.name().strip());
-        if (input.appId() != null) update.set(SOURCE.appId(), input.appId().strip());
-        if (present(input.appSecret()))
+        if (input.name() != null) {
+            update.set(SOURCE.name(), input.name().strip());
+        }
+        if (input.appId() != null) {
+            update.set(SOURCE.appId(), input.appId().strip());
+        }
+        if (present(input.appSecret())) {
             update.set(SOURCE.encryptedAppSecret(), encrypt(tenant, id, "app-secret", input.appSecret()));
-        if (present(input.verificationToken()))
+        }
+        if (present(input.verificationToken())) {
             update.set(SOURCE.encryptedVerificationToken(), encrypt(tenant, id, "verification-token", input.verificationToken()));
-        if (present(input.encryptKey()))
+        }
+        if (present(input.encryptKey())) {
             update.set(SOURCE.encryptedEncryptKey(), encrypt(tenant, id, "encrypt-key", input.encryptKey()));
-        if (input.status() != null) update.set(SOURCE.status(), status(input.status()));
+        }
+        if (input.status() != null) {
+            update.set(SOURCE.status(), status(input.status()));
+        }
         update.execute();
         return get(id);
     }
@@ -118,8 +127,9 @@ public class EnterpriseIdentityService {
     @Transactional
     public TaskView sync(UUID id) {
         var source = source(TenantContextHolder.requireTenantId(), id);
-        if (!"active".equals(source.status()))
+        if (!"active".equals(source.status())) {
             throw new DomainException(ErrorCodeConstants.ENTERPRISE_IDENTITY_SOURCE_DISABLED);
+        }
         return queue(source, "full", null, Map.of());
     }
 
@@ -144,24 +154,33 @@ public class EnterpriseIdentityService {
     @Transactional
     public FeishuEventResponse acceptFeishuEvent(UUID sourceId, Map<String, Object> envelope) {
         EnterpriseIdentitySourceEntity source = ignored(() -> sql.findById(EnterpriseIdentitySourceEntity.class, sourceId));
-        if (source == null || !"feishu".equals(source.provider()))
+        if (source == null || !"feishu".equals(source.provider())) {
             throw new DomainException(ErrorCodeConstants.ENTERPRISE_IDENTITY_SOURCE_NOT_FOUND);
+        }
         Map<String, Object> event = decrypted(source, envelope);
         String token = string(event.get("token"));
-        if (!MessageDigest.isEqual(token.getBytes(StandardCharsets.UTF_8), decrypt(source, "verification-token").getBytes(StandardCharsets.UTF_8)))
+        if (!MessageDigest.isEqual(token.getBytes(StandardCharsets.UTF_8), decrypt(source, "verification-token").getBytes(StandardCharsets.UTF_8))) {
             throw new DomainException(ErrorCodeConstants.FEISHU_EVENT_UNAUTHORIZED);
-        if ("url_verification".equals(string(event.get("type"))))
+        }
+        if ("url_verification".equals(string(event.get("type")))) {
             return new FeishuEventResponse(string(event.get("challenge")));
-        if (!"active".equals(source.status())) return new FeishuEventResponse(null);
+        }
+        if (!"active".equals(source.status())) {
+            return new FeishuEventResponse(null);
+        }
         Map<String, Object> header = map(event.get("header"));
         String eventId = string(header.get("event_id"));
-        if (eventId.isBlank()) throw new DomainException(ErrorCodeConstants.FEISHU_EVENT_INVALID);
+        if (eventId.isBlank()) {
+            throw new DomainException(ErrorCodeConstants.FEISHU_EVENT_INVALID);
+        }
         Map<String, Object> queued = new LinkedHashMap<>(event);
         queued.remove("token");
         try {
             TenantUtils.execute(source.tenantId(), (Runnable) () -> queue(source, "event", eventId, queued));
         } catch (RuntimeException ex) {
-            if (!isDuplicate(ex)) throw ex;
+            if (!isDuplicate(ex)) {
+                throw ex;
+            }
         }
         return new FeishuEventResponse(null);
     }
@@ -177,15 +196,19 @@ public class EnterpriseIdentityService {
     public List<TaskView> claim(int limit) {
         List<EnterpriseIdentitySyncTaskEntity> rows = sql.createQuery(TASK).where(TASK.status().eq("pending")).orderBy(TASK.createdAt().asc()).select(TASK).limit(Math.max(1, Math.min(limit, 20))).execute();
         List<TaskView> claimed = new ArrayList<>();
-        for (var row : rows)
-            if (sql.createUpdate(TASK).set(TASK.status(), "processing").set(TASK.startedAt(), Instant.now()).where(TASK.id().eq(row.id()), TASK.status().eq("pending")).execute() == 1)
+        for (var row : rows) {
+            if (sql.createUpdate(TASK).set(TASK.status(), "processing").set(TASK.startedAt(), Instant.now()).where(TASK.id().eq(row.id()), TASK.status().eq("pending")).execute() == 1) {
                 claimed.add(taskView(row));
+            }
+        }
         return claimed;
     }
 
     public void process(UUID taskId) {
         EnterpriseIdentitySyncTaskEntity task = ignored(() -> sql.findById(EnterpriseIdentitySyncTaskEntity.class, taskId));
-        if (task == null || !"processing".equals(task.status())) return;
+        if (task == null || !"processing".equals(task.status())) {
+            return;
+        }
         TenantUtils.execute(task.tenantId(), () -> processInTenant(task));
     }
 
@@ -194,8 +217,11 @@ public class EnterpriseIdentityService {
         var source = source(task.tenantId(), task.sourceId());
         Map<String, Object> summary = new LinkedHashMap<>();
         try {
-            if ("full".equals(task.type())) full(source, summary);
-            else event(source, task.payload(), summary);
+            if ("full".equals(task.type())) {
+                full(source, summary);
+            } else {
+                event(source, task.payload(), summary);
+            }
             boolean partial = summary.containsKey("skippedMissingPhone") || summary.containsKey("skippedEmailConflict") || summary.containsKey("skippedPhoneConflict");
             finish(task.id(), summary, partial ? "partial" : "succeeded", null);
         } catch (Exception ex) {
@@ -207,13 +233,19 @@ public class EnterpriseIdentityService {
         String token = token(source);
         Set<String> seenUsers = new HashSet<>();
         List<String> roots = scopeDepartments(token);
-        if (roots.isEmpty()) roots = List.of("0");
-        for (String root : roots) syncDepartmentTree(source, token, root, null, seenUsers, summary, new HashSet<>());
+        if (roots.isEmpty()) {
+            roots = List.of("0");
+        }
+        for (String root : roots) {
+            syncDepartmentTree(source, token, root, null, seenUsers, summary, new HashSet<>());
+        }
         summary.putIfAbsent("users", seenUsers.size());
     }
 
     private void syncDepartmentTree(EnterpriseIdentitySourceEntity source, String token, String externalId, UUID parent, Set<String> seenUsers, Map<String, Object> summary, Set<String> traversed) throws Exception {
-        if (!traversed.add(externalId)) return;
+        if (!traversed.add(externalId)) {
+            return;
+        }
         if (!"0".equals(externalId)) {
             Map<String, Object> department = data(get(token, "/open-apis/contact/v3/departments/" + enc(externalId) + "?department_id_type=open_department_id"));
             parent = upsertGroup(source, externalId, string(department.get("name")), parent);
@@ -221,12 +253,15 @@ public class EnterpriseIdentityService {
         for (Map<String, Object> user : paged(token, "/open-apis/contact/v3/users/find_by_department?department_id_type=open_department_id&user_id_type=open_id&department_id=" + enc(externalId) + "&page_size=50")) {
             String externalUser = string(user.get("open_id"));
             if (!externalUser.isBlank()) {
-                if (seenUsers.add(externalUser)) upsertUser(source, externalUser, user, summary);
+                if (seenUsers.add(externalUser)) {
+                    upsertUser(source, externalUser, user, summary);
+                }
                 syncMembership(source, externalUser, ids(user, "department_ids"));
             }
         }
-        for (Map<String, Object> child : paged(token, "/open-apis/contact/v3/departments/" + enc(externalId) + "/children?department_id_type=open_department_id&page_size=50"))
+        for (Map<String, Object> child : paged(token, "/open-apis/contact/v3/departments/" + enc(externalId) + "/children?department_id_type=open_department_id&page_size=50")) {
             syncDepartmentTree(source, token, string(child.get("open_department_id")), parent, seenUsers, summary, traversed);
+        }
     }
 
     private void event(EnterpriseIdentitySourceEntity source, Map<String, Object> payload, Map<String, Object> summary) throws Exception {
@@ -289,7 +324,9 @@ public class EnterpriseIdentityService {
         List<String> deps = ids(remote, "department_ids");
         if (!deps.isEmpty()) {
             var g = sql.createQuery(GROUP).where(GROUP.enterpriseIdentitySourceId().eq(source.id()), GROUP.enterpriseIdentityExternalId().eq(deps.getFirst())).select(GROUP).fetchOneOrNull();
-            if (g != null) department = g.name();
+            if (g != null) {
+                department = g.name();
+            }
         }
         if (old == null) {
             String username = username(externalId);
@@ -304,19 +341,24 @@ public class EnterpriseIdentityService {
 
     private void syncMembership(EnterpriseIdentitySourceEntity source, String externalUserId, List<String> departments) {
         var user = sql.createQuery(USER).where(USER.enterpriseIdentitySourceId().eq(source.id()), USER.enterpriseIdentityExternalId().eq(externalUserId)).select(USER).fetchOneOrNull();
-        if (user == null) return;
+        if (user == null) {
+            return;
+        }
         var sourceGroups = sql.createQuery(GROUP).where(GROUP.enterpriseIdentitySourceId().eq(source.id())).select(GROUP).execute();
         Set<UUID> ids = sourceGroups.stream().filter(group -> departments.contains(group.enterpriseIdentityExternalId())).map(UserGroupEntity::id).collect(java.util.stream.Collectors.toSet());
         List<UUID> sourceIds = sourceGroups.stream().map(UserGroupEntity::id).toList();
-        if (!sourceIds.isEmpty())
+        if (!sourceIds.isEmpty()) {
             sql.createDelete(MEMBERSHIP).where(MEMBERSHIP.id().tenantId().eq(source.tenantId()), MEMBERSHIP.id().userId().eq(user.id()), MEMBERSHIP.id().groupId().in(sourceIds)).execute();
-        for (UUID groupId : ids)
+        }
+        for (UUID groupId : ids) {
             sql.saveCommand(UserGroupAssignmentEntityDraft.$.produce(d -> d.setId(UserGroupAssignmentIdDraft.$.produce(k -> k.setTenantId(source.tenantId()).setUserId(user.id()).setGroupId(groupId))))).setMode(SaveMode.INSERT_IF_ABSENT).execute();
+        }
     }
 
     private void disableUser(EnterpriseIdentitySourceEntity source, String externalId) {
-        if (!externalId.isBlank())
+        if (!externalId.isBlank()) {
             sql.createUpdate(USER).set(USER.status(), "disabled").set(USER.updatedAt(), Instant.now()).where(USER.enterpriseIdentitySourceId().eq(source.id()), USER.enterpriseIdentityExternalId().eq(externalId)).execute();
+        }
     }
 
     private TaskView queue(EnterpriseIdentitySourceEntity source, String type, String eventId, Map<String, Object> payload) {
@@ -330,8 +372,9 @@ public class EnterpriseIdentityService {
     private void finish(UUID id, Map<String, Object> summary, String result, String error) {
         sql.createUpdate(TASK).set(TASK.status(), result).set(TASK.summary(), summary).set(TASK.lastError(), error).set(TASK.finishedAt(), Instant.now()).where(TASK.id().eq(id)).execute();
         var task = sql.findById(EnterpriseIdentitySyncTaskEntity.class, id);
-        if (task != null)
+        if (task != null) {
             sql.createUpdate(SOURCE).set(SOURCE.lastSyncAt(), Instant.now()).set(SOURCE.lastSyncStatus(), result).set(SOURCE.lastError(), error).set(SOURCE.updatedAt(), Instant.now()).where(SOURCE.id().eq(task.sourceId())).execute();
+        }
     }
 
     private EnterpriseIdentitySourceEntity source(UUID tenant, UUID id) {
@@ -339,7 +382,9 @@ public class EnterpriseIdentityService {
     }
 
     private Map<String, Object> decrypted(EnterpriseIdentitySourceEntity s, Map<String, Object> e) {
-        if (!e.containsKey("encrypt")) return e;
+        if (!e.containsKey("encrypt")) {
+            return e;
+        }
         try {
             byte[] raw = Base64.getDecoder().decode(string(e.get("encrypt"))), key = MessageDigest.getInstance("SHA-256").digest(decrypt(s, "encrypt-key").getBytes(StandardCharsets.UTF_8));
             Cipher c = Cipher.getInstance("AES/CBC/PKCS5Padding");
@@ -353,15 +398,18 @@ public class EnterpriseIdentityService {
 
     private String token(EnterpriseIdentitySourceEntity s) throws Exception {
         Map<String, Object> r = post("https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal", Map.of("app_id", s.appId(), "app_secret", decrypt(s, "app-secret")));
-        if (((Number) r.getOrDefault("code", -1)).intValue() != 0)
+        if (((Number) r.getOrDefault("code", -1)).intValue() != 0) {
             throw new DomainException(ErrorCodeConstants.FEISHU_TOKEN_FAILED);
+        }
         return string(r.get("tenant_access_token"));
     }
 
     private Map<String, Object> get(String token, String path) throws Exception {
         var req = HttpRequest.newBuilder(URI.create("https://open.feishu.cn" + path)).timeout(Duration.ofSeconds(15)).header("Authorization", "Bearer " + token).GET().build();
         var r = http.send(req, HttpResponse.BodyHandlers.ofString());
-        if (r.statusCode() != 200) throw new DomainException(ErrorCodeConstants.FEISHU_API_FAILED);
+        if (r.statusCode() != 200) {
+            throw new DomainException(ErrorCodeConstants.FEISHU_API_FAILED);
+        }
         return json.readValue(r.body(), new TypeReference<>() {
         });
     }
@@ -412,26 +460,33 @@ public class EnterpriseIdentityService {
         String base = nonBlank(desired, "未命名部门");
         String value = base;
         int n = 0;
-        while (sql.createQuery(GROUP).where(GROUP.tenantId().eq(tenant), GROUP.parentId().eq(parent), GROUP.name().eq(value)).whereIf(self != null, () -> GROUP.id().ne(self)).select(GROUP.id()).exists())
+        while (sql.createQuery(GROUP).where(GROUP.tenantId().eq(tenant), GROUP.parentId().eq(parent), GROUP.name().eq(value)).whereIf(self != null, () -> GROUP.id().ne(self)).select(GROUP.id()).exists()) {
             value = "飞书-" + base + (n++ == 0 ? "" : "-" + n);
+        }
         return value;
     }
 
     private UUID sourceGroupId(EnterpriseIdentitySourceEntity source, String externalId) {
-        if (!present(externalId) || "0".equals(externalId)) return null;
+        if (!present(externalId) || "0".equals(externalId)) {
+            return null;
+        }
         var group = sql.createQuery(GROUP).where(GROUP.enterpriseIdentitySourceId().eq(source.id()), GROUP.enterpriseIdentityExternalId().eq(externalId)).select(GROUP).fetchOneOrNull();
         return group == null ? null : group.id();
     }
 
     private void validate(Input x, boolean create) {
-        if (x == null || (create && (!present(x.name()) || !present(x.appId()) || !present(x.appSecret()) || !present(x.verificationToken()) || !present(x.encryptKey()))))
+        if (x == null || (create && (!present(x.name()) || !present(x.appId()) || !present(x.appSecret()) || !present(x.verificationToken()) || !present(x.encryptKey())))) {
             throw new DomainException(ErrorCodeConstants.ENTERPRISE_IDENTITY_SOURCE_INVALID);
-        if (x != null && x.status() != null) status(x.status());
+        }
+        if (x != null && x.status() != null) {
+            status(x.status());
+        }
     }
 
     private static String status(String v) {
-        if (!Set.of("active", "disabled").contains(v))
+        if (!Set.of("active", "disabled").contains(v)) {
             throw new DomainException(ErrorCodeConstants.ENTERPRISE_IDENTITY_SOURCE_STATUS_INVALID);
+        }
         return v;
     }
 
@@ -461,8 +516,9 @@ public class EnterpriseIdentityService {
     }
 
     private static Map<String, Object> data(Map<String, Object> response) {
-        if (((Number) response.getOrDefault("code", -1)).intValue() != 0)
+        if (((Number) response.getOrDefault("code", -1)).intValue() != 0) {
             throw new DomainException(ErrorCodeConstants.FEISHU_API_FAILED);
+        }
         return map(response.get("data"));
     }
 

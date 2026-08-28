@@ -41,14 +41,20 @@ public class GithubAdapter extends AbstractSocialIdentityAdapter {
                 "redirect_uri", redirectUri.toString());
         var token = postForm(TOKEN, form, null);
         String accessToken = string(token.get("access_token"));
-        if (accessToken == null) throw new com.easy1auth.foundation.error.DomainException(ErrorCodeConstants.SOCIAL_TOKEN_EXCHANGE_FAILED);
+        if (accessToken == null) {
+            throw new com.easy1auth.foundation.error.DomainException(ErrorCodeConstants.SOCIAL_TOKEN_EXCHANGE_FAILED);
+        }
         var user = getJson(USER, accessToken);
         String id = string(user.get("id"));
-        if (id == null) throw new com.easy1auth.foundation.error.DomainException(ErrorCodeConstants.SOCIAL_USERINFO_FAILED);
+        if (id == null) {
+            throw new com.easy1auth.foundation.error.DomainException(ErrorCodeConstants.SOCIAL_USERINFO_FAILED);
+        }
         String email = string(user.get("email"));
         String name = string(user.get("name"));
         String login = string(user.get("login"));
-        if (name == null) name = login;
+        if (name == null) {
+            name = login;
+        }
         return new RemoteUserInfo(id, login, name, email, false, string(user.get("avatar_url")), user);
     }
 }

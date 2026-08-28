@@ -29,8 +29,9 @@ public class PoolUserDeviceService {
             Instant now = Instant.now();
             var e = PoolUserDeviceEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTenantId(tenant).setUserId(user).setDeviceTokenHash(hash).setUserAgent(trim(userAgent, 512)).setIpAddress(trim(ip, 64)).setFirstSeenAt(now).setLastSeenAt(now).setRevokedAt(null));
             sql.saveCommand(e).setMode(SaveMode.INSERT_IF_ABSENT).execute();
-        } else
+        } else {
             sql.createUpdate(DEVICE).set(DEVICE.lastSeenAt(), Instant.now()).set(DEVICE.ipAddress(), trim(ip, 64)).where(DEVICE.id().eq(old.id())).execute();
+        }
     }
 
     @Transactional(readOnly = true)

@@ -24,8 +24,9 @@ public class LoginProtectionService {
     @Transactional(readOnly = true)
     public void assertAllowed(String type, String key, UUID tenant) {
         var row = find(type, normalize(key), tenant, false);
-        if (row != null && row.lockedUntil() != null && row.lockedUntil().isAfter(Instant.now()))
+        if (row != null && row.lockedUntil() != null && row.lockedUntil().isAfter(Instant.now())) {
             throw new DomainException(ErrorCodeConstants.ACCOUNT_TEMPORARILY_LOCKED);
+        }
     }
 
     @Transactional

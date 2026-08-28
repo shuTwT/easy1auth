@@ -67,7 +67,9 @@ public class MigrationApplication {
             LOG.info("Flyway migration complete; schema version={}, migrations executed={}",
                     flyway.info().current().getVersion(), result.migrationsExecuted);
 
-            if (commands.isEmpty()) return;
+            if (commands.isEmpty()) {
+                return;
+            }
             if (!Arrays.asList(environment.getActiveProfiles()).contains("bootstrap-admin")) {
                 throw new IllegalStateException("bootstrap-admin command requires the bootstrap-admin Spring profile");
             }
@@ -78,7 +80,9 @@ public class MigrationApplication {
     private static void requireV1(Flyway flyway) {
         boolean applied = Arrays.stream(flyway.info().applied())
                 .anyMatch(info -> info.getVersion() != null && "1".equals(info.getVersion().getVersion()));
-        if (!applied) throw new IllegalStateException("Flyway migration V1 must be applied before startup");
+        if (!applied) {
+            throw new IllegalStateException("Flyway migration V1 must be applied before startup");
+        }
     }
 
     private static void bootstrapAdmin(JdbcClient db, TransactionTemplate transactions, Environment environment) {
@@ -130,7 +134,9 @@ public class MigrationApplication {
 
     private static String required(Environment environment, String property) {
         String value = environment.getProperty(property);
-        if (value == null || value.isBlank()) throw new IllegalStateException(property + " is required");
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException(property + " is required");
+        }
         return value;
     }
 

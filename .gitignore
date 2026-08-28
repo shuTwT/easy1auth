@@ -59,3 +59,4 @@ temp/
 /.claude
 /.agents
 /.pnpm-store
+/.zcode

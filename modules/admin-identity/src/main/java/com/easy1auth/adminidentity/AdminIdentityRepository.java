@@ -25,7 +25,9 @@ class AdminIdentityRepository {
 
     Optional<CredentialRow> findCredential(String login) {
         var account = sql.createQuery(ACCOUNT).where(Predicate.or(ACCOUNT.username().lower().eq(login), ACCOUNT.email().lower().eq(login))).select(ACCOUNT).fetchOptional();
-        if (account.isEmpty()) return Optional.empty();
+        if (account.isEmpty()) {
+            return Optional.empty();
+        }
         var credential = sql.createQuery(CREDENTIAL).where(CREDENTIAL.accountId().eq(account.get().id())).select(CREDENTIAL.passwordHash()).fetchOptional();
         return credential.map(hash -> new CredentialRow(toDomain(account.get()), hash));
     }
@@ -74,7 +76,9 @@ class AdminIdentityRepository {
 
     Optional<SessionRow> lockSession(String hash) {
         var session = sql.createQuery(SESSION).where(SESSION.tokenHash().eq(hash), SESSION.revokedAt().isNull(), SESSION.expiresAt().gt(Instant.now())).select(SESSION).forUpdate().fetchOptional();
-        if (session.isEmpty()) return Optional.empty();
+        if (session.isEmpty()) {
+            return Optional.empty();
+        }
         return findAccount(session.get().accountId()).map(a -> new SessionRow(session.get().id(), session.get().securityVersion(), a));
     }
 
@@ -97,10 +101,18 @@ class AdminIdentityRepository {
 
     AdminAccount updateProfile(UUID id, String username, String email, String phone) {
         var update = sql.createUpdate(ACCOUNT).set(ACCOUNT.updatedAt(), Instant.now()).where(ACCOUNT.id().eq(id));
-        if (username != null) update.set(ACCOUNT.username(), username);
-        if (email != null) update.set(ACCOUNT.email(), email);
-        if (phone != null) update.set(ACCOUNT.phone(), phone);
-        if (update.execute() != 1) throw new IllegalStateException("account missing");
+        if (username != null) {
+            update.set(ACCOUNT.username(), username);
+        }
+        if (email != null) {
+            update.set(ACCOUNT.email(), email);
+        }
+        if (phone != null) {
+            update.set(ACCOUNT.phone(), phone);
+        }
+        if (update.execute() != 1) {
+            throw new IllegalStateException("account missing");
+        }
         return findActive(id).orElseThrow();
     }
 

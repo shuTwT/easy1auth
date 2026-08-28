@@ -40,14 +40,17 @@ public class TenantOAuth2AuthorizationService implements OAuth2AuthorizationServ
     }
 
     private OAuth2Authorization valid(OAuth2Authorization value) {
-        if (value == null) return null;
+        if (value == null) {
+            return null;
+        }
         requireClient(value.getRegisteredClientId());
         return value;
     }
 
     private void requireClient(String id) {
-        if (clients.findById(id) == null)
+        if (clients.findById(id) == null) {
             throw new IllegalArgumentException("OAuth authorization does not belong to requested tenant");
+        }
     }
 
     private boolean belongs(String statement, Object... params) {

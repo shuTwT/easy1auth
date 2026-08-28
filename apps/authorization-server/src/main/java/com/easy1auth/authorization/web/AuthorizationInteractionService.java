@@ -37,10 +37,8 @@ public class AuthorizationInteractionService {
     public static final String CONSENT_REQUEST = "EASY1AUTH_INTERACTION_CONSENT_REQUEST";
     /** 展示授权确认页时生成的不透明交互 ID。 */
     public static final String CONSENT_ID = "EASY1AUTH_INTERACTION_CONSENT_ID";
-    /** 用户在授权确认页选择的操作（approve 或 deny）。 */
-    public static final String CONSENT_ACTION = "EASY1AUTH_INTERACTION_CONSENT_ACTION";
-    /** 标记授权交互是否已经被 OAuth 流程消费。 */
-    public static final String USED = "EASY1AUTH_INTERACTION_USED";
+    /** Spring Authorization Server 为授权确认生成的一次性内部 state。 */
+    public static final String CONSENT_STATE = "EASY1AUTH_INTERACTION_CONSENT_STATE";
     /** Session 中最近一次登录错误的展示信息。 */
     public static final String LOGIN_ERROR = "EASY1AUTH_LOGIN_ERROR";
     /** 登录或授权交互在无操作时的有效期，单位为秒。 */
@@ -71,16 +69,17 @@ public class AuthorizationInteractionService {
     public void captureAuthorizationRequest(HttpServletRequest request, HttpServletResponse response) {
         requestCache.saveRequest(request, response);
         UUID tenant = tenantFromPath(request.getRequestURI());
-        if (tenant == null) return;
+        if (tenant == null) {
+            return;
+        }
         HttpSession session = request.getSession(true);
         session.setAttribute(TENANT, tenant.toString());
         session.setAttribute(AUTH_URI, request.getRequestURI());
         session.setAttribute(AUTH_REQUEST, copy(request.getParameterMap()));
         session.setAttribute(EXPIRES_AT, Instant.now().plusSeconds(INTERACTION_TTL_SECONDS).toEpochMilli());
-        session.removeAttribute(USED);
         session.removeAttribute(CONSENT_REQUEST);
         session.removeAttribute(CONSENT_ID);
-        session.removeAttribute(CONSENT_ACTION);
+        session.removeAttribute(CONSENT_STATE);
     }
 
     /**
@@ -100,7 +99,9 @@ public class AuthorizationInteractionService {
                 session.setAttribute(EXPIRES_AT, Instant.now().plusSeconds(INTERACTION_TTL_SECONDS).toEpochMilli());
             }
         }
-        if (tenant == null || expired(session)) return Context.expired();
+        if (tenant == null || expired(session)) {
+            return Context.expired();
+        }
         LoginStyleEntity style = customization.publicStyle(tenant);
         boolean mfa = session != null && session.getAttribute("EASY1AUTH_MFA_CHALLENGE") != null;
         String error = session == null ? null : (String) session.getAttribute(LOGIN_ERROR);
@@ -115,44 +116,56 @@ public class AuthorizationInteractionService {
     public UUID requireTenant(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
         UUID tenant = sessionTenant(session);
-        if (tenant == null || expired(session)) throw new DomainException(ErrorCodeConstants.AUTH_INTERACTION_EXPIRED_LOGIN);
+        if (tenant == null || expired(session)) {
+            throw new DomainException(ErrorCodeConstants.AUTH_INTERACTION_EXPIRED_LOGIN);
+        }
         return tenant;
     }
 
     /**
      * 校验并捕获授权确认请求。
      *
-     * <p>浏览器传回的关键参数必须与首次保存的请求一致；后续流程只使用服务端保存的
-     * canonical 请求。此处同时校验 OAuth 客户端是否属于当前租户，并生成新的 consent ID。</p>
+     * <p>同意页重定向中的 {@code state} 由 Spring Authorization Server 新生成，用于恢复其
+     * 内部授权上下文，不能与客户端原始 {@code state} 比较。客户端 ID 和申请 scope 则必须
+     * 仍与首次保存的请求一致。</p>
      */
     public ConsentStart captureConsent(HttpServletRequest request, HttpServletResponse response) {
         UUID tenant = requireTenant(request);
         Map<String, String[]> initial = sessionMap(request.getSession(false), AUTH_REQUEST);
         Map<String, String[]> received = copy(request.getParameterMap());
-        if (initial != null && !same(initial, received, "client_id", "redirect_uri", "response_type", "state"))
-            throw new DomainException(ErrorCodeConstants.AUTH_INTERACTION_MISMATCH_REQUEST);
-        if (initial != null && initial.containsKey("scope") && !Arrays.equals(initial.get("scope"), received.get("scope")))
-            throw new DomainException(ErrorCodeConstants.AUTH_INTERACTION_MISMATCH_REQUEST);
-        if (initial == null)
+        if (initial == null) {
             throw new DomainException(ErrorCodeConstants.AUTH_INTERACTION_EXPIRED_REQUEST);
+        }
+        if (!same(initial, received, "client_id")) {
+            throw new DomainException(ErrorCodeConstants.AUTH_INTERACTION_MISMATCH_REQUEST);
+        }
+        if (initial.containsKey("scope") && !Arrays.equals(initial.get("scope"), received.get("scope"))) {
+            throw new DomainException(ErrorCodeConstants.AUTH_INTERACTION_MISMATCH_REQUEST);
+        }
+        String consentState = first(received, "state");
+        if (consentState == null || consentState.isBlank()) {
+            throw new DomainException(ErrorCodeConstants.AUTH_INTERACTION_EXPIRED_REQUEST);
+        }
         // The saved request is the canonical request. Never persist a scope,
         // redirect URI, or state supplied only by the consent-page browser.
         Map<String, String[]> canonical = copy(initial);
         String clientId = first(canonical, "client_id");
-        if (clientId == null)
+        if (clientId == null) {
             throw new DomainException(ErrorCodeConstants.AUTH_INTERACTION_EXPIRED_REQUEST);
+        }
         LoginStyleEntity style = customization.publicStyle(tenant);
         UUID clientTenant = clientTenant(clientId);
-        if (!tenant.equals(clientTenant))
+        if (!tenant.equals(clientTenant)) {
             throw new DomainException(ErrorCodeConstants.AUTH_INTERACTION_MISMATCH_CLIENT_TENANT);
+        }
         HttpSession session = request.getSession(false);
         String interactionId = UUID.randomUUID().toString();
         session.setAttribute(CONSENT_REQUEST, canonical);
         session.setAttribute(CONSENT_ID, interactionId);
-        session.removeAttribute(CONSENT_ACTION);
+        session.setAttribute(CONSENT_STATE, consentState);
         session.setAttribute(EXPIRES_AT, Instant.now().plusSeconds(INTERACTION_TTL_SECONDS).toEpochMilli());
         return new ConsentStart(interactionId, tenant.toString(), publicStyle(style, tenant), clientId,
-                clientName(clientId), values(canonical, "scope"));
+                clientName(clientId), scopes(canonical));
     }
 
     /**
@@ -165,56 +178,52 @@ public class AuthorizationInteractionService {
         HttpSession session = request.getSession(false);
         UUID tenant = sessionTenant(session);
         Map<String, String[]> consent = sessionMap(session, CONSENT_REQUEST);
-        if (tenant == null || consent == null || expired(session) || Boolean.TRUE.equals(session.getAttribute(USED))) return ConsentContext.expired();
+        if (tenant == null || consent == null || expired(session)) {
+            return ConsentContext.expired();
+        }
         String clientId = first(consent, "client_id");
-        if (clientId == null) return ConsentContext.expired();
+        if (clientId == null) {
+            return ConsentContext.expired();
+        }
         LoginStyleEntity style = customization.publicStyle(tenant);
         return new ConsentContext("consent", tenant.toString(), publicStyle(style, tenant), clientId,
-                clientName(clientId), values(consent, "scope"), csrfToken(request));
+                clientName(clientId), scopes(consent), csrfToken(request));
     }
 
     /**
      * 记录用户在授权确认页的决定，并返回 OAuth 继续地址。
      *
-     * <p>决定绑定到服务端 Session；浏览器只能携带不透明 ID，不能通过修改 URL 更换
-     * approve/deny 操作。</p>
+     * <p>返回 Spring Authorization Server 授权端点所需的内部 state。前端必须使用正常
+     * 浏览器表单 POST 提交该 state；原始客户端 state 始终由框架在内部授权记录中保留。</p>
      *
      * @throws DomainException 操作非法、交互缺失、已过期或已消费时抛出领域异常
      */
     public Continuation consumeConsent(HttpServletRequest request, String action) {
-        if (!"approve".equals(action) && !"deny".equals(action))
+        if (!"approve".equals(action) && !"deny".equals(action)) {
             throw new DomainException(ErrorCodeConstants.AUTH_ACTION_INVALID);
+        }
         HttpSession session = request.getSession(false);
         UUID tenant = sessionTenant(session);
         Map<String, String[]> consent = sessionMap(session, CONSENT_REQUEST);
         String id = session == null ? null : (String) session.getAttribute(CONSENT_ID);
-        if (tenant == null || consent == null || id == null || expired(session) || Boolean.TRUE.equals(session.getAttribute(USED)))
+        String state = session == null ? null : (String) session.getAttribute(CONSENT_STATE);
+        if (tenant == null || consent == null || id == null || state == null || state.isBlank() || expired(session)) {
             throw new DomainException(ErrorCodeConstants.AUTH_INTERACTION_EXPIRED_PROCESSED);
-        // Bind the decision to the server-side session. The browser only gets
-        // an opaque interaction id; it cannot switch approve to deny by editing
-        // the continuation URL.
-        session.setAttribute(CONSENT_ACTION, action);
-        session.removeAttribute(USED);
-        String path = "/t/" + tenant + "/oauth2/authorize?interaction=" + id;
-        return new Continuation(path);
-    }
-
-    /** 获取 OAuth 流程继续使用的、经过复制保护的授权参数。 */
-    public Map<String, String[]> interactionParameters(HttpSession session) {
-        Map<String, String[]> value = sessionMap(session, CONSENT_REQUEST);
-        if (value == null || expired(session)) throw new DomainException(ErrorCodeConstants.AUTH_INTERACTION_EXPIRED_PROCESSED);
-        return value;
-    }
-
-    /** 获取当前授权确认交互 ID；Session 不存在时返回 null。 */
-    public String consentId(HttpSession session) {
-        return session == null ? null : (String) session.getAttribute(CONSENT_ID);
+        }
+        String clientId = first(consent, "client_id");
+        if (clientId == null || clientId.isBlank()) {
+            throw new DomainException(ErrorCodeConstants.AUTH_INTERACTION_EXPIRED_PROCESSED);
+        }
+        return new Continuation("/t/" + tenant + "/oauth2/authorize", clientId, state,
+                "approve".equals(action) ? scopes(consent) : List.of());
     }
 
     /** 清除当前 Session 中的登录错误提示。 */
     public void clearLoginError(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
-        if (session != null) session.removeAttribute(LOGIN_ERROR);
+        if (session != null) {
+            session.removeAttribute(LOGIN_ERROR);
+        }
     }
 
     /** 在当前 Session 中记录通用登录失败提示，不暴露具体失败原因。 */
@@ -236,13 +245,17 @@ public class AuthorizationInteractionService {
 
     /** 从 Session 读取并解析租户 ID。 */
     private static UUID sessionTenant(HttpSession session) {
-        if (session == null) return null;
+        if (session == null) {
+            return null;
+        }
         return parseTenant((String) session.getAttribute(TENANT));
     }
 
     /** 判断 Session 中的交互是否缺失过期时间或已经超过有效期。 */
     private static boolean expired(HttpSession session) {
-        if (session == null) return true;
+        if (session == null) {
+            return true;
+        }
         Object value = session.getAttribute(EXPIRES_AT);
         return !(value instanceof Number n) || n.longValue() < System.currentTimeMillis();
     }
@@ -267,8 +280,9 @@ public class AuthorizationInteractionService {
     private static Map<String, String[]> copy(Map<String, String[]> input) {
         Map<String, String[]> out = new LinkedHashMap<>();
         input.forEach((key, values) -> {
-            if (key != null && key.length() <= 100 && values != null && values.length <= 20)
+            if (key != null && key.length() <= 100 && values != null && values.length <= 20) {
                 out.put(key, values.clone());
+            }
         });
         return out;
     }
@@ -298,6 +312,15 @@ public class AuthorizationInteractionService {
         return values == null || values.length == 0 ? List.of() : Arrays.asList(values.clone());
     }
 
+    /** 将 OAuth 空格分隔的 scope 参数展开为独立 scope。 */
+    private static List<String> scopes(Map<String, String[]> map) {
+        return values(map, "scope").stream()
+                .flatMap(value -> Arrays.stream(value.trim().split("\\s+")))
+                .filter(value -> !value.isBlank())
+                .distinct()
+                .toList();
+    }
+
     /** 比较指定 OAuth 关键参数是否完全一致。 */
     private static boolean same(Map<String, String[]> left, Map<String, String[]> right, String... keys) {
         return Arrays.stream(keys).allMatch(key -> Arrays.equals(left.get(key), right.get(key)));
@@ -310,11 +333,15 @@ public class AuthorizationInteractionService {
         if (providerIds != null && !providerIds.isEmpty()) {
             var active = socialIdentity.listActive(tenant);
             var byId = new LinkedHashMap<String, SocialIdentityService.SourceView>();
-            for (var s : active) byId.put(s.id().toString(), s);
+            for (var s : active) {
+                byId.put(s.id().toString(), s);
+            }
             var filtered = new ArrayList<SocialSourceSummary>();
             for (var id : providerIds) {
                 var s = byId.get(id);
-                if (s != null) filtered.add(new SocialSourceSummary(s.id().toString(), s.type(), s.name()));
+                if (s != null) {
+                    filtered.add(new SocialSourceSummary(s.id().toString(), s.type(), s.name()));
+                }
             }
             sources = filtered;
         }
@@ -356,6 +383,6 @@ public class AuthorizationInteractionService {
         static ConsentContext expired() { return new ConsentContext("expired", null, null, null, null, List.of(), null); }
     }
 
-    /** OAuth 授权决定完成后返回给调用方的继续地址。 */
-    public record Continuation(String location) { }
+    /** OAuth 授权决定完成后，供浏览器表单 POST 的参数。 */
+    public record Continuation(String location, String clientId, String state, List<String> scopes) { }
 }

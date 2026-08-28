@@ -21,8 +21,9 @@ public final class UuidV7 {
 
     static synchronized UUID randomUuid(Clock clock) {
         long millis = clock.millis();
-        if (millis == lastMillis) sequence = (sequence + 1) & 0x0fff;
-        else {
+        if (millis == lastMillis) {
+            sequence = (sequence + 1) & 0x0fff;
+        } else {
             lastMillis = millis;
             sequence = RANDOM.nextInt(0x1000);
         }

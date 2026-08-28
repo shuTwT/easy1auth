@@ -49,9 +49,14 @@ public class PoolUserService {
     @Transactional
     public PoolUserView create(UUID tenant, Input in) {
         validate(in.username(), in.email(), in.phone(), in.name());
+        if (in.password() != null) {
+            security.validatePassword(in.password(), security.policy(tenant));
+        }
         int limit = tenants.lockForUserQuota(tenant);
         long count = sql.createQuery(USER).where(USER.tenantId().eq(tenant)).select(USER.id()).fetchUnlimitedCount();
-        if (count >= limit) throw new DomainException(ErrorCodeConstants.TENANT_USER_LIMIT);
+        if (count >= limit) {
+            throw new DomainException(ErrorCodeConstants.TENANT_USER_LIMIT);
+        }
         Instant now = Instant.now();
         String email = normalizeEmail(in.email());
         var e = PoolUserEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTenantId(tenant).setUsername(in.username().strip()).setEmail(email).setPhone(in.phone()).setPasswordHash(in.password() == null ? null : passwords.encode(in.password())).setName(in.name().strip()).setAvatar(in.avatar()).setStatus("active").setEmailVerified(false).setPhoneVerified(false).setDepartment(in.department()).setPosition(in.position()).setCustomAttributes(in.customAttributes()).setLastLoginAt(null).setCreatedAt(now).setUpdatedAt(now));
@@ -64,15 +69,33 @@ public class PoolUserService {
         var existing = entity(tenant, id);
         rejectEnterpriseManaged(existing);
         var u = sql.createUpdate(USER).set(USER.updatedAt(), Instant.now()).where(USER.id().eq(id), USER.tenantId().eq(tenant));
-        if (in.username() != null) u.set(USER.username(), in.username());
-        if (in.email() != null) u.set(USER.email(), in.email().toLowerCase());
-        if (in.phone() != null) u.set(USER.phone(), in.phone());
-        if (in.name() != null) u.set(USER.name(), in.name());
-        if (in.avatar() != null) u.set(USER.avatar(), in.avatar());
-        if (in.status() != null) u.set(USER.status(), in.status());
-        if (in.department() != null) u.set(USER.department(), in.department());
-        if (in.position() != null) u.set(USER.position(), in.position());
-        if (in.customAttributes() != null) u.set(USER.customAttributes(), in.customAttributes());
+        if (in.username() != null) {
+            u.set(USER.username(), in.username());
+        }
+        if (in.email() != null) {
+            u.set(USER.email(), in.email().toLowerCase());
+        }
+        if (in.phone() != null) {
+            u.set(USER.phone(), in.phone());
+        }
+        if (in.name() != null) {
+            u.set(USER.name(), in.name());
+        }
+        if (in.avatar() != null) {
+            u.set(USER.avatar(), in.avatar());
+        }
+        if (in.status() != null) {
+            u.set(USER.status(), in.status());
+        }
+        if (in.department() != null) {
+            u.set(USER.department(), in.department());
+        }
+        if (in.position() != null) {
+            u.set(USER.position(), in.position());
+        }
+        if (in.customAttributes() != null) {
+            u.set(USER.customAttributes(), in.customAttributes());
+        }
         u.execute();
         return get(tenant, id);
     }
@@ -81,13 +104,16 @@ public class PoolUserService {
     public void delete(UUID tenant, UUID id) {
         rejectEnterpriseManaged(entity(tenant, id));
         int changed = sql.createDelete(USER).where(USER.id().eq(id), USER.tenantId().eq(tenant)).execute();
-        if (changed != 1) throw missing();
+        if (changed != 1) {
+            throw missing();
+        }
     }
 
     @Transactional
     public PoolUserView status(UUID tenant, UUID id, String status) {
-        if (!Set.of("active", "disabled", "locked").contains(status))
+        if (!Set.of("active", "disabled", "locked").contains(status)) {
             throw new DomainException(ErrorCodeConstants.USER_STATUS_INVALID);
+        }
         rejectEnterpriseManaged(entity(tenant, id));
         sql.createUpdate(USER).set(USER.status(), status).set(USER.updatedAt(), Instant.now()).where(USER.id().eq(id), USER.tenantId().eq(tenant)).execute();
         return get(tenant, id);
@@ -106,8 +132,9 @@ public class PoolUserService {
     @Transactional
     public void changePassword(UUID tenant, UUID id, String oldPassword, String newPassword) {
         var user = entity(tenant, id);
-        if (user.passwordHash() == null || !passwords.matches(oldPassword, user.passwordHash()))
+        if (user.passwordHash() == null || !passwords.matches(oldPassword, user.passwordHash())) {
             throw new DomainException(ErrorCodeConstants.CURRENT_PASSWORD_INVALID_POOL_USER);
+        }
         var policy = security.policy(tenant);
         security.validatePassword(newPassword, policy);
         security.rejectReusedPassword("pool_user", id, newPassword, user.passwordHash(), passwords, policy.historyCount());
@@ -130,13 +157,15 @@ public class PoolUserService {
     }
 
     private static void rejectEnterpriseManaged(PoolUserEntity user) {
-        if (user.enterpriseIdentitySourceId() != null)
+        if (user.enterpriseIdentitySourceId() != null) {
             throw new DomainException(ErrorCodeConstants.ENTERPRISE_IDENTITY_MANAGED_USER);
+        }
     }
 
     private void validate(String u, String e, String p, String n) {
-        if (u == null || u.isBlank() || n == null || n.isBlank() || (!present(e) && !present(p)) || (present(e) && !e.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")))
+        if (u == null || u.isBlank() || n == null || n.isBlank() || (!present(e) && !present(p)) || (present(e) && !e.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"))) {
             throw new DomainException(ErrorCodeConstants.POOL_USER_INVALID);
+        }
     }
 
     private static boolean present(String value) {
@@ -145,10 +174,6 @@ public class PoolUserService {
 
     private static String normalizeEmail(String email) {
         return present(email) ? email.strip().toLowerCase() : null;
-    }
-
-    private void validatePassword(String p) {
-        if (p == null || p.length() < 8) throw new DomainException(ErrorCodeConstants.PASSWORD_WEAK);
     }
 
     private PoolUserView view(PoolUserEntity e) {

@@ -55,8 +55,18 @@ export const authPortalApi = {
       method: 'POST', body: JSON.stringify({ code }), headers: csrfToken ? { 'X-XSRF-TOKEN': csrfToken } : undefined
     })
   },
+  socialCallback(code: string, state: string, csrfToken?: string) {
+    return request<{ status: 'success' | 'unbound'; redirectUrl?: string; name?: string | null; email?: string | null; suggestedUsername?: string | null; canProvision?: boolean }>('/auth-portal-api/social/callback', {
+      method: 'POST', body: JSON.stringify({ code, state }), headers: csrfToken ? { 'X-XSRF-TOKEN': csrfToken } : undefined
+    })
+  },
+  socialProvision(username: string, csrfToken?: string) {
+    return request<{ status: 'success'; redirectUrl?: string }>('/auth-portal-api/social/provision', {
+      method: 'POST', body: JSON.stringify({ username }), headers: csrfToken ? { 'X-XSRF-TOKEN': csrfToken } : undefined
+    })
+  },
   consent(action: 'approve' | 'deny', csrfToken?: string) {
-    return request<{ location: string }>('/auth-portal-api/consent', {
+    return request<{ location: string; clientId: string; state: string; scopes: string[] }>('/auth-portal-api/consent', {
       method: 'POST', body: JSON.stringify({ action }), headers: csrfToken ? { 'X-XSRF-TOKEN': csrfToken } : undefined
     })
   }

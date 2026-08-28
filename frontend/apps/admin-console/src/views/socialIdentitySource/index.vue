@@ -39,7 +39,6 @@ type SourceForm = {
   mode: string | null
   clientId: string
   clientSecret: string
-  jitProvisioning: boolean
   status?: 'active' | 'disabled'
 }
 
@@ -49,7 +48,6 @@ const sourceForm = reactive<SourceForm>({
   mode: null,
   clientId: '',
   clientSecret: '',
-  jitProvisioning: true,
 })
 
 const sourceFormRules = {
@@ -123,7 +121,6 @@ const handleCreate = () => {
     mode: null,
     clientId: '',
     clientSecret: '',
-    jitProvisioning: true,
   })
   dialogVisible.value = true
 }
@@ -137,7 +134,6 @@ const handleEdit = (row: SocialIdentitySource) => {
     mode: row.mode,
     clientId: row.clientId,
     clientSecret: '',
-    jitProvisioning: row.jitProvisioning,
     status: row.status,
   })
   dialogVisible.value = true
@@ -151,7 +147,6 @@ const handleSubmit = async () => {
       type: sourceForm.type,
       mode: sourceForm.mode,
       clientId: sourceForm.clientId.trim(),
-      jitProvisioning: sourceForm.jitProvisioning,
     }
     if (sourceForm.clientSecret.trim()) {
       payload.clientSecret = sourceForm.clientSecret.trim()
@@ -328,22 +323,16 @@ onMounted(() => {
           { title: '名称', dataIndex: 'name', width: 192 },
           { title: '类型', key: 'type', width: 144 },
           { title: 'Client ID', dataIndex: 'clientId', width: 256 },
-          { title: 'JIT', key: 'jitProvisioning', width: 80 },
           { title: '状态', key: 'status', width: 96 },
           { title: '创建时间', key: 'createdAt', width: 160 },
           { title: '操作', key: 'actions', width: 200 }
-        ]" :data-source="sources" :loading="loading" row-key="id" :pagination="false" :scroll="{ x: 1180 }">
+        ]" :data-source="sources" :loading="loading" row-key="id" :pagination="false" :scroll="{ x: 1100 }">
           <template #bodyCell="{ column, record: row }">
             <template v-if="column.key === 'type'">
               <div class="flex items-center gap-2">
                 <Link :style="{ color: SOURCE_CONFIGS[row.type as SocialSourceType]?.color }" class="size-4" />
                 <span>{{ SOURCE_CONFIGS[row.type as SocialSourceType]?.name || row.type }}</span>
               </div>
-            </template>
-            <template v-else-if="column.key === 'jitProvisioning'">
-              <Tag :color="row.jitProvisioning ? 'green' : 'default'">
-                {{ row.jitProvisioning ? '是' : '否' }}
-              </Tag>
             </template>
             <template v-else-if="column.key === 'status'">
               <Tag :color="row.status === 'active' ? 'green' : 'red'">
@@ -405,10 +394,6 @@ onMounted(() => {
                 type="password"
                 :placeholder="isEdit ? '留空表示保持原值' : `请输入${currentTypeConfig.clientSecretLabel}`"
               />
-            </FormItem>
-            <FormItem label="JIT 自动开户">
-              <Switch v-model:checked="sourceForm.jitProvisioning" />
-              <span class="text-sm text-muted-foreground ml-3">首次登录时自动创建用户</span>
             </FormItem>
           </div>
           <div class="flex justify-end gap-2">

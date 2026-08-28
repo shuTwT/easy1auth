@@ -43,7 +43,9 @@ public final class TenantContextFilter extends OncePerRequestFilter {
         try {
             try {
                 UUID tenantId = WebFramework.getTenantId(request);
-                if (tenantId == null) throw new DomainException(com.easy1auth.tenant.ErrorCodeConstants.TENANT_CONTEXT_REQUIRED);
+                if (tenantId == null) {
+                    throw new DomainException(com.easy1auth.tenant.ErrorCodeConstants.TENANT_CONTEXT_REQUIRED);
+                }
                 TenantContextHolder.setTenantId(tenantId);
                 TenantContextHolder.setIgnore(false);
                 TenantContext context = tenants.resolve(UUID.fromString(jwt.getSubject()), tenantId,
