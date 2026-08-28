@@ -2,9 +2,10 @@ package com.easy1auth.admin.security;
 
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.trace.TraceIdFilter;
-import com.easy1auth.tenant.WebFramework;
-import com.easy1auth.tenant.*;
+import com.easy1auth.tenant.util.WebFramework;
 import com.easy1auth.tenant.service.TenantService;
+import com.easy1auth.tenant.util.TenantContext;
+import com.easy1auth.tenant.util.TenantContextHolder;
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
 import org.springframework.security.core.Authentication;

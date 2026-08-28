@@ -10,7 +10,7 @@ import com.easy1auth.social.ErrorCodeConstants;
 import com.easy1auth.social.adapter.SocialIdentityAdapter;
 import com.easy1auth.social.model.*;
 import com.easy1auth.social.repository.SocialIdentityRepository;
-import com.easy1auth.tenant.TenantContextHolder;
+import com.easy1auth.tenant.util.TenantContextHolder;
 import org.babyfish.jimmer.sql.ast.LikeMode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

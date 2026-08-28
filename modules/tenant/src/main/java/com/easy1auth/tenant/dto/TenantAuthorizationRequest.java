@@ -1,4 +1,6 @@
-package com.easy1auth.tenant;
+package com.easy1auth.tenant.dto;
+
+import com.easy1auth.tenant.TenantAuthorizationProvider;
 
 import java.util.Objects;
 import java.util.UUID;

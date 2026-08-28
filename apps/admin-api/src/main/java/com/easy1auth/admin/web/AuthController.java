@@ -9,7 +9,7 @@ import com.easy1auth.adminidentity.service.AdminIdentityService;
 import com.easy1auth.adminidentity.service.RegistrationCodeService;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
-import com.easy1auth.tenant.WebFramework;
+import com.easy1auth.tenant.util.WebFramework;
 import com.easy1auth.tenant.service.TenantService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.oauth2.jwt.Jwt;

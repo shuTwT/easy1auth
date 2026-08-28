@@ -9,7 +9,7 @@ import com.easy1auth.audit.repository.AuditEventRepository;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.id.UuidV7;
 import com.easy1auth.infrastructure.foundation.web.PageData;
-import com.easy1auth.tenant.TenantContextHolder;
+import com.easy1auth.tenant.util.TenantContextHolder;
 import org.babyfish.jimmer.sql.ast.LikeMode;
 import org.babyfish.jimmer.sql.ast.mutation.SaveMode;
 import org.springframework.stereotype.Service;

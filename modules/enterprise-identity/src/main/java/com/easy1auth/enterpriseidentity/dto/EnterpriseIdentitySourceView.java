@@ -1,4 +1,4 @@
-package com.easy1auth.enterpriseidentity;
+package com.easy1auth.enterpriseidentity.dto;
 
 import java.time.Instant;
 import java.util.UUID;

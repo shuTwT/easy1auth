@@ -1,6 +1,6 @@
 package com.easy1auth.tenant.repository;
 
-import com.easy1auth.tenant.TenantPackageMutation;
+import com.easy1auth.tenant.dto.TenantPackageMutation;
 import com.easy1auth.tenant.model.TenantPackageEntity;
 import com.easy1auth.tenant.model.TenantPackageEntityDraft;
 import com.easy1auth.tenant.model.TenantPackageEntityTable;

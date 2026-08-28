@@ -1,4 +1,4 @@
-package com.easy1auth.tenant;
+package com.easy1auth.tenant.util;
 
 import java.util.Objects;
 import java.util.UUID;

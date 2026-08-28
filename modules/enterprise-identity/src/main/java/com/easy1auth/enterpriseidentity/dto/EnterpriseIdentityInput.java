@@ -1,4 +1,4 @@
-package com.easy1auth.enterpriseidentity;
+package com.easy1auth.enterpriseidentity.dto;
 
 /**
  * 企业身份源新建/更新入参。

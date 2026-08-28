@@ -7,7 +7,7 @@ import com.easy1auth.adminidentity.model.*;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.id.UuidV7;
 import com.easy1auth.infrastructure.foundation.web.PageData;
-import com.easy1auth.tenant.TenantContext;
+import com.easy1auth.tenant.util.TenantContext;
 import com.easy1auth.tenant.model.*;
 import com.easy1auth.adminaccess.repository.AdminAccessRepository;
 import org.babyfish.jimmer.sql.ast.LikeMode;

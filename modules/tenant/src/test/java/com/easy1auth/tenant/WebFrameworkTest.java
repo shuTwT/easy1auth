@@ -1,5 +1,7 @@
 package com.easy1auth.tenant;
 
+import com.easy1auth.tenant.util.TenantContext;
+import com.easy1auth.tenant.util.WebFramework;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 

@@ -1,7 +1,7 @@
 package com.easy1auth.admin.security;
 
-import com.easy1auth.tenant.TenantContext;
-import com.easy1auth.tenant.WebFramework;
+import com.easy1auth.tenant.util.TenantContext;
+import com.easy1auth.tenant.util.WebFramework;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

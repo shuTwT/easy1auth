@@ -1,5 +1,7 @@
 package com.easy1auth.tenant;
 
+import com.easy1auth.tenant.util.TenantContextHolder;
+import com.easy1auth.tenant.util.TenantUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 

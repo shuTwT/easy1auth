@@ -1,4 +1,4 @@
-package com.easy1auth.tenant;
+package com.easy1auth.tenant.dto;
 
 import java.time.Instant;
 import java.util.List;

@@ -1,6 +1,6 @@
 package com.easy1auth.admin.web;
 
-import com.easy1auth.tenant.WebFramework;
+import com.easy1auth.tenant.util.WebFramework;
 
 import com.easy1auth.admin.security.ManagementRouteClassification;
 import com.easy1auth.admin.security.ManagementRouteKind;
@@ -8,8 +8,8 @@ import com.easy1auth.adminaccess.ManagementPermissionCatalog;
 import com.easy1auth.adminaccess.ManagementPermissionType;
 import com.easy1auth.adminaccess.ManagementPermissionView;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
-import com.easy1auth.tenant.TenantContext;
-import com.easy1auth.tenant.TenantPackageView;
+import com.easy1auth.tenant.util.TenantContext;
+import com.easy1auth.tenant.dto.TenantPackageView;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;

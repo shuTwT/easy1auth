@@ -1,4 +1,4 @@
-package com.easy1auth.tenant;
+package com.easy1auth.tenant.util;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -18,7 +18,7 @@ public final class WebFramework {
     /** 用户代理请求头名 */
     public static final String USER_AGENT_HEADER = "User-Agent";
     /** 请求属性中存放租户上下文的键名 */
-    public static final String TENANT_CONTEXT_ATTRIBUTE = "com.easy1auth.tenant.WebFramework.tenantContext";
+    public static final String TENANT_CONTEXT_ATTRIBUTE = "com.easy1auth.tenant.util.WebFramework.tenantContext";
 
     private WebFramework() {
     }

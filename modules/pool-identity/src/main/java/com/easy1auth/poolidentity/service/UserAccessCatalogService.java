@@ -2,7 +2,7 @@ package com.easy1auth.poolidentity.service;
 
 import com.easy1auth.poolidentity.model.PoolPermissionEntity;
 import com.easy1auth.poolidentity.model.PoolRoleEntity;
-import com.easy1auth.tenant.TenantContextHolder;
+import com.easy1auth.tenant.util.TenantContextHolder;
 
 import com.easy1auth.poolidentity.PoolUserView;
 import com.easy1auth.poolidentity.model.PoolUserEntity;

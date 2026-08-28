@@ -4,8 +4,8 @@ import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.*;
 import com.easy1auth.adminaccess.service.AdminAccessService;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
-import com.easy1auth.tenant.TenantContext;
-import com.easy1auth.tenant.WebFramework;
+import com.easy1auth.tenant.util.TenantContext;
+import com.easy1auth.tenant.util.WebFramework;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;

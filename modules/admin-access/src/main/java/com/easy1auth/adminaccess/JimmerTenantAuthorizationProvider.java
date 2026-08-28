@@ -2,11 +2,11 @@ package com.easy1auth.adminaccess;
 
 import com.easy1auth.adminidentity.model.AdminAccountEntityTable;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
-import com.easy1auth.tenant.TenantAuthorization;
+import com.easy1auth.tenant.dto.TenantAuthorization;
 import com.easy1auth.tenant.TenantAuthorizationProvider;
-import com.easy1auth.tenant.TenantAuthorizationRequest;
+import com.easy1auth.tenant.dto.TenantAuthorizationRequest;
 import com.easy1auth.tenant.service.TenantPackageService;
-import com.easy1auth.tenant.TenantPackageView;
+import com.easy1auth.tenant.dto.TenantPackageView;
 import com.easy1auth.adminaccess.repository.AdminAccessRepository;
 import org.springframework.stereotype.Component;
 

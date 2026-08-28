@@ -4,7 +4,7 @@ import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.ManagementPermissionCode;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
 import com.easy1auth.poolidentity.service.UserAccessCatalogService;
-import com.easy1auth.tenant.TenantContextHolder;
+import com.easy1auth.tenant.util.TenantContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
