@@ -163,15 +163,6 @@ public class ApplicationService {
         return new ApplicationStats(rows.size(), rows.stream().filter("active"::equals).count(), rows.stream().filter("disabled"::equals).count());
     }
 
-    /**
-     * 应用统计视图。
-     *
-     * @param totalApplications    应用总数
-     * @param activeApplications   active 状态应用数
-     * @param disabledApplications disabled 状态应用数
-     */
-    public record ApplicationStats(long totalApplications, long activeApplications, long disabledApplications) {
-    }
 
     /** 按 ID 查询应用，不存在时抛出领域异常。 */
     private OAuthApplicationEntity entity(UUID id) {
@@ -283,11 +274,6 @@ public class ApplicationService {
      * @param accessTokenLifetime    访问令牌有效期（秒）
      * @param refreshTokenLifetime   刷新令牌有效期（秒）
      */
-    public record ApplicationInput(String name, String logo, String description, String type, List<String> redirectUris,
-                                   List<String> postLogoutRedirectUris, List<String> allowedGrantTypes,
-                                   List<String> scopes, Boolean requirePkce, Boolean requireConsent,
-                                   Integer accessTokenLifetime, Integer refreshTokenLifetime) {
-    }
 
     /**
      * 应用视图（面向接口层的只读 DTO）。
@@ -312,19 +298,10 @@ public class ApplicationService {
      * @param createdAt              创建时间
      * @param updatedAt              最后更新时间
      */
-    public record ApplicationView(UUID id, UUID tenantId, String name, String logo, String description, String type,
-                                  String clientId, String clientSecret, List<String> redirectUris,
-                                  List<String> postLogoutRedirectUris, List<String> allowedGrantTypes,
-                                  List<String> scopes, boolean requirePkce, boolean requireConsent,
-                                  int accessTokenLifetime, int refreshTokenLifetime, String status, Instant createdAt,
-                                  Instant updatedAt) {
-    }
 
     /**
      * 客户端密钥结果。
      *
      * @param clientSecret 新生成的客户端密钥明文（仅本次返回）
      */
-    public record SecretView(String clientSecret) {
-    }
 }

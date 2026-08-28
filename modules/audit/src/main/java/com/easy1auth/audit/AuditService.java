@@ -119,11 +119,6 @@ public class AuditService {
      * @param errorCode   失败时的错误码
      * @param details     附加详情（敏感字段将被脱敏）
      */
-    public record Event(UUID tenantId, String actorType, UUID actorId, String actorName, String eventType,
-                        String action, String resourceType, String resourceId, String traceId, String method,
-                        String ipAddress, String userAgent, String outcome, String errorCode,
-                        Map<String, Object> details) {
-    }
 
     /**
      * 审计事件查询条件。
@@ -135,8 +130,6 @@ public class AuditService {
      * @param start     起始时间
      * @param end       结束时间
      */
-    public record Query(String actorName, String eventType, String action, String outcome, Instant start, Instant end) {
-    }
 
     /**
      * 审计统计视图。
@@ -146,6 +139,4 @@ public class AuditService {
      * @param failedLogs 失败事件数
      * @param todayLogs  今日事件数
      */
-    public record Stats(long totalLogs, long successLogs, long failedLogs, long todayLogs) {
-    }
 }

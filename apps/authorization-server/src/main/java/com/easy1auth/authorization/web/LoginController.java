@@ -2,10 +2,14 @@ package com.easy1auth.authorization.web;
 
 import com.easy1auth.customization.CustomizationService;
 import com.easy1auth.poolidentity.service.PoolUserService;
+import com.easy1auth.poolidentity.service.PoolUserInput;
 import com.easy1auth.poolidentity.model.PoolUserEntityTable;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.social.service.SocialIdentityService;
+import com.easy1auth.social.service.PendingIdentity;
 import com.easy1auth.security.service.SecurityPolicyService;
+import com.easy1auth.security.service.Challenge;
+import com.easy1auth.security.service.ConsumedEmailChallenge;
 import com.easy1auth.authorization.config.SecurityConfiguration;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -159,7 +163,7 @@ public class LoginController {
         if (existing != null) {
             return ResponseEntity.ok(new ApiError(ErrorCodeConstants.REGISTRATION_EMAIL_EXISTS.code(), ErrorCodeConstants.REGISTRATION_EMAIL_EXISTS.message()));
         }
-        SecurityPolicyService.Challenge challenge;
+        Challenge challenge;
         try {
             challenge = security.issueEmailChallenge("registration", null, tenant, "register", email);
         } catch (DomainException ex) {
@@ -181,7 +185,7 @@ public class LoginController {
         if (input == null || blank(input.token()) || blank(input.code())) {
             return ResponseEntity.ok(new ApiError(ErrorCodeConstants.REGISTRATION_INPUT_INVALID.code(), ErrorCodeConstants.REGISTRATION_INPUT_INVALID.message()));
         }
-        SecurityPolicyService.ConsumedEmailChallenge consumed;
+        ConsumedEmailChallenge consumed;
         try {
             consumed = security.consumeRegistrationEmailChallenge(input.token(), input.code(), "register");
         } catch (DomainException ex) {
@@ -192,7 +196,7 @@ public class LoginController {
             return ResponseEntity.ok(new ApiError(ErrorCodeConstants.REGISTRATION_EMAIL_EXISTS.code(), ErrorCodeConstants.REGISTRATION_EMAIL_EXISTS.message()));
         }
         String username = generateUsername(tenant, email);
-        var created = poolUsersService.create(tenant, new PoolUserService.Input(username, email, null, null, email.substring(0, email.indexOf('@')), null, "active", null, null, Map.of()));
+        var created = poolUsersService.create(tenant, new PoolUserInput(username, email, null, null, email.substring(0, email.indexOf('@')), null, "active", null, null, Map.of()));
         var authorities = List.of(new SimpleGrantedAuthority("ROLE_POOL_USER"), new SimpleGrantedAuthority("TENANT_" + tenant));
         var auth = UsernamePasswordAuthenticationToken.authenticated(org.springframework.security.core.userdetails.User.withUsername(created.id().toString()).password("").authorities(authorities).build(), null, authorities);
         saveAuthentication(auth, request, response);
@@ -217,7 +221,7 @@ public class LoginController {
         if (user == null) {
             return ResponseEntity.ok(new ChallengeResult(security.decoyChallengeToken(), 600));
         }
-        SecurityPolicyService.Challenge challenge;
+        Challenge challenge;
         try {
             challenge = security.issueEmailChallenge("pool_user", user.id(), tenant, "email_login", email);
         } catch (DomainException ex) {
@@ -238,7 +242,7 @@ public class LoginController {
         if (input == null || blank(input.token()) || blank(input.code())) {
             return ResponseEntity.ok(new ApiError(ErrorCodeConstants.LOGIN_INPUT_INVALID.code(), ErrorCodeConstants.LOGIN_INPUT_INVALID.message()));
         }
-        SecurityPolicyService.ConsumedEmailChallenge consumed;
+        ConsumedEmailChallenge consumed;
         try {
             consumed = security.consumeEmailChallenge(input.token(), input.code(), "pool_user", "email_login");
         } catch (DomainException ex) {
@@ -431,7 +435,7 @@ public class LoginController {
     /** 若 Session 中暂存了已验证的外部身份，则将其绑定到本次登录的本地用户上。 */
     private void bindPendingSocialIdentity(HttpServletRequest request, UUID poolUserId) {
         HttpSession session = request.getSession(false);
-        if (session == null || !(session.getAttribute(SOCIAL_PENDING_IDENTITY) instanceof SocialIdentityService.PendingIdentity identity)) {
+        if (session == null || !(session.getAttribute(SOCIAL_PENDING_IDENTITY) instanceof PendingIdentity identity)) {
             return;
         }
         UUID tenant = interactions.requireTenant(request);
@@ -443,9 +447,9 @@ public class LoginController {
     }
 
     /** 读取当前 Session 中属于指定租户的已验证外部身份；缺失或租户不符时抛过期异常。 */
-    private SocialIdentityService.PendingIdentity pendingSocialIdentity(HttpServletRequest request, UUID tenant) {
+    private PendingIdentity pendingSocialIdentity(HttpServletRequest request, UUID tenant) {
         HttpSession session = request.getSession(false);
-        if (session == null || !(session.getAttribute(SOCIAL_PENDING_IDENTITY) instanceof SocialIdentityService.PendingIdentity identity)
+        if (session == null || !(session.getAttribute(SOCIAL_PENDING_IDENTITY) instanceof PendingIdentity identity)
                 || !tenant.equals(identity.tenantId())) {
             throw new DomainException(ErrorCodeConstants.AUTH_INTERACTION_EXPIRED_LOGIN);
         }

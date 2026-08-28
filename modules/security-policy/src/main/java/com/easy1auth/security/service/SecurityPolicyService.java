@@ -370,10 +370,6 @@ public class SecurityPolicyService {
      * @param loginAttemptLimit  登录失败锁定阈值（连续失败次数）
      * @param lockoutSeconds     锁定持续时间（秒）
      */
-    public record Policy(int minLength, boolean requireUpper, boolean requireLower, boolean requireNumber,
-                         boolean requireSpecial, int maxAgeDays, int historyCount, boolean mfaRequired,
-                         int loginAttemptLimit, int lockoutSeconds) {
-    }
 
     /**
      * TOTP 设置结果。
@@ -382,8 +378,6 @@ public class SecurityPolicyService {
      * @param qrCodeUrl   otpauth 二维码 URI，供用户扫码录入
      * @param backupCodes 一次性备用码列表（仅设置时返回一次）
      */
-    public record Setup(String secret, String qrCodeUrl, List<String> backupCodes) {
-    }
 
     /**
      * 认证挑战签发结果。
@@ -392,8 +386,6 @@ public class SecurityPolicyService {
      * @param code      一次性验证码（邮箱场景返回，TOTP 场景为 null）
      * @param expiresIn 有效期（秒）
      */
-    public record Challenge(String token, String code, int expiresIn) {
-    }
 
     /**
      * 邮箱挑战消费结果。
@@ -401,8 +393,6 @@ public class SecurityPolicyService {
      * @param subjectId   被认证的主体 ID（注册场景可为 null）
      * @param destination 验证码发送目的地（邮箱）
      */
-    public record ConsumedEmailChallenge(UUID subjectId, String destination) {
-    }
 
     /**
      * 多因素认证状态。
@@ -410,6 +400,4 @@ public class SecurityPolicyService {
      * @param enabled 是否已启用至少一种因子
      * @param methods 已启用的因子类型列表（如 totp）
      */
-    public record Status(boolean enabled, List<String> methods) {
-    }
 }

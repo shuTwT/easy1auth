@@ -586,8 +586,6 @@ public class CustomizationService {
      * @param socialProviderIds 选中的社交身份源 ID 列表
      * @param legalDocuments    法律文档草稿内容
      */
-    public record DraftInput(Map<String, Object> config, List<String> socialProviderIds, LegalDocumentsInput legalDocuments) {
-    }
 
     /**
      * 草稿视图（查询 / 更新草稿后的返回结构）。
@@ -598,9 +596,6 @@ public class CustomizationService {
      * @param draftUpdatedAt    草稿最后更新时间
      * @param publishedAt       最近发布时间（从未发布为 null）
      */
-    public record DraftView(Map<String, Object> config, List<String> socialProviderIds, LegalDocumentsInput legalDocuments,
-                            Instant draftUpdatedAt, Instant publishedAt) {
-    }
 
     /**
      * 法律文档草稿入参。
@@ -608,8 +603,6 @@ public class CustomizationService {
      * @param termsOfService 服务条款内容（可为空）
      * @param privacyPolicy  隐私政策内容（可为空）
      */
-    public record LegalDocumentsInput(String termsOfService, String privacyPolicy) {
-    }
 
     /**
      * 已发布法律文档视图（供登录 / 注册页展示）。
@@ -617,8 +610,6 @@ public class CustomizationService {
      * @param termsOfService 已生效的服务条款
      * @param privacyPolicy  已生效的隐私政策
      */
-    public record PublishedLegalDocuments(String termsOfService, String privacyPolicy) {
-    }
 
     /**
      * 旧版样式字段视图（发布时将结构化配置回写到旧版字段）。
@@ -634,10 +625,6 @@ public class CustomizationService {
      * @param loginMethods        登录方式列表
      * @param registrationEnabled 是否开放注册
      */
-    private record LegacyStyle(String logo, String logoDark, String backgroundImage, String backgroundColor,
-                               String primaryColor, String title, String subtitle, String customCss,
-                               List<String> loginMethods, boolean registrationEnabled) {
-    }
 
     /**
      * 消息模板入参（新建 / 更新共用）。
@@ -651,7 +638,4 @@ public class CustomizationService {
      * @param isDefault 是否默认模板
      * @param status    模板状态：active / disabled
      */
-    public record TemplateInput(String type, String code, String name, String subject, String content,
-                                Map<String, String> variables, Boolean isDefault, String status) {
-    }
 }

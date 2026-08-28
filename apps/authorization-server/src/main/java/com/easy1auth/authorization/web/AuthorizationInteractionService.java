@@ -4,6 +4,7 @@ import com.easy1auth.customization.CustomizationService;
 import com.easy1auth.customization.model.LoginStyleEntity;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.social.service.SocialIdentityService;
+import com.easy1auth.social.service.SourceView;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -331,7 +332,7 @@ public class AuthorizationInteractionService {
         List<SocialSourceSummary> sources = List.of();
         if (providerIds != null && !providerIds.isEmpty()) {
             var active = socialIdentity.listActive(tenant);
-            var byId = new LinkedHashMap<String, SocialIdentityService.SourceView>();
+            var byId = new LinkedHashMap<String, SourceView>();
             for (var s : active) {
                 byId.put(s.id().toString(), s);
             }
@@ -375,11 +376,7 @@ public class AuthorizationInteractionService {
      * @param termsOfService    服务条款文档地址（可为 null）
      * @param privacyPolicy     隐私政策文档地址（可为 null）
      */
-    public record PublicStyle(String logo, String logoDark, String backgroundImage, String backgroundColor,
-                              String primaryColor, String title, String subtitle, List<String> loginMethods,
-                              List<String> socialProviders, List<SocialSourceSummary> socialSources,
-                              boolean registrationEnabled, Map<String, Object> config,
-                              String termsOfService, String privacyPolicy) { }
+    
 
     /**
      * 登录页渲染社交登录按钮所需的最小身份源信息。
@@ -388,7 +385,7 @@ public class AuthorizationInteractionService {
      * @param type 身份源类型（如 feishu）
      * @param name 身份源展示名称
      */
-    public record SocialSourceSummary(String id, String type, String name) { }
+    
 
     /**
      * 登录页上下文，包含当前状态、租户、样式、错误提示和 CSRF Token。
@@ -399,10 +396,7 @@ public class AuthorizationInteractionService {
      * @param message   需要展示的提示信息（如登录错误）
      * @param csrfToken 页面表单所需的 CSRF Token
      */
-    public record Context(String status, String tenantId, PublicStyle style, String message, String csrfToken) {
-        /** 创建一个表示交互已失效的登录上下文。 */
-        static Context expired() { return new Context("expired", null, null, "登录请求已过期，请重新发起", null); }
-    }
+    
 
     /**
      * 授权确认页初始化结果。
@@ -414,7 +408,7 @@ public class AuthorizationInteractionService {
      * @param clientName    客户端展示名称
      * @param scopes        申请的权限范围列表
      */
-    public record ConsentStart(String interactionId, String tenantId, PublicStyle style, String clientId, String clientName, List<String> scopes) { }
+    
 
     /**
      * 授权确认页上下文，包含客户端信息、权限范围、样式和 CSRF Token。
@@ -427,10 +421,7 @@ public class AuthorizationInteractionService {
      * @param scopes    申请的权限范围列表
      * @param csrfToken 页面表单所需的 CSRF Token
      */
-    public record ConsentContext(String status, String tenantId, PublicStyle style, String clientId, String clientName, List<String> scopes, String csrfToken) {
-        /** 创建一个表示授权交互已失效的上下文。 */
-        static ConsentContext expired() { return new ConsentContext("expired", null, null, null, null, List.of(), null); }
-    }
+    
 
     /**
      * OAuth 授权决定完成后，供浏览器表单 POST 的参数。
@@ -440,5 +431,5 @@ public class AuthorizationInteractionService {
      * @param state    授权框架内部的续接 state
      * @param scopes   同意授予的权限范围（拒绝时为空列表）
      */
-    public record Continuation(String location, String clientId, String state, List<String> scopes) { }
+    
 }

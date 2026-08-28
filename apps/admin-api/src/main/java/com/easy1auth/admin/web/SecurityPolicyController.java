@@ -4,6 +4,7 @@ import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.ManagementPermissionCode;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
 import com.easy1auth.security.service.SecurityPolicyService;
+import com.easy1auth.security.service.Policy;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -33,7 +34,7 @@ public class SecurityPolicyController {
     /** 更新当前租户的安全策略配置。 */
     @TenantManagementPermission(value = ManagementPermissionCode.SECURITY_POLICY_UPDATE)
     @PutMapping
-    ApiResponse<?> update(@RequestBody SecurityPolicyService.Policy input) {
+    ApiResponse<?> update(@RequestBody Policy input) {
         return ApiResponse.ok(service.update(input), "安全策略更新成功");
     }
 }

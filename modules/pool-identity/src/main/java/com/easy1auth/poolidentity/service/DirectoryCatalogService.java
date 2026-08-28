@@ -504,9 +504,6 @@ public class DirectoryCatalogService {
      * @param organizationGroups organization（组织）类型组数
      * @param rootGroups        顶级组（无父组）数量
      */
-    public record GroupStats(long totalGroups, long teamGroups, long departmentGroups, long projectGroups,
-                             long organizationGroups, long rootGroups) {
-    }
 
     /**
      * 岗位统计视图。
@@ -516,8 +513,6 @@ public class DirectoryCatalogService {
      * @param vacantPositions 空编（无用户）岗位数
      * @param averageLevel    平均岗位层级
      */
-    public record PositionStats(long totalPositions, long filledPositions, long vacantPositions, double averageLevel) {
-    }
 
     /**
      * 用户组创建/更新入参。
@@ -527,8 +522,6 @@ public class DirectoryCatalogService {
      * @param type        用户组类型：team / department / project / organization
      * @param parentId    父组 ID（可为 null，表示顶级组）
      */
-    public record GroupInput(String name, String description, String type, UUID parentId) {
-    }
 
     /**
      * 岗位创建/更新入参。
@@ -541,9 +534,6 @@ public class DirectoryCatalogService {
      * @param sequence     排序序号
      * @param maxCount     该岗位人数上限（可为 null，表示不限制）
      */
-    public record PositionInput(String name, String code, String description, UUID departmentId, Integer level,
-                                String sequence, Integer maxCount) {
-    }
 
     /**
      * 用户组详情视图。
@@ -558,9 +548,6 @@ public class DirectoryCatalogService {
      * @param updatedAt   最后更新时间
      * @param _count      成员/管理员/子组数量统计
      */
-    public record GroupView(UUID id, UUID tenantId, String name, String description, String type, UUID parentId,
-                            Instant createdAt, Instant updatedAt, Counts _count) {
-    }
 
     /**
      * 用户组数量统计视图。
@@ -569,8 +556,6 @@ public class DirectoryCatalogService {
      * @param admins   组管理员数
      * @param children 子组数
      */
-    public record Counts(long members, long admins, long children) {
-    }
 
     /**
      * 岗位详情视图。
@@ -588,10 +573,6 @@ public class DirectoryCatalogService {
      * @param createdAt   创建时间
      * @param updatedAt   最后更新时间
      */
-    public record PositionView(UUID id, UUID tenantId, String name, String code, String description, UUID departmentId,
-                               int level, String sequence, long userCount, Integer maxCount, Instant createdAt,
-                               Instant updatedAt) {
-    }
 
     /**
      * 用户组成员视图。
@@ -600,8 +581,6 @@ public class DirectoryCatalogService {
      * @param admins  管理员列表
      * @param total   成员总数
      */
-    public record GroupMembers(List<PoolUserView> members, List<PoolUserView> admins, int total) {
-    }
 
     /**
      * 用户组树节点视图。
@@ -615,9 +594,6 @@ public class DirectoryCatalogService {
      * @param memberCount 成员数
      * @param adminCount  管理员数
      */
-    public record GroupTree(UUID id, String name, String description, String type, UUID parentId,
-                            List<GroupTree> children, long memberCount, long adminCount) {
-    }
 
     /** 用户组树的可变构建节点（组装完成后转为不可变的 {@link GroupTree}）。 */
     private static final class MutableGroupTree {

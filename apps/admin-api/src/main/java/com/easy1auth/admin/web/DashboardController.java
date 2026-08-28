@@ -50,7 +50,7 @@ public class DashboardController {
         var userStats = users.stats();
         var applicationStats = applications.stats();
         Instant today = LocalDate.now(ZoneOffset.UTC).atStartOfDay().toInstant(ZoneOffset.UTC);
-        List<PoolUserService.RecentLogin> loginRows = users.recentLogins(20);
+        List<com.easy1auth.poolidentity.service.RecentLogin> loginRows = users.recentLogins(20);
         List<RecentLogin> recentLogins = loginRows.stream()
                 .limit(5)
                 .map(login -> new RecentLogin(login.username(), login.email(), "", login.time(), "success"))

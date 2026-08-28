@@ -7,6 +7,7 @@ import com.easy1auth.audit.DeliveryService;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.security.service.SecurityPolicyService;
+import com.easy1auth.security.service.Policy;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.transaction.annotation.Transactional;
@@ -218,7 +219,7 @@ public class AdminSecurityController {
      * @param policy        密码策略
      * @param expiryStatus  密码过期状态
      */
-    public record PasswordPolicyResponse(SecurityPolicyService.Policy policy, ExpiryStatus expiryStatus) {
+    public record PasswordPolicyResponse(Policy policy, ExpiryStatus expiryStatus) {
     }
 
     /**

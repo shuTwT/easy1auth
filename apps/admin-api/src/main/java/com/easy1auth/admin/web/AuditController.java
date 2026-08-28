@@ -33,7 +33,7 @@ public class AuditController {
     @TenantManagementPermission(value = ManagementPermissionCode.AUDIT_LIST)
     @GetMapping
     ApiResponse<?> list(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int pageSize, @RequestParam(required = false) String username, @RequestParam(required = false) String type, @RequestParam(required = false) String action, @RequestParam(required = false) String status, @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startDate, @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endDate) {
-        var p = service.list(page, pageSize, new AuditService.Query(username, type, action, "failed".equals(status) ? "failure" : status, startDate, endDate));
+        var p = service.list(page, pageSize, new Query(username, type, action, "failed".equals(status) ? "failure" : status, startDate, endDate));
         return ApiResponse.ok(PageData.of(p.items().stream().map(AuditController::legacy).toList(), p.page(), p.pageSize(), p.total()));
     }
 

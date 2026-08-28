@@ -3,6 +3,7 @@ package com.easy1auth.admin.web;
 import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.ManagementPermissionCode;
 import com.easy1auth.poolidentity.service.PoolUserService;
+import com.easy1auth.poolidentity.service.PoolUserInput;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
 import org.apache.poi.ss.usermodel.*;
@@ -76,7 +77,7 @@ public class PoolUserImportController {
                 }
                 total++;
                 try {
-                    var user = users.create(new PoolUserService.Input(username, email, blank(password), blank(phone), name, null, null, blank(department), blank(position), null));
+                    var user = users.create(new PoolUserInput(username, email, blank(password), blank(phone), name, null, null, blank(department), blank(position), null));
                     imported.add(new ImportedUser(user.username(), user.email(), user.name()));
                 } catch (RuntimeException ex) {
                     errors.add(new ImportError(rowIndex + 1, username,

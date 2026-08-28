@@ -4,6 +4,8 @@ import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.ManagementPermissionCode;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
 import com.easy1auth.social.service.SocialIdentityService;
+import com.easy1auth.social.service.SocialIdentityInput;
+import com.easy1auth.social.service.SourceView;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -42,7 +44,7 @@ public class SocialIdentitySourceController {
         var p = service.list(1, 100, null, null);
         long active = p.items().stream().filter(x -> "active".equals(x.status())).count();
         Map<String, Long> byType = p.items().stream()
-                .collect(Collectors.groupingBy(SocialIdentityService.SourceView::type, Collectors.counting()));
+                .collect(Collectors.groupingBy(SourceView::type, Collectors.counting()));
         return ApiResponse.ok(new SocialSourceStatsResponse(p.total(), active, p.total() - active, byType));
     }
 
@@ -56,14 +58,14 @@ public class SocialIdentitySourceController {
     /** 创建社会化身份源；返回的 Client Secret 仅显示一次，请及时保存。 */
     @TenantManagementPermission(value = ManagementPermissionCode.SOCIAL_IDENTITY_SOURCE_CREATE)
     @PostMapping
-    ApiResponse<?> create(@RequestBody SocialIdentityService.Input in) {
+    ApiResponse<?> create(@RequestBody SocialIdentityInput in) {
         return ApiResponse.ok(service.create(in), "社会化身份源创建成功；Client Secret 仅显示一次");
     }
 
     /** 更新指定社会化身份源的配置。 */
     @TenantManagementPermission(value = ManagementPermissionCode.SOCIAL_IDENTITY_SOURCE_UPDATE)
     @PutMapping("/{id}")
-    ApiResponse<?> update(@PathVariable UUID id, @RequestBody SocialIdentityService.Input in) {
+    ApiResponse<?> update(@PathVariable UUID id, @RequestBody SocialIdentityInput in) {
         return ApiResponse.ok(service.update(id, in), "社会化身份源更新成功");
     }
 

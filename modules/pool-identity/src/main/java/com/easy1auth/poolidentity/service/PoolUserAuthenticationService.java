@@ -84,6 +84,4 @@ public class PoolUserAuthenticationService {
      * @param name     用户姓名/显示名
      * @param email    邮箱（可为 null）
      */
-    public record PoolPrincipal(UUID id, UUID tenantId, String username, String name, @Nullable String email) {
-    }
 }

@@ -4,6 +4,7 @@ import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.ManagementPermissionCode;
 import com.easy1auth.poolidentity.service.DirectoryCatalogService;
 import com.easy1auth.poolidentity.service.PoolUserService;
+import com.easy1auth.poolidentity.service.PoolUserInput;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
 import com.easy1auth.poolidentity.service.UserAccessCatalogService;
 import org.springframework.web.bind.annotation.*;
@@ -59,14 +60,14 @@ public class PoolUserController {
     /** 创建目录用户。 */
     @TenantManagementPermission(value = ManagementPermissionCode.USER_CREATE)
     @PostMapping
-    public ApiResponse<?> create(@RequestBody PoolUserService.Input in) {
+    public ApiResponse<?> create(@RequestBody PoolUserInput in) {
         return ApiResponse.ok(users.create(in), "用户创建成功");
     }
 
     /** 更新指定目录用户的信息。 */
     @TenantManagementPermission(value = ManagementPermissionCode.USER_UPDATE)
     @PutMapping("/{id}")
-    public ApiResponse<?> update(@PathVariable UUID id, @RequestBody PoolUserService.Input in) {
+    public ApiResponse<?> update(@PathVariable UUID id, @RequestBody PoolUserInput in) {
         return ApiResponse.ok(users.update(id, in), "用户更新成功");
     }
 

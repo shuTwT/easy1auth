@@ -3,6 +3,8 @@ package com.easy1auth.admin.web;
 import com.easy1auth.admin.security.*;
 import com.easy1auth.adminaccess.ManagementPermissionCode;
 import com.easy1auth.enterpriseidentity.EnterpriseIdentityService;
+import com.easy1auth.enterpriseidentity.EnterpriseIdentityInput;
+import com.easy1auth.enterpriseidentity.FeishuEventResponse;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -57,14 +59,14 @@ public class EnterpriseIdentitySourceController {
     /** 创建飞书企业身份源。 */
     @TenantManagementPermission(ManagementPermissionCode.ENTERPRISE_IDENTITY_SOURCE_CREATE)
     @PostMapping
-    public ApiResponse<?> create(@RequestBody EnterpriseIdentityService.Input input) {
+    public ApiResponse<?> create(@RequestBody EnterpriseIdentityInput input) {
         return ApiResponse.ok(service.create(input), "飞书企业身份源创建成功");
     }
 
     /** 更新指定飞书企业身份源的配置。 */
     @TenantManagementPermission(ManagementPermissionCode.ENTERPRISE_IDENTITY_SOURCE_UPDATE)
     @PutMapping("/{id}")
-    public ApiResponse<?> update(@PathVariable UUID id, @RequestBody EnterpriseIdentityService.Input input) {
+    public ApiResponse<?> update(@PathVariable UUID id, @RequestBody EnterpriseIdentityInput input) {
         return ApiResponse.ok(service.update(id, input), "飞书企业身份源更新成功");
     }
 
@@ -93,7 +95,7 @@ public class EnterpriseIdentitySourceController {
     /** 接收飞书平台推送的事件回调（公开路由，无需登录）。 */
     @ManagementRouteClassification(ManagementRouteKind.PUBLIC)
     @PostMapping("/{id}/feishu/events")
-    public EnterpriseIdentityService.FeishuEventResponse feishuEvent(@PathVariable UUID id, @RequestBody FeishuEventRequest event) {
+    public FeishuEventResponse feishuEvent(@PathVariable UUID id, @RequestBody FeishuEventRequest event) {
         return service.acceptFeishuEvent(id, json.convertValue(event.fields, new TypeReference<>() {
         }));
     }

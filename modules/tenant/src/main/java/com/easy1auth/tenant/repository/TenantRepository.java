@@ -167,23 +167,4 @@ public class TenantRepository {
         return new DomainException(errorCode);
     }
 
-    /**
-     * 成员关系状态视图。
-     *
-     * @param id        成员关系 ID
-     * @param role      账号在租户内的角色
-     * @param system    租户是否为系统租户
-     * @param packageId 租户绑定的套餐 ID（可为 null）
-     */
-    public record MembershipState(UUID id, String role, boolean system, Long packageId) {
-    }
-
-    /**
-     * 租户状态视图。
-     *
-     * @param tenant 租户实体
-     * @param role   账号在租户内的角色
-     */
-    public record TenantState(TenantEntity tenant, String role) {
-    }
 }

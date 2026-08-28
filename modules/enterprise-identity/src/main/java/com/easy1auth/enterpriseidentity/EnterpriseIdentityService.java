@@ -2,6 +2,7 @@ package com.easy1auth.enterpriseidentity;
 
 import com.easy1auth.poolidentity.model.*;
 import com.easy1auth.poolidentity.service.PoolUserService;
+import com.easy1auth.poolidentity.service.PoolUserInput;
 import com.easy1auth.enterpriseidentity.model.*;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.id.UuidV7;
@@ -70,7 +71,7 @@ public class EnterpriseIdentityService {
 
     /** 分页查询当前租户的企业身份源列表，支持名称模糊搜索与状态过滤。 */
     @Transactional(readOnly = true)
-    public PageData<SourceView> list(int page, int pageSize, String search, String status) {
+    public PageData<EnterpriseIdentitySourceView> list(int page, int pageSize, String search, String status) {
         UUID tenant = TenantContextHolder.requireTenantId();
         int p = Math.max(page, 1), s = Math.min(Math.max(pageSize, 1), 100);
         var q = sql.createQuery(SOURCE).where(SOURCE.tenantId().eq(tenant))
@@ -82,13 +83,13 @@ public class EnterpriseIdentityService {
 
     /** 查询当前租户下指定身份源的详情。 */
     @Transactional(readOnly = true)
-    public SourceView get(UUID id) {
+    public EnterpriseIdentitySourceView get(UUID id) {
         return view(source(TenantContextHolder.requireTenantId(), id));
     }
 
     /** 新建飞书企业身份源（provider=feishu），敏感凭证加密后存储，状态默认 active。 */
     @Transactional
-    public SourceView create(Input input) {
+    public EnterpriseIdentitySourceView create(EnterpriseIdentityInput input) {
         UUID tenant = TenantContextHolder.requireTenantId();
         validate(input, true);
         UUID id = UuidV7.randomUuid();
@@ -104,7 +105,7 @@ public class EnterpriseIdentityService {
 
     /** 更新身份源信息：仅更新传入的非空字段，重新传入的凭证会加密覆盖。 */
     @Transactional
-    public SourceView update(UUID id, Input input) {
+    public EnterpriseIdentitySourceView update(UUID id, EnterpriseIdentityInput input) {
         UUID tenant = TenantContextHolder.requireTenantId();
         var old = source(tenant, id);
         validate(input, false);
@@ -144,7 +145,7 @@ public class EnterpriseIdentityService {
 
     /** 触发指定启用中身份源的全量同步，返回排队中的同步任务视图。 */
     @Transactional
-    public TaskView sync(UUID id) {
+    public EnterpriseIdentityTaskView sync(UUID id) {
         var source = source(TenantContextHolder.requireTenantId(), id);
         if (!"active".equals(source.status())) {
             throw new DomainException(ErrorCodeConstants.ENTERPRISE_IDENTITY_SOURCE_DISABLED);
@@ -154,7 +155,7 @@ public class EnterpriseIdentityService {
 
     /** 查询指定身份源最近的同步任务列表（最多 30 条）。 */
     @Transactional(readOnly = true)
-    public List<TaskView> tasks(UUID id) {
+    public List<EnterpriseIdentityTaskView> tasks(UUID id) {
         UUID tenant = TenantContextHolder.requireTenantId();
         source(tenant, id);
         return sql.createQuery(TASK).where(TASK.tenantId().eq(tenant), TASK.sourceId().eq(id)).orderBy(TASK.createdAt().desc()).select(TASK).limit(30).execute().stream().map(EnterpriseIdentityService::taskView).toList();
@@ -162,11 +163,11 @@ public class EnterpriseIdentityService {
 
     /** 统计当前租户身份源的总数及启用 / 停用数量。 */
     @Transactional(readOnly = true)
-    public Stats stats() {
+    public EnterpriseIdentityStats stats() {
         UUID tenant = TenantContextHolder.requireTenantId();
         var rows = sql.createQuery(SOURCE).where(SOURCE.tenantId().eq(tenant)).select(SOURCE.status()).execute();
         long active = rows.stream().filter("active"::equals).count();
-        return new Stats(rows.size(), active, rows.size() - active);
+        return new EnterpriseIdentityStats(rows.size(), active, rows.size() - active);
     }
 
     /**
@@ -214,23 +215,18 @@ public class EnterpriseIdentityService {
      * @param activeSources   启用中的身份源数量
      * @param inactiveSources 停用的身份源数量
      */
-    public record Stats(long totalSources, long activeSources, long inactiveSources) {
-    }
 
     /**
      * 飞书回调响应视图：仅 url_verification 挑战应答需要返回内容。
      *
      * @param challenge 飞书 URL 验证挑战值（无需应答时为 null）
      */
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    public record FeishuEventResponse(String challenge) {
-    }
 
     /** worker 领取待处理（pending）任务并置为 processing，返回实际领取的任务列表。 */
     @Transactional
-    public List<TaskView> claim(int limit) {
+    public List<EnterpriseIdentityTaskView> claim(int limit) {
         List<EnterpriseIdentitySyncTaskEntity> rows = sql.createQuery(TASK).where(TASK.status().eq("pending")).orderBy(TASK.createdAt().asc()).select(TASK).limit(Math.max(1, Math.min(limit, 20))).execute();
-        List<TaskView> claimed = new ArrayList<>();
+        List<EnterpriseIdentityTaskView> claimed = new ArrayList<>();
         for (var row : rows) {
             if (sql.createUpdate(TASK).set(TASK.status(), "processing").set(TASK.startedAt(), Instant.now()).where(TASK.id().eq(row.id()), TASK.status().eq("pending")).execute() == 1) {
                 claimed.add(taskView(row));
@@ -372,7 +368,7 @@ public class EnterpriseIdentityService {
         }
         if (old == null) {
             String username = username(externalId);
-            var created = users.create(tenant, new PoolUserService.Input(username, email, null, phone, name, avatar, "active", department, position, Map.of("enterpriseIdentity", "feishu")));
+            var created = users.create(tenant, new PoolUserInput(username, email, null, phone, name, avatar, "active", department, position, Map.of("enterpriseIdentity", "feishu")));
             sql.createUpdate(USER).set(USER.enterpriseIdentitySourceId(), source.id()).set(USER.enterpriseIdentityExternalId(), externalId).where(USER.id().eq(created.id())).execute();
             increment(summary, "createdUsers");
         } else {
@@ -406,7 +402,7 @@ public class EnterpriseIdentityService {
     }
 
     /** 创建一条 pending 状态的同步任务并入队，返回任务视图。 */
-    private TaskView queue(EnterpriseIdentitySourceEntity source, String type, String eventId, Map<String, Object> payload) {
+    private EnterpriseIdentityTaskView queue(EnterpriseIdentitySourceEntity source, String type, String eventId, Map<String, Object> payload) {
         UUID id = UuidV7.randomUuid();
         Instant now = Instant.now();
         var row = EnterpriseIdentitySyncTaskEntityDraft.$.produce(d -> d.setId(id).setTenantId(source.tenantId()).setSourceId(source.id()).setType(type).setEventId(eventId).setPayload(payload).setStatus("pending").setSummary(Map.of()).setLastError(null).setCreatedAt(now).setStartedAt(null).setFinishedAt(null));
@@ -527,7 +523,7 @@ public class EnterpriseIdentityService {
         return group == null ? null : group.id();
     }
 
-    private void validate(Input x, boolean create) {
+    private void validate(EnterpriseIdentityInput x, boolean create) {
         if (x == null || (create && (!present(x.name()) || !present(x.appId()) || !present(x.appSecret()) || !present(x.verificationToken()) || !present(x.encryptKey())))) {
             throw new DomainException(ErrorCodeConstants.ENTERPRISE_IDENTITY_SOURCE_INVALID);
         }
@@ -544,13 +540,13 @@ public class EnterpriseIdentityService {
     }
 
     /** 将身份源实体转换为视图 DTO。 */
-    private static SourceView view(EnterpriseIdentitySourceEntity e) {
-        return new SourceView(e.id(), e.name(), e.provider(), e.appId(), e.status(), e.lastSyncAt(), e.lastSyncStatus(), e.lastError(), e.createdAt(), e.updatedAt());
+    private static EnterpriseIdentitySourceView view(EnterpriseIdentitySourceEntity e) {
+        return new EnterpriseIdentitySourceView(e.id(), e.name(), e.provider(), e.appId(), e.status(), e.lastSyncAt(), e.lastSyncStatus(), e.lastError(), e.createdAt(), e.updatedAt());
     }
 
     /** 将同步任务实体转换为视图 DTO。 */
-    private static TaskView taskView(EnterpriseIdentitySyncTaskEntity e) {
-        return new TaskView(e.id(), e.type(), e.status(), e.summary(), e.lastError(), e.createdAt(), e.finishedAt());
+    private static EnterpriseIdentityTaskView taskView(EnterpriseIdentitySyncTaskEntity e) {
+        return new EnterpriseIdentityTaskView(e.id(), e.type(), e.status(), e.summary(), e.lastError(), e.createdAt(), e.finishedAt());
     }
 
     @SuppressWarnings("unchecked")
@@ -630,9 +626,6 @@ public class EnterpriseIdentityService {
      * @param encryptKey        事件解密密钥
      * @param status            身份源状态：active / disabled（可为空）
      */
-    public record Input(String name, String appId, String appSecret, String verificationToken, String encryptKey,
-                        String status) {
-    }
 
     /**
      * 身份源视图（面向接口层的只读 DTO）。
@@ -648,9 +641,6 @@ public class EnterpriseIdentityService {
      * @param createdAt      创建时间
      * @param updatedAt      最后更新时间
      */
-    public record SourceView(UUID id, String name, String provider, String appId, String status, Instant lastSyncAt,
-                             String lastSyncStatus, String lastError, Instant createdAt, Instant updatedAt) {
-    }
 
     /**
      * 同步任务视图（面向接口层的只读 DTO）。
@@ -663,7 +653,4 @@ public class EnterpriseIdentityService {
      * @param createdAt  创建时间
      * @param finishedAt 完成时间
      */
-    public record TaskView(UUID id, String type, String status, Map<String, Object> summary, String lastError,
-                           Instant createdAt, Instant finishedAt) {
-    }
 }

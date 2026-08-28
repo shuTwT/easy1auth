@@ -1,6 +1,7 @@
 package com.easy1auth.social.service;
 
 import com.easy1auth.poolidentity.service.PoolUserService;
+import com.easy1auth.poolidentity.service.PoolUserInput;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.id.UuidV7;
 import com.easy1auth.infrastructure.foundation.web.PageData;
@@ -64,7 +65,7 @@ public class SocialIdentityService {
 
     /** 创建身份源：校验参数后加密保存 client_secret，初始状态为 active。 */
     @Transactional
-    public SourceView create(UUID tenant, Input in) {
+    public SourceView create(UUID tenant, SocialIdentityInput in) {
         validate(in, true);
         UUID id = UuidV7.randomUuid();
         Instant now = Instant.now();
@@ -100,7 +101,7 @@ public class SocialIdentityService {
 
     /** 更新身份源：仅更新传入的非空字段，client_secret 非空时重新加密保存。 */
     @Transactional
-    public SourceView update(UUID tenant, UUID id, Input in) {
+    public SourceView update(UUID tenant, UUID id, SocialIdentityInput in) {
         var old = entity(tenant, id);
         validate(in, false);
         var u = sql.createUpdate(SOURCE).set(SOURCE.updatedAt(), Instant.now())
@@ -212,7 +213,7 @@ public class SocialIdentityService {
             throw new DomainException(ErrorCodeConstants.SOCIAL_EMAIL_REQUIRED);
         }
         String name = blank(identity.name()) ? identity.email() : identity.name();
-        var user = users.create(identity.tenantId(), new PoolUserService.Input(username, identity.email(), null, null,
+        var user = users.create(identity.tenantId(), new PoolUserInput(username, identity.email(), null, null,
                 name, identity.avatar(), null, null, null, Map.of("federated", true, "social_type", identity.sourceType())));
         bind(identity, user.id());
         return user.id();
@@ -246,7 +247,7 @@ public class SocialIdentityService {
 
     /** 从租户上下文创建身份源。 */
     @Transactional
-    public SourceView create(Input in) { return create(TenantContextHolder.requireTenantId(), in); }
+    public SourceView create(SocialIdentityInput in) { return create(TenantContextHolder.requireTenantId(), in); }
 
     /** 从租户上下文分页查询身份源。 */
     @Transactional(readOnly = true)
@@ -260,7 +261,7 @@ public class SocialIdentityService {
 
     /** 从租户上下文更新身份源。 */
     @Transactional
-    public SourceView update(UUID id, Input in) { return update(TenantContextHolder.requireTenantId(), id, in); }
+    public SourceView update(UUID id, SocialIdentityInput in) { return update(TenantContextHolder.requireTenantId(), id, in); }
 
     /** 从租户上下文删除身份源。 */
     @Transactional
@@ -290,7 +291,7 @@ public class SocialIdentityService {
     private DomainException missing() { return new DomainException(ErrorCodeConstants.SOCIAL_SOURCE_NOT_FOUND); }
 
     /** 校验身份源入参：创建时必须齐全，类型须受支持，状态合法。 */
-    private void validate(Input i, boolean create) {
+    private void validate(SocialIdentityInput i, boolean create) {
         if (i == null || (create && (blank(i.name()) || blank(i.type()) || blank(i.clientId()) || blank(i.clientSecret())))) {
             throw new DomainException(ErrorCodeConstants.SOCIAL_SOURCE_INVALID);
         }
@@ -375,8 +376,6 @@ public class SocialIdentityService {
      * @param jitProvisioning 是否在回调时自动开通新用户
      * @param status          状态：active / disabled
      */
-    public record Input(String name, String type, String mode, String clientId, String clientSecret,
-                        Boolean jitProvisioning, String status) { }
 
     /**
      * 身份源视图（面向接口层）。
@@ -393,9 +392,6 @@ public class SocialIdentityService {
      * @param createdAt     创建时间
      * @param updatedAt     最后更新时间
      */
-    public record SourceView(UUID id, UUID tenantId, String name, String type, String mode, String clientId,
-                             String clientSecret, boolean jitProvisioning, String status,
-                             Instant createdAt, Instant updatedAt) { }
 
     /**
      * 授权发起结果。
@@ -404,7 +400,6 @@ public class SocialIdentityService {
      * @param state        本次登录事务的随机 state（供回调校验）
      * @param expiresIn    事务有效期（秒）
      */
-    public record AuthorizationStart(String authorizeUrl, String state, int expiresIn) { }
 
     /**
      * 回调处理结果。
@@ -414,7 +409,6 @@ public class SocialIdentityService {
      * @param poolUserId 已绑定用户 ID（未绑定时为 null，需走账户确认流程）
      * @param identity  待确认/绑定的远程身份信息
      */
-    public record CallbackResult(UUID tenantId, UUID sourceId, UUID poolUserId, PendingIdentity identity) { }
 
     /**
      * 待确认的远程身份（用户确认后用于开通或绑定账户）。
@@ -428,6 +422,4 @@ public class SocialIdentityService {
      * @param email      邮箱（可为 null）
      * @param avatar     头像 URL（可为 null）
      */
-    public record PendingIdentity(UUID tenantId, UUID sourceId, String sourceType, String subject,
-                                  String username, String name, String email, String avatar) implements java.io.Serializable { }
 }

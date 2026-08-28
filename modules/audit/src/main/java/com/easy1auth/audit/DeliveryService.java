@@ -226,8 +226,6 @@ public class DeliveryService {
      * @param maxRetries 最大重试次数（0-20，默认 5）
      * @param status     订阅状态：active / disabled（仅更新时使用）
      */
-    public record SubscriptionInput(String name, String url, List<String> events, Integer maxRetries, String status) {
-    }
 
     /**
      * Webhook 订阅视图。
@@ -243,7 +241,4 @@ public class DeliveryService {
      * @param createdAt  创建时间
      * @param updatedAt  最后更新时间
      */
-    public record SubscriptionView(UUID id, UUID tenantId, String name, String url, List<String> events, String secret,
-                                   String status, int maxRetries, Instant createdAt, Instant updatedAt) {
-    }
 }

@@ -5,6 +5,7 @@ import com.easy1auth.infrastructure.foundation.security.ActiveAdminAccountLocker
 import com.easy1auth.tenant.*;
 import com.easy1auth.tenant.model.TenantEntity;
 import com.easy1auth.tenant.repository.TenantRepository;
+import com.easy1auth.tenant.repository.TenantState;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -183,7 +184,7 @@ public class TenantService {
     }
 
     /** 将仓储返回的租户状态转换为账号视角的租户摘要。 */
-    private TenantSummary summary(TenantRepository.TenantState state) {
+    private TenantSummary summary(TenantState state) {
         var tenant = state.tenant();
         validateMembershipRole(tenant.isSystem(), state.role());
         var tenantPackage = tenant.isSystem()

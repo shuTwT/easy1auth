@@ -3,6 +3,7 @@ package com.easy1auth.admin.web;
 import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.ManagementPermissionCode;
 import com.easy1auth.audit.DeliveryService;
+import com.easy1auth.audit.SubscriptionInput;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
 import org.springframework.web.bind.annotation.*;
 
@@ -36,14 +37,14 @@ public class WebhookController {
     /** 创建 Webhook 订阅；返回的 Secret 仅显示一次，请及时保存。 */
     @TenantManagementPermission(value = ManagementPermissionCode.WEBHOOK_CREATE)
     @PostMapping
-    ApiResponse<?> create(@RequestBody DeliveryService.SubscriptionInput in) {
+    ApiResponse<?> create(@RequestBody SubscriptionInput in) {
         return ApiResponse.ok(service.create(in), "Webhook 创建成功；Secret 仅显示一次");
     }
 
     /** 更新指定 Webhook 订阅的配置。 */
     @TenantManagementPermission(value = ManagementPermissionCode.WEBHOOK_UPDATE)
     @PutMapping("/{id}")
-    ApiResponse<?> update(@PathVariable UUID id, @RequestBody DeliveryService.SubscriptionInput in) {
+    ApiResponse<?> update(@PathVariable UUID id, @RequestBody SubscriptionInput in) {
         return ApiResponse.ok(service.update(id, in), "Webhook 更新成功");
     }
 

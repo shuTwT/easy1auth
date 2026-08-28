@@ -37,7 +37,7 @@ public class CustomizationController {
     /** 保存当前租户登录页样式的草稿配置。 */
     @TenantManagementPermission(value = ManagementPermissionCode.LOGIN_STYLE_UPDATE)
     @PutMapping("/api/login-style/draft")
-    ApiResponse<?> styleDraftUpdate(@RequestBody CustomizationService.DraftInput in) {
+    ApiResponse<?> styleDraftUpdate(@RequestBody DraftInput in) {
         return ApiResponse.ok(service.updateDraft(in), "登录页草稿已保存");
     }
 
@@ -137,14 +137,14 @@ public class CustomizationController {
     /** 新建消息模板。 */
     @TenantManagementPermission(value = ManagementPermissionCode.MESSAGE_TEMPLATE_CREATE)
     @PostMapping("/api/message-templates")
-    ApiResponse<?> addTemplate(@RequestBody CustomizationService.TemplateInput in) {
+    ApiResponse<?> addTemplate(@RequestBody TemplateInput in) {
         return ApiResponse.ok(service.saveTemplate(null, in), "模板创建成功");
     }
 
     /** 更新指定消息模板。 */
     @TenantManagementPermission(value = ManagementPermissionCode.MESSAGE_TEMPLATE_UPDATE)
     @PutMapping("/api/message-templates/{id}")
-    ApiResponse<?> updateTemplate(@PathVariable UUID id, @RequestBody CustomizationService.TemplateInput in) {
+    ApiResponse<?> updateTemplate(@PathVariable UUID id, @RequestBody TemplateInput in) {
         return ApiResponse.ok(service.saveTemplate(id, in), "模板更新成功");
     }
 

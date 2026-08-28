@@ -187,8 +187,6 @@ public class AdminAccessService {
      * @param customRoles 自定义角色数
      * @param totalAdmins 关联的管理员总数
      */
-    public record RoleStats(long totalRoles, long systemRoles, long customRoles, long totalAdmins) {
-    }
 
     /**
      * 管理员成员统计视图。
@@ -199,8 +197,6 @@ public class AdminAccessService {
      * @param mfaEnabledAdmins 已启用 MFA 的管理员数
      * @param ownerCount      扮演 owner 角色的成员账号数
      */
-    public record MemberStats(long totalAdmins, long activeAdmins, long disabledAdmins, long mfaEnabledAdmins, long ownerCount) {
-    }
 
     /** 查询租户内角色并转换为视图。 */
     private AdminRoleView find(UUID tenant, UUID id) {

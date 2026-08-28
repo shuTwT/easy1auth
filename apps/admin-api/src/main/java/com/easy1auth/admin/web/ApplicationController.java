@@ -3,6 +3,7 @@ package com.easy1auth.admin.web;
 import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.ManagementPermissionCode;
 import com.easy1auth.application.ApplicationService;
+import com.easy1auth.application.ApplicationInput;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
 import org.springframework.web.bind.annotation.*;
 
@@ -51,14 +52,14 @@ public class ApplicationController {
     /** 创建应用；返回的客户端密钥仅显示一次，请及时保存。 */
     @TenantManagementPermission(value = ManagementPermissionCode.APPLICATION_CREATE)
     @PostMapping
-    ApiResponse<?> create(@RequestBody ApplicationService.ApplicationInput input) {
+    ApiResponse<?> create(@RequestBody ApplicationInput input) {
         return ApiResponse.ok(applications.create(input), "应用创建成功；客户端密钥仅显示一次");
     }
 
     /** 更新指定应用的配置。 */
     @TenantManagementPermission(value = ManagementPermissionCode.APPLICATION_UPDATE)
     @PutMapping("/{id}")
-    ApiResponse<?> update(@PathVariable UUID id, @RequestBody ApplicationService.ApplicationInput input) {
+    ApiResponse<?> update(@PathVariable UUID id, @RequestBody ApplicationInput input) {
         return ApiResponse.ok(applications.update(id, input), "应用更新成功");
     }
 

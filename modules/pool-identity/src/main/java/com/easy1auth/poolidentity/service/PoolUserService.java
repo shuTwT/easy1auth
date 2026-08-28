@@ -72,7 +72,7 @@ public class PoolUserService {
      * BCrypt 加密存储，为空则允许无密码（后续由第三方认证）。</p>
      */
     @Transactional
-    public PoolUserView create(UUID tenant, Input in) {
+    public PoolUserView create(UUID tenant, PoolUserInput in) {
         validate(in.username(), in.email(), in.phone(), in.name());
         if (in.password() != null) {
             security.validatePassword(in.password(), security.policy(tenant));
@@ -91,7 +91,7 @@ public class PoolUserService {
 
     /** 更新用户档案：仅更新传入的非空字段；企业身份源托管的用户不可修改。 */
     @Transactional
-    public PoolUserView update(UUID tenant, UUID id, Input in) {
+    public PoolUserView update(UUID tenant, UUID id, PoolUserInput in) {
         var existing = entity(tenant, id);
         rejectEnterpriseManaged(existing);
         var u = sql.createUpdate(USER).set(USER.updatedAt(), Instant.now()).where(USER.id().eq(id), USER.tenantId().eq(tenant));
@@ -226,13 +226,13 @@ public class PoolUserService {
 
     /** 从当前租户上下文取租户 ID 后创建用户。 */
     @Transactional
-    public PoolUserView create(Input in) {
+    public PoolUserView create(PoolUserInput in) {
         return create(TenantContextHolder.requireTenantId(), in);
     }
 
     /** 从当前租户上下文取租户 ID 后更新用户。 */
     @Transactional
-    public PoolUserView update(UUID id, Input in) {
+    public PoolUserView update(UUID id, PoolUserInput in) {
         return update(TenantContextHolder.requireTenantId(), id, in);
     }
 
@@ -274,8 +274,6 @@ public class PoolUserService {
      * @param disabledUsers disabled（禁用）用户数
      * @param lockedUsers  locked（锁定）用户数
      */
-    public record UserStats(long totalUsers, long activeUsers, long disabledUsers, long lockedUsers) {
-    }
 
     /**
      * 查询最近成功登录的用户列表（按登录时间倒序，最多 20 条）。
@@ -320,9 +318,6 @@ public class PoolUserService {
      * @param position         岗位名称
      * @param customAttributes 自定义扩展属性
      */
-    public record Input(String username, String email, String password, String phone, String name, String avatar,
-                        String status, String department, String position, Map<String, Object> customAttributes) {
-    }
 
     /**
      * 最近登录记录视图。
@@ -331,6 +326,4 @@ public class PoolUserService {
      * @param email    邮箱（可为 null）
      * @param time     最后登录时间
      */
-    public record RecentLogin(String username, @Nullable String email, Instant time) {
-    }
 }
