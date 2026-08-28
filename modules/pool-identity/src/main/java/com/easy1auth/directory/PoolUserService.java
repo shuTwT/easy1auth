@@ -18,12 +18,25 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.*;
 
+/**
+ * pool_user 目录服务：管理第三方接入用户的生命周期与档案信息。
+ *
+ * <p>覆盖用户的创建、查询、更新、删除、状态变更与密码管理，并结合
+ * {@link TenantService} 做用户配额校验、{@link SecurityPolicyService}
+ * 做密码强度与历史复用校验。pool_user 供第三方授权登录使用，
+ * 不属于管理端（admin_user）账号体系。</p>
+ */
 @Service
 public class PoolUserService {
+    /** pool_user 用户表静态描述符 */
     private static final PoolUserEntityTable USER = PoolUserEntityTable.$;
+    /** jimmer SQL 客户端 */
     private final JSqlClient sql;
+    /** 租户服务（用于锁定租户并校验用户配额上限） */
     private final TenantService tenants;
+    /** 密码编码器（用于密码加密与比对） */
     private final PasswordEncoder passwords;
+    /** 安全策略服务（密码强度、历史复用校验） */
     private final SecurityPolicyService security;
 
     public PoolUserService(JSqlClient sql, TenantService tenants, PasswordEncoder passwords, SecurityPolicyService security) {
@@ -33,6 +46,7 @@ public class PoolUserService {
         this.security = security;
     }
 
+    /** 分页查询租户下的用户，可按用户名/邮箱/手机号/姓名/状态/部门过滤，按创建时间倒序。 */
     @Transactional(readOnly = true)
     public PageData<PoolUserView> list(UUID tenant, int page, int pageSize, String username, String email, String phone, String name, String status, String department) {
         int p = Math.max(1, page), size = Math.min(100, Math.max(1, pageSize));
@@ -41,11 +55,18 @@ public class PoolUserService {
         return PageData.of(q.limit(size, (long) (p - 1) * size).execute().stream().map(this::view).toList(), p, size, total);
     }
 
+    /** 查询指定租户下单个用户的详情视图。 */
     @Transactional(readOnly = true)
     public PoolUserView get(UUID tenant, UUID id) {
         return view(entity(tenant, id));
     }
 
+    /**
+     * 创建 pool_user 用户：校验必填字段与密码强度，并锁定租户校验用户配额上限。
+     *
+     * <p>默认状态为 active，邮箱、手机号验证标记初始为 false；密码非空时以
+     * BCrypt 加密存储，为空则允许无密码（后续由第三方认证）。</p>
+     */
     @Transactional
     public PoolUserView create(UUID tenant, Input in) {
         validate(in.username(), in.email(), in.phone(), in.name());
@@ -64,6 +85,7 @@ public class PoolUserService {
         return view(e);
     }
 
+    /** 更新用户档案：仅更新传入的非空字段；企业身份源托管的用户不可修改。 */
     @Transactional
     public PoolUserView update(UUID tenant, UUID id, Input in) {
         var existing = entity(tenant, id);
@@ -100,6 +122,7 @@ public class PoolUserService {
         return get(tenant, id);
     }
 
+    /** 删除用户（硬删除）；企业身份源托管的用户不可删除。 */
     @Transactional
     public void delete(UUID tenant, UUID id) {
         rejectEnterpriseManaged(entity(tenant, id));
@@ -109,6 +132,7 @@ public class PoolUserService {
         }
     }
 
+    /** 更新用户状态：active（正常）/ disabled（禁用）/ locked（锁定）。 */
     @Transactional
     public PoolUserView status(UUID tenant, UUID id, String status) {
         if (!Set.of("active", "disabled", "locked").contains(status)) {
@@ -119,6 +143,7 @@ public class PoolUserService {
         return get(tenant, id);
     }
 
+    /** 管理员重置用户密码：校验密码强度与历史复用后更新密码哈希。 */
     @Transactional
     public void resetPassword(UUID tenant, UUID id, String password) {
         var user = entity(tenant, id);
@@ -129,6 +154,7 @@ public class PoolUserService {
         security.rememberPassword("pool_user", id, user.passwordHash(), policy.historyCount());
     }
 
+    /** 用户修改自己的密码：先校验原密码，再校验新密码强度与历史复用。 */
     @Transactional
     public void changePassword(UUID tenant, UUID id, String oldPassword, String newPassword) {
         var user = entity(tenant, id);
@@ -142,6 +168,7 @@ public class PoolUserService {
         security.rememberPassword("pool_user", id, user.passwordHash(), policy.historyCount());
     }
 
+    /** 统计租户下的用户总数及各状态（active / disabled / locked）数量。 */
     @Transactional(readOnly = true)
     public UserStats stats(UUID tenant) {
         var rows = sql.createQuery(USER).where(USER.tenantId().eq(tenant)).select(USER.status()).execute();
@@ -156,6 +183,7 @@ public class PoolUserService {
         return new DomainException(ErrorCodeConstants.POOL_USER_NOT_FOUND);
     }
 
+    /** 企业身份源托管的用户禁止在本系统修改，抛出领域异常。 */
     private static void rejectEnterpriseManaged(PoolUserEntity user) {
         if (user.enterpriseIdentitySourceId() != null) {
             throw new DomainException(ErrorCodeConstants.ENTERPRISE_IDENTITY_MANAGED_USER);
@@ -180,57 +208,75 @@ public class PoolUserService {
         return new PoolUserView(e.id(), e.tenantId(), e.username(), e.email(), e.phone(), e.name(), e.avatar(), e.status(), e.emailVerified(), e.phoneVerified(), e.department(), e.position(), e.customAttributes(), e.lastLoginAt(), e.createdAt(), e.updatedAt());
     }
 
+    /** 从当前租户上下文取租户 ID 后分页查询用户列表。 */
     @Transactional(readOnly = true)
     public PageData<PoolUserView> list(int page, int pageSize, String username, String email, String phone, String name, String status, String department) {
         return list(TenantContextHolder.requireTenantId(), page, pageSize, username, email, phone, name, status, department);
     }
 
+    /** 从当前租户上下文取租户 ID 后查询用户详情。 */
     @Transactional(readOnly = true)
     public PoolUserView get(UUID id) {
         return get(TenantContextHolder.requireTenantId(), id);
     }
 
+    /** 从当前租户上下文取租户 ID 后创建用户。 */
     @Transactional
     public PoolUserView create(Input in) {
         return create(TenantContextHolder.requireTenantId(), in);
     }
 
+    /** 从当前租户上下文取租户 ID 后更新用户。 */
     @Transactional
     public PoolUserView update(UUID id, Input in) {
         return update(TenantContextHolder.requireTenantId(), id, in);
     }
 
+    /** 从当前租户上下文取租户 ID 后删除用户。 */
     @Transactional
     public void delete(UUID id) {
         delete(TenantContextHolder.requireTenantId(), id);
     }
 
+    /** 从当前租户上下文取租户 ID 后更新用户状态。 */
     @Transactional
     public PoolUserView status(UUID id, String status) {
         return status(TenantContextHolder.requireTenantId(), id, status);
     }
 
+    /** 从当前租户上下文取租户 ID 后重置用户密码。 */
     @Transactional
     public void resetPassword(UUID id, String password) {
         resetPassword(TenantContextHolder.requireTenantId(), id, password);
     }
 
+    /** 从当前租户上下文取租户 ID 后修改用户密码。 */
     @Transactional
     public void changePassword(UUID id, String oldPassword, String newPassword) {
         changePassword(TenantContextHolder.requireTenantId(), id, oldPassword, newPassword);
     }
 
+    /** 从当前租户上下文取租户 ID 后统计用户状态。 */
     @Transactional(readOnly = true)
     public UserStats stats() {
         return stats(TenantContextHolder.requireTenantId());
     }
 
+    /**
+     * 用户状态统计视图。
+     *
+     * @param totalUsers   用户总数
+     * @param activeUsers  active（正常）用户数
+     * @param disabledUsers disabled（禁用）用户数
+     * @param lockedUsers  locked（锁定）用户数
+     */
     public record UserStats(long totalUsers, long activeUsers, long disabledUsers, long lockedUsers) {
     }
 
     /**
-     * The identity model does not retain the source IP of a successful login,
-     * so callers must render that field as unavailable.
+     * 查询最近成功登录的用户列表（按登录时间倒序，最多 20 条）。
+     *
+     * <p>说明：身份模型未保留成功登录的来源 IP，调用方需将该项渲染为不可用。</p>
      */
     @Transactional(readOnly = true)
     public List<RecentLogin> recentLogins(int limit) {
@@ -246,6 +292,7 @@ public class PoolUserService {
                 .toList();
     }
 
+    /** 统计自指定时间以来成功登录过的用户数（按最后登录时间 >= start 计数）。 */
     @Transactional(readOnly = true)
     public long successfulLoginCountSince(Instant start) {
         return sql.createQuery(USER)
@@ -255,10 +302,31 @@ public class PoolUserService {
                 .size();
     }
 
+    /**
+     * 用户创建/更新入参（非空字段才会在更新时生效）。
+     *
+     * @param username         用户名（必填）
+     * @param email            邮箱
+     * @param password         密码（创建时可为空，表示无密码用户）
+     * @param phone            手机号
+     * @param name             用户姓名/显示名（必填）
+     * @param avatar           头像地址
+     * @param status           用户状态
+     * @param department       所属部门
+     * @param position         岗位名称
+     * @param customAttributes 自定义扩展属性
+     */
     public record Input(String username, String email, String password, String phone, String name, String avatar,
                         String status, String department, String position, Map<String, Object> customAttributes) {
     }
 
+    /**
+     * 最近登录记录视图。
+     *
+     * @param username 用户名
+     * @param email    邮箱（可为 null）
+     * @param time     最后登录时间
+     */
     public record RecentLogin(String username, @Nullable String email, Instant time) {
     }
 }

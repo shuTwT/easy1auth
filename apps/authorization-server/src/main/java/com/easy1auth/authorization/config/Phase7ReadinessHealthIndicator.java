@@ -8,10 +8,19 @@ import org.springframework.stereotype.Component;
 
 import java.net.URI;
 
+/**
+ * 阶段 7 就绪健康检查（actuator 组件名 {@code phase7Readiness}）。
+ *
+ * <p>对外暴露就绪状态：同时校验数据库连通性、Flyway V1 迁移是否完成，以及 issuer
+ * 与 OAuth2 密钥加密密钥等关键配置是否可用，供部署时的健康探针使用。</p>
+ */
 @Component("phase7Readiness")
 public final class Phase7ReadinessHealthIndicator implements HealthIndicator {
+    /** JDBC 客户端，用于数据库连通性与迁移记录查询 */
     private final JdbcClient db;
+    /** OAuth2 的 issuer 基础地址 */
     private final String issuerBase;
+    /** OAuth2 密钥加密密钥，要求至少 32 字节 */
     private final String keyEncryptionSecret;
 
     Phase7ReadinessHealthIndicator(JdbcClient db,
@@ -22,6 +31,7 @@ public final class Phase7ReadinessHealthIndicator implements HealthIndicator {
         this.keyEncryptionSecret = keyEncryptionSecret;
     }
 
+    /** 汇总数据库与配置的就绪状态，异常时返回 DOWN。 */
     @Override
     public Health health() {
         try {

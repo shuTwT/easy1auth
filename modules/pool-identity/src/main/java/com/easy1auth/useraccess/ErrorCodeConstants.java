@@ -2,6 +2,12 @@ package com.easy1auth.useraccess;
 
 import com.easy1auth.foundation.error.ErrorCode;
 
+/**
+ * 用户访问控制（useraccess）模块的错误码常量。
+ *
+ * <p>集中定义 pool_user 访问控制相关的领域错误码（15xxx 段）：
+ * 角色、权限及其层级关系、用户-角色分配等场景的错误描述。</p>
+ */
 public interface ErrorCodeConstants {
     ErrorCode PERMISSION_CYCLE = new ErrorCode(15000, "权限层级不能形成循环");
     ErrorCode PERMISSION_HAS_CHILDREN = new ErrorCode(15001, "权限下还有子权限，不能删除");

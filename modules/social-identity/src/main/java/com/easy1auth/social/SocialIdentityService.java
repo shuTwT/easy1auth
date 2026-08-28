@@ -30,14 +30,22 @@ import java.util.*;
 @Service
 public class SocialIdentityService {
 
+    /** social_identity_source 表静态描述符 */
     private static final SocialIdentitySourceEntityTable SOURCE = SocialIdentitySourceEntityTable.$;
+    /** social_login_transaction 表静态描述符 */
     private static final SocialLoginTransactionEntityTable TX = SocialLoginTransactionEntityTable.$;
+    /** social_identity_binding 表静态描述符 */
     private static final SocialIdentityBindingEntityTable BINDING = SocialIdentityBindingEntityTable.$;
 
+    /** jimmer SQL 客户端 */
     private final JSqlClient sql;
+    /** 数据加密器（用于加密 client_secret / nonce / PKCE verifier） */
     private final SecurityDataCipher cipher;
+    /** 用户服务（JIT 开通时创建 pool_user） */
     private final PoolUserService users;
+    /** 随机源（生成 state / nonce / PKCE 参数） */
     private final SecureRandom random = new SecureRandom();
+    /** 按厂商类型索引的适配器映射 */
     private final Map<String, SocialIdentityAdapter> adapters;
 
     public SocialIdentityService(JSqlClient sql, SecurityDataCipher cipher, PoolUserService users, List<SocialIdentityAdapter> adapterList) {
@@ -53,6 +61,7 @@ public class SocialIdentityService {
 
     // ==================== 管理 API ====================
 
+    /** 创建身份源：校验参数后加密保存 client_secret，初始状态为 active。 */
     @Transactional
     public SourceView create(UUID tenant, Input in) {
         validate(in, true);
@@ -70,6 +79,7 @@ public class SocialIdentityService {
         return view(e, in.clientSecret());
     }
 
+    /** 分页查询租户下的身份源，支持按名称模糊搜索与状态过滤。 */
     @Transactional(readOnly = true)
     public PageData<SourceView> list(UUID tenant, int page, int size, String search, String status) {
         int p = Math.max(1, page), s = Math.min(100, Math.max(1, size));
@@ -81,11 +91,13 @@ public class SocialIdentityService {
         return PageData.of(q.limit(s, (long) (p - 1) * s).execute().stream().map(e -> view(e, null)).toList(), p, s, total);
     }
 
+    /** 查询单个身份源详情（不返回明文 client_secret）。 */
     @Transactional(readOnly = true)
     public SourceView get(UUID tenant, UUID id) {
         return view(entity(tenant, id), null);
     }
 
+    /** 更新身份源：仅更新传入的非空字段，client_secret 非空时重新加密保存。 */
     @Transactional
     public SourceView update(UUID tenant, UUID id, Input in) {
         var old = entity(tenant, id);
@@ -117,6 +129,7 @@ public class SocialIdentityService {
         return get(tenant, id);
     }
 
+    /** 删除身份源（物理删除，须属于指定租户）。 */
     @Transactional
     public void delete(UUID tenant, UUID id) {
         if (sql.createDelete(SOURCE).where(SOURCE.tenantId().eq(tenant), SOURCE.id().eq(id)).execute() != 1) {
@@ -134,6 +147,7 @@ public class SocialIdentityService {
 
     // ==================== 登录流程 ====================
 
+    /** 发起社交登录：校验身份源后生成 state/nonce/PKCE，落库事务并返回跳转授权 URL。 */
     @Transactional
     public AuthorizationStart authorize(UUID tenant, UUID sourceId, String redirectUri) {
         var s = entity(tenant, sourceId);
@@ -159,6 +173,7 @@ public class SocialIdentityService {
         return new AuthorizationStart(result.authorizeUrl().toString(), state, 600);
     }
 
+    /** 处理回调：校验事务并拉取用户信息，若已有绑定则返回该用户并刷新最后登录时间。 */
     @Transactional
     public CallbackResult callback(String code, String state, String redirectUri) {
         var tx = sql.createQuery(TX).where(TX.stateHash().eq(hash(state)))
@@ -228,28 +243,35 @@ public class SocialIdentityService {
 
     // ==================== TenantContextHolder 便捷重载 ====================
 
+    /** 从租户上下文创建身份源。 */
     @Transactional
     public SourceView create(Input in) { return create(TenantContextHolder.requireTenantId(), in); }
 
+    /** 从租户上下文分页查询身份源。 */
     @Transactional(readOnly = true)
     public PageData<SourceView> list(int page, int size, String search, String status) {
         return list(TenantContextHolder.requireTenantId(), page, size, search, status);
     }
 
+    /** 从租户上下文查询单个身份源。 */
     @Transactional(readOnly = true)
     public SourceView get(UUID id) { return get(TenantContextHolder.requireTenantId(), id); }
 
+    /** 从租户上下文更新身份源。 */
     @Transactional
     public SourceView update(UUID id, Input in) { return update(TenantContextHolder.requireTenantId(), id, in); }
 
+    /** 从租户上下文删除身份源。 */
     @Transactional
     public void delete(UUID id) { delete(TenantContextHolder.requireTenantId(), id); }
 
+    /** 从租户上下文查询已启用身份源。 */
     @Transactional(readOnly = true)
     public List<SourceView> listActive() { return listActive(TenantContextHolder.requireTenantId()); }
 
     // ==================== 私有辅助 ====================
 
+    /** 按厂商类型获取适配器，不支持的类型抛出异常。 */
     private SocialIdentityAdapter adapter(String type) {
         var a = adapters.get(type);
         if (a == null) {
@@ -258,6 +280,7 @@ public class SocialIdentityService {
         return a;
     }
 
+    /** 查询租户下指定身份源，不存在时抛出异常。 */
     private SocialIdentitySourceEntity entity(UUID tenant, UUID id) {
         return sql.createQuery(SOURCE).where(SOURCE.tenantId().eq(tenant), SOURCE.id().eq(id)).select(SOURCE)
                 .fetchOptional().orElseThrow(this::missing);
@@ -265,6 +288,7 @@ public class SocialIdentityService {
 
     private DomainException missing() { return new DomainException(ErrorCodeConstants.SOCIAL_SOURCE_NOT_FOUND); }
 
+    /** 校验身份源入参：创建时必须齐全，类型须受支持，状态合法。 */
     private void validate(Input i, boolean create) {
         if (i == null || (create && (blank(i.name()) || blank(i.type()) || blank(i.clientId()) || blank(i.clientSecret())))) {
             throw new DomainException(ErrorCodeConstants.SOCIAL_SOURCE_INVALID);
@@ -277,6 +301,7 @@ public class SocialIdentityService {
         }
     }
 
+    /** 校验并返回合法状态（active / disabled）。 */
     private static String status(String s) {
         if (!Set.of("active", "disabled").contains(s)) {
             throw new DomainException(ErrorCodeConstants.SOCIAL_STATUS_INVALID);
@@ -284,11 +309,13 @@ public class SocialIdentityService {
         return s;
     }
 
+    /** 将实体转为视图对象，secret 仅在校验回显时传入。 */
     private static SourceView view(SocialIdentitySourceEntity s, String secret) {
         return new SourceView(s.id(), s.tenantId(), s.name(), s.type(), s.mode(), s.clientId(), secret,
                 s.jitProvisioning(), s.status(), s.createdAt(), s.updatedAt());
     }
 
+    /** 校验回调地址：必须为 http/https 绝对 URI 且不含 fragment，防止开放重定向。 */
     private static URI safeRedirect(String v) {
         try {
             URI u = URI.create(v);
@@ -301,12 +328,14 @@ public class SocialIdentityService {
         }
     }
 
+    /** 生成 n 字节随机数的 URL-safe Base64 字符串（用于 state/nonce/PKCE）。 */
     private String token(int n) {
         byte[] b = new byte[n];
         random.nextBytes(b);
         return base64(b);
     }
 
+    /** SHA-256 摘要。 */
     private static byte[] sha256(String v) {
         try {
             return MessageDigest.getInstance("SHA-256").digest(Objects.toString(v, "").getBytes(StandardCharsets.UTF_8));
@@ -315,12 +344,15 @@ public class SocialIdentityService {
         }
     }
 
+    /** SHA-256 十六进制编码（用于 state/nonce/code 哈希比对）。 */
     private static String hash(String v) { return HexFormat.of().formatHex(sha256(v)); }
 
+    /** URL-safe 无填充 Base64 编码。 */
     private static String base64(byte[] b) { return Base64.getUrlEncoder().withoutPadding().encodeToString(b); }
 
     private static boolean blank(String s) { return s == null || s.isBlank(); }
 
+    /** 净化第三方返回的用户名：仅保留字母数字、截断至 80 字符，空则生成随机占位。 */
     private static String sanitizeUsername(String raw) {
         String clean = raw.replaceAll("[^A-Za-z0-9]", "");
         if (clean.length() > 80) {
@@ -331,17 +363,70 @@ public class SocialIdentityService {
 
     // ==================== 值对象 ====================
 
+    /**
+     * 身份源创建/更新入参。
+     *
+     * @param name            身份源名称
+     * @param type            厂商类型（wechat_qr / wechat_mp / github / gitee / feishu_web）
+     * @param mode            厂商子模式（当前仅微信区分 qr/mp，其余为 null）
+     * @param clientId        厂商应用 client_id / appid
+     * @param clientSecret    厂商应用密钥（仅创建/更新时传入，查询不出明文）
+     * @param jitProvisioning 是否在回调时自动开通新用户
+     * @param status          状态：active / disabled
+     */
     public record Input(String name, String type, String mode, String clientId, String clientSecret,
                         Boolean jitProvisioning, String status) { }
 
+    /**
+     * 身份源视图（面向接口层）。
+     *
+     * @param id            身份源 ID
+     * @param tenantId      所属租户 ID
+     * @param name          身份源名称
+     * @param type          厂商类型
+     * @param mode          厂商子模式
+     * @param clientId      厂商应用 client_id / appid
+     * @param clientSecret  明文密钥（仅创建回显时非空）
+     * @param jitProvisioning 是否自动开通新用户
+     * @param status        状态：active / disabled
+     * @param createdAt     创建时间
+     * @param updatedAt     最后更新时间
+     */
     public record SourceView(UUID id, UUID tenantId, String name, String type, String mode, String clientId,
                              String clientSecret, boolean jitProvisioning, String status,
                              Instant createdAt, Instant updatedAt) { }
 
+    /**
+     * 授权发起结果。
+     *
+     * @param authorizeUrl 跳转社交厂商的授权 URL
+     * @param state        本次登录事务的随机 state（供回调校验）
+     * @param expiresIn    事务有效期（秒）
+     */
     public record AuthorizationStart(String authorizeUrl, String state, int expiresIn) { }
 
+    /**
+     * 回调处理结果。
+     *
+     * @param tenantId  租户 ID
+     * @param sourceId  身份源 ID
+     * @param poolUserId 已绑定用户 ID（未绑定时为 null，需走账户确认流程）
+     * @param identity  待确认/绑定的远程身份信息
+     */
     public record CallbackResult(UUID tenantId, UUID sourceId, UUID poolUserId, PendingIdentity identity) { }
 
+    /**
+     * 待确认的远程身份（用户确认后用于开通或绑定账户）。
+     *
+     * @param tenantId   租户 ID
+     * @param sourceId   身份源 ID
+     * @param sourceType 厂商类型
+     * @param subject    外部账号唯一标识
+     * @param username   外部平台登录名（可为 null）
+     * @param name       用户显示名称（可为 null）
+     * @param email      邮箱（可为 null）
+     * @param avatar     头像 URL（可为 null）
+     */
     public record PendingIdentity(UUID tenantId, UUID sourceId, String sourceType, String subject,
                                   String username, String name, String email, String avatar) implements java.io.Serializable { }
 }

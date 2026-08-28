@@ -12,8 +12,11 @@ import java.util.Map;
 @Component
 public class GiteeAdapter extends AbstractSocialIdentityAdapter {
 
+    /** Gitee OAuth 授权页地址 */
     private static final String AUTHORIZE = "https://gitee.com/oauth2/authorize";
+    /** Gitee 令牌交换端点 */
     private static final String TOKEN = "https://gitee.com/oauth2/token";
+    /** Gitee 用户信息端点（access_token 以 query 参数传入） */
     private static final String USER = "https://gitee.com/api/v5/user";
 
     GiteeAdapter(ObjectMapper json) { super(json); }
@@ -23,6 +26,7 @@ public class GiteeAdapter extends AbstractSocialIdentityAdapter {
     @Override public String defaultScope() { return "user_info"; }
     @Override public boolean supportsPkce() { return false; }
 
+    /** 拼装 Gitee 授权 URL（scope 缺省时使用默认 user_info）。 */
     @Override
     public AuthorizeResult authorize(String clientId, URI redirectUri, String state, String scope, String pkceChallenge) {
         var url = AUTHORIZE + "?response_type=code&client_id=" + enc(clientId)
@@ -32,6 +36,7 @@ public class GiteeAdapter extends AbstractSocialIdentityAdapter {
         return new AuthorizeResult(URI.create(url));
     }
 
+    /** 用授权码换取 access_token 并拉取 Gitee 用户信息，名称缺失时回退为登录名。 */
     @Override
     public RemoteUserInfo exchangeAndFetch(String clientId, String clientSecret, String code, URI redirectUri, String pkceVerifier) {
         var form = Map.of(

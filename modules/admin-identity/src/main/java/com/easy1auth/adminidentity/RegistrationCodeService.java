@@ -8,15 +8,29 @@ import org.springframework.transaction.annotation.Transactional;
 import java.security.SecureRandom;
 import java.time.*;
 
+/**
+ * 注册码服务：为管理后台注册流程签发邮箱验证码。
+ *
+ * <p>生成 6 位数字验证码，仅保存其 SHA-256 哈希，验证码有效期 10 分钟，
+ * 用于注册时校验邮箱归属。</p>
+ */
 @Service
 public class RegistrationCodeService {
+    /** 安全随机数生成器（生成 6 位验证码） */
     private static final SecureRandom RANDOM = new SecureRandom();
+    /** 管理账号身份数据访问仓储 */
     private final AdminIdentityRepository repository;
 
     RegistrationCodeService(AdminIdentityRepository repository) {
         this.repository = repository;
     }
 
+    /**
+     * 为指定邮箱签发注册码。
+     *
+     * @param email 目标邮箱
+     * @return 签发结果（含明文验证码与过期时间，明文仅供本次返回使用）
+     */
     @Transactional
     public IssuedCode issue(String email) {
         String normalizedEmail = AdminIdentityNormalizer.normalizeEmail(email);
@@ -31,6 +45,13 @@ public class RegistrationCodeService {
         return new IssuedCode(normalizedEmail, code, Instant.now().plus(Duration.ofMinutes(10)));
     }
 
+    /**
+     * 注册码签发结果。
+     *
+     * @param email     目标邮箱
+     * @param code      明文验证码（一次性返回）
+     * @param expiresAt 过期时间
+     */
     public record IssuedCode(String email, String code, Instant expiresAt) {
     }
 }

@@ -14,6 +14,7 @@ import java.time.Instant;
 @Entity
 @Table(name = "social_identity_source")
 public interface SocialIdentitySourceEntity extends BaseEntity, BaseTenantEntity {
+    /** 身份源显示名称 */
     String name();
 
     /** 厂商类型，如 wechat_qr / wechat_mp / github / gitee / feishu_web。 */
@@ -25,20 +26,26 @@ public interface SocialIdentitySourceEntity extends BaseEntity, BaseTenantEntity
     @Column(name = "mode")
     String mode();
 
+    /** 厂商应用 client_id / appid */
     @Column(name = "client_id")
     String clientId();
 
+    /** 厂商应用密钥的密文（AES-GCM，明文不落库） */
     @Column(name = "encrypted_client_secret")
     String encryptedClientSecret();
 
+    /** 是否在回调时自动开通新用户（JIT provisioning） */
     @Column(name = "jit_provisioning")
     boolean jitProvisioning();
 
+    /** 状态：active（启用）/ disabled（停用） */
     String status();
 
+    /** 创建时间 */
     @Column(name = "created_at")
     Instant createdAt();
 
+    /** 最后更新时间 */
     @Column(name = "updated_at")
     Instant updatedAt();
 }

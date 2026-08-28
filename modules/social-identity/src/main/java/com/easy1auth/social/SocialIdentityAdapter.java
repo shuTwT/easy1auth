@@ -47,10 +47,24 @@ public interface SocialIdentityAdapter {
      */
     RemoteUserInfo exchangeAndFetch(String clientId, String clientSecret, String code, URI redirectUri, String pkceVerifier);
 
-    /** 授权 URL 拼接结果。 */
+    /**
+     * 授权 URL 拼接结果。
+     *
+     * @param authorizeUrl 引导用户跳转到社交厂商的完整授权 URL
+     */
     record AuthorizeResult(URI authorizeUrl) { }
 
-    /** 适配器产出的标准化远程用户信息，由 service 层据此完成账户确认与绑定。 */
+    /**
+     * 适配器产出的标准化远程用户信息，由 service 层据此完成账户确认与绑定。
+     *
+     * @param subject       外部账号唯一标识（openid / unionid / id 等），用于建立绑定关系
+     * @param username      外部平台登录名（可为 null）
+     * @param name          用户显示名称（可为 null）
+     * @param email         邮箱（可为 null）
+     * @param emailVerified 邮箱是否已由平台验证
+     * @param avatar        头像 URL（可为 null）
+     * @param rawClaims     平台返回的原始用户信息，原样透传保存
+     */
     record RemoteUserInfo(String subject, String username, String name, String email, boolean emailVerified,
                           String avatar, Map<String, Object> rawClaims) { }
 }

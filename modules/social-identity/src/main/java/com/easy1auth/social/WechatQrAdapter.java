@@ -11,6 +11,7 @@ import java.net.URI;
 @Component
 public class WechatQrAdapter extends WechatAdapter {
 
+    /** 微信开放平台网站应用扫码登录授权页地址 */
     private static final String AUTHORIZE = "https://open.weixin.qq.com/connect/qrconnect";
 
     WechatQrAdapter(ObjectMapper json) { super(json); }
@@ -18,6 +19,7 @@ public class WechatQrAdapter extends WechatAdapter {
     @Override public String type() { return "wechat_qr"; }
     @Override public String displayName() { return "微信扫码"; }
 
+    /** 拼装微信扫码授权 URL，以 appid 作为 client_id，并追加 #wechat_redirect 锚点。 */
     @Override
     public AuthorizeResult authorize(String clientId, URI redirectUri, String state, String scope, String pkceChallenge) {
         var url = AUTHORIZE + "?appid=" + enc(clientId)

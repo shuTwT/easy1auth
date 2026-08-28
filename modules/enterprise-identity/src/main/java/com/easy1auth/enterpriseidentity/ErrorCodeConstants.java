@@ -2,6 +2,12 @@ package com.easy1auth.enterpriseidentity;
 
 import com.easy1auth.foundation.error.ErrorCode;
 
+/**
+ * 企业身份源域的领域错误码常量。
+ *
+ * <p>统一管理本模块（enterprise-identity）抛出领域异常时使用的错误码，
+ * 当前主要用于飞书企业身份源的配置校验、事件回调与同步任务。</p>
+ */
 public interface ErrorCodeConstants {
     ErrorCode ENTERPRISE_IDENTITY_SOURCE_DISABLED = new ErrorCode(19000, "身份源已停用");
     ErrorCode ENTERPRISE_IDENTITY_SOURCE_INVALID = new ErrorCode(19001, "飞书身份源配置不完整");

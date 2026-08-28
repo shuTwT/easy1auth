@@ -14,16 +14,27 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.*;
 import java.util.*;
 
+/**
+ * 审计服务：审计事件的记录、查询与清理。
+ *
+ * <p>负责写入审计事件（自动脱敏敏感字段、规范化枚举取值），并支持按条件分页
+ * 查询、详情查看、超期清理与基础统计。查询与清理均以当前租户隔离，保证租户
+ * 只能访问自己的审计数据。</p>
+ */
 @Service
 public class AuditService {
+    /** audit_event 表静态描述符 */
     private static final AuditEventEntityTable EVENT = AuditEventEntityTable.$;
+    /** 需在审计详情中脱敏的敏感字段名（大小写不敏感） */
     private static final Set<String> SECRET_KEYS = Set.of("password", "token", "secret", "code", "authorization", "cookie", "privateKey", "refreshToken");
+    /** jimmer SQL 客户端 */
     private final JSqlClient sql;
 
     public AuditService(JSqlClient sql) {
         this.sql = sql;
     }
 
+    /** 记录一条审计事件并返回事件 ID（敏感字段自动脱敏）。 */
     @Transactional
     public UUID record(Event input) {
         UUID id = UuidV7.randomUuid();
@@ -32,6 +43,7 @@ public class AuditService {
         return id;
     }
 
+    /** 分页查询当前租户的审计事件（支持按操作者、事件类型、动作、结果与时间范围过滤）。 */
     @Transactional(readOnly = true)
     public PageData<AuditEventEntity> list(int page, int size, Query q) {
         UUID tenant = TenantContextHolder.requireTenantId();
@@ -41,12 +53,14 @@ public class AuditService {
         return PageData.of(query.limit(s, (long) (p - 1) * s).execute(), p, s, total);
     }
 
+    /** 查询单条审计事件详情（限当前租户）。 */
     @Transactional(readOnly = true)
     public AuditEventEntity get(UUID id) {
         UUID tenant = TenantContextHolder.requireTenantId();
         return sql.createQuery(EVENT).where(EVENT.tenantId().eq(tenant), EVENT.id().eq(id)).select(EVENT).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.AUDIT_EVENT_NOT_FOUND));
     }
 
+    /** 清理当前租户早于保留期（不少于 30 天）的审计事件，返回删除条数。 */
     @Transactional
     public int cleanup(int days) {
         UUID tenant = TenantContextHolder.requireTenantId();
@@ -56,6 +70,7 @@ public class AuditService {
         return sql.createDelete(EVENT).where(EVENT.tenantId().eq(tenant), EVENT.createdAt().lt(Instant.now().minus(Duration.ofDays(days)))).execute();
     }
 
+    /** 统计当前租户审计事件总量、成功/失败数与今日发生数。 */
     @Transactional(readOnly = true)
     public Stats stats() {
         UUID tenant = TenantContextHolder.requireTenantId();
@@ -64,6 +79,7 @@ public class AuditService {
         return new Stats(rows.size(), rows.stream().filter(r -> "success".equals(r.get_1())).count(), rows.stream().filter(r -> "failure".equals(r.get_1())).count(), rows.stream().filter(r -> r.get_2().isAfter(day)).count());
     }
 
+    /** 将详情中命中敏感键名的值替换为 [REDACTED]，其余原样保留。 */
     private static Map<String, Object> redact(Map<String, Object> in) {
         if (in == null) {
             return Map.of();
@@ -73,24 +89,63 @@ public class AuditService {
         return out;
     }
 
+    /** 规范化字符串：空值回退为默认值，再截断到最大长度。 */
     private static String clean(String v, int max, String fallback) {
         String value = v == null || v.isBlank() ? fallback : v;
         return trim(value, max);
     }
 
+    /** 将字符串截断到最大长度（null 原样返回）。 */
     private static String trim(String v, int max) {
         return v == null ? null : v.substring(0, Math.min(max, v.length()));
     }
 
+    /**
+     * 审计事件输入（记录时的入参）。
+     *
+     * @param tenantId    租户 ID
+     * @param actorType   操作者类型（如 admin / user / system）
+     * @param actorId     操作者账号 ID
+     * @param actorName   操作者名称
+     * @param eventType   事件类型（如 security / user）
+     * @param action      具体动作（如 create / update / login）
+     * @param resourceType 被操作资源类型
+     * @param resourceId  被操作资源 ID
+     * @param traceId     链路追踪 ID
+     * @param method      HTTP 方法
+     * @param ipAddress   来源 IP
+     * @param userAgent   客户端标识
+     * @param outcome     结果：success / failure
+     * @param errorCode   失败时的错误码
+     * @param details     附加详情（敏感字段将被脱敏）
+     */
     public record Event(UUID tenantId, String actorType, UUID actorId, String actorName, String eventType,
                         String action, String resourceType, String resourceId, String traceId, String method,
                         String ipAddress, String userAgent, String outcome, String errorCode,
                         Map<String, Object> details) {
     }
 
+    /**
+     * 审计事件查询条件。
+     *
+     * @param actorName 操作者名称（模糊匹配）
+     * @param eventType 事件类型（精确匹配）
+     * @param action    动作（精确匹配）
+     * @param outcome   结果（精确匹配）
+     * @param start     起始时间
+     * @param end       结束时间
+     */
     public record Query(String actorName, String eventType, String action, String outcome, Instant start, Instant end) {
     }
 
+    /**
+     * 审计统计视图。
+     *
+     * @param totalLogs  事件总数
+     * @param successLogs 成功事件数
+     * @param failedLogs 失败事件数
+     * @param todayLogs  今日事件数
+     */
     public record Stats(long totalLogs, long successLogs, long failedLogs, long todayLogs) {
     }
 }

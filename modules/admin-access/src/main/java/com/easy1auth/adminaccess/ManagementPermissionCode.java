@@ -3,6 +3,13 @@ package com.easy1auth.adminaccess;
 import java.util.Arrays;
 import java.util.Optional;
 
+/**
+ * 管理端权限码枚举。
+ *
+ * <p>以 {@code 资源:动作}（如 "user:list"）为唯一标识，覆盖菜单、目录与操作三类
+ * 权限。每个权限码同时声明其作用域（{@link ManagementPermissionScope}）与类型
+ * （{@link ManagementPermissionType}），是管理端授权判断与权限目录校验的标准单位。</p>
+ */
 public enum ManagementPermissionCode {
     MENU_DASHBOARD("menu:dashboard", ManagementPermissionScope.TENANT, ManagementPermissionType.MENU),
     DIRECTORY_USER_MANAGEMENT("menu:user-management", ManagementPermissionScope.TENANT, ManagementPermissionType.DIRECTORY),
@@ -167,8 +174,11 @@ public enum ManagementPermissionCode {
     MESSAGE_TEMPLATE_DELETE("message-template:delete", ManagementPermissionScope.TENANT, ManagementPermissionType.ACTION),
     MESSAGE_TEMPLATE_INIT("message-template:init", ManagementPermissionScope.TENANT, ManagementPermissionType.ACTION);
 
+    /** 权限码字符串（如 "user:list"，与管理端权限目录中的 code 一致） */
     private final String value;
+    /** 权限作用域（平台 / 租户） */
     private final ManagementPermissionScope scope;
+    /** 权限类型（菜单 / 目录 / 操作） */
     private final ManagementPermissionType type;
 
     ManagementPermissionCode(String value, ManagementPermissionScope scope, ManagementPermissionType type) {
@@ -177,18 +187,22 @@ public enum ManagementPermissionCode {
         this.type = type;
     }
 
+    /** 返回权限码字符串。 */
     public String value() {
         return value;
     }
 
+    /** 返回权限作用域。 */
     public ManagementPermissionScope scope() {
         return scope;
     }
 
+    /** 返回权限类型。 */
     public ManagementPermissionType type() {
         return type;
     }
 
+    /** 按权限码字符串反查枚举，未找到时返回空 Optional。 */
     public static Optional<ManagementPermissionCode> fromValue(String value) {
         return Arrays.stream(values()).filter(code -> code.value.equals(value)).findFirst();
     }

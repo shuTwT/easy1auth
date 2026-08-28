@@ -21,12 +21,24 @@ import java.security.interfaces.*;
 import java.time.Instant;
 import java.util.*;
 
+/**
+ * 租户签名密钥服务：为每个租户提供 RSA 签名密钥（用于 OIDC/JWT 签名）。
+ *
+ * <p>密钥首次按租户生成并持久化到 oauth2_signing_key 表：公钥以明文保存，
+ * 私钥使用 AES-GCM 加密后保存；同一租户始终复用同一把激活密钥。
+ * 生成前会锁定租户，保证并发场景下每个租户只存在一把激活密钥。</p>
+ */
 @Service
 public class TenantSigningKeyService {
+    /** oauth2_signing_key 表静态描述符 */
     private static final OAuthSigningKeyEntityTable KEY = OAuthSigningKeyEntityTable.$;
+    /** jimmer SQL 客户端 */
     private final JSqlClient sql;
+    /** 租户服务（生成密钥前锁定租户，保证并发安全） */
     private final TenantService tenants;
+    /** JSON 序列化器（用于 JWK 的序列化与反序列化） */
     private final ObjectMapper json;
+    /** 私钥加密密钥（由配置密钥经 SHA-256 派生，供 AES-GCM 使用） */
     private final byte[] encryptionKey;
 
     public TenantSigningKeyService(JSqlClient sql, TenantService tenants, ObjectMapper json, @Value("${easy1auth.oauth2.key-encryption-secret:}") String secret) {
@@ -43,6 +55,12 @@ public class TenantSigningKeyService {
         }
     }
 
+    /**
+     * 返回指定租户的激活签名密钥；若尚未生成，则并发安全地生成并持久化。
+     *
+     * @param tenant 租户 ID
+     * @return 租户用于 JWT 签名的 RSA 密钥
+     */
     @Transactional
     public RSAKey active(UUID tenant) {
         var existing = find(tenant);
@@ -68,10 +86,12 @@ public class TenantSigningKeyService {
         }
     }
 
+    /** 查询指定租户的激活签名密钥实体，不存在时返回 null。 */
     private OAuthSigningKeyEntity find(UUID tenant) {
         return sql.createQuery(KEY).where(KEY.tenantId().eq(tenant), KEY.status().eq("active")).select(KEY).fetchOneOrNull();
     }
 
+    /** 将实体中加密存储的私钥解密，还原为可用的 RSAKey。 */
     private RSAKey decode(OAuthSigningKeyEntity entity) {
         try {
             return RSAKey.parse(decrypt(entity.tenantId(), entity.keyId(), entity.encryptedPrivateJwk()));
@@ -80,6 +100,7 @@ public class TenantSigningKeyService {
         }
     }
 
+    /** 使用 AES-GCM 加密 JWK 明文，输出「nonce + 密文」的 Base64 串（以租户与 keyId 作为附加认证数据）。 */
     private String encrypt(UUID tenant, String keyId, String value) {
         try {
             byte[] nonce = new byte[12];
@@ -94,6 +115,7 @@ public class TenantSigningKeyService {
         }
     }
 
+    /** 解密 {@link #encrypt} 生成的 Base64 串，还原 JWK 明文。 */
     private String decrypt(UUID tenant, String keyId, String value) throws GeneralSecurityException {
         byte[] all = Base64.getDecoder().decode(value);
         ByteBuffer buffer = ByteBuffer.wrap(all);

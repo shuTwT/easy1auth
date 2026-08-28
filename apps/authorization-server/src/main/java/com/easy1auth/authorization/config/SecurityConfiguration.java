@@ -46,13 +46,22 @@ import java.nio.charset.StandardCharsets;
 
 import java.util.*;
 
+/**
+ * 授权服务器安全配置。
+ *
+ * <p>装配两条过滤链：{@code @Order(1)} 处理 OAuth2 授权端点（含授权、令牌、吊销、
+ * JWKS 与 OIDC），{@code @Order(2)} 处理登录门户与常规请求。提供 pool_user 的
+ * 认证提供者、多租户 JWT 密钥源、令牌声明定制与门户跳转等能力。</p>
+ */
 @Configuration
 public class SecurityConfiguration {
+    /** 声明密码编码器：BCrypt，强度 12（用于门户与授权相关密码场景）。 */
     @Bean
     PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder(12);
     }
 
+    /** 声明并默认禁用 {@link IssuerHostValidationFilter}（由授权过滤链按需启用）。 */
     @Bean
     FilterRegistrationBean<IssuerHostValidationFilter> issuerHostValidationFilterRegistration(IssuerHostValidationFilter filter) {
         var registration = new FilterRegistrationBean<>(filter);
@@ -60,6 +69,7 @@ public class SecurityConfiguration {
         return registration;
     }
 
+    /** 声明并默认禁用 {@link TenantPrincipalValidationFilter}（由授权过滤链按需启用）。 */
     @Bean
     FilterRegistrationBean<TenantPrincipalValidationFilter> tenantPrincipalValidationFilterRegistration(TenantPrincipalValidationFilter filter) {
         var registration = new FilterRegistrationBean<>(filter);
@@ -67,6 +77,12 @@ public class SecurityConfiguration {
         return registration;
     }
 
+    /**
+     * 声明 pool_user 用户名/密码认证提供者。
+     *
+     * <p>从认证细节中的租户解析用户，校验通过后授予 ROLE_POOL_USER、TENANT_{租户} 权限，
+     * 并按策略在需要时附加 MFA_REQUIRED，供登录流程进入多因素认证。</p>
+     */
     @Bean
     AuthenticationProvider poolUserAuthenticationProvider(PoolUserAuthenticationService users, SecurityPolicyService security, com.easy1auth.security.PoolUserDeviceService devices) {
         return new AuthenticationProvider() {
@@ -100,6 +116,12 @@ public class SecurityConfiguration {
         };
     }
 
+    /**
+     * 声明 OAuth2 授权服务器安全过滤链（最高优先级）。
+     *
+     * <p>配置授权、令牌、吊销、JWKS 与 OIDC 端点；在安全上下文之后挂载 issuer 主机
+     * 校验与租户主体校验过滤器；未认证的 HTML 请求跳转到登录门户并捕获原始授权请求。</p>
+     */
     @Bean
     @Order(1)
     SecurityFilterChain authorizationServerSecurity(HttpSecurity http, RegisteredClientRepository clients, OAuth2AuthorizationService authorizations, OAuth2AuthorizationConsentService consents, IssuerHostValidationFilter issuerHostValidation, TenantPrincipalValidationFilter tenantPrincipalValidation, AuthorizationInteractionService interactions) throws Exception {
@@ -147,10 +169,17 @@ public class SecurityConfiguration {
         };
     }
 
+    /** JSON 转义工具：将字符串中会破坏 JSON 结构的字符替换为转义形式。 */
     private static String json(String value) {
         return value.replace("\\", "\\\\").replace("\"", "\\\"").replace("\r", "\\r").replace("\n", "\\n");
     }
 
+    /**
+     * 声明登录门户与常规请求的安全过滤链（次高优先级）。
+     *
+     * <p>放行健康检查、门户 API、登录/授权确认页与社交登录等公开端点，其余请求需
+     * 认证；启用基于 Cookie 的 CSRF 保护以支撑表单提交。</p>
+     */
     @Bean
     @Order(2)
     SecurityFilterChain applicationSecurity(HttpSecurity http, AuthenticationProvider provider) throws Exception {
@@ -160,21 +189,30 @@ public class SecurityConfiguration {
                 .build();
     }
 
+    /** 声明授权服务器端点路径，支持多 issuer 并开放完整的 OAuth2 / OIDC 端点。 */
     @Bean
     AuthorizationServerSettings authorizationServerSettings() {
         return AuthorizationServerSettings.builder().multipleIssuersAllowed(true).authorizationEndpoint("/oauth2/authorize").tokenEndpoint("/oauth2/token").tokenRevocationEndpoint("/oauth2/revoke").jwkSetEndpoint("/oauth2/jwks").oidcUserInfoEndpoint("/userinfo").oidcLogoutEndpoint("/connect/logout").build();
     }
 
+    /** 声明 JWKS 密钥源：按当前租户上下文返回该租户激活的签名密钥集。 */
     @Bean
     JWKSource<SecurityContext> jwkSource(TenantSigningKeyService keys) {
         return (selector, context) -> selector.select(new JWKSet(keys.active(TenantIssuerContext.tenantId())));
     }
 
+    /** 声明基于多租户密钥源的 JWT 解码器。 */
     @Bean
     JwtDecoder jwtDecoder(JWKSource<SecurityContext> source) {
         return OAuth2AuthorizationServerConfiguration.jwtDecoder(source);
     }
 
+    /**
+     * 声明令牌声明定制器。
+     *
+     * <p>为签发的访问令牌注入 tenant_id 与 subject_type；对 pool_user 主体补充用户名、
+     * 邮箱、角色、组织等用户目录信息；客户端凭证模式则标记为 oauth_client 主体。</p>
+     */
     @Bean
     OAuth2TokenCustomizer<JwtEncodingContext> tokenClaims(PoolUserService users, DirectoryCatalogService directory, UserAccessCatalogService access) {
         return context -> {
@@ -209,6 +247,13 @@ public class SecurityConfiguration {
         };
     }
 
+    /**
+     * 门户登录附带信息，随认证请求传入认证提供者。
+     *
+     * @param tenant    登录所属租户 UUID
+     * @param userAgent 用户代理（浏览器标识）
+     * @param ip        客户端 IP
+     */
     public record PoolLoginDetails(String tenant, String userAgent, String ip) {
     }
 }

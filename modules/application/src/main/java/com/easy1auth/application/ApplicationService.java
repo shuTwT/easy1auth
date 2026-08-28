@@ -18,14 +18,28 @@ import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.*;
 
+/**
+ * OAuth2 应用服务：租户下 OAuth 客户端应用的生命周期管理。
+ *
+ * <p>负责应用的创建、分页查询、详情、更新、删除、启停、密钥重新生成与统计，
+ * 并对类型、授权类型、重定向 URI、令牌有效期等做归一化与合规校验；创建与更新
+ * 会校验租户应用配额与应用名称的唯一性。</p>
+ */
 @Service
 public class ApplicationService {
+    /** oauth_application 表静态描述符 */
     private static final OAuthApplicationEntityTable APP = OAuthApplicationEntityTable.$;
+    /** 支持的应用类型：web（Web）/ native（原生）/ spa（单页应用）/ machine（机器） */
     private static final Set<String> TYPES = Set.of("web", "native", "spa", "machine");
+    /** 支持的授权类型：授权码 / 刷新令牌 / 客户端凭证 */
     private static final Set<String> GRANTS = Set.of("authorization_code", "refresh_token", "client_credentials");
+    /** 安全随机数生成器（生成客户端密钥） */
     private static final SecureRandom RANDOM = new SecureRandom();
+    /** jimmer SQL 客户端 */
     private final JSqlClient sql;
+    /** 租户服务（应用配额校验等） */
     private final TenantService tenants;
+    /** 密码编码器（编码客户端密钥哈希） */
     private final PasswordEncoder passwords;
 
     public ApplicationService(JSqlClient sql, TenantService tenants, PasswordEncoder passwords) {
@@ -34,6 +48,7 @@ public class ApplicationService {
         this.passwords = passwords;
     }
 
+    /** 创建 OAuth 应用：校验配额与名称唯一性，生成 client_id 与客户端密钥（公共客户端不生成），返回视图。 */
     @Transactional
     public ApplicationView create(ApplicationInput input) {
         UUID tenant = TenantContextHolder.requireTenantId();
@@ -55,6 +70,7 @@ public class ApplicationService {
         return view(entity, secret);
     }
 
+    /** 分页查询应用列表，支持按名称（模糊）/类型/状态过滤，按创建时间倒序。 */
     @Transactional(readOnly = true)
     public PageData<ApplicationView> list(int page, int pageSize, String name, String type, String status) {
         int p = Math.max(1, page), size = Math.min(100, Math.max(1, pageSize));
@@ -67,21 +83,25 @@ public class ApplicationService {
         return PageData.of(query.limit(size, (long) (p - 1) * size).execute().stream().map(e -> view(e, null)).toList(), p, size, total);
     }
 
+    /** 按 ID 查询应用详情（不含客户端密钥明文）。 */
     @Transactional(readOnly = true)
     public ApplicationView get(UUID id) {
         return view(entity(id), null);
     }
 
+    /** 按客户端 ID 查询 active 状态的应用（供授权服务器使用）。 */
     @Transactional(readOnly = true)
     public OAuthApplicationEntity findActiveByClientId(String clientId) {
         return sql.createQuery(APP).where(APP.clientId().eq(clientId), APP.status().eq("active")).select(APP).fetchOneOrNull();
     }
 
+    /** 按 ID 查询指定租户下 active 状态的应用（供授权服务器使用）。 */
     @Transactional(readOnly = true)
     public OAuthApplicationEntity findActive(UUID tenant, UUID id) {
         return sql.createQuery(APP).where(APP.id().eq(id), APP.tenantId().eq(tenant), APP.status().eq("active")).select(APP).fetchOneOrNull();
     }
 
+    /** 更新应用配置（未传字段沿用旧值），并在公开/机密客户端类型切换时生成或清空密钥。 */
     @Transactional
     public ApplicationView update(UUID id, ApplicationInput input) {
         UUID tenant = TenantContextHolder.requireTenantId();
@@ -102,6 +122,7 @@ public class ApplicationService {
         return view(entity(id), oneTimeSecret);
     }
 
+    /** 删除应用（物理删除，仅限当前租户内）。 */
     @Transactional
     public void delete(UUID id) {
         UUID tenant = TenantContextHolder.requireTenantId();
@@ -110,6 +131,7 @@ public class ApplicationService {
         }
     }
 
+    /** 启停应用：更新状态为 active/disabled。 */
     @Transactional
     public ApplicationView status(UUID id, String status) {
         UUID tenant = TenantContextHolder.requireTenantId();
@@ -121,6 +143,7 @@ public class ApplicationService {
         return get(id);
     }
 
+    /** 重新生成客户端密钥（公共客户端不允许），返回一次性明文密钥。 */
     @Transactional
     public SecretView regenerateSecret(UUID id) {
         UUID tenant = TenantContextHolder.requireTenantId();
@@ -133,33 +156,46 @@ public class ApplicationService {
         return new SecretView(secret);
     }
 
+    /** 统计应用总量及 active/disabled 数量（租户维度）。 */
     @Transactional(readOnly = true)
     public ApplicationStats stats() {
         var rows = sql.createQuery(APP).select(APP.status()).execute();
         return new ApplicationStats(rows.size(), rows.stream().filter("active"::equals).count(), rows.stream().filter("disabled"::equals).count());
     }
 
+    /**
+     * 应用统计视图。
+     *
+     * @param totalApplications    应用总数
+     * @param activeApplications   active 状态应用数
+     * @param disabledApplications disabled 状态应用数
+     */
     public record ApplicationStats(long totalApplications, long activeApplications, long disabledApplications) {
     }
 
+    /** 按 ID 查询应用，不存在时抛出领域异常。 */
     private OAuthApplicationEntity entity(UUID id) {
         return sql.createQuery(APP).where(APP.id().eq(id)).select(APP).fetchOptional().orElseThrow(this::missing);
     }
 
+    /** 构造“应用不存在”异常。 */
     private DomainException missing() {
         return new DomainException(ErrorCodeConstants.APPLICATION_NOT_FOUND);
     }
 
+    /** 判断应用类型是否为公共客户端（spa/native），公共客户端不持有密钥。 */
     private static boolean isPublic(String type) {
         return "spa".equals(type) || "native".equals(type);
     }
 
+    /** 生成 32 字节随机客户端密钥（Base64 URL 编码，无填充）。 */
     private static String secret() {
         byte[] bytes = new byte[32];
         RANDOM.nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
+    /** 校验重定向 URI：必须为无 fragment 的绝对 HTTP(S) URI。 */
     private static void uri(String value) {
         try {
             URI u = URI.create(value);
@@ -171,10 +207,12 @@ public class ApplicationService {
         }
     }
 
+    /** 规范化字符串列表：去空白、剔除空串、去重。 */
     private static List<String> copy(List<String> values) {
         return values == null ? List.of() : values.stream().filter(Objects::nonNull).map(String::strip).filter(v -> !v.isEmpty()).distinct().toList();
     }
 
+    /** 归一化并校验创建/更新的应用输入，返回规范化后的输入。 */
     private static ApplicationInput normalize(ApplicationInput in, boolean creating) {
         if (in == null || in.name() == null || in.name().isBlank()) {
             throw new DomainException(ErrorCodeConstants.APPLICATION_NAME_REQUIRED);
@@ -206,10 +244,12 @@ public class ApplicationService {
         return new ApplicationInput(in.name().strip(), in.logo(), in.description(), type, redirects, logout, grants, scopes, pkce, in.requireConsent() == null || in.requireConsent(), access, refresh);
     }
 
+    /** 返回应用类型对应的默认授权类型（machine 为 client_credentials，其余为授权码+刷新令牌）。 */
     private static List<String> defaultGrants(String type) {
         return "machine".equals(type) ? List.of("client_credentials") : List.of("authorization_code", "refresh_token");
     }
 
+    /** 用传入输入覆盖旧值（未传字段沿用旧值）后进行归一化校验。 */
     private static ApplicationInput normalizeForUpdate(OAuthApplicationEntity old, ApplicationInput in) {
         if (in == null) {
             return from(old);
@@ -217,20 +257,61 @@ public class ApplicationService {
         return normalize(new ApplicationInput(in.name() == null ? old.name() : in.name(), in.logo() == null ? old.logo() : in.logo(), in.description() == null ? old.description() : in.description(), in.type() == null ? old.type() : in.type(), in.redirectUris() == null ? old.redirectUris() : in.redirectUris(), in.postLogoutRedirectUris() == null ? old.postLogoutRedirectUris() : in.postLogoutRedirectUris(), in.allowedGrantTypes() == null ? old.allowedGrantTypes() : in.allowedGrantTypes(), in.scopes() == null ? old.scopes() : in.scopes(), in.requirePkce() == null ? old.requirePkce() : in.requirePkce(), in.requireConsent() == null ? old.requireConsent() : in.requireConsent(), in.accessTokenLifetime() == null ? old.accessTokenLifetime() : in.accessTokenLifetime(), in.refreshTokenLifetime() == null ? old.refreshTokenLifetime() : in.refreshTokenLifetime()), false);
     }
 
+    /** 将应用实体转换为输入对象（用于整体更新）。 */
     private static ApplicationInput from(OAuthApplicationEntity e) {
         return new ApplicationInput(e.name(), e.logo(), e.description(), e.type(), e.redirectUris(), e.postLogoutRedirectUris(), e.allowedGrantTypes(), e.scopes(), e.requirePkce(), e.requireConsent(), e.accessTokenLifetime(), e.refreshTokenLifetime());
     }
 
+    /** 将应用实体转换为视图，附带可选的客户端密钥明文。 */
     private static ApplicationView view(OAuthApplicationEntity e, String secret) {
         return new ApplicationView(e.id(), e.tenantId(), e.name(), e.logo(), e.description(), e.type(), e.clientId(), secret, e.redirectUris(), e.postLogoutRedirectUris(), e.allowedGrantTypes(), e.scopes(), e.requirePkce(), e.requireConsent(), e.accessTokenLifetime(), e.refreshTokenLifetime(), e.status(), e.createdAt(), e.updatedAt());
     }
 
+    /**
+     * 应用创建/更新输入。
+     *
+     * @param name                   应用名称
+     * @param logo                   应用 Logo
+     * @param description            应用描述
+     * @param type                   应用类型：web / native / spa / machine
+     * @param redirectUris           授权码回调地址列表
+     * @param postLogoutRedirectUris 登出后的跳转地址列表
+     * @param allowedGrantTypes      允许的授权类型列表
+     * @param scopes                 允许申请的作用域列表
+     * @param requirePkce            是否强制使用 PKCE
+     * @param requireConsent         是否要求用户同意
+     * @param accessTokenLifetime    访问令牌有效期（秒）
+     * @param refreshTokenLifetime   刷新令牌有效期（秒）
+     */
     public record ApplicationInput(String name, String logo, String description, String type, List<String> redirectUris,
                                    List<String> postLogoutRedirectUris, List<String> allowedGrantTypes,
                                    List<String> scopes, Boolean requirePkce, Boolean requireConsent,
                                    Integer accessTokenLifetime, Integer refreshTokenLifetime) {
     }
 
+    /**
+     * 应用视图（面向接口层的只读 DTO）。
+     *
+     * @param id                     应用 ID
+     * @param tenantId               所属租户 ID
+     * @param name                   应用名称
+     * @param logo                   应用 Logo
+     * @param description            应用描述
+     * @param type                   应用类型：web / native / spa / machine
+     * @param clientId               客户端 ID
+     * @param clientSecret           客户端密钥明文（仅创建/更新/重新生成时返回，其余场景为 null）
+     * @param redirectUris           授权码回调地址列表
+     * @param postLogoutRedirectUris 登出后的跳转地址列表
+     * @param allowedGrantTypes      允许的授权类型列表
+     * @param scopes                 允许申请的作用域列表
+     * @param requirePkce            是否强制使用 PKCE
+     * @param requireConsent         是否要求用户同意
+     * @param accessTokenLifetime    访问令牌有效期（秒）
+     * @param refreshTokenLifetime   刷新令牌有效期（秒）
+     * @param status                 应用状态：active / disabled
+     * @param createdAt              创建时间
+     * @param updatedAt              最后更新时间
+     */
     public record ApplicationView(UUID id, UUID tenantId, String name, String logo, String description, String type,
                                   String clientId, String clientSecret, List<String> redirectUris,
                                   List<String> postLogoutRedirectUris, List<String> allowedGrantTypes,
@@ -239,6 +320,11 @@ public class ApplicationService {
                                   Instant updatedAt) {
     }
 
+    /**
+     * 客户端密钥结果。
+     *
+     * @param clientSecret 新生成的客户端密钥明文（仅本次返回）
+     */
     public record SecretView(String clientSecret) {
     }
 }

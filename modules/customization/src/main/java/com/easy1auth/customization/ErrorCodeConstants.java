@@ -2,6 +2,12 @@ package com.easy1auth.customization;
 
 import com.easy1auth.foundation.error.ErrorCode;
 
+/**
+ * 品牌定制域的领域错误码常量。
+ *
+ * <p>统一管理本模块（customization）抛出领域异常时使用的错误码，
+ * 每个错误码附带面向用户的中文错误提示文案。</p>
+ */
 public interface ErrorCodeConstants {
     ErrorCode ASSET_URL_INVALID = new ErrorCode(20000, "认证页面资源必须使用 HTTPS URL");
     ErrorCode LEGAL_DOCUMENT_CONTENT_UNSAFE = new ErrorCode(20001, "法律文档包含不安全脚本");

@@ -42,6 +42,7 @@ import java.util.*;
  */
 @RestController
 public class LoginController {
+    /** Session 中暂存的已验证外部身份（等待绑定或创建新账号） */
     private static final String SOCIAL_PENDING_IDENTITY = "EASY1AUTH_SOCIAL_PENDING_IDENTITY";
     /** 负责签发和校验 pool_user 的 TOTP 多因素认证挑战。 */
     private final SecurityPolicyService security;
@@ -427,6 +428,7 @@ public class LoginController {
         securityContexts.saveContext(context, request, response);
     }
 
+    /** 若 Session 中暂存了已验证的外部身份，则将其绑定到本次登录的本地用户上。 */
     private void bindPendingSocialIdentity(HttpServletRequest request, UUID poolUserId) {
         HttpSession session = request.getSession(false);
         if (session == null || !(session.getAttribute(SOCIAL_PENDING_IDENTITY) instanceof SocialIdentityService.PendingIdentity identity)) {
@@ -440,6 +442,7 @@ public class LoginController {
         session.removeAttribute(SOCIAL_PENDING_IDENTITY);
     }
 
+    /** 读取当前 Session 中属于指定租户的已验证外部身份；缺失或租户不符时抛过期异常。 */
     private SocialIdentityService.PendingIdentity pendingSocialIdentity(HttpServletRequest request, UUID tenant) {
         HttpSession session = request.getSession(false);
         if (session == null || !(session.getAttribute(SOCIAL_PENDING_IDENTITY) instanceof SocialIdentityService.PendingIdentity identity)
@@ -449,6 +452,7 @@ public class LoginController {
         return identity;
     }
 
+    /** 清理 Session 中暂存的外部身份。 */
     private void clearPendingSocialIdentity(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
         if (session != null) {
@@ -456,6 +460,7 @@ public class LoginController {
         }
     }
 
+    /** 构造 pool_user 的已认证主体，可按需附加 MFA_VERIFIED 权限。 */
     private static Authentication poolUserAuthentication(UUID userId, UUID tenant, boolean mfaVerified) {
         var authorities = new ArrayList<SimpleGrantedAuthority>(List.of(
                 new SimpleGrantedAuthority("ROLE_POOL_USER"), new SimpleGrantedAuthority("TENANT_" + tenant)));
@@ -465,6 +470,7 @@ public class LoginController {
         return UsernamePasswordAuthenticationToken.authenticated(org.springframework.security.core.userdetails.User.withUsername(userId.toString()).password("").authorities(authorities).build(), null, authorities);
     }
 
+    /** 基于当前请求 URL 构造前端回调页地址，供身份源回跳使用。 */
     private static String socialCallbackUrl(HttpServletRequest request) {
         URI requestUri = URI.create(request.getRequestURL().toString());
         return requestUri.resolve(request.getContextPath() + "/oauth-login/social/callback").toString();
@@ -495,29 +501,85 @@ public class LoginController {
     /** 判断字符串是否为空或仅包含空白字符。 */
     private static boolean blank(String value) { return value == null || value.isBlank(); }
 
-    /** 密码登录请求体。 */
+    /**
+     * 密码登录请求体。
+     *
+     * @param username 登录邮箱（登录标识）
+     * @param password 登录密码
+     */
     public record LoginInput(String username, String password) { }
-    /** 邮箱输入请求体，用于发送验证码。 */
+    /**
+     * 邮箱输入请求体，用于发送验证码。
+     *
+     * @param email 目标邮箱地址
+     */
     public record EmailInput(String email) { }
-    /** 验证码校验请求体。 */
+    /**
+     * 验证码校验请求体。
+     *
+     * @param token 发送验证码时返回的不透明挑战 token
+     * @param code  用户收到的验证码
+     */
     public record VerifyInput(String token, String code) { }
-    /** MFA 验证请求体。 */
+    /**
+     * MFA 验证请求体。
+     *
+     * @param code 用户输入的 TOTP 动态验证码
+     */
     public record MfaInput(String code) { }
-    /** 授权确认操作请求体，action 取值为 approve 或 deny。 */
+    /**
+     * 授权确认操作请求体。
+     *
+     * @param action 用户决定：approve（同意）或 deny（拒绝）
+     */
     public record ConsentInput(String action) { }
-    /** 飞书前端回调提交的授权码与防 CSRF state。 */
+    /**
+     * 飞书前端回调提交的授权码与防 CSRF state。
+     *
+     * @param code  身份源回调返回的授权码
+     * @param state 发起授权时携带的防 CSRF state
+     */
     public record SocialCallbackInput(String code, String state) { }
-    /** 用户确认创建新账号时提供的本地用户名。 */
+    /**
+     * 用户确认创建新账号时提供的本地用户名。
+     *
+     * @param username 本地用户名
+     */
     public record SocialProvisionInput(String username) { }
-    /** 前端根据 status 显示继续登录或账户确认界面。 */
+    /**
+     * 社交登录回调结果，前端根据 status 显示继续登录或账户确认界面。
+     *
+     * @param status            状态：success（可直接登录）或 unbound（需绑定/新建账号）
+     * @param redirectUrl       成功后继续跳转的地址
+     * @param name              外部身份显示名称
+     * @param email             外部身份邮箱
+     * @param suggestedUsername 建议的本地用户名
+     * @param canProvision      是否允许用该外部身份创建新账号
+     */
     public record SocialCallbackResult(String status, String redirectUrl, String name, String email, String suggestedUsername, boolean canProvision) {
         static SocialCallbackResult success(String redirectUrl) { return new SocialCallbackResult("success", redirectUrl, null, null, null, false); }
         static SocialCallbackResult unbound(String name, String email, String suggestedUsername, boolean canProvision) { return new SocialCallbackResult("unbound", null, name, email, suggestedUsername, canProvision); }
     }
-    /** 登录结果；MFA 阶段返回剩余有效秒数，成功时返回继续地址。 */
+    /**
+     * 登录结果；MFA 阶段返回剩余有效秒数，成功时返回继续地址。
+     *
+     * @param status      状态：success / mfa_required
+     * @param redirectUrl 成功后继续跳转的地址（MFA 阶段为 null）
+     * @param expiresIn   挑战剩余有效秒数（非 MFA 场景为 0）
+     */
     public record LoginResult(String status, String redirectUrl, int expiresIn) { }
-    /** 验证码挑战结果，返回不透明 token 和有效秒数。 */
+    /**
+     * 验证码挑战结果，返回不透明 token 和有效秒数。
+     *
+     * @param token     不透明挑战 token
+     * @param expiresIn 挑战有效秒数
+     */
     public record ChallengeResult(String token, int expiresIn) { }
-    /** 门户接口统一错误响应。 */
+    /**
+     * 门户接口统一错误响应。
+     *
+     * @param code    业务错误码
+     * @param message 错误提示信息
+     */
     public record ApiError(int code, String message) { }
 }

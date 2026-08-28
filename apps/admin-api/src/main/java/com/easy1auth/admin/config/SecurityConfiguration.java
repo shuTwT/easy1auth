@@ -22,19 +22,32 @@ import com.easy1auth.admin.security.TenantSecurityFilter;
 import com.easy1auth.admin.security.AuditMutationFilter;
 import com.easy1auth.admin.security.ApiErrorWriter;
 
+/**
+ * 管理端 API 安全配置。
+ *
+ * <p>装配管理端安全过滤链：配置公开路由白名单，其余请求要求 JWT 认证；提供 HS256
+ * 的 JWT 编解码器并校验 issuer / audience / subject_type 与账号会话有效性；同时在
+ * 认证过滤器之后挂载租户上下文解析、租户权限与审计三个自定义过滤器。</p>
+ */
 @Configuration
 @EnableConfigurationProperties({AdminJwtProperties.class, RegistrationProperties.class})
 public class SecurityConfiguration {
+    /** 声明密码编码器：BCrypt，强度 12。 */
     @Bean
     PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder(12);
     }
 
+    /** 声明 JWT 编码器，使用配置的签名密钥进行 HS256 签名。 */
     @Bean
     JwtEncoder jwtEncoder(AdminJwtProperties properties) {
         return new NimbusJwtEncoder(new ImmutableSecret<SecurityContext>(key(properties)));
     }
 
+    /**
+     * 声明 JWT 解码器：HS256 验签，并校验 issuer、audience、subject_type=admin，
+     * 以及账号会话是否仍有效（security_version 未失效）。
+     */
     @Bean
     JwtDecoder jwtDecoder(AdminJwtProperties properties, AdminIdentityService identities) {
         var decoder = NimbusJwtDecoder.withSecretKey(key(properties)).macAlgorithm(org.springframework.security.oauth2.jose.jws.MacAlgorithm.HS256).build();
@@ -54,6 +67,12 @@ public class SecurityConfiguration {
         return decoder;
     }
 
+    /**
+     * 声明管理端安全过滤链。
+     *
+     * <p>关闭 CSRF（无状态 JWT 认证）；放行健康检查、登录/注册/刷新等公开端点；
+     * 其余请求需认证。认证通过后依次执行租户上下文解析、租户安全校验与审计过滤器。</p>
+     */
     @Bean
     SecurityFilterChain security(HttpSecurity http, TenantContextFilter tenantContextFilter, TenantSecurityFilter tenantSecurityFilter,
                                  AuditMutationFilter auditMutationFilter, ApiErrorWriter errors) throws Exception {
@@ -68,6 +87,7 @@ public class SecurityConfiguration {
                 .build();
     }
 
+    /** 由配置的签名密钥构造 HS256 密钥规格；密钥不足 32 字节时拒绝启动。 */
     private static SecretKeySpec key(AdminJwtProperties properties) {
         if (properties.secret() == null || properties.secret().getBytes(StandardCharsets.UTF_8).length < 32) {
             throw new IllegalStateException("ADMIN_JWT_SECRET must contain at least 32 UTF-8 bytes");

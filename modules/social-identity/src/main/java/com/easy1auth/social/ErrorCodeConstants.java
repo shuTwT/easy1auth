@@ -2,6 +2,12 @@ package com.easy1auth.social;
 
 import com.easy1auth.foundation.error.ErrorCode;
 
+/**
+ * 社会化身份域错误码常量（18000-18012）。
+ *
+ * <p>覆盖身份源管理、社交登录授权/回调、用户信息拉取与身份绑定等环节的
+ * 业务错误，供 {@link com.easy1auth.foundation.error.DomainException} 使用。</p>
+ */
 public interface ErrorCodeConstants {
     ErrorCode SOCIAL_BINDING_REQUIRED = new ErrorCode(18000, "该外部身份尚未绑定");
     ErrorCode SOCIAL_TOKEN_EXCHANGE_FAILED = new ErrorCode(18001, "社交登录 Token 交换失败");

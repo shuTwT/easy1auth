@@ -14,15 +14,31 @@ import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.*;
 
+/**
+ * 品牌定制服务：管理 pool_user 登录页的品牌样式（logo、配色、文案、自定义 CSS、
+ * 登录方式等）、法律文档（服务条款与隐私政策）、自定义域名与消息模板。
+ *
+ * <p>品牌样式与法律文档采用"草稿 + 发布"模式：编辑内容保存在草稿中，
+ * 调用 {@link #publish()} 后才会对用户可见的登录页生效。
+ * 自定义域名支持 DNS 或文件两种所有权验证方式。</p>
+ */
 @Service
 public class CustomizationService {
+    /** 登录样式配置的 schema 版本号（当前为 1） */
     private static final int LOGIN_STYLE_SCHEMA_VERSION = 1;
+    /** legal_document_setting 表静态描述符 */
     private static final LegalDocumentSettingEntityTable LEGAL_DOCUMENT = LegalDocumentSettingEntityTable.$;
+    /** login_style 表静态描述符 */
     private static final LoginStyleEntityTable STYLE = LoginStyleEntityTable.$;
+    /** custom_domain 表静态描述符 */
     private static final CustomDomainEntityTable DOMAIN = CustomDomainEntityTable.$;
+    /** message_template 表静态描述符 */
     private static final MessageTemplateEntityTable TEMPLATE = MessageTemplateEntityTable.$;
+    /** jimmer SQL 客户端 */
     private final JSqlClient sql;
+    /** 社会化身份源服务（用于校验所选社交登录方式对应的身份源是否可用） */
     private final SocialIdentityService socialIdentity;
+    /** 生成域名所有权验证令牌的随机源 */
     private final SecureRandom random = new SecureRandom();
 
     public CustomizationService(JSqlClient sql, SocialIdentityService socialIdentity) {
@@ -30,6 +46,7 @@ public class CustomizationService {
         this.socialIdentity = socialIdentity;
     }
 
+    /** 查询（或自动创建）法律文档设置记录，返回当前生效的服务条款与隐私政策实体。 */
     @Transactional
     public LegalDocumentSettingEntity legalDocuments() {
         var e = sql.createQuery(LEGAL_DOCUMENT).select(LEGAL_DOCUMENT).fetchOneOrNull();
@@ -40,6 +57,7 @@ public class CustomizationService {
         return e;
     }
 
+    /** 查询当前草稿视图：登录样式草稿配置 + 法律文档草稿 + 草稿更新时间。 */
     @Transactional
     public DraftView draft() {
         var style = style();
@@ -50,6 +68,7 @@ public class CustomizationService {
                 style.draftUpdatedAt(), style.publishedAt());
     }
 
+    /** 更新草稿：合并输入配置、法律文档与社交身份源到现有草稿中，仅改草稿不影响已发布内容。 */
     @Transactional
     public DraftView updateDraft(DraftInput input) {
         Map<String, Object> nextConfig = normalizeConfig(input == null ? null : input.config());
@@ -79,6 +98,7 @@ public class CustomizationService {
         return new DraftView(nextConfig, nextSocialProviders, nextLegal, now, oldStyle.publishedAt());
     }
 
+    /** 发布草稿：将当前草稿配置与法律文档设为已发布版本，对用户可见的登录页生效。 */
     @Transactional
     public DraftView publish() {
         var oldStyle = style();
@@ -108,11 +128,13 @@ public class CustomizationService {
         return new DraftView(nextConfig, nextSocialProviders, nextLegal, now, now);
     }
 
+    /** 重置草稿为默认配置（默认样式 + 空法律文档 + 清空社交身份源）。 */
     @Transactional
     public DraftView resetDraft() {
         return updateDraft(new DraftInput(defaultConfig(), List.of(), new LegalDocumentsInput(null, null)));
     }
 
+    /** 查询（或自动初始化）当前租户的登录样式实体；首次访问时写入默认样式。 */
     @Transactional
     public LoginStyleEntity style() {
         var e = sql.createQuery(STYLE).select(STYLE).fetchOneOrNull();
@@ -125,6 +147,7 @@ public class CustomizationService {
         return e;
     }
 
+    /** 查询指定租户的登录样式（面向 pool_user 登录页的公开访问；不存在则初始化默认样式）。 */
     @Transactional
     public LoginStyleEntity publicStyle(UUID tenant) {
         var e = sql.createQuery(STYLE).where(STYLE.tenantId().eq(tenant)).select(STYLE).fetchOneOrNull();
@@ -137,6 +160,7 @@ public class CustomizationService {
         return e;
     }
 
+    /** 查询指定租户已发布的登录样式配置（供登录页渲染使用；未配置时返回默认配置）。 */
     @Transactional(readOnly = true)
     public Map<String, Object> publishedConfig(UUID tenant) {
         var style = sql.createQuery(STYLE).where(STYLE.tenantId().eq(tenant)).select(STYLE).fetchOneOrNull();
@@ -146,6 +170,7 @@ public class CustomizationService {
         return config(style.publishedConfig(), style);
     }
 
+    /** 查询指定租户已发布的法律文档（服务条款与隐私政策，供登录 / 注册页展示）。 */
     @Transactional(readOnly = true)
     public PublishedLegalDocuments publishedLegalDocuments(UUID tenant) {
         var legal = sql.createQuery(LEGAL_DOCUMENT).where(LEGAL_DOCUMENT.tenantId().eq(tenant)).select(LEGAL_DOCUMENT).fetchOneOrNull();
@@ -155,11 +180,17 @@ public class CustomizationService {
         return new PublishedLegalDocuments(firstNonNull(legal.publishedTermsOfService(), legal.termsOfService()), firstNonNull(legal.publishedPrivacyPolicy(), legal.privacyPolicy()));
     }
 
+    /** 查询全部自定义域名（按创建时间倒序）。 */
     @Transactional(readOnly = true)
     public List<CustomDomainEntity> domains() {
         return sql.createQuery(DOMAIN).orderBy(DOMAIN.createdAt().desc()).select(DOMAIN).execute();
     }
 
+    /**
+     * 添加自定义域名并进入待验证状态，生成用于所有权验证的随机令牌。
+     *
+     * @param method 验证方式：dns（DNS 记录）/ file（上传验证文件）
+     */
     @Transactional
     public CustomDomainEntity addDomain(String value, String method) {
         String domain = normalizeDomain(value);
@@ -175,6 +206,7 @@ public class CustomizationService {
         return e;
     }
 
+    /** 删除自定义域名；域名不存在时抛出领域异常。 */
     @Transactional
     public void deleteDomain(UUID id) {
         if (!sql.createQuery(DOMAIN).where(DOMAIN.id().eq(id)).select(DOMAIN.id()).exists() || sql.deleteById(CustomDomainEntity.class, id).getTotalAffectedRowCount() != 1) {
@@ -182,15 +214,18 @@ public class CustomizationService {
         }
     }
 
+    /** 抛出"阶段 6 不提供域名所有权验证或证书托管"的领域异常。 */
     public void verificationUnavailable() {
         throw new DomainException(ErrorCodeConstants.DOMAIN_VERIFICATION_NOT_AVAILABLE);
     }
 
+    /** 查询消息模板列表，可按类型（email / sms）过滤，按类型与编码排序。 */
     @Transactional(readOnly = true)
     public List<MessageTemplateEntity> templates(String type) {
         return sql.createQuery(TEMPLATE).whereIf(type != null && !type.isBlank(), () -> TEMPLATE.type().eq(type)).orderBy(TEMPLATE.type(), TEMPLATE.code()).select(TEMPLATE).execute();
     }
 
+    /** 新建（id 为空）或更新（id 非空）消息模板，校验模板参数与变量声明合法性。 */
     @Transactional
     public MessageTemplateEntity saveTemplate(UUID id, TemplateInput in) {
         if (in == null || !Set.of("email", "sms").contains(in.type()) || in.code() == null || !in.code().matches("[a-z0-9_]{2,100}") || in.name() == null || in.name().isBlank() || in.content() == null || in.content().isBlank()) {
@@ -211,6 +246,7 @@ public class CustomizationService {
         return template(id);
     }
 
+    /** 读取草稿 / 已发布的样式配置，为空时由旧版字段兼容生成。 */
     private static Map<String, Object> config(Map<String, Object> value, LoginStyleEntity legacy) {
         return normalizeConfig(value == null || value.isEmpty() ? legacyConfig(legacy) : value, false);
     }
@@ -278,6 +314,7 @@ public class CustomizationService {
         return normalizeConfig(input, true);
     }
 
+    /** 规范化样式配置：与默认值合并并校验取值范围；strictCss=true 时不安全 CSS 直接报错，否则置空。 */
     private static Map<String, Object> normalizeConfig(Map<String, Object> input, boolean strictCss) {
         Map<String, Object> root = defaultConfig();
         if (input != null) {
@@ -328,6 +365,7 @@ public class CustomizationService {
         return root;
     }
 
+    /** 从规范化配置中提取关键项，回写为旧版样式字段（发布时使用）。 */
     private static LegacyStyle legacyStyle(Map<String, Object> config) {
         Map<String, Object> global = object(config, "global");
         Map<String, Object> background = object(global, "background");
@@ -347,6 +385,7 @@ public class CustomizationService {
         return new LegalDocumentsInput(terms, privacy);
     }
 
+    /** 获取父 Map 中的嵌套子 Map，不存在时创建并放回。 */
     private static Map<String, Object> object(Map<String, Object> parent, String key) {
         Object value = parent.get(key);
         if (value instanceof Map<?, ?> map) {
@@ -397,6 +436,7 @@ public class CustomizationService {
         return result;
     }
 
+    /** 校验自定义 CSS：包含脚本、javascript:、@import 等不安全内容时按 strict 决定报错或置空。 */
     private static String css(Object value, boolean strict) {
         String result = nullableString(value);
         if (result == null) {
@@ -422,6 +462,7 @@ public class CustomizationService {
         return result.isEmpty() ? List.of("password") : result;
     }
 
+    /** 校验并规范化社交身份源 ID：须为合法 UUID 且均为启用中的身份源。 */
     private List<String> socialProviders(Collection<String> values) {
         if (values == null || values.isEmpty()) {
             return List.of();
@@ -456,6 +497,7 @@ public class CustomizationService {
         return first != null ? first : second;
     }
 
+    /** 删除消息模板；模板不存在时抛出领域异常。 */
     @Transactional
     public void deleteTemplate(UUID id) {
         template(id);
@@ -536,24 +578,78 @@ public class CustomizationService {
         return new DomainException(errorCode);
     }
 
+    /**
+     * 草稿更新入参。
+     *
+     * @param config            结构化的样式配置（与草稿 schema 一致）
+     * @param socialProviderIds 选中的社交身份源 ID 列表
+     * @param legalDocuments    法律文档草稿内容
+     */
     public record DraftInput(Map<String, Object> config, List<String> socialProviderIds, LegalDocumentsInput legalDocuments) {
     }
 
+    /**
+     * 草稿视图（查询 / 更新草稿后的返回结构）。
+     *
+     * @param config            规范化后的样式配置
+     * @param socialProviderIds 已生效的社交身份源 ID 列表
+     * @param legalDocuments    法律文档草稿内容
+     * @param draftUpdatedAt    草稿最后更新时间
+     * @param publishedAt       最近发布时间（从未发布为 null）
+     */
     public record DraftView(Map<String, Object> config, List<String> socialProviderIds, LegalDocumentsInput legalDocuments,
                             Instant draftUpdatedAt, Instant publishedAt) {
     }
 
+    /**
+     * 法律文档草稿入参。
+     *
+     * @param termsOfService 服务条款内容（可为空）
+     * @param privacyPolicy  隐私政策内容（可为空）
+     */
     public record LegalDocumentsInput(String termsOfService, String privacyPolicy) {
     }
 
+    /**
+     * 已发布法律文档视图（供登录 / 注册页展示）。
+     *
+     * @param termsOfService 已生效的服务条款
+     * @param privacyPolicy  已生效的隐私政策
+     */
     public record PublishedLegalDocuments(String termsOfService, String privacyPolicy) {
     }
 
+    /**
+     * 旧版样式字段视图（发布时将结构化配置回写到旧版字段）。
+     *
+     * @param logo                亮色主题 logo URL
+     * @param logoDark            深色主题 logo URL
+     * @param backgroundImage     背景图片 URL
+     * @param backgroundColor     背景颜色
+     * @param primaryColor        主题主色
+     * @param title               登录页标题
+     * @param subtitle            登录页副标题
+     * @param customCss           自定义 CSS
+     * @param loginMethods        登录方式列表
+     * @param registrationEnabled 是否开放注册
+     */
     private record LegacyStyle(String logo, String logoDark, String backgroundImage, String backgroundColor,
                                String primaryColor, String title, String subtitle, String customCss,
                                List<String> loginMethods, boolean registrationEnabled) {
     }
 
+    /**
+     * 消息模板入参（新建 / 更新共用）。
+     *
+     * @param type      模板类型：email / sms
+     * @param code      模板编码（唯一，小写字母数字下划线）
+     * @param name      模板名称
+     * @param subject   邮件主题（短信模板可为空）
+     * @param content   模板正文，支持 {{变量名}} 占位符
+     * @param variables 变量声明（变量名 -> 默认值或说明）
+     * @param isDefault 是否默认模板
+     * @param status    模板状态：active / disabled
+     */
     public record TemplateInput(String type, String code, String name, String subject, String content,
                                 Map<String, String> variables, Boolean isDefault, String status) {
     }

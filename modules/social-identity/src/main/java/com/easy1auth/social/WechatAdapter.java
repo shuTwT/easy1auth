@@ -15,7 +15,9 @@ import java.util.Map;
  */
 abstract class WechatAdapter extends AbstractSocialIdentityAdapter {
 
+    /** 微信 sns OAuth 令牌交换端点（appid/secret 走 query 参数） */
     static final String TOKEN = "https://api.weixin.qq.com/sns/oauth2/access_token";
+    /** 微信用户信息端点（需携带 access_token 与 openid） */
     static final String USERINFO = "https://api.weixin.qq.com/sns/userinfo";
 
     WechatAdapter(ObjectMapper json) { super(json); }
@@ -23,6 +25,7 @@ abstract class WechatAdapter extends AbstractSocialIdentityAdapter {
     @Override public boolean supportsPkce() { return false; }
     @Override public String defaultScope() { return "snsapi_login"; }
 
+    /** 用授权码换取微信 access_token 并拉取用户信息，subject 优先取 unionid 实现跨应用去重。 */
     @Override
     public RemoteUserInfo exchangeAndFetch(String clientId, String clientSecret, String code, URI redirectUri, String pkceVerifier) {
         // 微信换 token 用 query 参数而非 Basic Auth，且 secret 直接放 query。

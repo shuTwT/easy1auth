@@ -10,8 +10,16 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.UUID;
 
+/**
+ * Issuer 主机校验过滤器。
+ *
+ * <p>对形如 {@code /t/{tenant}/...} 的多租户路径请求，校验请求的主机、协议、端口与
+ * 配置的 issuer 一致，并确认路径中的租户段为合法 UUID，防止跨租户伪冒 issuer 访问
+ * 授权端点。校验失败时返回 400 错误。</p>
+ */
 @Component
 public class IssuerHostValidationFilter extends OncePerRequestFilter {
+    /** 配置允许的 issuer 源（协议 + 主机 + 端口） */
     private final URI allowed;
 
     public IssuerHostValidationFilter(@Value("${easy1auth.oauth2.issuer-base}") String issuerBase) {
@@ -21,11 +29,13 @@ public class IssuerHostValidationFilter extends OncePerRequestFilter {
         }
     }
 
+    /** 仅对多租户路径（以 /t/ 开头）执行校验，其余请求直接放行。 */
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         return !request.getRequestURI().startsWith("/t/");
     }
 
+    /** 校验租户段合法性及请求主机与配置 issuer 一致，不匹配则返回 400。 */
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws ServletException, IOException {
         String[] parts = request.getRequestURI().split("/");

@@ -12,8 +12,11 @@ import java.util.Map;
 @Component
 public class GithubAdapter extends AbstractSocialIdentityAdapter {
 
+    /** GitHub OAuth 授权页地址 */
     private static final String AUTHORIZE = "https://github.com/login/oauth/authorize";
+    /** GitHub 令牌交换端点 */
     private static final String TOKEN = "https://github.com/login/oauth/access_token";
+    /** GitHub 用户信息端点（携带 Bearer access_token 调用） */
     private static final String USER = "https://api.github.com/user";
 
     GithubAdapter(ObjectMapper json) { super(json); }
@@ -23,6 +26,7 @@ public class GithubAdapter extends AbstractSocialIdentityAdapter {
     @Override public String defaultScope() { return "read:user user:email"; }
     @Override public boolean supportsPkce() { return false; }
 
+    /** 拼装 GitHub 授权 URL（scope 缺省时使用默认 read:user user:email）。 */
     @Override
     public AuthorizeResult authorize(String clientId, URI redirectUri, String state, String scope, String pkceChallenge) {
         var url = AUTHORIZE + "?response_type=code&client_id=" + enc(clientId)
@@ -32,6 +36,7 @@ public class GithubAdapter extends AbstractSocialIdentityAdapter {
         return new AuthorizeResult(URI.create(url));
     }
 
+    /** 用授权码换取 access_token 并拉取 GitHub 用户信息，名称缺失时回退为登录名。 */
     @Override
     public RemoteUserInfo exchangeAndFetch(String clientId, String clientSecret, String code, URI redirectUri, String pkceVerifier) {
         var form = Map.of(

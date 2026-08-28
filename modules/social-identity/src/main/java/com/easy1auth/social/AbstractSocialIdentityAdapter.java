@@ -18,11 +18,13 @@ import java.util.Map;
  */
 abstract class AbstractSocialIdentityAdapter implements SocialIdentityAdapter {
 
+    /** 共享的 HTTP 客户端：8 秒连接超时、不自动跟随重定向 */
     protected static final HttpClient HTTP = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(8))
             .followRedirects(HttpClient.Redirect.NEVER)
             .build();
 
+    /** JSON 序列化器 */
     protected final ObjectMapper json;
 
     protected AbstractSocialIdentityAdapter(ObjectMapper json) {
@@ -99,10 +101,12 @@ abstract class AbstractSocialIdentityAdapter implements SocialIdentityAdapter {
         }
     }
 
+    /** URL 编码（UTF-8），用于拼接 query 参数。 */
     protected static String enc(String s) {
         return URLEncoder.encode(s, StandardCharsets.UTF_8);
     }
 
+    /** 空值安全地转为字符串，供取值后统一处理。 */
     protected static String string(Object o) {
         return o == null ? null : o.toString();
     }

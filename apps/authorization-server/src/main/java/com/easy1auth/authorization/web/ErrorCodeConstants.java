@@ -2,6 +2,12 @@ package com.easy1auth.authorization.web;
 
 import com.easy1auth.foundation.error.ErrorCode;
 
+/**
+ * 授权门户业务错误码常量。
+ *
+ * <p>集中定义登录门户、OAuth 授权交互、MFA 与注册等场景下的错误码（编号区间
+ * 24000-24099），与错误码配套的中文提示信息可直接展示给前端用户。</p>
+ */
 public interface ErrorCodeConstants {
     ErrorCode AUTH_ACTION_INVALID = new ErrorCode(24000, "授权操作无效");
     ErrorCode AUTH_INPUT_INVALID = new ErrorCode(24001, "授权操作无效");

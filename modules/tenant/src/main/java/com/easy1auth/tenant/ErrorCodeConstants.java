@@ -2,6 +2,12 @@ package com.easy1auth.tenant;
 
 import com.easy1auth.foundation.error.ErrorCode;
 
+/**
+ * 租户模块错误码常量集合（错误码区间 11000-11031）。
+ *
+ * <p>集中定义租户域内各业务校验失败对应的错误码与中文提示，
+ * 供领域服务抛出 DomainException 时使用，由统一异常处理转换为响应。</p>
+ */
 public interface ErrorCodeConstants {
     ErrorCode ADMINISTRATOR_ACCOUNT_REQUIRED = new ErrorCode(11000, "管理员账号不能为空");
     ErrorCode TENANT_ACCESS_DENIED = new ErrorCode(11001, "无权访问所选租户");

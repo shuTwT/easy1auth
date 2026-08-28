@@ -14,16 +14,32 @@ import java.security.*;
 import java.time.*;
 import java.util.*;
 
+/**
+ * 安全策略服务：密码策略、TOTP 多因素认证与邮箱/验证码挑战的统一入口。
+ *
+ * <p>负责密码强度校验与历史密码防重用、TOTP 密钥的生成/启用/验证/关闭，
+ * 以及邮箱验证码与 TOTP 两类认证挑战（challenge）的签发与消费。所有
+ * 敏感材料（TOTP 密钥、验证码）均以哈希或加密形式落库。</p>
+ */
 @Service
 public class SecurityPolicyService {
+    /** authentication_recovery_code 表静态描述符 */
     private static final AuthenticationRecoveryCodeEntityTable RECOVERY = AuthenticationRecoveryCodeEntityTable.$;
+    /** password_history 表静态描述符 */
     private static final PasswordHistoryEntityTable HISTORY = PasswordHistoryEntityTable.$;
+    /** security_policy 表静态描述符 */
     private static final SecurityPolicyEntityTable POLICY = SecurityPolicyEntityTable.$;
+    /** authentication_factor 表静态描述符 */
     private static final AuthenticationFactorEntityTable FACTOR = AuthenticationFactorEntityTable.$;
+    /** authentication_challenge 表静态描述符 */
     private static final AuthenticationChallengeEntityTable CHALLENGE = AuthenticationChallengeEntityTable.$;
+    /** jimmer SQL 客户端 */
     private final JSqlClient sql;
+    /** 数据加密器（加密 TOTP 密钥） */
     private final SecurityDataCipher cipher;
+    /** TOTP 计算服务 */
     private final TotpService totp;
+    /** 安全随机源（生成挑战 token 与备用码） */
     private final SecureRandom random = new SecureRandom();
 
     public SecurityPolicyService(JSqlClient sql, SecurityDataCipher cipher, TotpService totp) {
@@ -32,20 +48,24 @@ public class SecurityPolicyService {
         this.totp = totp;
     }
 
+    /** 平台管理员的默认安全策略（不落库，直接返回）。 */
     public static Policy adminPolicy() {
         return new Policy(12, true, true, true, true, 90, 5, false, 5, 1800);
     }
 
+    /** 读取全局（平台）安全策略，不存在时按默认值初始化。 */
     @Transactional
     public Policy policy() {
         return view(policyEntity());
     }
 
+    /** 读取指定租户的安全策略，不存在时按默认值初始化。 */
     @Transactional
     public Policy policy(UUID tenant) {
         return view(policyEntity(tenant));
     }
 
+    /** 更新安全策略：先校验取值范围，再整体覆盖保存。 */
     @Transactional
     public Policy update(Policy p) {
         validate(p);
@@ -55,12 +75,14 @@ public class SecurityPolicyService {
         return p;
     }
 
+    /** 校验密码是否符合策略：长度 8-128，并按需要求大小写字母、数字与特殊字符。 */
     public void validatePassword(String password, Policy p) {
         if (password == null || password.length() < p.minLength() || password.length() > 128 || (p.requireUpper() && !password.matches(".*[A-Z].*")) || (p.requireLower() && !password.matches(".*[a-z].*")) || (p.requireNumber() && !password.matches(".*\\d.*")) || (p.requireSpecial() && !password.matches(".*[^A-Za-z0-9].*"))) {
             throw new DomainException(ErrorCodeConstants.PASSWORD_WEAK);
         }
     }
 
+    /** 拒绝与当前密码或最近 {@code count} 次历史密码相同的候选密码。 */
     @Transactional(readOnly = true)
     public void rejectReusedPassword(String subjectType, UUID subject, String candidate, String currentHash, org.springframework.security.crypto.password.PasswordEncoder encoder, int count) {
         if (currentHash != null && encoder.matches(candidate, currentHash)) {
@@ -75,6 +97,7 @@ public class SecurityPolicyService {
         }
     }
 
+    /** 记录一次密码变更：保存旧密码哈希，并裁剪历史记录只保留最近 {@code count} 条。 */
     @Transactional
     public void rememberPassword(String subjectType, UUID subject, String oldHash, int count) {
         if (oldHash == null || count <= 0) {
@@ -88,6 +111,7 @@ public class SecurityPolicyService {
         }
     }
 
+    /** 为指定主体初始化 TOTP：生成密钥并签发 10 个一次性备用码，返回设置信息。 */
     @Transactional
     public Setup setupTotp(String subjectType, UUID subject, UUID tenant, String label) {
         var old = findFactor(subjectType, subject, "totp");
@@ -110,6 +134,7 @@ public class SecurityPolicyService {
         return new Setup(secret, "otpauth://totp/Easy1Auth:" + url(label) + "?secret=" + secret + "&issuer=Easy1Auth&digits=6&period=30", recovery);
     }
 
+    /** 启用 TOTP：校验一次性验证码通过后置 enabled 并记录当前时间步。 */
     @Transactional
     public void enableTotp(String subjectType, UUID subject, String code) {
         var f = requireFactor(subjectType, subject, "totp");
@@ -120,12 +145,14 @@ public class SecurityPolicyService {
         sql.createUpdate(FACTOR).set(FACTOR.enabled(), true).set(FACTOR.lastTotpStep(), totp.step(Instant.now())).set(FACTOR.updatedAt(), Instant.now()).where(FACTOR.id().eq(f.id())).execute();
     }
 
+    /** 关闭 TOTP：校验验证码通过后删除该主体的全部认证因子。 */
     @Transactional
     public void disable(String subjectType, UUID subject, String code) {
         verifyTotp(subjectType, subject, code);
         sql.createDelete(FACTOR).where(FACTOR.subjectType().eq(subjectType), FACTOR.subjectId().eq(subject)).execute();
     }
 
+    /** 校验 TOTP 验证码：未启用或验证失败均抛异常，成功后防重放更新时间步。 */
     @Transactional
     public boolean verifyTotp(String subjectType, UUID subject, String code) {
         var f = requireFactor(subjectType, subject, "totp");
@@ -141,11 +168,17 @@ public class SecurityPolicyService {
         return true;
     }
 
+    /** 签发邮箱验证码挑战（用于登录等常规场景，60 秒内同主体/目的地限发一次）。 */
     @Transactional
     public Challenge issueEmailChallenge(String subjectType, UUID subject, UUID tenant, String purpose) {
         return issueEmailChallenge(subjectType, subject, tenant, purpose, null);
     }
 
+    /**
+     * 签发邮箱验证码挑战。
+     *
+     * @param destination 发送目的地（邮箱），在 subject 为 null 时用于限流判断
+     */
     @Transactional
     public Challenge issueEmailChallenge(String subjectType, UUID subject, UUID tenant, String purpose, String destination) {
         Instant now = Instant.now();
@@ -164,10 +197,12 @@ public class SecurityPolicyService {
         return new Challenge(token, code, 600);
     }
 
+    /** 生成一个伪挑战 token（不落库），用于防探测的应答混淆。 */
     public String decoyChallengeToken() {
         return randomToken(32);
     }
 
+    /** 消费邮箱验证码挑战：校验过期/次数/重放后返回已确认的主体与目的地。 */
     @Transactional
     public ConsumedEmailChallenge consumeEmailChallenge(String token, String code, String subjectType, String purpose) {
         var row = sql.createQuery(CHALLENGE).where(CHALLENGE.tokenHash().eq(hash(token)), CHALLENGE.subjectType().eq(subjectType), CHALLENGE.purpose().eq(purpose), CHALLENGE.factorType().eq("email")).select(CHALLENGE).forUpdate().fetchOneOrNull();
@@ -207,6 +242,7 @@ public class SecurityPolicyService {
         return new ConsumedEmailChallenge(null, row.destination());
     }
 
+    /** 签发 TOTP 挑战（不存验证码，验证码在消费时实时计算比对）。 */
     @Transactional
     public Challenge issueTotpChallenge(String subjectType, UUID subject, UUID tenant, String purpose) {
         var factor = requireFactor(subjectType, subject, "totp");
@@ -220,6 +256,7 @@ public class SecurityPolicyService {
         return new Challenge(token, null, 600);
     }
 
+    /** 消费 TOTP 挑战：实时校验验证码成功后标记已用，返回被认证的主体 ID。 */
     @Transactional
     public UUID consumeTotpChallenge(String token, String code, String subjectType, String purpose) {
         var row = sql.createQuery(CHALLENGE).where(CHALLENGE.tokenHash().eq(hash(token)), CHALLENGE.subjectType().eq(subjectType), CHALLENGE.purpose().eq(purpose), CHALLENGE.factorType().eq("totp")).select(CHALLENGE).forUpdate().fetchOneOrNull();
@@ -238,16 +275,19 @@ public class SecurityPolicyService {
         return row.subjectId();
     }
 
+    /** 查询主体已启用的多因素认证方式列表。 */
     @Transactional(readOnly = true)
     public Status status(String type, UUID subject) {
         var rows = sql.createQuery(FACTOR).where(FACTOR.subjectType().eq(type), FACTOR.subjectId().eq(subject), FACTOR.enabled().eq(true)).select(FACTOR.factorType()).execute();
         return new Status(!rows.isEmpty(), rows);
     }
 
+    /** 查询指定主体的某类认证因子（不存在返回 null）。 */
     private AuthenticationFactorEntity findFactor(String type, UUID subject, String factor) {
         return sql.createQuery(FACTOR).where(FACTOR.subjectType().eq(type), FACTOR.subjectId().eq(subject), FACTOR.factorType().eq(factor)).select(FACTOR).fetchOneOrNull();
     }
 
+    /** 查询指定主体的某类认证因子，未配置时抛出异常。 */
     private AuthenticationFactorEntity requireFactor(String type, UUID subject, String factor) {
         var f = findFactor(type, subject, factor);
         if (f == null) {
@@ -256,6 +296,7 @@ public class SecurityPolicyService {
         return f;
     }
 
+    /** 读取全局安全策略，不存在时按默认值初始化一条。 */
     private SecurityPolicyEntity policyEntity() {
         var found = sql.createQuery(POLICY).select(POLICY).fetchOneOrNull();
         if (found == null) {
@@ -265,6 +306,7 @@ public class SecurityPolicyService {
         return found;
     }
 
+    /** 读取指定租户的安全策略，不存在时按默认值初始化一条。 */
     private SecurityPolicyEntity policyEntity(UUID tenant) {
         var found = sql.createQuery(POLICY).where(POLICY.tenantId().eq(tenant)).select(POLICY).fetchOneOrNull();
         if (found == null) {
@@ -274,30 +316,36 @@ public class SecurityPolicyService {
         return found;
     }
 
+    /** 将策略实体转为视图对象。 */
     private static Policy view(SecurityPolicyEntity e) {
         return new Policy(e.passwordMinLength(), e.passwordRequireUpper(), e.passwordRequireLower(), e.passwordRequireNumber(), e.passwordRequireSpecial(), e.passwordMaxAgeDays(), e.passwordHistoryCount(), e.mfaRequired(), e.loginAttemptLimit(), e.lockoutDurationSeconds());
     }
 
+    /** 校验策略参数取值范围：密码长度 8-128、历史 0-24、锁定时长等下限约束。 */
     private static void validate(Policy p) {
         if (p == null || p.minLength() < 8 || p.minLength() > 128 || p.historyCount() < 0 || p.historyCount() > 24 || p.loginAttemptLimit() < 1 || p.lockoutSeconds() < 60) {
             throw new DomainException(ErrorCodeConstants.SECURITY_POLICY_INVALID);
         }
     }
 
+    /** 拼装加密用的 AAD：主体类型 + 主体 ID + 因子类型。 */
     private static String aad(String type, UUID id, String factor) {
         return type + ":" + id + ":" + factor;
     }
 
+    /** 对标签做 URL 编码，用于拼装 otpauth 二维码 URI。 */
     private static String url(String v) {
         return java.net.URLEncoder.encode(v == null ? "user" : v, StandardCharsets.UTF_8);
     }
 
+    /** 生成指定字节数随机数的 URL-safe Base64 token（挑战 token / 备用码）。 */
     private String randomToken(int bytes) {
         byte[] value = new byte[bytes];
         random.nextBytes(value);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(value);
     }
 
+    /** SHA-256 十六进制哈希（用于验证码/token 的落库比对）。 */
     private static String hash(String value) {
         try {
             return java.util.HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Objects.toString(value, "").getBytes(StandardCharsets.UTF_8)));
@@ -306,20 +354,60 @@ public class SecurityPolicyService {
         }
     }
 
+    /**
+     * 安全策略值对象。
+     *
+     * @param minLength          密码最小长度（8-128）
+     * @param requireUpper       是否要求大写字母
+     * @param requireLower       是否要求小写字母
+     * @param requireNumber      是否要求数字
+     * @param requireSpecial     是否要求特殊字符
+     * @param maxAgeDays         密码最长有效期（天），过期需改密
+     * @param historyCount       防重用保留的历史密码条数（0-24）
+     * @param mfaRequired        是否强制启用 MFA
+     * @param loginAttemptLimit  登录失败锁定阈值（连续失败次数）
+     * @param lockoutSeconds     锁定持续时间（秒）
+     */
     public record Policy(int minLength, boolean requireUpper, boolean requireLower, boolean requireNumber,
                          boolean requireSpecial, int maxAgeDays, int historyCount, boolean mfaRequired,
                          int loginAttemptLimit, int lockoutSeconds) {
     }
 
+    /**
+     * TOTP 设置结果。
+     *
+     * @param secret      明文 TOTP 密钥（仅设置时返回一次）
+     * @param qrCodeUrl   otpauth 二维码 URI，供用户扫码录入
+     * @param backupCodes 一次性备用码列表（仅设置时返回一次）
+     */
     public record Setup(String secret, String qrCodeUrl, List<String> backupCodes) {
     }
 
+    /**
+     * 认证挑战签发结果。
+     *
+     * @param token     挑战令牌（回调时提交以定位挑战）
+     * @param code      一次性验证码（邮箱场景返回，TOTP 场景为 null）
+     * @param expiresIn 有效期（秒）
+     */
     public record Challenge(String token, String code, int expiresIn) {
     }
 
+    /**
+     * 邮箱挑战消费结果。
+     *
+     * @param subjectId   被认证的主体 ID（注册场景可为 null）
+     * @param destination 验证码发送目的地（邮箱）
+     */
     public record ConsumedEmailChallenge(UUID subjectId, String destination) {
     }
 
+    /**
+     * 多因素认证状态。
+     *
+     * @param enabled 是否已启用至少一种因子
+     * @param methods 已启用的因子类型列表（如 totp）
+     */
     public record Status(boolean enabled, List<String> methods) {
     }
 }

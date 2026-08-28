@@ -2,6 +2,12 @@ package com.easy1auth.security;
 
 import com.easy1auth.foundation.error.ErrorCode;
 
+/**
+ * 安全策略域错误码常量（17000-17011）。
+ *
+ * <p>覆盖登录锁定、验证码限流、MFA/TOTP、密码强度与复用、安全策略校验等
+ * 环节的业务错误，供 {@link com.easy1auth.foundation.error.DomainException} 使用。</p>
+ */
 public interface ErrorCodeConstants {
     ErrorCode ACCOUNT_TEMPORARILY_LOCKED = new ErrorCode(17000, "登录失败次数过多，请稍后再试");
     ErrorCode CODE_RATE_LIMITED = new ErrorCode(17001, "验证码发送过于频繁");

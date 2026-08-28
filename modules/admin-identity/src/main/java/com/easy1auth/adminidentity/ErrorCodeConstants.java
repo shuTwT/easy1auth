@@ -2,6 +2,12 @@ package com.easy1auth.adminidentity;
 
 import com.easy1auth.foundation.error.ErrorCode;
 
+/**
+ * 管理账号身份域错误码常量（12000-12018）。
+ *
+ * <p>定义管理后台账号/凭证/会话/注册码等业务场景的错误码，
+ * 供领域服务抛出 {@link com.easy1auth.foundation.error.DomainException} 使用。</p>
+ */
 public interface ErrorCodeConstants {
     ErrorCode ADMINISTRATOR_ACCOUNT_NOT_ACTIVE = new ErrorCode(12000, "管理员账号不存在或未启用");
     ErrorCode ADMINISTRATOR_ACCOUNT_REQUIRED = new ErrorCode(12001, "管理员账号不能为空");

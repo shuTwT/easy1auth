@@ -17,10 +17,19 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * 平台菜单目录接口。
+ *
+ * <p>管理端 REST 入口，基路径 {@code /api/platform/menus}，返回当前账号在平台
+ * 管理侧可见的菜单与全部权限目录。操作通过 {@link PlatformManagementPermission}
+ * 做平台级权限控制，并以 {@link ApiResponse} 统一包装返回。</p>
+ */
 @RestController
 @RequestMapping("/api/platform/menus")
 public class PlatformMenuController {
+    /** 平台级授权解析器 */
     private final PlatformAuthorizationResolver platformAuthorization;
+    /** 管理权限目录（菜单 / 目录 / 权限的定义集合） */
     private final ManagementPermissionCatalog catalog;
 
     PlatformMenuController(PlatformAuthorizationResolver platformAuthorization, ManagementPermissionCatalog catalog) {
@@ -28,6 +37,7 @@ public class PlatformMenuController {
         this.catalog = catalog;
     }
 
+    /** 查询平台管理菜单（菜单与目录）及完整权限目录。 */
     @PlatformManagementPermission(value = ManagementPermissionCode.MENU_MANAGEMENT_LIST)
     @GetMapping
     public ApiResponse<MenuCatalogResponse> list(@AuthenticationPrincipal Jwt actor) {
@@ -40,6 +50,7 @@ public class PlatformMenuController {
         return ApiResponse.ok(new MenuCatalogResponse(menus, permissions));
     }
 
+    /** 从 JWT 主体解析当前账号 ID，缺失或非法时抛出认证异常。 */
     private static UUID accountId(Jwt actor) {
         if (actor == null || actor.getSubject() == null) {
             throw new DomainException(ErrorCodeConstants.AUTHENTICATION_SUBJECT_INVALID);
@@ -51,6 +62,12 @@ public class PlatformMenuController {
         }
     }
 
+    /**
+     * 菜单目录响应。
+     *
+     * @param menus       当前可展示的菜单与目录（按权限类型过滤）
+     * @param permissions 完整的权限目录视图
+     */
     public record MenuCatalogResponse(
             List<ManagementPermissionView> menus,
             List<ManagementPermissionView> permissions) {

@@ -2,6 +2,12 @@ package com.easy1auth.admin.web;
 
 import com.easy1auth.foundation.error.ErrorCode;
 
+/**
+ * 管理端接口错误码常量（包私有约定）。
+ *
+ * <p>集中定义管理端 REST API 使用的业务错误码与中文提示，供控制器与
+ * {@link GlobalExceptionHandler} 引用，保证错误码全局唯一且语义一致。</p>
+ */
 public interface ErrorCodeConstants {
     ErrorCode AUTHENTICATION_SUBJECT_INVALID = new ErrorCode(23000, "认证主体无效");
     ErrorCode CODE_TYPE_UNSUPPORTED = new ErrorCode(23001, "不支持的验证码类型");

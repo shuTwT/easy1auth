@@ -17,19 +17,33 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * 目录目录服务：管理 pool_user 的用户组（Group）、岗位（Position）及其组织关系。
+ *
+ * <p>用户组支持树形层级与多种类型（team / department / project / organization），
+ * 可维护组成员与组管理员；岗位记录编码、层级与部门归属。用户组、岗位均按租户隔离，
+ * 服务于 pool_user 的组织架构管理。</p>
+ */
 @Service
 public class DirectoryCatalogService {
+    /** 用户组表（user_group）静态描述符 */
     private static final UserGroupEntityTable GROUP = UserGroupEntityTable.$;
+    /** 岗位表（position）静态描述符 */
     private static final PositionEntityTable POSITION = PositionEntityTable.$;
+    /** pool_user 用户表静态描述符 */
     private static final PoolUserEntityTable USER = PoolUserEntityTable.$;
+    /** 用户-组成员分配表（pool_user_group）静态描述符 */
     private static final UserGroupAssignmentEntityTable MEMBER = UserGroupAssignmentEntityTable.$;
+    /** 用户-组管理员分配表（pool_group_admin）静态描述符 */
     private static final GroupAdminAssignmentEntityTable ADMIN = GroupAdminAssignmentEntityTable.$;
+    /** jimmer SQL 客户端 */
     private final JSqlClient sql;
 
     public DirectoryCatalogService(JSqlClient sql) {
         this.sql = sql;
     }
 
+    /** 分页查询租户下的用户组，可按名称模糊搜索、按类型/父组过滤，按创建时间倒序。 */
     @Transactional(readOnly = true)
     public PageData<GroupView> groups(UUID tenant, int page, int size, String name, String type, UUID parentId) {
         int p = Math.max(1, page), s = Math.min(100, Math.max(1, size));
@@ -42,11 +56,13 @@ public class DirectoryCatalogService {
         return PageData.of(query.limit(s, (long) (p - 1) * s).execute().stream().map(this::groupView).toList(), p, s, total);
     }
 
+    /** 查询租户下单个用户组的详情视图。 */
     @Transactional(readOnly = true)
     public GroupView group(UUID tenant, UUID id) {
         return groupView(groupEntity(tenant, id));
     }
 
+    /** 创建用户组（默认类型 team）：校验名称/类型与父组合法性。 */
     @Transactional
     public GroupView createGroup(UUID tenant, GroupInput in) {
         validateGroup(in.name(), in.type());
@@ -59,6 +75,7 @@ public class DirectoryCatalogService {
         return groupView(entity);
     }
 
+    /** 更新用户组的名称、类型、描述与父组（仅更新传入的非空字段）；企业身份源托管的组不可修改。 */
     @Transactional
     public GroupView updateGroup(UUID tenant, UUID id, GroupInput in) {
         var old = groupEntity(tenant, id);
@@ -79,6 +96,7 @@ public class DirectoryCatalogService {
         return group(tenant, id);
     }
 
+    /** 删除用户组；存在子组的用户组不可删除，企业身份源托管的组不可删除。 */
     @Transactional
     public void deleteGroup(UUID tenant, UUID id) {
         rejectEnterpriseManaged(groupEntity(tenant, id));
@@ -88,6 +106,7 @@ public class DirectoryCatalogService {
         sql.createDelete(GROUP).where(GROUP.id().eq(id), GROUP.tenantId().eq(tenant)).execute();
     }
 
+    /** 构建租户下的用户组树（按父组 parentId 组织层级，含成员/管理员/子组数量）。 */
     @Transactional(readOnly = true)
     public List<GroupTree> groupTree(UUID tenant) {
         var groups = sql.createQuery(GROUP).where(GROUP.tenantId().eq(tenant)).orderBy(GROUP.createdAt()).select(GROUP).execute();
@@ -105,6 +124,7 @@ public class DirectoryCatalogService {
         return roots.stream().map(MutableGroupTree::freeze).toList();
     }
 
+    /** 统计租户下的用户组数量（按类型拆分，含顶级组数量）。 */
     @Transactional(readOnly = true)
     public GroupStats groupStats(UUID tenant) {
         var rows = sql.createQuery(GROUP).where(GROUP.tenantId().eq(tenant)).select(GROUP).execute();
@@ -112,6 +132,7 @@ public class DirectoryCatalogService {
                 countType(rows, "organization"), rows.stream().filter(g -> g.parentId() == null).count());
     }
 
+    /** 查询用户组的成员与管理员列表（含成员总数）。 */
     @Transactional(readOnly = true)
     public GroupMembers groupMembers(UUID tenant, UUID groupId) {
         groupEntity(tenant, groupId);
@@ -120,26 +141,31 @@ public class DirectoryCatalogService {
         return new GroupMembers(userViews(tenant, memberIds), userViews(tenant, adminIds), memberIds.size());
     }
 
+    /** 批量向用户组添加成员（已存在的分配自动跳过）。 */
     @Transactional
     public void addMembers(UUID tenant, UUID groupId, Collection<UUID> users) {
         mutateGroupUsers(tenant, groupId, users, false, true);
     }
 
+    /** 批量从用户组移除成员。 */
     @Transactional
     public void removeMembers(UUID tenant, UUID groupId, Collection<UUID> users) {
         mutateGroupUsers(tenant, groupId, users, false, false);
     }
 
+    /** 批量向用户组添加管理员（已存在的分配自动跳过）。 */
     @Transactional
     public void addAdmins(UUID tenant, UUID groupId, Collection<UUID> users) {
         mutateGroupUsers(tenant, groupId, users, true, true);
     }
 
+    /** 批量移除用户组的组管理员。 */
     @Transactional
     public void removeAdmins(UUID tenant, UUID groupId, Collection<UUID> users) {
         mutateGroupUsers(tenant, groupId, users, true, false);
     }
 
+    /** 分页查询租户下的岗位，可按名称/编码模糊搜索、按部门/层级过滤，按创建时间倒序。 */
     @Transactional(readOnly = true)
     public PageData<PositionView> positions(UUID tenant, int page, int size, String name, String code, UUID departmentId, Integer level) {
         int p = Math.max(1, page), s = Math.min(100, Math.max(1, size));
@@ -152,11 +178,13 @@ public class DirectoryCatalogService {
         return PageData.of(query.limit(s, (long) (p - 1) * s).execute().stream().map(this::positionView).toList(), p, s, total);
     }
 
+    /** 查询租户下单个岗位的详情视图。 */
     @Transactional(readOnly = true)
     public PositionView position(UUID tenant, UUID id) {
         return positionView(positionEntity(tenant, id));
     }
 
+    /** 创建岗位：校验名称与编码，默认层级 level=1。 */
     @Transactional
     public PositionView createPosition(UUID tenant, PositionInput in) {
         validatePosition(in.name(), in.code());
@@ -168,6 +196,7 @@ public class DirectoryCatalogService {
         return positionView(e);
     }
 
+    /** 更新岗位的名称、编码、描述、部门、层级、排序与人数上限（仅更新传入的非空字段）。 */
     @Transactional
     public PositionView updatePosition(UUID tenant, UUID id, PositionInput in) {
         var old = positionEntity(tenant, id);
@@ -194,12 +223,14 @@ public class DirectoryCatalogService {
         return position(tenant, id);
     }
 
+    /** 删除岗位。 */
     @Transactional
     public void deletePosition(UUID tenant, UUID id) {
         positionEntity(tenant, id);
         sql.createDelete(POSITION).where(POSITION.id().eq(id), POSITION.tenantId().eq(tenant)).execute();
     }
 
+    /** 统计租户下的岗位数量：总数、在编（有用户）/空编数量及平均层级。 */
     @Transactional(readOnly = true)
     public PositionStats positionStats(UUID tenant) {
         var rows = sql.createQuery(POSITION).where(POSITION.tenantId().eq(tenant)).select(POSITION).execute();
@@ -208,6 +239,7 @@ public class DirectoryCatalogService {
                 rows.stream().mapToInt(PositionEntity::level).average().orElse(0));
     }
 
+    /** 查询用户当前加入的全部用户组。 */
     @Transactional(readOnly = true)
     public List<GroupView> groupsForUser(UUID tenant, UUID userId) {
         userEntity(tenant, userId);
@@ -215,6 +247,7 @@ public class DirectoryCatalogService {
         return ids.isEmpty() ? List.of() : sql.createQuery(GROUP).where(GROUP.tenantId().eq(tenant), GROUP.id().in(ids)).select(GROUP).execute().stream().map(this::groupView).toList();
     }
 
+    /** 替换用户加入的用户组：先删除旧的成员分配，再批量插入新的分配。 */
     @Transactional
     public void replaceUserGroups(UUID tenant, UUID userId, Collection<UUID> groupIds) {
         userEntity(tenant, userId);
@@ -341,139 +374,252 @@ public class DirectoryCatalogService {
         return groups.stream().filter(g -> type.equals(g.type())).count();
     }
 
+    /** 从当前租户上下文取租户 ID 后分页查询用户组。 */
     @Transactional(readOnly = true)
     public PageData<GroupView> groups(int page, int size, String name, String type, UUID parentId) {
         return groups(TenantContextHolder.requireTenantId(), page, size, name, type, parentId);
     }
 
+    /** 从当前租户上下文取租户 ID 后查询用户组详情。 */
     @Transactional(readOnly = true)
     public GroupView group(UUID id) {
         return group(TenantContextHolder.requireTenantId(), id);
     }
 
+    /** 从当前租户上下文取租户 ID 后创建用户组。 */
     @Transactional
     public GroupView createGroup(GroupInput in) {
         return createGroup(TenantContextHolder.requireTenantId(), in);
     }
 
+    /** 从当前租户上下文取租户 ID 后更新用户组。 */
     @Transactional
     public GroupView updateGroup(UUID id, GroupInput in) {
         return updateGroup(TenantContextHolder.requireTenantId(), id, in);
     }
 
+    /** 从当前租户上下文取租户 ID 后删除用户组。 */
     @Transactional
     public void deleteGroup(UUID id) {
         deleteGroup(TenantContextHolder.requireTenantId(), id);
     }
 
+    /** 从当前租户上下文取租户 ID 后构建用户组树。 */
     @Transactional(readOnly = true)
     public List<GroupTree> groupTree() {
         return groupTree(TenantContextHolder.requireTenantId());
     }
 
+    /** 从当前租户上下文取租户 ID 后统计用户组。 */
     @Transactional(readOnly = true)
     public GroupStats groupStats() {
         return groupStats(TenantContextHolder.requireTenantId());
     }
 
+    /** 从当前租户上下文取租户 ID 后查询用户组成员与管理员。 */
     @Transactional(readOnly = true)
     public GroupMembers groupMembers(UUID groupId) {
         return groupMembers(TenantContextHolder.requireTenantId(), groupId);
     }
 
+    /** 从当前租户上下文取租户 ID 后向用户组添加成员。 */
     @Transactional
     public void addMembers(UUID groupId, Collection<UUID> users) {
         addMembers(TenantContextHolder.requireTenantId(), groupId, users);
     }
 
+    /** 从当前租户上下文取租户 ID 后移除用户组成员。 */
     @Transactional
     public void removeMembers(UUID groupId, Collection<UUID> users) {
         removeMembers(TenantContextHolder.requireTenantId(), groupId, users);
     }
 
+    /** 从当前租户上下文取租户 ID 后向用户组添加管理员。 */
     @Transactional
     public void addAdmins(UUID groupId, Collection<UUID> users) {
         addAdmins(TenantContextHolder.requireTenantId(), groupId, users);
     }
 
+    /** 从当前租户上下文取租户 ID 后移除用户组管理员。 */
     @Transactional
     public void removeAdmins(UUID groupId, Collection<UUID> users) {
         removeAdmins(TenantContextHolder.requireTenantId(), groupId, users);
     }
 
+    /** 从当前租户上下文取租户 ID 后分页查询岗位。 */
     @Transactional(readOnly = true)
     public PageData<PositionView> positions(int page, int size, String name, String code, UUID departmentId, Integer level) {
         return positions(TenantContextHolder.requireTenantId(), page, size, name, code, departmentId, level);
     }
 
+    /** 从当前租户上下文取租户 ID 后查询岗位详情。 */
     @Transactional(readOnly = true)
     public PositionView position(UUID id) {
         return position(TenantContextHolder.requireTenantId(), id);
     }
 
+    /** 从当前租户上下文取租户 ID 后创建岗位。 */
     @Transactional
     public PositionView createPosition(PositionInput in) {
         return createPosition(TenantContextHolder.requireTenantId(), in);
     }
 
+    /** 从当前租户上下文取租户 ID 后更新岗位。 */
     @Transactional
     public PositionView updatePosition(UUID id, PositionInput in) {
         return updatePosition(TenantContextHolder.requireTenantId(), id, in);
     }
 
+    /** 从当前租户上下文取租户 ID 后删除岗位。 */
     @Transactional
     public void deletePosition(UUID id) {
         deletePosition(TenantContextHolder.requireTenantId(), id);
     }
 
+    /** 从当前租户上下文取租户 ID 后统计岗位。 */
     @Transactional(readOnly = true)
     public PositionStats positionStats() {
         return positionStats(TenantContextHolder.requireTenantId());
     }
 
+    /** 从当前租户上下文取租户 ID 后查询用户加入的用户组。 */
     @Transactional(readOnly = true)
     public List<GroupView> groupsForUser(UUID userId) {
         return groupsForUser(TenantContextHolder.requireTenantId(), userId);
     }
 
+    /** 从当前租户上下文取租户 ID 后替换用户加入的用户组。 */
     @Transactional
     public void replaceUserGroups(UUID userId, Collection<UUID> groupIds) {
         replaceUserGroups(TenantContextHolder.requireTenantId(), userId, groupIds);
     }
 
+    /**
+     * 用户组统计视图。
+     *
+     * @param totalGroups        用户组总数
+     * @param teamGroups         team（团队）类型组数
+     * @param departmentGroups  department（部门）类型组数
+     * @param projectGroups     project（项目）类型组数
+     * @param organizationGroups organization（组织）类型组数
+     * @param rootGroups        顶级组（无父组）数量
+     */
     public record GroupStats(long totalGroups, long teamGroups, long departmentGroups, long projectGroups,
                              long organizationGroups, long rootGroups) {
     }
 
+    /**
+     * 岗位统计视图。
+     *
+     * @param totalPositions  岗位总数
+     * @param filledPositions 在编（有用户）岗位数
+     * @param vacantPositions 空编（无用户）岗位数
+     * @param averageLevel    平均岗位层级
+     */
     public record PositionStats(long totalPositions, long filledPositions, long vacantPositions, double averageLevel) {
     }
 
+    /**
+     * 用户组创建/更新入参。
+     *
+     * @param name        用户组名称（必填）
+     * @param description 用户组描述
+     * @param type        用户组类型：team / department / project / organization
+     * @param parentId    父组 ID（可为 null，表示顶级组）
+     */
     public record GroupInput(String name, String description, String type, UUID parentId) {
     }
 
+    /**
+     * 岗位创建/更新入参。
+     *
+     * @param name         岗位名称（必填）
+     * @param code         岗位编码（必填）
+     * @param description  岗位描述
+     * @param departmentId 所属部门 ID（可为 null）
+     * @param level        岗位层级（默认 1）
+     * @param sequence     排序序号
+     * @param maxCount     该岗位人数上限（可为 null，表示不限制）
+     */
     public record PositionInput(String name, String code, String description, UUID departmentId, Integer level,
                                 String sequence, Integer maxCount) {
     }
 
+    /**
+     * 用户组详情视图。
+     *
+     * @param id          用户组 ID
+     * @param tenantId    所属租户 ID
+     * @param name        用户组名称
+     * @param description 用户组描述
+     * @param type        用户组类型
+     * @param parentId    父组 ID
+     * @param createdAt   创建时间
+     * @param updatedAt   最后更新时间
+     * @param _count      成员/管理员/子组数量统计
+     */
     public record GroupView(UUID id, UUID tenantId, String name, String description, String type, UUID parentId,
                             Instant createdAt, Instant updatedAt, Counts _count) {
     }
 
+    /**
+     * 用户组数量统计视图。
+     *
+     * @param members  组成员数
+     * @param admins   组管理员数
+     * @param children 子组数
+     */
     public record Counts(long members, long admins, long children) {
     }
 
+    /**
+     * 岗位详情视图。
+     *
+     * @param id          岗位 ID
+     * @param tenantId    所属租户 ID
+     * @param name        岗位名称
+     * @param code        岗位编码
+     * @param description 岗位描述
+     * @param departmentId 所属部门 ID
+     * @param level       岗位层级
+     * @param sequence    排序序号
+     * @param userCount   在编用户数
+     * @param maxCount    人数上限（可为 null）
+     * @param createdAt   创建时间
+     * @param updatedAt   最后更新时间
+     */
     public record PositionView(UUID id, UUID tenantId, String name, String code, String description, UUID departmentId,
                                int level, String sequence, long userCount, Integer maxCount, Instant createdAt,
                                Instant updatedAt) {
     }
 
+    /**
+     * 用户组成员视图。
+     *
+     * @param members 成员列表
+     * @param admins  管理员列表
+     * @param total   成员总数
+     */
     public record GroupMembers(List<PoolUserView> members, List<PoolUserView> admins, int total) {
     }
 
+    /**
+     * 用户组树节点视图。
+     *
+     * @param id          用户组 ID
+     * @param name        用户组名称
+     * @param description 用户组描述
+     * @param type        用户组类型
+     * @param parentId    父组 ID
+     * @param children    子组节点列表
+     * @param memberCount 成员数
+     * @param adminCount  管理员数
+     */
     public record GroupTree(UUID id, String name, String description, String type, UUID parentId,
                             List<GroupTree> children, long memberCount, long adminCount) {
     }
 
+    /** 用户组树的可变构建节点（组装完成后转为不可变的 {@link GroupTree}）。 */
     private static final class MutableGroupTree {
         final UserGroupEntity entity;
         final long members, admins;

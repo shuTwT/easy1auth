@@ -2,6 +2,12 @@ package com.easy1auth.directory;
 
 import com.easy1auth.foundation.error.ErrorCode;
 
+/**
+ * 目录（directory）模块的错误码常量。
+ *
+ * <p>集中定义 pool_user 目录相关的领域错误码（14xxx 段）：
+ * 用户、用户组、岗位以及企业身份源托管、密码与配额等场景的错误描述。</p>
+ */
 public interface ErrorCodeConstants {
     ErrorCode CURRENT_PASSWORD_INVALID_POOL_USER = new ErrorCode(14000, "原密码错误");
     ErrorCode DIRECTORY_GROUP_NOT_FOUND = new ErrorCode(14001, "用户组不存在");

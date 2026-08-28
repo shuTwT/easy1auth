@@ -11,6 +11,7 @@ import java.net.URI;
 @Component
 public class WechatMpAdapter extends WechatAdapter {
 
+    /** 微信公众号网页授权页地址（在微信内置浏览器中打开） */
     private static final String AUTHORIZE = "https://open.weixin.qq.com/connect/oauth2/authorize";
 
     WechatMpAdapter(ObjectMapper json) { super(json); }
@@ -19,6 +20,7 @@ public class WechatMpAdapter extends WechatAdapter {
     @Override public String displayName() { return "微信公众号"; }
     @Override public String defaultScope() { return "snsapi_userinfo"; }
 
+    /** 拼装公众号网页授权 URL，scope 缺省时使用 snsapi_userinfo（可获取用户信息）。 */
     @Override
     public AuthorizeResult authorize(String clientId, URI redirectUri, String state, String scope, String pkceChallenge) {
         var url = AUTHORIZE + "?appid=" + enc(clientId)

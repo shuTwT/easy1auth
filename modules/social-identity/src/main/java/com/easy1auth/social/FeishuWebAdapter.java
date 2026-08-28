@@ -17,8 +17,11 @@ import java.util.Map;
 @Component
 public class FeishuWebAdapter extends AbstractSocialIdentityAdapter {
 
+    /** 飞书 OAuth 授权页地址（引导用户到飞书确认授权） */
     private static final String AUTHORIZE = "https://accounts.feishu.cn/open-apis/authen/v1/authorize";
+    /** 飞书 OAuth v3 换取 user_access_token 的令牌端点 */
     private static final String USER_TOKEN = "https://accounts.feishu.cn/oauth/v3/token";
+    /** 飞书用户信息端点（携带 user_access_token 调用） */
     private static final String USERINFO = "https://open.feishu.cn/open-apis/authen/v1/user_info";
 
     FeishuWebAdapter(ObjectMapper json) { super(json); }
@@ -28,6 +31,7 @@ public class FeishuWebAdapter extends AbstractSocialIdentityAdapter {
     @Override public String defaultScope() { return ""; }
     @Override public boolean supportsPkce() { return false; }
 
+    /** 拼装飞书授权 URL（response_type=code，飞书不支持 PKCE）。 */
     @Override
     public AuthorizeResult authorize(String clientId, URI redirectUri, String state, String scope, String pkceChallenge) {
         var url = AUTHORIZE + "?client_id=" + enc(clientId)
@@ -37,6 +41,7 @@ public class FeishuWebAdapter extends AbstractSocialIdentityAdapter {
         return new AuthorizeResult(URI.create(url));
     }
 
+    /** 用授权码换取 user_access_token 并拉取飞书用户信息，subject 优先取 open_id。 */
     @Override
     public RemoteUserInfo exchangeAndFetch(String clientId, String clientSecret, String code, URI redirectUri, String pkceVerifier) {
         // OAuth v3 直接使用授权码与应用凭证换取 user_access_token。

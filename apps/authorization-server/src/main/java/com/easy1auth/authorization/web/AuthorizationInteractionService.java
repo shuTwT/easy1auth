@@ -358,31 +358,88 @@ public class AuthorizationInteractionService {
         return csrf == null ? null : csrf.getToken();
     }
 
-    /** 登录页或授权页公开展示的品牌样式。 */
+    /**
+     * 登录页或授权页公开展示的品牌样式。
+     *
+     * @param logo              浅色模式 Logo 地址
+     * @param logoDark          深色模式 Logo 地址
+     * @param backgroundImage   登录页背景图地址
+     * @param backgroundColor   登录页背景色
+     * @param primaryColor      主题主色
+     * @param title             登录页标题
+     * @param subtitle          登录页副标题
+     * @param loginMethods      启用的登录方式
+     * @param socialProviders   启用的社会化身份源 ID 列表
+     * @param socialSources     可渲染的社会化登录按钮详情
+     * @param registrationEnabled 是否开放自助注册
+     * @param config            租户公开的自定义配置
+     * @param termsOfService    服务条款文档地址（可为 null）
+     * @param privacyPolicy     隐私政策文档地址（可为 null）
+     */
     public record PublicStyle(String logo, String logoDark, String backgroundImage, String backgroundColor,
                               String primaryColor, String title, String subtitle, List<String> loginMethods,
                               List<String> socialProviders, List<SocialSourceSummary> socialSources,
                               boolean registrationEnabled, Map<String, Object> config,
                               String termsOfService, String privacyPolicy) { }
 
-    /** 登录页渲染社交登录按钮所需的最小身份源信息。 */
+    /**
+     * 登录页渲染社交登录按钮所需的最小身份源信息。
+     *
+     * @param id   身份源 ID
+     * @param type 身份源类型（如 feishu）
+     * @param name 身份源展示名称
+     */
     public record SocialSourceSummary(String id, String type, String name) { }
 
-    /** 登录页上下文，包含当前状态、租户、样式、错误提示和 CSRF Token。 */
+    /**
+     * 登录页上下文，包含当前状态、租户、样式、错误提示和 CSRF Token。
+     *
+     * @param status    当前状态：login / mfa / expired
+     * @param tenantId  租户 ID
+     * @param style     登录页品牌样式
+     * @param message   需要展示的提示信息（如登录错误）
+     * @param csrfToken 页面表单所需的 CSRF Token
+     */
     public record Context(String status, String tenantId, PublicStyle style, String message, String csrfToken) {
         /** 创建一个表示交互已失效的登录上下文。 */
         static Context expired() { return new Context("expired", null, null, "登录请求已过期，请重新发起", null); }
     }
 
-    /** 授权确认页初始化结果。 */
+    /**
+     * 授权确认页初始化结果。
+     *
+     * @param interactionId 服务端生成的不透明交互 ID
+     * @param tenantId      租户 ID
+     * @param style         登录页品牌样式
+     * @param clientId      OAuth 客户端 ID
+     * @param clientName    客户端展示名称
+     * @param scopes        申请的权限范围列表
+     */
     public record ConsentStart(String interactionId, String tenantId, PublicStyle style, String clientId, String clientName, List<String> scopes) { }
 
-    /** 授权确认页上下文，包含客户端信息、权限范围、样式和 CSRF Token。 */
+    /**
+     * 授权确认页上下文，包含客户端信息、权限范围、样式和 CSRF Token。
+     *
+     * @param status    当前状态：consent / expired
+     * @param tenantId  租户 ID
+     * @param style     登录页品牌样式
+     * @param clientId  OAuth 客户端 ID
+     * @param clientName 客户端展示名称
+     * @param scopes    申请的权限范围列表
+     * @param csrfToken 页面表单所需的 CSRF Token
+     */
     public record ConsentContext(String status, String tenantId, PublicStyle style, String clientId, String clientName, List<String> scopes, String csrfToken) {
         /** 创建一个表示授权交互已失效的上下文。 */
         static ConsentContext expired() { return new ConsentContext("expired", null, null, null, null, List.of(), null); }
     }
 
-    /** OAuth 授权决定完成后，供浏览器表单 POST 的参数。 */
+    /**
+     * OAuth 授权决定完成后，供浏览器表单 POST 的参数。
+     *
+     * @param location 继续处理的授权端点地址
+     * @param clientId OAuth 客户端 ID
+     * @param state    授权框架内部的续接 state
+     * @param scopes   同意授予的权限范围（拒绝时为空列表）
+     */
     public record Continuation(String location, String clientId, String state, List<String> scopes) { }
 }
