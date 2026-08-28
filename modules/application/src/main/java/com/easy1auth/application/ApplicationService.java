@@ -258,50 +258,9 @@ public class ApplicationService {
         return new ApplicationView(e.id(), e.tenantId(), e.name(), e.logo(), e.description(), e.type(), e.clientId(), secret, e.redirectUris(), e.postLogoutRedirectUris(), e.allowedGrantTypes(), e.scopes(), e.requirePkce(), e.requireConsent(), e.accessTokenLifetime(), e.refreshTokenLifetime(), e.status(), e.createdAt(), e.updatedAt());
     }
 
-    /**
-     * 应用创建/更新输入。
-     *
-     * @param name                   应用名称
-     * @param logo                   应用 Logo
-     * @param description            应用描述
-     * @param type                   应用类型：web / native / spa / machine
-     * @param redirectUris           授权码回调地址列表
-     * @param postLogoutRedirectUris 登出后的跳转地址列表
-     * @param allowedGrantTypes      允许的授权类型列表
-     * @param scopes                 允许申请的作用域列表
-     * @param requirePkce            是否强制使用 PKCE
-     * @param requireConsent         是否要求用户同意
-     * @param accessTokenLifetime    访问令牌有效期（秒）
-     * @param refreshTokenLifetime   刷新令牌有效期（秒）
-     */
+    
 
-    /**
-     * 应用视图（面向接口层的只读 DTO）。
-     *
-     * @param id                     应用 ID
-     * @param tenantId               所属租户 ID
-     * @param name                   应用名称
-     * @param logo                   应用 Logo
-     * @param description            应用描述
-     * @param type                   应用类型：web / native / spa / machine
-     * @param clientId               客户端 ID
-     * @param clientSecret           客户端密钥明文（仅创建/更新/重新生成时返回，其余场景为 null）
-     * @param redirectUris           授权码回调地址列表
-     * @param postLogoutRedirectUris 登出后的跳转地址列表
-     * @param allowedGrantTypes      允许的授权类型列表
-     * @param scopes                 允许申请的作用域列表
-     * @param requirePkce            是否强制使用 PKCE
-     * @param requireConsent         是否要求用户同意
-     * @param accessTokenLifetime    访问令牌有效期（秒）
-     * @param refreshTokenLifetime   刷新令牌有效期（秒）
-     * @param status                 应用状态：active / disabled
-     * @param createdAt              创建时间
-     * @param updatedAt              最后更新时间
-     */
+    
 
-    /**
-     * 客户端密钥结果。
-     *
-     * @param clientSecret 新生成的客户端密钥明文（仅本次返回）
-     */
+    
 }

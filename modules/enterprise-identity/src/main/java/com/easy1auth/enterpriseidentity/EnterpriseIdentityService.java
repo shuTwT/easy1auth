@@ -208,19 +208,9 @@ public class EnterpriseIdentityService {
         return new FeishuEventResponse(null);
     }
 
-    /**
-     * 身份源数量统计视图。
-     *
-     * @param totalSources    身份源总数
-     * @param activeSources   启用中的身份源数量
-     * @param inactiveSources 停用的身份源数量
-     */
+    
 
-    /**
-     * 飞书回调响应视图：仅 url_verification 挑战应答需要返回内容。
-     *
-     * @param challenge 飞书 URL 验证挑战值（无需应答时为 null）
-     */
+    
 
     /** worker 领取待处理（pending）任务并置为 processing，返回实际领取的任务列表。 */
     @Transactional
@@ -616,41 +606,9 @@ public class EnterpriseIdentityService {
         }
     }
 
-    /**
-     * 身份源新建 / 更新入参。
-     *
-     * @param name              身份源名称
-     * @param appId             飞书开放平台应用 App ID
-     * @param appSecret         应用密钥（更新时为空表示不修改）
-     * @param verificationToken 事件订阅验证令牌
-     * @param encryptKey        事件解密密钥
-     * @param status            身份源状态：active / disabled（可为空）
-     */
+    
 
-    /**
-     * 身份源视图（面向接口层的只读 DTO）。
-     *
-     * @param id             身份源 ID
-     * @param name           身份源名称
-     * @param provider       身份源类型（当前仅 feishu）
-     * @param appId          飞书应用 App ID
-     * @param status         身份源状态：active / disabled
-     * @param lastSyncAt     最近一次同步时间
-     * @param lastSyncStatus 最近一次同步结果：succeeded / partial / failed
-     * @param lastError      最近一次同步的错误信息
-     * @param createdAt      创建时间
-     * @param updatedAt      最后更新时间
-     */
+    
 
-    /**
-     * 同步任务视图（面向接口层的只读 DTO）。
-     *
-     * @param id         任务 ID
-     * @param type       任务类型：full（全量）/ event（事件增量）
-     * @param status     任务状态：pending / processing / succeeded / partial / failed
-     * @param summary    同步结果摘要（计数）
-     * @param lastError  失败时的错误信息
-     * @param createdAt  创建时间
-     * @param finishedAt 完成时间
-     */
+    
 }

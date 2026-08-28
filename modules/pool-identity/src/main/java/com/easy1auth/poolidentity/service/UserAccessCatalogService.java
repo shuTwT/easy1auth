@@ -12,10 +12,7 @@ import com.easy1auth.infrastructure.foundation.id.UuidV7;
 import com.easy1auth.infrastructure.foundation.web.PageData;
 import com.easy1auth.poolidentity.ErrorCodeConstants;
 import com.easy1auth.poolidentity.model.*;
-import org.babyfish.jimmer.sql.JSqlClient;
-import org.babyfish.jimmer.sql.ast.LikeMode;
-import org.babyfish.jimmer.sql.ast.Predicate;
-import org.babyfish.jimmer.sql.ast.mutation.SaveMode;
+import com.easy1auth.poolidentity.repository.UserAccessCatalogRepository;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,7 +43,7 @@ public class UserAccessCatalogService {
     /** pool_user 用户表静态描述符 */
     private static final PoolUserEntityTable USER = PoolUserEntityTable.$;
     /** jimmer SQL 客户端 */
-    private final JSqlClient sql;
+    private final UserAccessCatalogRepository repository;
     /** JDBC 客户端（用于预置权限的批量初始化写入） */
     private final JdbcClient db;
     /** 每个租户首次使用权限功能时自动初始化的预置权限清单 */
@@ -59,8 +56,8 @@ public class UserAccessCatalogService {
             new PermissionSeed("data:all", "全部数据", "data", "data", "all"), new PermissionSeed("data:department", "本部门数据", "data", "data", "department"), new PermissionSeed("data:department-sub", "本部门及下级数据", "data", "data", "department_and_sub"), new PermissionSeed("data:self", "仅本人数据", "data", "data", "self"),
             new PermissionSeed("menu:user", "用户管理", "menu", "menu", "user"), new PermissionSeed("menu:group", "用户组管理", "menu", "menu", "group"), new PermissionSeed("menu:position", "岗位管理", "menu", "menu", "position"), new PermissionSeed("menu:role", "角色管理", "menu", "menu", "role"), new PermissionSeed("menu:permission", "权限管理", "menu", "menu", "permission"));
 
-    public UserAccessCatalogService(JSqlClient sql, JdbcClient db) {
-        this.sql = sql;
+    public UserAccessCatalogService(UserAccessCatalogRepository repository, JdbcClient db) {
+        this.repository = repository;
         this.db = db;
     }
 
@@ -68,11 +65,8 @@ public class UserAccessCatalogService {
     @Transactional(readOnly = true)
     public PageData<RoleView> roles(UUID tenant, int page, int pageSize, String search, String type) {
         int p = Math.max(1, page), size = Math.min(100, Math.max(1, pageSize));
-        var query = sql.createQuery(ROLE).where(ROLE.tenantId().eq(tenant))
-                .whereIf(search != null, () -> Predicate.or(ROLE.name().ilike(search, LikeMode.ANYWHERE), ROLE.code().ilike(search, LikeMode.ANYWHERE)))
-                .whereIf(type != null, () -> ROLE.type().eq(type)).orderBy(ROLE.createdAt().desc()).select(ROLE);
-        long total = query.fetchUnlimitedCount();
-        return PageData.of(query.limit(size, (long) (p - 1) * size).execute().stream().map(this::roleView).toList(), p, size, total);
+        var rows = repository.findRoles(tenant, search, type);
+        return PageData.of(rows.stream().skip((long) (p - 1) * size).limit(size).map(this::roleView).toList(), p, size, rows.size());
     }
 
     /** 查询租户下单个角色的详情视图。 */
@@ -94,7 +88,7 @@ public class UserAccessCatalogService {
                 .setName(in.name()).setCode(in.code()).setDescription(in.description()).setType(in.type() == null ? "custom" : in.type())
                 .setPermissions(in.permissions() == null ? Map.of() : in.permissions()).setDataScope(in.dataScope() == null ? "self" : in.dataScope())
                 .setParentId(in.parentId()).setCreatedAt(now).setUpdatedAt(now));
-        sql.saveCommand(e).setMode(SaveMode.INSERT_ONLY).execute();
+        repository.saveRole(e);
         return roleView(e);
     }
 
@@ -108,17 +102,7 @@ public class UserAccessCatalogService {
         String name = in.name() == null ? old.name() : in.name(), scope = in.dataScope() == null ? old.dataScope() : in.dataScope();
         validateRole(name, old.code(), scope);
         validateRoleParent(tenant, id, in.parentId());
-        var u = sql.createUpdate(ROLE).set(ROLE.name(), name).set(ROLE.dataScope(), scope).set(ROLE.updatedAt(), Instant.now()).where(ROLE.id().eq(id), ROLE.tenantId().eq(tenant));
-        if (in.description() != null) {
-            u.set(ROLE.description(), in.description());
-        }
-        if (in.permissions() != null) {
-            u.set(ROLE.permissions(), in.permissions());
-        }
-        if (in.parentId() != null) {
-            u.set(ROLE.parentId(), in.parentId());
-        }
-        u.execute();
+        repository.updateRole(tenant, id, name, scope, in.description(), in.permissions(), in.parentId());
         return role(tenant, id);
     }
 
@@ -132,16 +116,16 @@ public class UserAccessCatalogService {
         if (assignmentCount(tenant, id) > 0) {
             throw new DomainException(ErrorCodeConstants.ROLE_HAS_USERS);
         }
-        if (sql.createQuery(ROLE).where(ROLE.tenantId().eq(tenant), ROLE.parentId().eq(id)).select(ROLE.id()).exists()) {
+        if (repository.hasRoleChildren(tenant, id)) {
             throw new DomainException(ErrorCodeConstants.ROLE_HAS_CHILDREN);
         }
-        sql.createDelete(ROLE).where(ROLE.id().eq(id), ROLE.tenantId().eq(tenant)).execute();
+        repository.deleteRole(tenant, id);
     }
 
     /** 构建租户下的角色树（按父角色 parentId 组织层级）。 */
     @Transactional(readOnly = true)
     public List<RoleTree> roleTree(UUID tenant) {
-        var roles = sql.createQuery(ROLE).where(ROLE.tenantId().eq(tenant)).orderBy(ROLE.createdAt()).select(ROLE).execute();
+        var roles = repository.findAllRoles(tenant);
         Map<UUID, MutableRoleTree> nodes = new LinkedHashMap<>();
         roles.forEach(r -> nodes.put(r.id(), new MutableRoleTree(roleView(r))));
         List<MutableRoleTree> roots = new ArrayList<>();
@@ -159,9 +143,9 @@ public class UserAccessCatalogService {
     /** 统计租户下的角色总数、内置/自定义角色数以及已分配角色的去重用户数。 */
     @Transactional(readOnly = true)
     public RoleStats roleStats(UUID tenant) {
-        var roles = sql.createQuery(ROLE).where(ROLE.tenantId().eq(tenant)).select(ROLE).execute();
+        var roles = repository.findAllRoles(tenant);
         var roleIds = roles.stream().map(PoolRoleEntity::id).toList();
-        var assigned = roleIds.isEmpty() ? 0L : sql.createQuery(ASSIGNMENT).where(ASSIGNMENT.id().tenantId().eq(tenant), ASSIGNMENT.id().roleId().in(roleIds)).select(ASSIGNMENT.id().userId()).execute().stream().distinct().count();
+        var assigned = roleIds.isEmpty() ? 0L : roleIds.stream().flatMap(roleId -> repository.findAssignedUserIds(tenant, roleId).stream()).distinct().count();
         return new RoleStats(roles.size(), roles.stream().filter(r -> "system".equals(r.type())).count(),
                 roles.stream().filter(r -> "custom".equals(r.type())).count(), assigned);
     }
@@ -170,13 +154,11 @@ public class UserAccessCatalogService {
     @Transactional(readOnly = true)
     public RoleUsers roleUsers(UUID tenant, UUID roleId, String search) {
         roleEntity(tenant, roleId);
-        var userIds = sql.createQuery(ASSIGNMENT).where(ASSIGNMENT.id().tenantId().eq(tenant), ASSIGNMENT.id().roleId().eq(roleId)).select(ASSIGNMENT.id().userId()).execute();
+        var userIds = repository.findAssignedUserIds(tenant, roleId);
         if (userIds.isEmpty()) {
             return new RoleUsers(List.of(), 0);
         }
-        var users = sql.createQuery(USER).where(USER.tenantId().eq(tenant), USER.id().in(userIds))
-                .whereIf(search != null, () -> Predicate.or(USER.username().ilike(search, LikeMode.ANYWHERE), USER.email().ilike(search, LikeMode.ANYWHERE), USER.name().ilike(search, LikeMode.ANYWHERE)))
-                .orderBy(USER.createdAt().desc()).select(USER).execute().stream().map(this::userView).toList();
+        var users = repository.findUsers(tenant, userIds, search).stream().map(this::userView).toList();
         return new RoleUsers(users, users.size());
     }
 
@@ -193,15 +175,15 @@ public class UserAccessCatalogService {
     public void removeUsers(UUID tenant, UUID roleId, Collection<UUID> users) {
         roleEntity(tenant, roleId);
         users.forEach(id -> userEntity(tenant, id));
-        users.forEach(id -> sql.createDelete(ASSIGNMENT).where(ASSIGNMENT.id().tenantId().eq(tenant), ASSIGNMENT.id().userId().eq(id), ASSIGNMENT.id().roleId().eq(roleId)).execute());
+        users.forEach(id -> repository.deleteAssignment(tenant, id, roleId));
     }
 
     /** 查询用户当前分配的全部角色。 */
     @Transactional(readOnly = true)
     public List<RoleView> rolesForUser(UUID tenant, UUID userId) {
         userEntity(tenant, userId);
-        var ids = sql.createQuery(ASSIGNMENT).where(ASSIGNMENT.id().tenantId().eq(tenant), ASSIGNMENT.id().userId().eq(userId)).select(ASSIGNMENT.id().roleId()).execute();
-        return ids.isEmpty() ? List.of() : sql.createQuery(ROLE).where(ROLE.tenantId().eq(tenant), ROLE.id().in(ids)).select(ROLE).execute().stream().map(this::roleView).toList();
+        var ids = repository.findAssignedRoleIds(tenant, userId);
+        return repository.findRolesByIds(tenant, ids).stream().map(this::roleView).toList();
     }
 
     /** 替换用户的全部角色分配：先删除旧的分配，再批量插入新的分配。 */
@@ -209,7 +191,7 @@ public class UserAccessCatalogService {
     public void replaceUserRoles(UUID tenant, UUID userId, Collection<UUID> roleIds) {
         userEntity(tenant, userId);
         roleIds.forEach(id -> roleEntity(tenant, id));
-        sql.createDelete(ASSIGNMENT).where(ASSIGNMENT.id().tenantId().eq(tenant), ASSIGNMENT.id().userId().eq(userId)).execute();
+        repository.deleteAssignmentsForUser(tenant, userId);
         roleIds.forEach(id -> insertAssignment(tenant, userId, id));
     }
 
@@ -234,12 +216,8 @@ public class UserAccessCatalogService {
     public PageData<PermissionView> permissions(UUID tenant, int page, int pageSize, String search, String type, String resource) {
         ensurePresetPermissions(tenant);
         int p = Math.max(1, page), size = Math.min(200, Math.max(1, pageSize));
-        var query = sql.createQuery(PERMISSION).where(PERMISSION.tenantId().eq(tenant))
-                .whereIf(search != null && !search.isBlank(), () -> Predicate.or(PERMISSION.name().ilike(search, LikeMode.ANYWHERE), PERMISSION.code().ilike(search, LikeMode.ANYWHERE), PERMISSION.resource().ilike(search, LikeMode.ANYWHERE)))
-                .whereIf(type != null && !type.isBlank(), () -> PERMISSION.type().eq(type)).whereIf(resource != null && !resource.isBlank(), () -> PERMISSION.resource().eq(resource))
-                .orderBy(PERMISSION.resource(), PERMISSION.code()).select(PERMISSION);
-        long total = query.fetchUnlimitedCount();
-        return PageData.of(query.limit(size, (long) (p - 1) * size).execute().stream().map(this::permissionView).toList(), p, size, total);
+        var rows = repository.findPermissions(tenant, search, type, resource);
+        return PageData.of(rows.stream().skip((long) (p - 1) * size).limit(size).map(this::permissionView).toList(), p, size, rows.size());
     }
 
     /** 查询租户下单个权限的详情视图。 */
@@ -256,7 +234,7 @@ public class UserAccessCatalogService {
         Instant now = Instant.now();
         var e = PoolPermissionEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTenantId(tenant).setCode(in.code()).setName(in.name())
                 .setDescription(in.description()).setType(in.type() == null ? "operation" : in.type()).setParentId(in.parentId()).setResource(in.resource()).setAction(in.action()).setCreatedAt(now).setUpdatedAt(now));
-        sql.saveCommand(e).setMode(SaveMode.INSERT_ONLY).execute();
+        repository.savePermission(e);
         return permissionView(e);
     }
 
@@ -267,14 +245,7 @@ public class UserAccessCatalogService {
         String name = in.name() == null ? old.name() : in.name(), type = in.type() == null ? old.type() : in.type(), resource = in.resource() == null ? old.resource() : in.resource(), action = in.action() == null ? old.action() : in.action();
         validatePermission(name, old.code(), type, resource, action);
         validatePermissionParent(tenant, id, in.parentId());
-        var u = sql.createUpdate(PERMISSION).set(PERMISSION.name(), name).set(PERMISSION.type(), type).set(PERMISSION.resource(), resource).set(PERMISSION.action(), action).set(PERMISSION.updatedAt(), Instant.now()).where(PERMISSION.id().eq(id), PERMISSION.tenantId().eq(tenant));
-        if (in.description() != null) {
-            u.set(PERMISSION.description(), in.description());
-        }
-        if (in.parentId() != null) {
-            u.set(PERMISSION.parentId(), in.parentId());
-        }
-        u.execute();
+        repository.updatePermission(tenant, id, name, type, resource, action, in.description(), in.parentId());
         return permission(tenant, id);
     }
 
@@ -282,17 +253,17 @@ public class UserAccessCatalogService {
     @Transactional
     public void deletePermission(UUID tenant, UUID id) {
         permissionEntity(tenant, id);
-        if (sql.createQuery(PERMISSION).where(PERMISSION.tenantId().eq(tenant), PERMISSION.parentId().eq(id)).select(PERMISSION.id()).exists()) {
+        if (repository.hasPermissionChildren(tenant, id)) {
             throw new DomainException(ErrorCodeConstants.PERMISSION_HAS_CHILDREN);
         }
-        sql.createDelete(PERMISSION).where(PERMISSION.id().eq(id), PERMISSION.tenantId().eq(tenant)).execute();
+        repository.deletePermission(tenant, id);
     }
 
     /** 构建租户下的权限树（按父权限 parentId 组织层级，首次访问自动初始化预置权限）。 */
     @Transactional
     public List<PermissionTree> permissionTree(UUID tenant) {
         ensurePresetPermissions(tenant);
-        var rows = sql.createQuery(PERMISSION).where(PERMISSION.tenantId().eq(tenant)).orderBy(PERMISSION.type(), PERMISSION.resource(), PERMISSION.code()).select(PERMISSION).execute();
+        var rows = repository.findAllPermissions(tenant);
         Map<UUID, MutablePermissionTree> nodes = new LinkedHashMap<>();
         rows.forEach(x -> nodes.put(x.id(), new MutablePermissionTree(permissionView(x))));
         List<MutablePermissionTree> roots = new ArrayList<>();
@@ -311,22 +282,19 @@ public class UserAccessCatalogService {
     @Transactional
     public PermissionStats permissionStats(UUID tenant) {
         ensurePresetPermissions(tenant);
-        var rows = sql.createQuery(PERMISSION).where(PERMISSION.tenantId().eq(tenant)).select(PERMISSION.type()).execute();
+        var rows = repository.findPermissionTypes(tenant);
         return new PermissionStats(rows.size(), rows.stream().filter("menu"::equals).count(), rows.stream().filter("operation"::equals).count(), rows.stream().filter("data"::equals).count());
     }
 
     private void insertAssignment(UUID tenant, UUID user, UUID role) {
         var id = UserRoleAssignmentIdDraft.$.produce(d -> d.setTenantId(tenant).setUserId(user).setRoleId(role));
-        sql.saveCommand(UserRoleAssignmentEntityDraft.$.produce(d -> d.setId(id))).setMode(SaveMode.INSERT_IF_ABSENT).execute();
+        repository.saveAssignment(UserRoleAssignmentEntityDraft.$.produce(d -> d.setId(id)));
     }
 
     /** 确保租户的预置权限已初始化：缺失的预置项通过原生 SQL 批量插入（幂等）。 */
     private void ensurePresetPermissions(UUID tenant) {
         var presetCodes = PRESETS.stream().map(PermissionSeed::code).toList();
-        var existingCodes = new HashSet<>(sql.createQuery(PERMISSION)
-                .where(PERMISSION.tenantId().eq(tenant), PERMISSION.code().in(presetCodes))
-                .select(PERMISSION.code())
-                .execute());
+        var existingCodes = new HashSet<>(repository.findPermissionCodes(tenant, presetCodes));
         if (existingCodes.size() == PRESETS.size()) {
             return;
         }
@@ -354,19 +322,19 @@ public class UserAccessCatalogService {
     }
 
     private PoolRoleEntity roleEntity(UUID tenant, UUID id) {
-        return sql.createQuery(ROLE).where(ROLE.id().eq(id), ROLE.tenantId().eq(tenant)).select(ROLE).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.USER_ROLE_NOT_FOUND));
+        return repository.findRole(tenant, id).orElseThrow(() -> new DomainException(ErrorCodeConstants.USER_ROLE_NOT_FOUND));
     }
 
     private PoolPermissionEntity permissionEntity(UUID tenant, UUID id) {
-        return sql.createQuery(PERMISSION).where(PERMISSION.id().eq(id), PERMISSION.tenantId().eq(tenant)).select(PERMISSION).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.USER_PERMISSION_NOT_FOUND));
+        return repository.findPermission(tenant, id).orElseThrow(() -> new DomainException(ErrorCodeConstants.USER_PERMISSION_NOT_FOUND));
     }
 
     private PoolUserEntity userEntity(UUID tenant, UUID id) {
-        return sql.createQuery(USER).where(USER.id().eq(id), USER.tenantId().eq(tenant)).select(USER).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.USER_ACCESS_USER_NOT_FOUND));
+        return repository.findUser(tenant, id).orElseThrow(() -> new DomainException(ErrorCodeConstants.USER_ACCESS_USER_NOT_FOUND));
     }
 
     private long assignmentCount(UUID tenant, UUID role) {
-        return sql.createQuery(ASSIGNMENT).where(ASSIGNMENT.id().tenantId().eq(tenant), ASSIGNMENT.id().roleId().eq(role)).select(ASSIGNMENT.id()).fetchUnlimitedCount();
+        return repository.assignmentCount(tenant, role);
     }
 
     private RoleView roleView(PoolRoleEntity r) {
@@ -381,7 +349,7 @@ public class UserAccessCatalogService {
         if (id == null) {
             return null;
         }
-        var p = sql.createQuery(ROLE).where(ROLE.id().eq(id), ROLE.tenantId().eq(tenant)).select(ROLE).fetchOneOrNull();
+        var p = repository.findRole(tenant, id).orElse(null);
         return p == null ? null : new ParentSummary(p.id(), p.name(), p.code());
     }
 
@@ -389,7 +357,7 @@ public class UserAccessCatalogService {
         if (id == null) {
             return null;
         }
-        var p = sql.createQuery(PERMISSION).where(PERMISSION.id().eq(id), PERMISSION.tenantId().eq(tenant)).select(PERMISSION).fetchOneOrNull();
+        var p = repository.findPermission(tenant, id).orElse(null);
         return p == null ? null : new ParentSummary(p.id(), p.name(), p.code());
     }
 
@@ -441,48 +409,6 @@ public class UserAccessCatalogService {
         if (name == null || code == null || resource == null || action == null || !Set.of("menu", "operation", "data").contains(type == null ? "operation" : type)) {
             throw new DomainException(ErrorCodeConstants.PERMISSION_INVALID);
         }
-    }
-
-    /** 从当前租户上下文取租户 ID 后分页查询角色。 */
-    @Transactional(readOnly = true)
-    public PageData<RoleView> roles(int page, int pageSize, String search, String type) {
-        return roles(TenantContextHolder.requireTenantId(), page, pageSize, search, type);
-    }
-
-    /** 从当前租户上下文取租户 ID 后查询角色详情。 */
-    @Transactional(readOnly = true)
-    public RoleView role(UUID id) {
-        return role(TenantContextHolder.requireTenantId(), id);
-    }
-
-    /** 从当前租户上下文取租户 ID 后创建角色。 */
-    @Transactional
-    public RoleView createRole(RoleInput in) {
-        return createRole(TenantContextHolder.requireTenantId(), in);
-    }
-
-    /** 从当前租户上下文取租户 ID 后更新角色。 */
-    @Transactional
-    public RoleView updateRole(UUID id, RoleInput in) {
-        return updateRole(TenantContextHolder.requireTenantId(), id, in);
-    }
-
-    /** 从当前租户上下文取租户 ID 后删除角色。 */
-    @Transactional
-    public void deleteRole(UUID id) {
-        deleteRole(TenantContextHolder.requireTenantId(), id);
-    }
-
-    /** 从当前租户上下文取租户 ID 后构建角色树。 */
-    @Transactional(readOnly = true)
-    public List<RoleTree> roleTree() {
-        return roleTree(TenantContextHolder.requireTenantId());
-    }
-
-    /** 从当前租户上下文取租户 ID 后统计角色。 */
-    @Transactional(readOnly = true)
-    public RoleStats roleStats() {
-        return roleStats(TenantContextHolder.requireTenantId());
     }
 
     /** 从当前租户上下文取租户 ID 后查询角色下的用户。 */
@@ -556,132 +482,6 @@ public class UserAccessCatalogService {
     public PermissionStats permissionStats() {
         return permissionStats(TenantContextHolder.requireTenantId());
     }
-
-    /**
-     * 角色创建/更新入参。
-     *
-     * @param name        角色名称（必填）
-     * @param code        角色编码（创建时必填，用于程序识别）
-     * @param description 角色描述
-     * @param type        角色类型：system（内置）/ custom（自定义）
-     * @param permissions 权限集合（权限码 -> 是否启用）
-     * @param dataScope   数据范围：all / department / department_and_sub / self
-     * @param parentId    父角色 ID（可为 null，表示顶级角色）
-     */
-    
-
-    /**
-     * 角色统计视图。
-     *
-     * @param totalRoles  角色总数
-     * @param systemRoles 内置（system）角色数
-     * @param customRoles 自定义（custom）角色数
-     * @param totalUsers  已分配角色的去重用户数
-     */
-    
-
-    /**
-     * 权限统计视图。
-     *
-     * @param totalPermissions  权限总数
-     * @param menuPermissions   menu（菜单）类权限数
-     * @param operationPermissions operation（操作）类权限数
-     * @param dataPermissions   data（数据）类权限数
-     */
-    
-
-    /**
-     * 权限创建/更新入参。
-     *
-     * @param code        权限编码（创建时必填）
-     * @param name        权限名称（必填）
-     * @param description 权限描述
-     * @param type        权限类型：menu / operation / data
-     * @param parentId    父权限 ID（可为 null，表示顶级权限）
-     * @param resource    权限对应的资源标识
-     * @param action      权限对应的动作（如 read / create / delete）
-     */
-    
-
-    /**
-     * 角色详情视图。
-     *
-     * @param id          角色 ID
-     * @param tenantId    所属租户 ID
-     * @param name        角色名称
-     * @param code        角色编码
-     * @param description 角色描述
-     * @param type        角色类型：system（内置）/ custom（自定义）
-     * @param permissions 权限集合（权限码 -> 是否启用）
-     * @param dataScope   数据范围：all / department / department_and_sub / self
-     * @param parentId    父角色 ID
-     * @param createdAt   创建时间
-     * @param updatedAt   最后更新时间
-     * @param userCount   分配该角色的用户数
-     * @param parent      父角色摘要（可为 null）
-     */
-    
-
-    /**
-     * 角色下的用户视图。
-     *
-     * @param users 用户列表
-     * @param total 用户总数
-     */
-    
-
-    /**
-     * 角色树节点视图。
-     *
-     * @param id          角色 ID
-     * @param name        角色名称
-     * @param code        角色编码
-     * @param description 角色描述
-     * @param type        角色类型
-     * @param userCount   分配该角色的用户数
-     * @param children    子角色节点列表
-     */
-    
-
-    /**
-     * 权限详情视图。
-     *
-     * @param id          权限 ID
-     * @param tenantId    所属租户 ID
-     * @param code        权限编码
-     * @param name        权限名称
-     * @param description 权限描述
-     * @param type        权限类型：menu / operation / data
-     * @param resource    权限对应的资源标识
-     * @param action      权限对应的动作
-     * @param parentId    父权限 ID
-     * @param createdAt   创建时间
-     * @param updatedAt   最后更新时间
-     * @param parent      父权限摘要（可为 null）
-     */
-    
-
-    /**
-     * 父节点摘要视图。
-     *
-     * @param id   父节点 ID
-     * @param name 父节点名称
-     * @param code 父节点编码
-     */
-    
-
-    /**
-     * 权限树节点视图。
-     *
-     * @param id          权限 ID
-     * @param code        权限编码
-     * @param name        权限名称
-     * @param description 权限描述
-     * @param type        权限类型
-     * @param resource    权限对应的资源标识
-     * @param action      权限对应的动作
-     * @param children    子权限节点列表
-     */
     
 
     /** 角色树的可变构建节点（组装完成后转为不可变的 {@link RoleTree}）。 */
@@ -712,14 +512,6 @@ public class UserAccessCatalogService {
         }
     }
 
-    /**
-     * 预置权限种子定义。
-     *
-     * @param code     权限编码
-     * @param name     权限名称
-     * @param type     权限类型：menu / operation / data
-     * @param resource 资源标识
-     * @param action   动作
-     */
+    
     
 }

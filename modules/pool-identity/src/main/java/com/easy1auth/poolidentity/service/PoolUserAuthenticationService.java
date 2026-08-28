@@ -75,13 +75,5 @@ public class PoolUserAuthenticationService {
         return new PoolPrincipal(user.id(), user.tenantId(), user.username(), user.name(), user.email());
     }
 
-    /**
-     * 认证通过后的 pool_user 身份凭据。
-     *
-     * @param id       用户 ID
-     * @param tenantId 所属租户 ID
-     * @param username 用户名
-     * @param name     用户姓名/显示名
-     * @param email    邮箱（可为 null）
-     */
+    
 }

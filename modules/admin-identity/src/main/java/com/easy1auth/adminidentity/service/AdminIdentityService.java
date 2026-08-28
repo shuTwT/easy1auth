@@ -1,5 +1,7 @@
-package com.easy1auth.adminidentity;
+package com.easy1auth.adminidentity.service;
 
+import com.easy1auth.adminidentity.*;
+import com.easy1auth.adminidentity.repository.AdminIdentityRepository;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.id.UuidV7;
 import com.easy1auth.infrastructure.foundation.error.ErrorCode;
@@ -370,11 +372,6 @@ public class AdminIdentityService implements ActiveAdminAccountLocker {
         return value == null ? null : value.substring(0, Math.min(value.length(), max));
     }
 
-    /**
-     * 刷新令牌签发结果（内部使用）。
-     *
-     * @param id    新会话 ID
-     * @param token 明文刷新令牌（仅本次返回）
-     */
+    
     
 }

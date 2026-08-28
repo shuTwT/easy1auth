@@ -1,7 +1,7 @@
 package com.easy1auth.adminaccess;
 
 import com.easy1auth.adminaccess.model.*;
-import com.easy1auth.adminidentity.AdminIdentityService;
+import com.easy1auth.adminidentity.service.AdminIdentityService;
 import com.easy1auth.adminidentity.model.*;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.id.UuidV7;
@@ -179,24 +179,9 @@ public class AdminAccessService {
         return new MemberStats(accounts.size(), accounts.stream().filter(a -> "active".equals(a.status())).count(), accounts.stream().filter(a -> "disabled".equals(a.status())).count(), accounts.stream().filter(AdminAccountEntity::mfaEnabled).count(), memberships.stream().filter(m -> "owner".equals(m.membershipRole())).map(TenantMembershipEntity::accountId).distinct().count());
     }
 
-    /**
-     * 角色统计视图。
-     *
-     * @param totalRoles  角色总数
-     * @param systemRoles 系统角色数
-     * @param customRoles 自定义角色数
-     * @param totalAdmins 关联的管理员总数
-     */
+    
 
-    /**
-     * 管理员成员统计视图。
-     *
-     * @param totalAdmins     管理员总数
-     * @param activeAdmins    启用中的管理员数
-     * @param disabledAdmins  已停用的管理员数
-     * @param mfaEnabledAdmins 已启用 MFA 的管理员数
-     * @param ownerCount      扮演 owner 角色的成员账号数
-     */
+    
 
     /** 查询租户内角色并转换为视图。 */
     private AdminRoleView find(UUID tenant, UUID id) {

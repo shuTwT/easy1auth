@@ -5,6 +5,7 @@ import com.easy1auth.admin.security.ManagementRouteKind;
 import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.ManagementPermissionCode;
 import com.easy1auth.customization.*;
+import com.easy1auth.customization.service.CustomizationService;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
 import org.springframework.web.bind.annotation.*;
 
@@ -137,14 +138,14 @@ public class CustomizationController {
     /** 新建消息模板。 */
     @TenantManagementPermission(value = ManagementPermissionCode.MESSAGE_TEMPLATE_CREATE)
     @PostMapping("/api/message-templates")
-    ApiResponse<?> addTemplate(@RequestBody TemplateInput in) {
+    ApiResponse<?> addTemplate(@RequestBody MessageTemplateInput in) {
         return ApiResponse.ok(service.saveTemplate(null, in), "模板创建成功");
     }
 
     /** 更新指定消息模板。 */
     @TenantManagementPermission(value = ManagementPermissionCode.MESSAGE_TEMPLATE_UPDATE)
     @PutMapping("/api/message-templates/{id}")
-    ApiResponse<?> updateTemplate(@PathVariable UUID id, @RequestBody TemplateInput in) {
+    ApiResponse<?> updateTemplate(@PathVariable UUID id, @RequestBody MessageTemplateInput in) {
         return ApiResponse.ok(service.saveTemplate(id, in), "模板更新成功");
     }
 

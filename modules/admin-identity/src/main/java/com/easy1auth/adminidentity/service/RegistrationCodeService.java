@@ -1,5 +1,7 @@
-package com.easy1auth.adminidentity;
+package com.easy1auth.adminidentity.service;
 
+import com.easy1auth.adminidentity.*;
+import com.easy1auth.adminidentity.repository.AdminIdentityRepository;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.id.UuidV7;
 import org.springframework.stereotype.Service;
@@ -45,12 +47,6 @@ public class RegistrationCodeService {
         return new IssuedCode(normalizedEmail, code, Instant.now().plus(Duration.ofMinutes(10)));
     }
 
-    /**
-     * 注册码签发结果。
-     *
-     * @param email     目标邮箱
-     * @param code      明文验证码（一次性返回）
-     * @param expiresAt 过期时间
-     */
+    
     
 }

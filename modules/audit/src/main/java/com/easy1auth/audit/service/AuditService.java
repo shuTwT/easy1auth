@@ -1,5 +1,9 @@
-package com.easy1auth.audit;
+package com.easy1auth.audit.service;
 
+import com.easy1auth.audit.ErrorCodeConstants;
+import com.easy1auth.audit.Event;
+import com.easy1auth.audit.Query;
+import com.easy1auth.audit.Stats;
 import com.easy1auth.audit.model.*;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.id.UuidV7;
@@ -100,43 +104,4 @@ public class AuditService {
         return v == null ? null : v.substring(0, Math.min(max, v.length()));
     }
 
-    /**
-     * 审计事件输入（记录时的入参）。
-     *
-     * @param tenantId    租户 ID
-     * @param actorType   操作者类型（如 admin / user / system）
-     * @param actorId     操作者账号 ID
-     * @param actorName   操作者名称
-     * @param eventType   事件类型（如 security / user）
-     * @param action      具体动作（如 create / update / login）
-     * @param resourceType 被操作资源类型
-     * @param resourceId  被操作资源 ID
-     * @param traceId     链路追踪 ID
-     * @param method      HTTP 方法
-     * @param ipAddress   来源 IP
-     * @param userAgent   客户端标识
-     * @param outcome     结果：success / failure
-     * @param errorCode   失败时的错误码
-     * @param details     附加详情（敏感字段将被脱敏）
-     */
-
-    /**
-     * 审计事件查询条件。
-     *
-     * @param actorName 操作者名称（模糊匹配）
-     * @param eventType 事件类型（精确匹配）
-     * @param action    动作（精确匹配）
-     * @param outcome   结果（精确匹配）
-     * @param start     起始时间
-     * @param end       结束时间
-     */
-
-    /**
-     * 审计统计视图。
-     *
-     * @param totalLogs  事件总数
-     * @param successLogs 成功事件数
-     * @param failedLogs 失败事件数
-     * @param todayLogs  今日事件数
-     */
 }

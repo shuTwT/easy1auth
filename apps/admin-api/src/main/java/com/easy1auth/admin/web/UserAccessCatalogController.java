@@ -4,6 +4,7 @@ import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.ManagementPermissionCode;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
 import com.easy1auth.poolidentity.service.UserAccessCatalogService;
+import com.easy1auth.tenant.TenantContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -29,7 +30,8 @@ public class UserAccessCatalogController {
     @TenantManagementPermission(value = ManagementPermissionCode.USER_ROLE_LIST)
     @GetMapping("/api/roles")
     ApiResponse<?> roles(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, @RequestParam(required = false) String search, @RequestParam(required = false) String type) {
-        var p = service.roles(page, pageSize, search, type);
+        UUID tenantId = TenantContextHolder.requireTenantId();
+        var p = service.roles(tenantId,page, pageSize, search, type);
         return ApiResponse.ok(p);
     }
 
@@ -37,42 +39,48 @@ public class UserAccessCatalogController {
     @TenantManagementPermission(value = ManagementPermissionCode.USER_ROLE_STATS)
     @GetMapping("/api/roles/stats")
     ApiResponse<?> roleStats() {
-        return ApiResponse.ok(service.roleStats());
+        UUID tenantId = TenantContextHolder.requireTenantId();
+        return ApiResponse.ok(service.roleStats(tenantId));
     }
 
     /** 查询目录用户角色的树形结构。 */
     @TenantManagementPermission(value = ManagementPermissionCode.USER_ROLE_TREE)
     @GetMapping("/api/roles/tree")
     ApiResponse<?> roleTree() {
-        return ApiResponse.ok(service.roleTree());
+        UUID tenantId = TenantContextHolder.requireTenantId();
+        return ApiResponse.ok(service.roleTree(tenantId));
     }
 
     /** 查询指定目录用户角色的详情。 */
     @TenantManagementPermission(value = ManagementPermissionCode.USER_ROLE_READ)
     @GetMapping("/api/roles/{id}")
     ApiResponse<?> role(@PathVariable UUID id) {
-        return ApiResponse.ok(service.role(id));
+        UUID tenantId = TenantContextHolder.requireTenantId();
+        return ApiResponse.ok(service.role(tenantId,id));
     }
 
     /** 创建目录用户角色。 */
     @TenantManagementPermission(value = ManagementPermissionCode.USER_ROLE_CREATE)
     @PostMapping("/api/roles")
     ApiResponse<?> createRole(@RequestBody com.easy1auth.poolidentity.service.RoleInput in) {
-        return ApiResponse.ok(service.createRole(in), "角色创建成功");
+        UUID tenantId = TenantContextHolder.requireTenantId();
+        return ApiResponse.ok(service.createRole(tenantId,in), "角色创建成功");
     }
 
     /** 更新指定目录用户角色的信息。 */
     @TenantManagementPermission(value = ManagementPermissionCode.USER_ROLE_UPDATE)
     @PutMapping("/api/roles/{id}")
     ApiResponse<?> updateRole(@PathVariable UUID id, @RequestBody com.easy1auth.poolidentity.service.RoleInput in) {
-        return ApiResponse.ok(service.updateRole(id, in), "角色更新成功");
+        UUID tenantId = TenantContextHolder.requireTenantId();
+        return ApiResponse.ok(service.updateRole(tenantId,id, in), "角色更新成功");
     }
 
     /** 删除指定目录用户角色。 */
     @TenantManagementPermission(value = ManagementPermissionCode.USER_ROLE_DELETE)
     @DeleteMapping("/api/roles/{id}")
     ApiResponse<Void> deleteRole(@PathVariable UUID id) {
-        service.deleteRole(id);
+        UUID tenantId = TenantContextHolder.requireTenantId();
+        service.deleteRole(tenantId,id);
         return ApiResponse.ok(null, "角色删除成功");
     }
 
@@ -80,13 +88,15 @@ public class UserAccessCatalogController {
     @TenantManagementPermission(value = ManagementPermissionCode.USER_ROLE_USERS_READ)
     @GetMapping("/api/roles/{id}/users")
     ApiResponse<?> roleUsers(@PathVariable UUID id, @RequestParam(required = false) String search) {
-        return ApiResponse.ok(service.roleUsers(id, search));
+        UUID tenantId = TenantContextHolder.requireTenantId();
+        return ApiResponse.ok(service.roleUsers(tenantId,id, search));
     }
 
     /** 向指定角色批量分配用户。 */
     @TenantManagementPermission(value = ManagementPermissionCode.USER_ROLE_USERS_ASSIGN)
     @PostMapping("/api/roles/{id}/users")
     ApiResponse<Void> assignUsers(@PathVariable UUID id, @RequestBody UserIds in) {
+        UUID tenantId = TenantContextHolder.requireTenantId();
         service.assignUsers(id, in.userIds());
         return ApiResponse.ok(null, "分配用户成功");
     }

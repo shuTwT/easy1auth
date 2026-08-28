@@ -4,7 +4,7 @@ import com.easy1auth.adminaccess.AdminAccessService;
 import com.easy1auth.adminaccess.ManagementPermissionCode;
 import com.easy1auth.adminaccess.PlatformAuthorizationResolver;
 import com.easy1auth.admin.security.PlatformManagementPermission;
-import com.easy1auth.adminidentity.AdminIdentityService;
+import com.easy1auth.adminidentity.service.AdminIdentityService;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;

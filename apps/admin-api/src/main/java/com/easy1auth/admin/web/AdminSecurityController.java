@@ -1,9 +1,9 @@
 package com.easy1auth.admin.web;
 
-import com.easy1auth.adminidentity.*;
 import com.easy1auth.admin.security.ManagementRouteClassification;
 import com.easy1auth.admin.security.ManagementRouteKind;
-import com.easy1auth.audit.DeliveryService;
+import com.easy1auth.adminidentity.service.AdminIdentityService;
+import com.easy1auth.audit.service.DeliveryService;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.security.service.SecurityPolicyService;

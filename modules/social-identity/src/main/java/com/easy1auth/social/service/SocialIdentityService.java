@@ -365,61 +365,13 @@ public class SocialIdentityService {
 
     // ==================== 值对象 ====================
 
-    /**
-     * 身份源创建/更新入参。
-     *
-     * @param name            身份源名称
-     * @param type            厂商类型（wechat_qr / wechat_mp / github / gitee / feishu_web）
-     * @param mode            厂商子模式（当前仅微信区分 qr/mp，其余为 null）
-     * @param clientId        厂商应用 client_id / appid
-     * @param clientSecret    厂商应用密钥（仅创建/更新时传入，查询不出明文）
-     * @param jitProvisioning 是否在回调时自动开通新用户
-     * @param status          状态：active / disabled
-     */
+    
 
-    /**
-     * 身份源视图（面向接口层）。
-     *
-     * @param id            身份源 ID
-     * @param tenantId      所属租户 ID
-     * @param name          身份源名称
-     * @param type          厂商类型
-     * @param mode          厂商子模式
-     * @param clientId      厂商应用 client_id / appid
-     * @param clientSecret  明文密钥（仅创建回显时非空）
-     * @param jitProvisioning 是否自动开通新用户
-     * @param status        状态：active / disabled
-     * @param createdAt     创建时间
-     * @param updatedAt     最后更新时间
-     */
+    
 
-    /**
-     * 授权发起结果。
-     *
-     * @param authorizeUrl 跳转社交厂商的授权 URL
-     * @param state        本次登录事务的随机 state（供回调校验）
-     * @param expiresIn    事务有效期（秒）
-     */
+    
 
-    /**
-     * 回调处理结果。
-     *
-     * @param tenantId  租户 ID
-     * @param sourceId  身份源 ID
-     * @param poolUserId 已绑定用户 ID（未绑定时为 null，需走账户确认流程）
-     * @param identity  待确认/绑定的远程身份信息
-     */
+    
 
-    /**
-     * 待确认的远程身份（用户确认后用于开通或绑定账户）。
-     *
-     * @param tenantId   租户 ID
-     * @param sourceId   身份源 ID
-     * @param sourceType 厂商类型
-     * @param subject    外部账号唯一标识
-     * @param username   外部平台登录名（可为 null）
-     * @param name       用户显示名称（可为 null）
-     * @param email      邮箱（可为 null）
-     * @param avatar     头像 URL（可为 null）
-     */
+    
 }

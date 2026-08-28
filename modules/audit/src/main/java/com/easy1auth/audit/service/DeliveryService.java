@@ -1,5 +1,8 @@
-package com.easy1auth.audit;
+package com.easy1auth.audit.service;
 
+import com.easy1auth.audit.ErrorCodeConstants;
+import com.easy1auth.audit.SubscriptionInput;
+import com.easy1auth.audit.SubscriptionView;
 import com.easy1auth.audit.model.*;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.id.UuidV7;
@@ -217,28 +220,4 @@ public class DeliveryService {
         return new SubscriptionView(e.id(), e.tenantId(), e.name(), e.url(), e.events(), secret, e.status(), e.maxRetries(), e.createdAt(), e.updatedAt());
     }
 
-    /**
-     * Webhook 订阅输入。
-     *
-     * @param name       订阅名称
-     * @param url        回调地址（须为可公开访问的 HTTPS）
-     * @param events     订阅的审计事件类型（含 "*" 表示全部事件）
-     * @param maxRetries 最大重试次数（0-20，默认 5）
-     * @param status     订阅状态：active / disabled（仅更新时使用）
-     */
-
-    /**
-     * Webhook 订阅视图。
-     *
-     * @param id         订阅 ID
-     * @param tenantId   所属租户 ID
-     * @param name       订阅名称
-     * @param url        回调地址
-     * @param events     订阅的审计事件类型
-     * @param secret     当前密钥（仅创建/轮换后返回，其余为 null）
-     * @param status     订阅状态：active / disabled
-     * @param maxRetries 最大重试次数
-     * @param createdAt  创建时间
-     * @param updatedAt  最后更新时间
-     */
 }

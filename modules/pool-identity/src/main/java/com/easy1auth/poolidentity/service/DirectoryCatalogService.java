@@ -494,106 +494,23 @@ public class DirectoryCatalogService {
         replaceUserGroups(TenantContextHolder.requireTenantId(), userId, groupIds);
     }
 
-    /**
-     * 用户组统计视图。
-     *
-     * @param totalGroups        用户组总数
-     * @param teamGroups         team（团队）类型组数
-     * @param departmentGroups  department（部门）类型组数
-     * @param projectGroups     project（项目）类型组数
-     * @param organizationGroups organization（组织）类型组数
-     * @param rootGroups        顶级组（无父组）数量
-     */
+    
 
-    /**
-     * 岗位统计视图。
-     *
-     * @param totalPositions  岗位总数
-     * @param filledPositions 在编（有用户）岗位数
-     * @param vacantPositions 空编（无用户）岗位数
-     * @param averageLevel    平均岗位层级
-     */
+    
 
-    /**
-     * 用户组创建/更新入参。
-     *
-     * @param name        用户组名称（必填）
-     * @param description 用户组描述
-     * @param type        用户组类型：team / department / project / organization
-     * @param parentId    父组 ID（可为 null，表示顶级组）
-     */
+    
 
-    /**
-     * 岗位创建/更新入参。
-     *
-     * @param name         岗位名称（必填）
-     * @param code         岗位编码（必填）
-     * @param description  岗位描述
-     * @param departmentId 所属部门 ID（可为 null）
-     * @param level        岗位层级（默认 1）
-     * @param sequence     排序序号
-     * @param maxCount     该岗位人数上限（可为 null，表示不限制）
-     */
+    
 
-    /**
-     * 用户组详情视图。
-     *
-     * @param id          用户组 ID
-     * @param tenantId    所属租户 ID
-     * @param name        用户组名称
-     * @param description 用户组描述
-     * @param type        用户组类型
-     * @param parentId    父组 ID
-     * @param createdAt   创建时间
-     * @param updatedAt   最后更新时间
-     * @param _count      成员/管理员/子组数量统计
-     */
+    
 
-    /**
-     * 用户组数量统计视图。
-     *
-     * @param members  组成员数
-     * @param admins   组管理员数
-     * @param children 子组数
-     */
+    
 
-    /**
-     * 岗位详情视图。
-     *
-     * @param id          岗位 ID
-     * @param tenantId    所属租户 ID
-     * @param name        岗位名称
-     * @param code        岗位编码
-     * @param description 岗位描述
-     * @param departmentId 所属部门 ID
-     * @param level       岗位层级
-     * @param sequence    排序序号
-     * @param userCount   在编用户数
-     * @param maxCount    人数上限（可为 null）
-     * @param createdAt   创建时间
-     * @param updatedAt   最后更新时间
-     */
+    
 
-    /**
-     * 用户组成员视图。
-     *
-     * @param members 成员列表
-     * @param admins  管理员列表
-     * @param total   成员总数
-     */
+    
 
-    /**
-     * 用户组树节点视图。
-     *
-     * @param id          用户组 ID
-     * @param name        用户组名称
-     * @param description 用户组描述
-     * @param type        用户组类型
-     * @param parentId    父组 ID
-     * @param children    子组节点列表
-     * @param memberCount 成员数
-     * @param adminCount  管理员数
-     */
+    
 
     /** 用户组树的可变构建节点（组装完成后转为不可变的 {@link GroupTree}）。 */
     private static final class MutableGroupTree {

@@ -1,6 +1,6 @@
 package com.easy1auth.authorization.web;
 
-import com.easy1auth.customization.CustomizationService;
+import com.easy1auth.customization.service.CustomizationService;
 import com.easy1auth.poolidentity.service.PoolUserService;
 import com.easy1auth.poolidentity.service.PoolUserInput;
 import com.easy1auth.poolidentity.model.PoolUserEntityTable;

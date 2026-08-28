@@ -1,12 +1,12 @@
-package com.easy1auth.customization;
+package com.easy1auth.customization.service;
 
+import com.easy1auth.customization.*;
 import com.easy1auth.customization.model.*;
+import com.easy1auth.customization.repository.CustomizationRepository;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.id.UuidV7;
 import com.easy1auth.infrastructure.foundation.error.ErrorCode;
 import com.easy1auth.social.service.SocialIdentityService;
-import org.babyfish.jimmer.sql.JSqlClient;
-import org.babyfish.jimmer.sql.ast.mutation.SaveMode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,33 +27,25 @@ import java.util.*;
 public class CustomizationService {
     /** 登录样式配置的 schema 版本号（当前为 1） */
     private static final int LOGIN_STYLE_SCHEMA_VERSION = 1;
-    /** legal_document_setting 表静态描述符 */
-    private static final LegalDocumentSettingEntityTable LEGAL_DOCUMENT = LegalDocumentSettingEntityTable.$;
-    /** login_style 表静态描述符 */
-    private static final LoginStyleEntityTable STYLE = LoginStyleEntityTable.$;
-    /** custom_domain 表静态描述符 */
-    private static final CustomDomainEntityTable DOMAIN = CustomDomainEntityTable.$;
-    /** message_template 表静态描述符 */
-    private static final MessageTemplateEntityTable TEMPLATE = MessageTemplateEntityTable.$;
-    /** jimmer SQL 客户端 */
-    private final JSqlClient sql;
+    /** 品牌定制数据仓储 */
+    private final CustomizationRepository repository;
     /** 社会化身份源服务（用于校验所选社交登录方式对应的身份源是否可用） */
     private final SocialIdentityService socialIdentity;
     /** 生成域名所有权验证令牌的随机源 */
     private final SecureRandom random = new SecureRandom();
 
-    public CustomizationService(JSqlClient sql, SocialIdentityService socialIdentity) {
-        this.sql = sql;
+    public CustomizationService(CustomizationRepository repository, SocialIdentityService socialIdentity) {
+        this.repository = repository;
         this.socialIdentity = socialIdentity;
     }
 
     /** 查询（或自动创建）法律文档设置记录，返回当前生效的服务条款与隐私政策实体。 */
     @Transactional
     public LegalDocumentSettingEntity legalDocuments() {
-        var e = sql.createQuery(LEGAL_DOCUMENT).select(LEGAL_DOCUMENT).fetchOneOrNull();
+        var e = repository.legalDocuments().orElse(null);
         if (e == null) {
             e = LegalDocumentSettingEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTermsOfService(null).setPrivacyPolicy(null).setDraftTermsOfService(null).setDraftPrivacyPolicy(null).setPublishedTermsOfService(null).setPublishedPrivacyPolicy(null).setUpdatedAt(Instant.now()));
-            sql.saveCommand(e).setMode(SaveMode.INSERT_IF_ABSENT).execute();
+            repository.insertLegal(e);
         }
         return e;
     }
@@ -94,8 +86,8 @@ public class CustomizationService {
                 .setDraftTermsOfService(nextLegal.termsOfService()).setDraftPrivacyPolicy(nextLegal.privacyPolicy())
                 .setPublishedTermsOfService(oldLegal.publishedTermsOfService()).setPublishedPrivacyPolicy(oldLegal.publishedPrivacyPolicy())
                 .setUpdatedAt(now));
-        sql.saveCommand(nextStyle).setMode(SaveMode.UPSERT).execute();
-        sql.saveCommand(nextLegalEntity).setMode(SaveMode.UPSERT).execute();
+        repository.upsertStyle(nextStyle);
+        repository.upsertLegal(nextLegalEntity);
         return new DraftView(nextConfig, nextSocialProviders, nextLegal, now, oldStyle.publishedAt());
     }
 
@@ -124,8 +116,8 @@ public class CustomizationService {
                 .setDraftTermsOfService(nextLegal.termsOfService()).setDraftPrivacyPolicy(nextLegal.privacyPolicy())
                 .setPublishedTermsOfService(nextLegal.termsOfService()).setPublishedPrivacyPolicy(nextLegal.privacyPolicy())
                 .setUpdatedAt(now));
-        sql.saveCommand(nextStyle).setMode(SaveMode.UPSERT).execute();
-        sql.saveCommand(nextLegalEntity).setMode(SaveMode.UPSERT).execute();
+        repository.upsertStyle(nextStyle);
+        repository.upsertLegal(nextLegalEntity);
         return new DraftView(nextConfig, nextSocialProviders, nextLegal, now, now);
     }
 
@@ -138,12 +130,12 @@ public class CustomizationService {
     /** 查询（或自动初始化）当前租户的登录样式实体；首次访问时写入默认样式。 */
     @Transactional
     public LoginStyleEntity style() {
-        var e = sql.createQuery(STYLE).select(STYLE).fetchOneOrNull();
+        var e = repository.style().orElse(null);
         if (e == null) {
             Instant now = Instant.now();
             Map<String, Object> defaults = defaultConfig();
             e = LoginStyleEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setLogo(null).setLogoDark(null).setBackgroundImage(null).setBackgroundColor("#f5f7fa").setPrimaryColor("#0369A1").setTitle("Easy1Auth").setSubtitle("企业级身份管理平台").setCustomCss(null).setLoginMethods(List.of("password")).setSocialProviders(List.of()).setDraftSocialProviders(List.of()).setDraftConfig(defaults).setPublishedConfig(defaults).setRegistrationEnabled(true).setDraftUpdatedAt(now).setPublishedAt(now).setCreatedAt(now).setUpdatedAt(now));
-            sql.saveCommand(e).setMode(SaveMode.INSERT_IF_ABSENT).execute();
+            repository.insertStyle(e);
         }
         return e;
     }
@@ -151,12 +143,12 @@ public class CustomizationService {
     /** 查询指定租户的登录样式（面向 pool_user 登录页的公开访问；不存在则初始化默认样式）。 */
     @Transactional
     public LoginStyleEntity publicStyle(UUID tenant) {
-        var e = sql.createQuery(STYLE).where(STYLE.tenantId().eq(tenant)).select(STYLE).fetchOneOrNull();
+        var e = repository.style(tenant).orElse(null);
         if (e == null) {
             Instant now = Instant.now();
             Map<String, Object> defaults = defaultConfig();
             e = LoginStyleEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTenantId(tenant).setLogo(null).setLogoDark(null).setBackgroundImage(null).setBackgroundColor("#f5f7fa").setPrimaryColor("#0369A1").setTitle("Easy1Auth").setSubtitle("企业级身份管理平台").setCustomCss(null).setLoginMethods(List.of("password")).setSocialProviders(List.of()).setDraftSocialProviders(List.of()).setDraftConfig(defaults).setPublishedConfig(defaults).setRegistrationEnabled(true).setDraftUpdatedAt(now).setPublishedAt(now).setCreatedAt(now).setUpdatedAt(now));
-            sql.saveCommand(e).setMode(SaveMode.INSERT_IF_ABSENT).execute();
+            repository.insertStyle(e);
         }
         return e;
     }
@@ -164,7 +156,7 @@ public class CustomizationService {
     /** 查询指定租户已发布的登录样式配置（供登录页渲染使用；未配置时返回默认配置）。 */
     @Transactional(readOnly = true)
     public Map<String, Object> publishedConfig(UUID tenant) {
-        var style = sql.createQuery(STYLE).where(STYLE.tenantId().eq(tenant)).select(STYLE).fetchOneOrNull();
+        var style = repository.style(tenant).orElse(null);
         if (style == null) {
             return defaultConfig();
         }
@@ -174,7 +166,7 @@ public class CustomizationService {
     /** 查询指定租户已发布的法律文档（服务条款与隐私政策，供登录 / 注册页展示）。 */
     @Transactional(readOnly = true)
     public PublishedLegalDocuments publishedLegalDocuments(UUID tenant) {
-        var legal = sql.createQuery(LEGAL_DOCUMENT).where(LEGAL_DOCUMENT.tenantId().eq(tenant)).select(LEGAL_DOCUMENT).fetchOneOrNull();
+        var legal = repository.legalDocuments(tenant).orElse(null);
         if (legal == null) {
             return new PublishedLegalDocuments(null, null);
         }
@@ -184,7 +176,7 @@ public class CustomizationService {
     /** 查询全部自定义域名（按创建时间倒序）。 */
     @Transactional(readOnly = true)
     public List<CustomDomainEntity> domains() {
-        return sql.createQuery(DOMAIN).orderBy(DOMAIN.createdAt().desc()).select(DOMAIN).execute();
+        return repository.domains();
     }
 
     /**
@@ -203,14 +195,14 @@ public class CustomizationService {
         random.nextBytes(b);
         Instant now = Instant.now();
         var e = CustomDomainEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setDomain(domain).setStatus("pending").setVerificationMethod(m).setVerificationToken(Base64.getUrlEncoder().withoutPadding().encodeToString(b)).setVerifiedAt(null).setCreatedAt(now).setUpdatedAt(now));
-        sql.saveCommand(e).setMode(SaveMode.INSERT_ONLY).execute();
+        repository.insertDomain(e);
         return e;
     }
 
     /** 删除自定义域名；域名不存在时抛出领域异常。 */
     @Transactional
     public void deleteDomain(UUID id) {
-        if (!sql.createQuery(DOMAIN).where(DOMAIN.id().eq(id)).select(DOMAIN.id()).exists() || sql.deleteById(CustomDomainEntity.class, id).getTotalAffectedRowCount() != 1) {
+        if (!repository.deleteDomain(id)) {
             throw new DomainException(ErrorCodeConstants.DOMAIN_NOT_FOUND);
         }
     }
@@ -223,12 +215,12 @@ public class CustomizationService {
     /** 查询消息模板列表，可按类型（email / sms）过滤，按类型与编码排序。 */
     @Transactional(readOnly = true)
     public List<MessageTemplateEntity> templates(String type) {
-        return sql.createQuery(TEMPLATE).whereIf(type != null && !type.isBlank(), () -> TEMPLATE.type().eq(type)).orderBy(TEMPLATE.type(), TEMPLATE.code()).select(TEMPLATE).execute();
+        return repository.templates(type);
     }
 
     /** 新建（id 为空）或更新（id 非空）消息模板，校验模板参数与变量声明合法性。 */
     @Transactional
-    public MessageTemplateEntity saveTemplate(UUID id, TemplateInput in) {
+    public MessageTemplateEntity saveTemplate(UUID id, MessageTemplateInput in) {
         if (in == null || !Set.of("email", "sms").contains(in.type()) || in.code() == null || !in.code().matches("[a-z0-9_]{2,100}") || in.name() == null || in.name().isBlank() || in.content() == null || in.content().isBlank()) {
             throw invalid(ErrorCodeConstants.MESSAGE_TEMPLATE_INVALID);
         }
@@ -236,11 +228,11 @@ public class CustomizationService {
         Instant now = Instant.now();
         if (id == null) {
             var created = MessageTemplateEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setType(in.type()).setCode(in.code()).setName(in.name().strip()).setSubject(in.subject()).setContent(in.content()).setVariables(in.variables() == null ? Map.of() : in.variables()).setDefaultTemplate(Boolean.TRUE.equals(in.isDefault())).setStatus(in.status() == null ? "active" : in.status()).setCreatedAt(now).setUpdatedAt(now));
-            sql.saveCommand(created).setMode(SaveMode.INSERT_ONLY).execute();
+            repository.insertTemplate(created);
             return created;
         }
         template(id);
-        int updated = sql.createUpdate(TEMPLATE).set(TEMPLATE.type(), in.type()).set(TEMPLATE.code(), in.code()).set(TEMPLATE.name(), in.name().strip()).set(TEMPLATE.subject(), in.subject()).set(TEMPLATE.content(), in.content()).set(TEMPLATE.variables(), in.variables() == null ? Map.of() : in.variables()).set(TEMPLATE.defaultTemplate(), Boolean.TRUE.equals(in.isDefault())).set(TEMPLATE.status(), in.status() == null ? "active" : in.status()).set(TEMPLATE.updatedAt(), now).where(TEMPLATE.id().eq(id)).execute();
+        int updated = repository.updateTemplate(id, in.type(), in.code(), in.name().strip(), in.subject(), in.content(), in.variables() == null ? Map.of() : in.variables(), Boolean.TRUE.equals(in.isDefault()), in.status() == null ? "active" : in.status());
         if (updated != 1) {
             throw templateMissing();
         }
@@ -502,13 +494,13 @@ public class CustomizationService {
     @Transactional
     public void deleteTemplate(UUID id) {
         template(id);
-        if (sql.deleteById(MessageTemplateEntity.class, id).getTotalAffectedRowCount() != 1) {
+        if (!repository.deleteTemplate(id)) {
             throw new DomainException(ErrorCodeConstants.MESSAGE_TEMPLATE_NOT_FOUND);
         }
     }
 
     private MessageTemplateEntity template(UUID id) {
-        return sql.createQuery(TEMPLATE).where(TEMPLATE.id().eq(id)).select(TEMPLATE).fetchOptional().orElseThrow(this::templateMissing);
+        return repository.template(id).orElseThrow(this::templateMissing);
     }
 
     private DomainException templateMissing() {
@@ -579,63 +571,15 @@ public class CustomizationService {
         return new DomainException(errorCode);
     }
 
-    /**
-     * 草稿更新入参。
-     *
-     * @param config            结构化的样式配置（与草稿 schema 一致）
-     * @param socialProviderIds 选中的社交身份源 ID 列表
-     * @param legalDocuments    法律文档草稿内容
-     */
+    
 
-    /**
-     * 草稿视图（查询 / 更新草稿后的返回结构）。
-     *
-     * @param config            规范化后的样式配置
-     * @param socialProviderIds 已生效的社交身份源 ID 列表
-     * @param legalDocuments    法律文档草稿内容
-     * @param draftUpdatedAt    草稿最后更新时间
-     * @param publishedAt       最近发布时间（从未发布为 null）
-     */
+    
 
-    /**
-     * 法律文档草稿入参。
-     *
-     * @param termsOfService 服务条款内容（可为空）
-     * @param privacyPolicy  隐私政策内容（可为空）
-     */
+    
 
-    /**
-     * 已发布法律文档视图（供登录 / 注册页展示）。
-     *
-     * @param termsOfService 已生效的服务条款
-     * @param privacyPolicy  已生效的隐私政策
-     */
+    
 
-    /**
-     * 旧版样式字段视图（发布时将结构化配置回写到旧版字段）。
-     *
-     * @param logo                亮色主题 logo URL
-     * @param logoDark            深色主题 logo URL
-     * @param backgroundImage     背景图片 URL
-     * @param backgroundColor     背景颜色
-     * @param primaryColor        主题主色
-     * @param title               登录页标题
-     * @param subtitle            登录页副标题
-     * @param customCss           自定义 CSS
-     * @param loginMethods        登录方式列表
-     * @param registrationEnabled 是否开放注册
-     */
+    
 
-    /**
-     * 消息模板入参（新建 / 更新共用）。
-     *
-     * @param type      模板类型：email / sms
-     * @param code      模板编码（唯一，小写字母数字下划线）
-     * @param name      模板名称
-     * @param subject   邮件主题（短信模板可为空）
-     * @param content   模板正文，支持 {{变量名}} 占位符
-     * @param variables 变量声明（变量名 -> 默认值或说明）
-     * @param isDefault 是否默认模板
-     * @param status    模板状态：active / disabled
-     */
+    
 }

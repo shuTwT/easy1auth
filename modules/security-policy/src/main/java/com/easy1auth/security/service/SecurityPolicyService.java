@@ -356,48 +356,13 @@ public class SecurityPolicyService {
         }
     }
 
-    /**
-     * 安全策略值对象。
-     *
-     * @param minLength          密码最小长度（8-128）
-     * @param requireUpper       是否要求大写字母
-     * @param requireLower       是否要求小写字母
-     * @param requireNumber      是否要求数字
-     * @param requireSpecial     是否要求特殊字符
-     * @param maxAgeDays         密码最长有效期（天），过期需改密
-     * @param historyCount       防重用保留的历史密码条数（0-24）
-     * @param mfaRequired        是否强制启用 MFA
-     * @param loginAttemptLimit  登录失败锁定阈值（连续失败次数）
-     * @param lockoutSeconds     锁定持续时间（秒）
-     */
+    
 
-    /**
-     * TOTP 设置结果。
-     *
-     * @param secret      明文 TOTP 密钥（仅设置时返回一次）
-     * @param qrCodeUrl   otpauth 二维码 URI，供用户扫码录入
-     * @param backupCodes 一次性备用码列表（仅设置时返回一次）
-     */
+    
 
-    /**
-     * 认证挑战签发结果。
-     *
-     * @param token     挑战令牌（回调时提交以定位挑战）
-     * @param code      一次性验证码（邮箱场景返回，TOTP 场景为 null）
-     * @param expiresIn 有效期（秒）
-     */
+    
 
-    /**
-     * 邮箱挑战消费结果。
-     *
-     * @param subjectId   被认证的主体 ID（注册场景可为 null）
-     * @param destination 验证码发送目的地（邮箱）
-     */
+    
 
-    /**
-     * 多因素认证状态。
-     *
-     * @param enabled 是否已启用至少一种因子
-     * @param methods 已启用的因子类型列表（如 totp）
-     */
+    
 }

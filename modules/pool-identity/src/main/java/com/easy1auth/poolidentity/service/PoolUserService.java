@@ -266,14 +266,7 @@ public class PoolUserService {
         return stats(TenantContextHolder.requireTenantId());
     }
 
-    /**
-     * 用户状态统计视图。
-     *
-     * @param totalUsers   用户总数
-     * @param activeUsers  active（正常）用户数
-     * @param disabledUsers disabled（禁用）用户数
-     * @param lockedUsers  locked（锁定）用户数
-     */
+    
 
     /**
      * 查询最近成功登录的用户列表（按登录时间倒序，最多 20 条）。
@@ -304,26 +297,7 @@ public class PoolUserService {
                 .size();
     }
 
-    /**
-     * 用户创建/更新入参（非空字段才会在更新时生效）。
-     *
-     * @param username         用户名（必填）
-     * @param email            邮箱
-     * @param password         密码（创建时可为空，表示无密码用户）
-     * @param phone            手机号
-     * @param name             用户姓名/显示名（必填）
-     * @param avatar           头像地址
-     * @param status           用户状态
-     * @param department       所属部门
-     * @param position         岗位名称
-     * @param customAttributes 自定义扩展属性
-     */
+    
 
-    /**
-     * 最近登录记录视图。
-     *
-     * @param username 用户名
-     * @param email    邮箱（可为 null）
-     * @param time     最后登录时间
-     */
+    
 }
