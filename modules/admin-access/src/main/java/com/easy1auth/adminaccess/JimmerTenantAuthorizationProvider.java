@@ -7,7 +7,7 @@ import com.easy1auth.tenant.TenantAuthorizationProvider;
 import com.easy1auth.tenant.TenantAuthorizationRequest;
 import com.easy1auth.tenant.service.TenantPackageService;
 import com.easy1auth.tenant.TenantPackageView;
-import org.babyfish.jimmer.sql.JSqlClient;
+import com.easy1auth.adminaccess.repository.AdminAccessRepository;
 import org.springframework.stereotype.Component;
 
 import java.util.Set;
@@ -27,7 +27,7 @@ final class JimmerTenantAuthorizationProvider implements TenantAuthorizationProv
     private static final AdminAccountEntityTable ACCOUNT = AdminAccountEntityTable.$;
 
     /** jimmer SQL 客户端 */
-    private final JSqlClient sql;
+    private final AdminAccessRepository repository;
     /** 管理端权限目录 */
     private final ManagementPermissionCatalog catalog;
     /** 租户套餐服务 */
@@ -36,11 +36,11 @@ final class JimmerTenantAuthorizationProvider implements TenantAuthorizationProv
     private final PlatformAuthorizationResolver platforms;
 
     JimmerTenantAuthorizationProvider(
-            JSqlClient sql,
+            AdminAccessRepository repository,
             ManagementPermissionCatalog catalog,
             TenantPackageService packages,
             PlatformAuthorizationResolver platforms) {
-        this.sql = sql;
+        this.repository = repository;
         this.catalog = catalog;
         this.packages = packages;
         this.platforms = platforms;
@@ -49,7 +49,7 @@ final class JimmerTenantAuthorizationProvider implements TenantAuthorizationProv
     /** 判断账号是否为激活状态（授权解析的前置校验）。 */
     @Override
     public boolean isActiveAccount(UUID accountId) {
-        return sql.createQuery(ACCOUNT)
+        return repository.sql().createQuery(ACCOUNT)
                 .where(ACCOUNT.id().eq(accountId), ACCOUNT.status().eq("active"))
                 .select(ACCOUNT.id())
                 .exists();

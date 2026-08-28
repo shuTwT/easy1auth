@@ -4,11 +4,11 @@ import com.easy1auth.audit.ErrorCodeConstants;
 import com.easy1auth.audit.SubscriptionInput;
 import com.easy1auth.audit.SubscriptionView;
 import com.easy1auth.audit.model.*;
+import com.easy1auth.audit.repository.DeliveryRepository;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.id.UuidV7;
 import com.easy1auth.security.SecurityDataCipher;
 import com.easy1auth.tenant.TenantContextHolder;
-import org.babyfish.jimmer.sql.JSqlClient;
 import org.babyfish.jimmer.sql.ast.Predicate;
 import org.babyfish.jimmer.sql.ast.mutation.SaveMode;
 import org.springframework.stereotype.Service;
@@ -34,14 +34,14 @@ public class DeliveryService {
     /** delivery_outbox 表静态描述符 */
     private static final DeliveryOutboxEntityTable OUT = DeliveryOutboxEntityTable.$;
     /** jimmer SQL 客户端 */
-    private final JSqlClient sql;
+    private final DeliveryRepository repository;
     /** 数据加解密器（用于加密存储 Webhook 密钥） */
     private final SecurityDataCipher cipher;
     /** 安全随机数生成器（用于生成密钥与投递退避抖动） */
     private final SecureRandom random = new SecureRandom();
 
-    public DeliveryService(JSqlClient sql, SecurityDataCipher cipher) {
-        this.sql = sql;
+    public DeliveryService(DeliveryRepository repository, SecurityDataCipher cipher) {
+        this.repository = repository;
         this.cipher = cipher;
     }
 
@@ -54,14 +54,14 @@ public class DeliveryService {
         String secret = token(32);
         Instant now = Instant.now();
         var e = WebhookSubscriptionEntityDraft.$.produce(d -> d.setId(id).setName(in.name().strip()).setUrl(in.url()).setEvents(in.events().stream().distinct().toList()).setSecretHash(hash(secret)).setEncryptedSecret(cipher.encrypt("webhook:" + tenant + ":" + id, secret)).setStatus("active").setMaxRetries(in.maxRetries() == null ? 5 : in.maxRetries()).setCreatedAt(now).setUpdatedAt(now));
-        sql.saveCommand(e).setMode(SaveMode.INSERT_ONLY).execute();
+        repository.sql().saveCommand(e).setMode(SaveMode.INSERT_ONLY).execute();
         return view(e, secret);
     }
 
     /** 查询当前租户全部 Webhook 订阅（按创建时间倒序，不返回密钥）。 */
     @Transactional(readOnly = true)
     public List<SubscriptionView> list() {
-        return sql.createQuery(HOOK).orderBy(HOOK.createdAt().desc()).select(HOOK).execute().stream().map(e -> view(e, null)).toList();
+        return repository.sql().createQuery(HOOK).orderBy(HOOK.createdAt().desc()).select(HOOK).execute().stream().map(e -> view(e, null)).toList();
     }
 
     /** 更新 Webhook 订阅信息（名称/地址/事件/重试次数/状态），仅更新传入的非空字段。 */
@@ -69,7 +69,7 @@ public class DeliveryService {
     public SubscriptionView update(UUID id, SubscriptionInput in) {
         var old = entity(id);
         validate(in);
-        sql.createUpdate(HOOK).set(HOOK.name(), in.name()).set(HOOK.url(), in.url()).set(HOOK.events(), in.events()).set(HOOK.maxRetries(), in.maxRetries() == null ? old.maxRetries() : in.maxRetries()).set(HOOK.status(), in.status() == null ? old.status() : status(in.status())).set(HOOK.updatedAt(), Instant.now()).where(HOOK.tenantId().eq(old.tenantId()), HOOK.id().eq(id)).execute();
+        repository.sql().createUpdate(HOOK).set(HOOK.name(), in.name()).set(HOOK.url(), in.url()).set(HOOK.events(), in.events()).set(HOOK.maxRetries(), in.maxRetries() == null ? old.maxRetries() : in.maxRetries()).set(HOOK.status(), in.status() == null ? old.status() : status(in.status())).set(HOOK.updatedAt(), Instant.now()).where(HOOK.tenantId().eq(old.tenantId()), HOOK.id().eq(id)).execute();
         return view(entity(id), null);
     }
 
@@ -78,7 +78,7 @@ public class DeliveryService {
     public SubscriptionView rotate(UUID id) {
         var old = entity(id);
         String secret = token(32);
-        sql.createUpdate(HOOK).set(HOOK.secretHash(), hash(secret)).set(HOOK.encryptedSecret(), cipher.encrypt("webhook:" + old.tenantId() + ":" + id, secret)).set(HOOK.updatedAt(), Instant.now()).where(HOOK.id().eq(id), HOOK.tenantId().eq(old.tenantId())).execute();
+        repository.sql().createUpdate(HOOK).set(HOOK.secretHash(), hash(secret)).set(HOOK.encryptedSecret(), cipher.encrypt("webhook:" + old.tenantId() + ":" + id, secret)).set(HOOK.updatedAt(), Instant.now()).where(HOOK.id().eq(id), HOOK.tenantId().eq(old.tenantId())).execute();
         return view(entity(id), secret);
     }
 
@@ -86,7 +86,7 @@ public class DeliveryService {
     @Transactional
     public void delete(UUID id) {
         var old = entity(id);
-        if (sql.createDelete(HOOK).where(HOOK.id().eq(id), HOOK.tenantId().eq(old.tenantId())).execute() != 1) {
+        if (repository.sql().createDelete(HOOK).where(HOOK.id().eq(id), HOOK.tenantId().eq(old.tenantId())).execute() != 1) {
             throw missing();
         }
     }
@@ -94,7 +94,7 @@ public class DeliveryService {
     /** 将审计事件写入所有匹配订阅的 Webhook 投递队列（含幂等键防止重复投递）。 */
     @Transactional
     public void enqueueEvent(UUID tenant, String event, Map<String, Object> payload, String key) {
-        for (var hook : sql.createQuery(HOOK).where(HOOK.tenantId().eq(tenant), HOOK.status().eq("active")).select(HOOK).execute()) {
+        for (var hook : repository.sql().createQuery(HOOK).where(HOOK.tenantId().eq(tenant), HOOK.status().eq("active")).select(HOOK).execute()) {
             if (hook.events().contains(event) || hook.events().contains("*")) {
                 enqueue(tenant, "webhook", hook.url(), event, payload, hook.id(), key + ":" + hook.id(), hook.maxRetries());
             }
@@ -111,9 +111,9 @@ public class DeliveryService {
     @Transactional
     public List<DeliveryOutboxEntity> claim(int limit) {
         Instant now = Instant.now();
-        var rows = sql.createQuery(OUT).where(Predicate.or(OUT.status().eq("pending"), Predicate.and(OUT.status().eq("processing"), OUT.leaseUntil().lt(now))), OUT.availableAt().le(now)).orderBy(OUT.availableAt()).select(OUT).limit(Math.min(50, Math.max(1, limit))).forUpdate().execute();
+        var rows = repository.sql().createQuery(OUT).where(Predicate.or(OUT.status().eq("pending"), Predicate.and(OUT.status().eq("processing"), OUT.leaseUntil().lt(now))), OUT.availableAt().le(now)).orderBy(OUT.availableAt()).select(OUT).limit(Math.min(50, Math.max(1, limit))).forUpdate().execute();
         for (var row : rows) {
-            sql.createUpdate(OUT).set(OUT.status(), "processing").set(OUT.leaseUntil(), now.plusSeconds(60)).where(OUT.id().eq(row.id())).execute();
+            repository.sql().createUpdate(OUT).set(OUT.status(), "processing").set(OUT.leaseUntil(), now.plusSeconds(60)).where(OUT.id().eq(row.id())).execute();
         }
         return rows;
     }
@@ -121,17 +121,17 @@ public class DeliveryService {
     /** 标记投递记录发送成功（记录发送时间并释放租约）。 */
     @Transactional
     public void sent(UUID id) {
-        sql.createUpdate(OUT).set(OUT.status(), "sent").set(OUT.sentAt(), Instant.now()).set(OUT.leaseUntil(), (Instant) null).where(OUT.id().eq(id)).execute();
+        repository.sql().createUpdate(OUT).set(OUT.status(), "sent").set(OUT.sentAt(), Instant.now()).set(OUT.leaseUntil(), (Instant) null).where(OUT.id().eq(id)).execute();
     }
 
     /** 标记投递失败：按指数退避（上限 1 小时）重排待投递，超过最大次数则置为 dead。 */
     @Transactional
     public void failed(UUID id, String error) {
-        var row = sql.createQuery(OUT).where(OUT.id().eq(id)).select(OUT).forUpdate().fetchOne();
+        var row = repository.sql().createQuery(OUT).where(OUT.id().eq(id)).select(OUT).forUpdate().fetchOne();
         int n = row.attempts() + 1;
         boolean dead = n >= row.maxAttempts();
         long delay = Math.min(3600L, 5L * (1L << Math.min(10, n)));
-        sql.createUpdate(OUT).set(OUT.status(), dead ? "dead" : "pending").set(OUT.attempts(), n).set(OUT.availableAt(), Instant.now().plusSeconds(delay + random.nextInt(5))).set(OUT.leaseUntil(), (Instant) null).set(OUT.lastError(), trim(error, 1000)).where(OUT.id().eq(id)).execute();
+        repository.sql().createUpdate(OUT).set(OUT.status(), dead ? "dead" : "pending").set(OUT.attempts(), n).set(OUT.availableAt(), Instant.now().plusSeconds(delay + random.nextInt(5))).set(OUT.leaseUntil(), (Instant) null).set(OUT.lastError(), trim(error, 1000)).where(OUT.id().eq(id)).execute();
     }
 
     /** 解密并返回投递记录对应 Webhook 订阅的密钥（投递签名校验用）。 */
@@ -145,17 +145,17 @@ public class DeliveryService {
     private void enqueue(UUID tenant, String channel, String dest, String event, Map<String, Object> payload, UUID subscription, String key, int retries) {
         Instant now = Instant.now();
         var e = DeliveryOutboxEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTenantId(tenant).setChannel(channel).setDestination(dest).setEventType(event).setPayload(payload).setSubscriptionId(subscription).setIdempotencyKey(key).setStatus("pending").setAttempts(0).setMaxAttempts(retries).setAvailableAt(now).setLeaseUntil(null).setLastError(null).setCreatedAt(now).setSentAt(null));
-        sql.saveCommand(e).setMode(SaveMode.INSERT_IF_ABSENT).execute();
+        repository.sql().saveCommand(e).setMode(SaveMode.INSERT_IF_ABSENT).execute();
     }
 
     /** 按租户与 ID 查询订阅实体，不存在时抛出领域异常。 */
     private WebhookSubscriptionEntity entity(UUID tenant, UUID id) {
-        return sql.createQuery(HOOK).where(HOOK.tenantId().eq(tenant), HOOK.id().eq(id)).select(HOOK).fetchOptional().orElseThrow(this::missing);
+        return repository.sql().createQuery(HOOK).where(HOOK.tenantId().eq(tenant), HOOK.id().eq(id)).select(HOOK).fetchOptional().orElseThrow(this::missing);
     }
 
     /** 按 ID 查询订阅实体（不限租户），不存在时抛出领域异常。 */
     private WebhookSubscriptionEntity entity(UUID id) {
-        return sql.createQuery(HOOK).where(HOOK.id().eq(id)).select(HOOK).fetchOptional().orElseThrow(this::missing);
+        return repository.sql().createQuery(HOOK).where(HOOK.id().eq(id)).select(HOOK).fetchOptional().orElseThrow(this::missing);
     }
 
     /** 构造订阅缺失的领域异常。 */

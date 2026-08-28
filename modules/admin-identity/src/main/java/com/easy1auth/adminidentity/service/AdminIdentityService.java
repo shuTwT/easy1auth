@@ -2,6 +2,8 @@ package com.easy1auth.adminidentity.service;
 
 import com.easy1auth.adminidentity.*;
 import com.easy1auth.adminidentity.repository.AdminIdentityRepository;
+import com.easy1auth.adminidentity.util.AdminIdentityNormalizer;
+import com.easy1auth.adminidentity.util.TokenHash;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.id.UuidV7;
 import com.easy1auth.infrastructure.foundation.error.ErrorCode;
@@ -38,12 +40,14 @@ public class AdminIdentityService implements ActiveAdminAccountLocker {
     private final LoginProtectionService protection;
     /** 安全策略服务（密码强度与历史密码校验） */
     private final SecurityPolicyService security;
+    private final RegistrationCodeNativeSql registrationCodes;
 
-    AdminIdentityService(AdminIdentityRepository repository, PasswordEncoder passwords, LoginProtectionService protection, SecurityPolicyService security) {
+    AdminIdentityService(AdminIdentityRepository repository, PasswordEncoder passwords, LoginProtectionService protection, SecurityPolicyService security, RegistrationCodeNativeSql registrationCodes) {
         this.repository = repository;
         this.passwords = passwords;
         this.protection = protection;
         this.security = security;
+        this.registrationCodes = registrationCodes;
     }
 
     /**
@@ -80,7 +84,7 @@ public class AdminIdentityService implements ActiveAdminAccountLocker {
     public AuthenticatedAdmin register(String username, String email, String password, String code, Duration refreshTtl, String userAgent, String ip) {
         var identity = AdminIdentityNormalizer.normalize(username, email);
         validateCredentials(identity.username(), identity.email(), password);
-        if (code == null || code.isBlank() || !repository.consumeRegistrationCode(identity.email(), TokenHash.sha256(code))) {
+        if (code == null || code.isBlank() || !registrationCodes.consume(identity.email(), TokenHash.sha256(code))) {
             throw new DomainException(ErrorCodeConstants.VERIFICATION_CODE_INVALID);
         }
         if (repository.exists(identity.username(), identity.email())) {

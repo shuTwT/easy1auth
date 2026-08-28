@@ -1,4 +1,4 @@
-package com.easy1auth.adminidentity;
+package com.easy1auth.adminidentity.util;
 
 import java.util.Locale;
 

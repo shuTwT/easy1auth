@@ -1,9 +1,11 @@
-package com.easy1auth.enterpriseidentity;
+package com.easy1auth.enterpriseidentity.service;
 
+import com.easy1auth.enterpriseidentity.*;
 import com.easy1auth.poolidentity.model.*;
 import com.easy1auth.poolidentity.service.PoolUserService;
 import com.easy1auth.poolidentity.service.PoolUserInput;
 import com.easy1auth.enterpriseidentity.model.*;
+import com.easy1auth.enterpriseidentity.repository.EnterpriseIdentityRepository;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.id.UuidV7;
 import com.easy1auth.infrastructure.foundation.web.PageData;
@@ -12,8 +14,6 @@ import com.easy1auth.tenant.TenantContextHolder;
 import com.easy1auth.tenant.TenantUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import org.babyfish.jimmer.sql.JSqlClient;
 import org.babyfish.jimmer.sql.ast.LikeMode;
 import org.babyfish.jimmer.sql.ast.mutation.SaveMode;
 import org.springframework.stereotype.Service;
@@ -52,7 +52,7 @@ public class EnterpriseIdentityService {
     /** user_group_assignment 表静态描述符 */
     private static final UserGroupAssignmentEntityTable MEMBERSHIP = UserGroupAssignmentEntityTable.$;
     /** jimmer SQL 客户端 */
-    private final JSqlClient sql;
+    private final EnterpriseIdentityRepository repository;
     /** 敏感凭证加解密器 */
     private final SecurityDataCipher cipher;
     /** JSON 序列化 / 反序列化器 */
@@ -62,8 +62,8 @@ public class EnterpriseIdentityService {
     /** 飞书 Open API 的 HTTP 客户端（连接超时 8 秒） */
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(8)).build();
 
-    public EnterpriseIdentityService(JSqlClient sql, SecurityDataCipher cipher, ObjectMapper json, PoolUserService users) {
-        this.sql = sql;
+    public EnterpriseIdentityService(EnterpriseIdentityRepository repository, SecurityDataCipher cipher, ObjectMapper json, PoolUserService users) {
+        this.repository = repository;
         this.cipher = cipher;
         this.json = json;
         this.users = users;
@@ -74,7 +74,7 @@ public class EnterpriseIdentityService {
     public PageData<EnterpriseIdentitySourceView> list(int page, int pageSize, String search, String status) {
         UUID tenant = TenantContextHolder.requireTenantId();
         int p = Math.max(page, 1), s = Math.min(Math.max(pageSize, 1), 100);
-        var q = sql.createQuery(SOURCE).where(SOURCE.tenantId().eq(tenant))
+        var q = repository.sql().createQuery(SOURCE).where(SOURCE.tenantId().eq(tenant))
                 .whereIf(search != null && !search.isBlank(), () -> SOURCE.name().ilike(search, LikeMode.ANYWHERE))
                 .whereIf(status != null && !status.isBlank(), () -> SOURCE.status().eq(status))
                 .orderBy(SOURCE.createdAt().desc()).select(SOURCE);
@@ -99,7 +99,7 @@ public class EnterpriseIdentityService {
                 .setEncryptedVerificationToken(encrypt(tenant, id, "verification-token", input.verificationToken()))
                 .setEncryptedEncryptKey(encrypt(tenant, id, "encrypt-key", input.encryptKey())).setStatus("active")
                 .setLastSyncAt(null).setLastSyncStatus(null).setLastError(null).setCreatedAt(now).setUpdatedAt(now));
-        sql.saveCommand(row).setMode(SaveMode.INSERT_ONLY).execute();
+        repository.sql().saveCommand(row).setMode(SaveMode.INSERT_ONLY).execute();
         return view(row);
     }
 
@@ -109,7 +109,7 @@ public class EnterpriseIdentityService {
         UUID tenant = TenantContextHolder.requireTenantId();
         var old = source(tenant, id);
         validate(input, false);
-        var update = sql.createUpdate(SOURCE).set(SOURCE.updatedAt(), Instant.now()).where(SOURCE.id().eq(id), SOURCE.tenantId().eq(tenant));
+        var update = repository.sql().createUpdate(SOURCE).set(SOURCE.updatedAt(), Instant.now()).where(SOURCE.id().eq(id), SOURCE.tenantId().eq(tenant));
         if (input.name() != null) {
             update.set(SOURCE.name(), input.name().strip());
         }
@@ -138,9 +138,9 @@ public class EnterpriseIdentityService {
         UUID tenant = TenantContextHolder.requireTenantId();
         source(tenant, id);
         // Imported data deliberately survives source deletion and becomes locally managed.
-        sql.createUpdate(USER).set(USER.enterpriseIdentitySourceId(), (UUID) null).set(USER.enterpriseIdentityExternalId(), (String) null).where(USER.tenantId().eq(tenant), USER.enterpriseIdentitySourceId().eq(id)).execute();
-        sql.createUpdate(GROUP).set(GROUP.enterpriseIdentitySourceId(), (UUID) null).set(GROUP.enterpriseIdentityExternalId(), (String) null).where(GROUP.tenantId().eq(tenant), GROUP.enterpriseIdentitySourceId().eq(id)).execute();
-        sql.createDelete(SOURCE).where(SOURCE.id().eq(id), SOURCE.tenantId().eq(tenant)).execute();
+        repository.sql().createUpdate(USER).set(USER.enterpriseIdentitySourceId(), (UUID) null).set(USER.enterpriseIdentityExternalId(), (String) null).where(USER.tenantId().eq(tenant), USER.enterpriseIdentitySourceId().eq(id)).execute();
+        repository.sql().createUpdate(GROUP).set(GROUP.enterpriseIdentitySourceId(), (UUID) null).set(GROUP.enterpriseIdentityExternalId(), (String) null).where(GROUP.tenantId().eq(tenant), GROUP.enterpriseIdentitySourceId().eq(id)).execute();
+        repository.sql().createDelete(SOURCE).where(SOURCE.id().eq(id), SOURCE.tenantId().eq(tenant)).execute();
     }
 
     /** 触发指定启用中身份源的全量同步，返回排队中的同步任务视图。 */
@@ -158,14 +158,14 @@ public class EnterpriseIdentityService {
     public List<EnterpriseIdentityTaskView> tasks(UUID id) {
         UUID tenant = TenantContextHolder.requireTenantId();
         source(tenant, id);
-        return sql.createQuery(TASK).where(TASK.tenantId().eq(tenant), TASK.sourceId().eq(id)).orderBy(TASK.createdAt().desc()).select(TASK).limit(30).execute().stream().map(EnterpriseIdentityService::taskView).toList();
+        return repository.sql().createQuery(TASK).where(TASK.tenantId().eq(tenant), TASK.sourceId().eq(id)).orderBy(TASK.createdAt().desc()).select(TASK).limit(30).execute().stream().map(EnterpriseIdentityService::taskView).toList();
     }
 
     /** 统计当前租户身份源的总数及启用 / 停用数量。 */
     @Transactional(readOnly = true)
     public EnterpriseIdentityStats stats() {
         UUID tenant = TenantContextHolder.requireTenantId();
-        var rows = sql.createQuery(SOURCE).where(SOURCE.tenantId().eq(tenant)).select(SOURCE.status()).execute();
+        var rows = repository.sql().createQuery(SOURCE).where(SOURCE.tenantId().eq(tenant)).select(SOURCE.status()).execute();
         long active = rows.stream().filter("active"::equals).count();
         return new EnterpriseIdentityStats(rows.size(), active, rows.size() - active);
     }
@@ -176,7 +176,7 @@ public class EnterpriseIdentityService {
      */
     @Transactional
     public FeishuEventResponse acceptFeishuEvent(UUID sourceId, Map<String, Object> envelope) {
-        EnterpriseIdentitySourceEntity source = ignored(() -> sql.findById(EnterpriseIdentitySourceEntity.class, sourceId));
+        EnterpriseIdentitySourceEntity source = ignored(() -> repository.sql().findById(EnterpriseIdentitySourceEntity.class, sourceId));
         if (source == null || !"feishu".equals(source.provider())) {
             throw new DomainException(ErrorCodeConstants.ENTERPRISE_IDENTITY_SOURCE_NOT_FOUND);
         }
@@ -215,10 +215,10 @@ public class EnterpriseIdentityService {
     /** worker 领取待处理（pending）任务并置为 processing，返回实际领取的任务列表。 */
     @Transactional
     public List<EnterpriseIdentityTaskView> claim(int limit) {
-        List<EnterpriseIdentitySyncTaskEntity> rows = sql.createQuery(TASK).where(TASK.status().eq("pending")).orderBy(TASK.createdAt().asc()).select(TASK).limit(Math.max(1, Math.min(limit, 20))).execute();
+        List<EnterpriseIdentitySyncTaskEntity> rows = repository.sql().createQuery(TASK).where(TASK.status().eq("pending")).orderBy(TASK.createdAt().asc()).select(TASK).limit(Math.max(1, Math.min(limit, 20))).execute();
         List<EnterpriseIdentityTaskView> claimed = new ArrayList<>();
         for (var row : rows) {
-            if (sql.createUpdate(TASK).set(TASK.status(), "processing").set(TASK.startedAt(), Instant.now()).where(TASK.id().eq(row.id()), TASK.status().eq("pending")).execute() == 1) {
+            if (repository.sql().createUpdate(TASK).set(TASK.status(), "processing").set(TASK.startedAt(), Instant.now()).where(TASK.id().eq(row.id()), TASK.status().eq("pending")).execute() == 1) {
                 claimed.add(taskView(row));
             }
         }
@@ -227,7 +227,7 @@ public class EnterpriseIdentityService {
 
     /** worker 处理指定任务：按任务类型执行全量或事件同步，并落最终状态。 */
     public void process(UUID taskId) {
-        EnterpriseIdentitySyncTaskEntity task = ignored(() -> sql.findById(EnterpriseIdentitySyncTaskEntity.class, taskId));
+        EnterpriseIdentitySyncTaskEntity task = ignored(() -> repository.sql().findById(EnterpriseIdentitySyncTaskEntity.class, taskId));
         if (task == null || !"processing".equals(task.status())) {
             return;
         }
@@ -316,15 +316,15 @@ public class EnterpriseIdentityService {
     /** 新建或更新某个同步部门对应的用户组，返回其 ID。 */
     private UUID upsertGroup(EnterpriseIdentitySourceEntity source, String externalId, String name, UUID parent) {
         UUID tenant = source.tenantId();
-        var old = sql.createQuery(GROUP).where(GROUP.tenantId().eq(tenant), GROUP.enterpriseIdentitySourceId().eq(source.id()), GROUP.enterpriseIdentityExternalId().eq(externalId)).select(GROUP).fetchOneOrNull();
+        var old = repository.sql().createQuery(GROUP).where(GROUP.tenantId().eq(tenant), GROUP.enterpriseIdentitySourceId().eq(source.id()), GROUP.enterpriseIdentityExternalId().eq(externalId)).select(GROUP).fetchOneOrNull();
         String safe = uniqueGroupName(tenant, old == null ? null : old.id(), parent, name);
         if (old == null) {
             UUID id = UuidV7.randomUuid();
             Instant now = Instant.now();
-            sql.saveCommand(UserGroupEntityDraft.$.produce(d -> d.setId(id).setTenantId(tenant).setName(safe).setDescription("由飞书同步管理").setType("department").setParentId(parent).setEnterpriseIdentitySourceId(source.id()).setEnterpriseIdentityExternalId(externalId).setCreatedAt(now).setUpdatedAt(now))).setMode(SaveMode.INSERT_ONLY).execute();
+            repository.sql().saveCommand(UserGroupEntityDraft.$.produce(d -> d.setId(id).setTenantId(tenant).setName(safe).setDescription("由飞书同步管理").setType("department").setParentId(parent).setEnterpriseIdentitySourceId(source.id()).setEnterpriseIdentityExternalId(externalId).setCreatedAt(now).setUpdatedAt(now))).setMode(SaveMode.INSERT_ONLY).execute();
             return id;
         }
-        sql.createUpdate(GROUP).set(GROUP.name(), safe).set(GROUP.parentId(), parent).set(GROUP.updatedAt(), Instant.now()).where(GROUP.id().eq(old.id())).execute();
+        repository.sql().createUpdate(GROUP).set(GROUP.name(), safe).set(GROUP.parentId(), parent).set(GROUP.updatedAt(), Instant.now()).where(GROUP.id().eq(old.id())).execute();
         return old.id();
     }
 
@@ -338,12 +338,12 @@ public class EnterpriseIdentityService {
             increment(summary, "skippedMissingPhone");
             return;
         }
-        var old = sql.createQuery(USER).where(USER.tenantId().eq(tenant), USER.enterpriseIdentitySourceId().eq(source.id()), USER.enterpriseIdentityExternalId().eq(externalId)).select(USER).fetchOneOrNull();
-        if (old == null && email != null && sql.createQuery(USER).where(USER.tenantId().eq(tenant), USER.email().eq(email)).select(USER.id()).exists()) {
+        var old = repository.sql().createQuery(USER).where(USER.tenantId().eq(tenant), USER.enterpriseIdentitySourceId().eq(source.id()), USER.enterpriseIdentityExternalId().eq(externalId)).select(USER).fetchOneOrNull();
+        if (old == null && email != null && repository.sql().createQuery(USER).where(USER.tenantId().eq(tenant), USER.email().eq(email)).select(USER.id()).exists()) {
             increment(summary, "skippedEmailConflict");
             return;
         }
-        if (old == null && sql.createQuery(USER).where(USER.tenantId().eq(tenant), USER.phone().eq(phone)).select(USER.id()).exists()) {
+        if (old == null && repository.sql().createQuery(USER).where(USER.tenantId().eq(tenant), USER.phone().eq(phone)).select(USER.id()).exists()) {
             increment(summary, "skippedPhoneConflict");
             return;
         }
@@ -351,7 +351,7 @@ public class EnterpriseIdentityService {
         String department = "";
         List<String> deps = ids(remote, "department_ids");
         if (!deps.isEmpty()) {
-            var g = sql.createQuery(GROUP).where(GROUP.enterpriseIdentitySourceId().eq(source.id()), GROUP.enterpriseIdentityExternalId().eq(deps.getFirst())).select(GROUP).fetchOneOrNull();
+            var g = repository.sql().createQuery(GROUP).where(GROUP.enterpriseIdentitySourceId().eq(source.id()), GROUP.enterpriseIdentityExternalId().eq(deps.getFirst())).select(GROUP).fetchOneOrNull();
             if (g != null) {
                 department = g.name();
             }
@@ -359,35 +359,35 @@ public class EnterpriseIdentityService {
         if (old == null) {
             String username = username(externalId);
             var created = users.create(tenant, new PoolUserInput(username, email, null, phone, name, avatar, "active", department, position, Map.of("enterpriseIdentity", "feishu")));
-            sql.createUpdate(USER).set(USER.enterpriseIdentitySourceId(), source.id()).set(USER.enterpriseIdentityExternalId(), externalId).where(USER.id().eq(created.id())).execute();
+            repository.sql().createUpdate(USER).set(USER.enterpriseIdentitySourceId(), source.id()).set(USER.enterpriseIdentityExternalId(), externalId).where(USER.id().eq(created.id())).execute();
             increment(summary, "createdUsers");
         } else {
-            sql.createUpdate(USER).set(USER.email(), email).set(USER.name(), name).set(USER.phone(), phone).set(USER.avatar(), avatar).set(USER.department(), department).set(USER.position(), position).set(USER.status(), "active").set(USER.updatedAt(), Instant.now()).where(USER.id().eq(old.id())).execute();
+            repository.sql().createUpdate(USER).set(USER.email(), email).set(USER.name(), name).set(USER.phone(), phone).set(USER.avatar(), avatar).set(USER.department(), department).set(USER.position(), position).set(USER.status(), "active").set(USER.updatedAt(), Instant.now()).where(USER.id().eq(old.id())).execute();
             increment(summary, "updatedUsers");
         }
     }
 
     /** 按用户的部门归属重建其与同步用户组的成员关系（先清理旧关系再补齐）。 */
     private void syncMembership(EnterpriseIdentitySourceEntity source, String externalUserId, List<String> departments) {
-        var user = sql.createQuery(USER).where(USER.enterpriseIdentitySourceId().eq(source.id()), USER.enterpriseIdentityExternalId().eq(externalUserId)).select(USER).fetchOneOrNull();
+        var user = repository.sql().createQuery(USER).where(USER.enterpriseIdentitySourceId().eq(source.id()), USER.enterpriseIdentityExternalId().eq(externalUserId)).select(USER).fetchOneOrNull();
         if (user == null) {
             return;
         }
-        var sourceGroups = sql.createQuery(GROUP).where(GROUP.enterpriseIdentitySourceId().eq(source.id())).select(GROUP).execute();
+        var sourceGroups = repository.sql().createQuery(GROUP).where(GROUP.enterpriseIdentitySourceId().eq(source.id())).select(GROUP).execute();
         Set<UUID> ids = sourceGroups.stream().filter(group -> departments.contains(group.enterpriseIdentityExternalId())).map(UserGroupEntity::id).collect(java.util.stream.Collectors.toSet());
         List<UUID> sourceIds = sourceGroups.stream().map(UserGroupEntity::id).toList();
         if (!sourceIds.isEmpty()) {
-            sql.createDelete(MEMBERSHIP).where(MEMBERSHIP.id().tenantId().eq(source.tenantId()), MEMBERSHIP.id().userId().eq(user.id()), MEMBERSHIP.id().groupId().in(sourceIds)).execute();
+            repository.sql().createDelete(MEMBERSHIP).where(MEMBERSHIP.id().tenantId().eq(source.tenantId()), MEMBERSHIP.id().userId().eq(user.id()), MEMBERSHIP.id().groupId().in(sourceIds)).execute();
         }
         for (UUID groupId : ids) {
-            sql.saveCommand(UserGroupAssignmentEntityDraft.$.produce(d -> d.setId(UserGroupAssignmentIdDraft.$.produce(k -> k.setTenantId(source.tenantId()).setUserId(user.id()).setGroupId(groupId))))).setMode(SaveMode.INSERT_IF_ABSENT).execute();
+            repository.sql().saveCommand(UserGroupAssignmentEntityDraft.$.produce(d -> d.setId(UserGroupAssignmentIdDraft.$.produce(k -> k.setTenantId(source.tenantId()).setUserId(user.id()).setGroupId(groupId))))).setMode(SaveMode.INSERT_IF_ABSENT).execute();
         }
     }
 
     /** 将飞书侧已删除用户的本地状态置为 disabled。 */
     private void disableUser(EnterpriseIdentitySourceEntity source, String externalId) {
         if (!externalId.isBlank()) {
-            sql.createUpdate(USER).set(USER.status(), "disabled").set(USER.updatedAt(), Instant.now()).where(USER.enterpriseIdentitySourceId().eq(source.id()), USER.enterpriseIdentityExternalId().eq(externalId)).execute();
+            repository.sql().createUpdate(USER).set(USER.status(), "disabled").set(USER.updatedAt(), Instant.now()).where(USER.enterpriseIdentitySourceId().eq(source.id()), USER.enterpriseIdentityExternalId().eq(externalId)).execute();
         }
     }
 
@@ -396,22 +396,22 @@ public class EnterpriseIdentityService {
         UUID id = UuidV7.randomUuid();
         Instant now = Instant.now();
         var row = EnterpriseIdentitySyncTaskEntityDraft.$.produce(d -> d.setId(id).setTenantId(source.tenantId()).setSourceId(source.id()).setType(type).setEventId(eventId).setPayload(payload).setStatus("pending").setSummary(Map.of()).setLastError(null).setCreatedAt(now).setStartedAt(null).setFinishedAt(null));
-        sql.saveCommand(row).setMode(SaveMode.INSERT_ONLY).execute();
+        repository.sql().saveCommand(row).setMode(SaveMode.INSERT_ONLY).execute();
         return taskView(row);
     }
 
     /** 结束任务并回写身份源的最近同步时间与结果。 */
     private void finish(UUID id, Map<String, Object> summary, String result, String error) {
-        sql.createUpdate(TASK).set(TASK.status(), result).set(TASK.summary(), summary).set(TASK.lastError(), error).set(TASK.finishedAt(), Instant.now()).where(TASK.id().eq(id)).execute();
-        var task = sql.findById(EnterpriseIdentitySyncTaskEntity.class, id);
+        repository.sql().createUpdate(TASK).set(TASK.status(), result).set(TASK.summary(), summary).set(TASK.lastError(), error).set(TASK.finishedAt(), Instant.now()).where(TASK.id().eq(id)).execute();
+        var task = repository.sql().findById(EnterpriseIdentitySyncTaskEntity.class, id);
         if (task != null) {
-            sql.createUpdate(SOURCE).set(SOURCE.lastSyncAt(), Instant.now()).set(SOURCE.lastSyncStatus(), result).set(SOURCE.lastError(), error).set(SOURCE.updatedAt(), Instant.now()).where(SOURCE.id().eq(task.sourceId())).execute();
+            repository.sql().createUpdate(SOURCE).set(SOURCE.lastSyncAt(), Instant.now()).set(SOURCE.lastSyncStatus(), result).set(SOURCE.lastError(), error).set(SOURCE.updatedAt(), Instant.now()).where(SOURCE.id().eq(task.sourceId())).execute();
         }
     }
 
     /** 按租户与 ID 查询身份源，不存在时抛出领域异常。 */
     private EnterpriseIdentitySourceEntity source(UUID tenant, UUID id) {
-        return sql.createQuery(SOURCE).where(SOURCE.tenantId().eq(tenant), SOURCE.id().eq(id)).select(SOURCE).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.ENTERPRISE_IDENTITY_SOURCE_NOT_FOUND));
+        return repository.sql().createQuery(SOURCE).where(SOURCE.tenantId().eq(tenant), SOURCE.id().eq(id)).select(SOURCE).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.ENTERPRISE_IDENTITY_SOURCE_NOT_FOUND));
     }
 
     /** 解密飞书事件包络中的 encrypt 字段；未加密时原样返回。 */
@@ -499,7 +499,7 @@ public class EnterpriseIdentityService {
         String base = nonBlank(desired, "未命名部门");
         String value = base;
         int n = 0;
-        while (sql.createQuery(GROUP).where(GROUP.tenantId().eq(tenant), GROUP.parentId().eq(parent), GROUP.name().eq(value)).whereIf(self != null, () -> GROUP.id().ne(self)).select(GROUP.id()).exists()) {
+        while (repository.sql().createQuery(GROUP).where(GROUP.tenantId().eq(tenant), GROUP.parentId().eq(parent), GROUP.name().eq(value)).whereIf(self != null, () -> GROUP.id().ne(self)).select(GROUP.id()).exists()) {
             value = "飞书-" + base + (n++ == 0 ? "" : "-" + n);
         }
         return value;
@@ -509,7 +509,7 @@ public class EnterpriseIdentityService {
         if (!present(externalId) || "0".equals(externalId)) {
             return null;
         }
-        var group = sql.createQuery(GROUP).where(GROUP.enterpriseIdentitySourceId().eq(source.id()), GROUP.enterpriseIdentityExternalId().eq(externalId)).select(GROUP).fetchOneOrNull();
+        var group = repository.sql().createQuery(GROUP).where(GROUP.enterpriseIdentitySourceId().eq(source.id()), GROUP.enterpriseIdentityExternalId().eq(externalId)).select(GROUP).fetchOneOrNull();
         return group == null ? null : group.id();
     }
 

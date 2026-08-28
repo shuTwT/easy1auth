@@ -2,6 +2,8 @@ package com.easy1auth.adminidentity.service;
 
 import com.easy1auth.adminidentity.*;
 import com.easy1auth.adminidentity.repository.AdminIdentityRepository;
+import com.easy1auth.adminidentity.util.AdminIdentityNormalizer;
+import com.easy1auth.adminidentity.util.TokenHash;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.id.UuidV7;
 import org.springframework.stereotype.Service;
@@ -22,9 +24,11 @@ public class RegistrationCodeService {
     private static final SecureRandom RANDOM = new SecureRandom();
     /** 管理账号身份数据访问仓储 */
     private final AdminIdentityRepository repository;
+    private final RegistrationCodeNativeSql registrationCodes;
 
-    RegistrationCodeService(AdminIdentityRepository repository) {
+    RegistrationCodeService(AdminIdentityRepository repository, RegistrationCodeNativeSql registrationCodes) {
         this.repository = repository;
+        this.registrationCodes = registrationCodes;
     }
 
     /**
@@ -43,7 +47,7 @@ public class RegistrationCodeService {
             throw new DomainException(ErrorCodeConstants.ADMIN_EXISTS_EMAIL);
         }
         String code = "%06d".formatted(RANDOM.nextInt(1_000_000));
-        repository.issueRegistrationCode(UuidV7.randomUuid(), normalizedEmail, TokenHash.sha256(code), Instant.now().plus(Duration.ofMinutes(10)));
+        registrationCodes.issue(UuidV7.randomUuid(), normalizedEmail, TokenHash.sha256(code), Instant.now().plus(Duration.ofMinutes(10)));
         return new IssuedCode(normalizedEmail, code, Instant.now().plus(Duration.ofMinutes(10)));
     }
 

@@ -9,10 +9,9 @@ import com.easy1auth.security.SecurityDataCipher;
 import com.easy1auth.social.ErrorCodeConstants;
 import com.easy1auth.social.adapter.SocialIdentityAdapter;
 import com.easy1auth.social.model.*;
+import com.easy1auth.social.repository.SocialIdentityRepository;
 import com.easy1auth.tenant.TenantContextHolder;
-import org.babyfish.jimmer.sql.JSqlClient;
 import org.babyfish.jimmer.sql.ast.LikeMode;
-import org.babyfish.jimmer.sql.ast.mutation.SaveMode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,7 +39,7 @@ public class SocialIdentityService {
     private static final SocialIdentityBindingEntityTable BINDING = SocialIdentityBindingEntityTable.$;
 
     /** jimmer SQL 客户端 */
-    private final JSqlClient sql;
+    private final SocialIdentityRepository repository;
     /** 数据加密器（用于加密 client_secret / nonce / PKCE verifier） */
     private final SecurityDataCipher cipher;
     /** 用户服务（JIT 开通时创建 pool_user） */
@@ -50,8 +49,8 @@ public class SocialIdentityService {
     /** 按厂商类型索引的适配器映射 */
     private final Map<String, SocialIdentityAdapter> adapters;
 
-    public SocialIdentityService(JSqlClient sql, SecurityDataCipher cipher, PoolUserService users, List<SocialIdentityAdapter> adapterList) {
-        this.sql = sql;
+    public SocialIdentityService(SocialIdentityRepository repository, SecurityDataCipher cipher, PoolUserService users, List<SocialIdentityAdapter> adapterList) {
+        this.repository = repository;
         this.cipher = cipher;
         this.users = users;
         Map<String, SocialIdentityAdapter> map = new LinkedHashMap<>();
@@ -69,15 +68,7 @@ public class SocialIdentityService {
         validate(in, true);
         UUID id = UuidV7.randomUuid();
         Instant now = Instant.now();
-        var e = SocialIdentitySourceEntityDraft.$.produce(d -> d.setId(id).setTenantId(tenant)
-                .setName(in.name().strip())
-                .setType(in.type())
-                .setMode(in.mode())
-                .setClientId(in.clientId().strip())
-                .setEncryptedClientSecret(cipher.encrypt("social:" + tenant + ":" + id, in.clientSecret()))
-                .setJitProvisioning(Boolean.TRUE.equals(in.jitProvisioning()))
-                .setStatus("active").setCreatedAt(now).setUpdatedAt(now));
-        sql.saveCommand(e).setMode(SaveMode.INSERT_ONLY).execute();
+        var e = repository.createSource(id, tenant, in.name().strip(), in.type(), in.mode(), in.clientId().strip(), cipher.encrypt("social:" + tenant + ":" + id, in.clientSecret()), Boolean.TRUE.equals(in.jitProvisioning()));
         return view(e, in.clientSecret());
     }
 
@@ -85,7 +76,7 @@ public class SocialIdentityService {
     @Transactional(readOnly = true)
     public PageData<SourceView> list(UUID tenant, int page, int size, String search, String status) {
         int p = Math.max(1, page), s = Math.min(100, Math.max(1, size));
-        var q = sql.createQuery(SOURCE).where(SOURCE.tenantId().eq(tenant))
+        var q = repository.sql().createQuery(SOURCE).where(SOURCE.tenantId().eq(tenant))
                 .whereIf(search != null && !search.isBlank(), () -> SOURCE.name().ilike(search, LikeMode.ANYWHERE))
                 .whereIf(status != null && !status.isBlank(), () -> SOURCE.status().eq(status))
                 .orderBy(SOURCE.createdAt().desc()).select(SOURCE);
@@ -104,7 +95,7 @@ public class SocialIdentityService {
     public SourceView update(UUID tenant, UUID id, SocialIdentityInput in) {
         var old = entity(tenant, id);
         validate(in, false);
-        var u = sql.createUpdate(SOURCE).set(SOURCE.updatedAt(), Instant.now())
+        var u = repository.sql().createUpdate(SOURCE).set(SOURCE.updatedAt(), Instant.now())
                 .where(SOURCE.tenantId().eq(tenant), SOURCE.id().eq(id));
         if (in.name() != null) {
             u.set(SOURCE.name(), in.name().strip());
@@ -134,7 +125,7 @@ public class SocialIdentityService {
     /** 删除身份源（物理删除，须属于指定租户）。 */
     @Transactional
     public void delete(UUID tenant, UUID id) {
-        if (sql.createDelete(SOURCE).where(SOURCE.tenantId().eq(tenant), SOURCE.id().eq(id)).execute() != 1) {
+        if (repository.sql().createDelete(SOURCE).where(SOURCE.tenantId().eq(tenant), SOURCE.id().eq(id)).execute() != 1) {
             throw missing();
         }
     }
@@ -142,7 +133,7 @@ public class SocialIdentityService {
     /** 查询租户下已启用的身份源（供登录页渲染按钮用）。 */
     @Transactional(readOnly = true)
     public List<SourceView> listActive(UUID tenant) {
-        return sql.createQuery(SOURCE).where(SOURCE.tenantId().eq(tenant), SOURCE.status().eq("active"))
+        return repository.sql().createQuery(SOURCE).where(SOURCE.tenantId().eq(tenant), SOURCE.status().eq("active"))
                 .orderBy(SOURCE.createdAt().asc()).select(SOURCE).execute().stream()
                 .map(e -> view(e, null)).toList();
     }
@@ -163,14 +154,7 @@ public class SocialIdentityService {
         String challenge = verifier != null ? base64(sha256(verifier)) : null;
         UUID id = UuidV7.randomUuid();
         Instant now = Instant.now();
-        var tx = SocialLoginTransactionEntityDraft.$.produce(d -> d.setId(id).setTenantId(tenant)
-                .setSourceId(sourceId)
-                .setStateHash(hash(state)).setNonceHash(hash(nonce))
-                .setEncryptedNonce(cipher.encrypt("social-tx:" + id + ":nonce", nonce))
-                .setEncryptedPkceVerifier(verifier != null ? cipher.encrypt("social-tx:" + id + ":pkce", verifier) : null)
-                .setReturnUri(callback.toString()).setExpiresAt(now.plusSeconds(600))
-                .setConsumedAt(null).setCreatedAt(now));
-        sql.saveCommand(tx).setMode(SaveMode.INSERT_ONLY).execute();
+        var tx = repository.createTransaction(id, tenant, sourceId, hash(state), hash(nonce), cipher.encrypt("social-tx:" + id + ":nonce", nonce), verifier != null ? cipher.encrypt("social-tx:" + id + ":pkce", verifier) : null, callback.toString(), now.plusSeconds(600));
         var result = adapter.authorize(s.clientId(), callback, state, adapter.defaultScope(), challenge);
         return new AuthorizationStart(result.authorizeUrl().toString(), state, 600);
     }
@@ -178,7 +162,7 @@ public class SocialIdentityService {
     /** 处理回调：校验事务并拉取用户信息，若已有绑定则返回该用户并刷新最后登录时间。 */
     @Transactional
     public CallbackResult callback(String code, String state, String redirectUri) {
-        var tx = sql.createQuery(TX).where(TX.stateHash().eq(hash(state)))
+        var tx = repository.sql().createQuery(TX).where(TX.stateHash().eq(hash(state)))
                 .select(TX).forUpdate().fetchOneOrNull();
         if (tx == null || tx.consumedAt() != null || tx.expiresAt().isBefore(Instant.now()) || !Objects.equals(tx.returnUri(), redirectUri)) {
             throw new DomainException(ErrorCodeConstants.SOCIAL_TRANSACTION_INVALID);
@@ -192,15 +176,15 @@ public class SocialIdentityService {
                 ? cipher.decrypt("social-tx:" + tx.id() + ":pkce", tx.encryptedPkceVerifier()) : null;
         var info = adapter.exchangeAndFetch(s.clientId(), secret, code, safeRedirect(redirectUri), verifier);
 
-        var binding = sql.createQuery(BINDING)
+        var binding = repository.sql().createQuery(BINDING)
                 .where(BINDING.tenantId().eq(tenant), BINDING.sourceId().eq(sourceId), BINDING.subject().eq(info.subject()))
                 .select(BINDING).fetchOneOrNull();
         UUID userId = null;
         if (binding != null) {
             userId = binding.poolUserId();
-            sql.createUpdate(BINDING).set(BINDING.lastLoginAt(), Instant.now()).where(BINDING.id().eq(binding.id())).execute();
+            repository.sql().createUpdate(BINDING).set(BINDING.lastLoginAt(), Instant.now()).where(BINDING.id().eq(binding.id())).execute();
         }
-        sql.createUpdate(TX).set(TX.consumedAt(), Instant.now()).where(TX.id().eq(tx.id()), TX.consumedAt().isNull()).execute();
+        repository.sql().createUpdate(TX).set(TX.consumedAt(), Instant.now()).where(TX.id().eq(tx.id()), TX.consumedAt().isNull()).execute();
         var identity = new PendingIdentity(tenant, sourceId, s.type(), info.subject(), info.username(),
                 info.name(), info.email(), info.avatar());
         return new CallbackResult(tenant, sourceId, userId, identity);
@@ -225,22 +209,17 @@ public class SocialIdentityService {
         if (identity == null || poolUserId == null) {
             throw new DomainException(ErrorCodeConstants.SOCIAL_TRANSACTION_INVALID);
         }
-        var existing = sql.createQuery(BINDING)
+        var existing = repository.sql().createQuery(BINDING)
                 .where(BINDING.tenantId().eq(identity.tenantId()), BINDING.sourceId().eq(identity.sourceId()), BINDING.subject().eq(identity.subject()))
                 .select(BINDING).fetchOneOrNull();
         if (existing != null) {
             if (!existing.poolUserId().equals(poolUserId)) {
                 throw new DomainException(ErrorCodeConstants.SOCIAL_BINDING_CONFLICT);
             }
-            sql.createUpdate(BINDING).set(BINDING.lastLoginAt(), Instant.now()).where(BINDING.id().eq(existing.id())).execute();
+            repository.sql().createUpdate(BINDING).set(BINDING.lastLoginAt(), Instant.now()).where(BINDING.id().eq(existing.id())).execute();
             return;
         }
-        var binding = SocialIdentityBindingEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTenantId(identity.tenantId())
-                .setSourceId(identity.sourceId()).setPoolUserId(poolUserId).setSourceType(identity.sourceType()).setSubject(identity.subject())
-                .setClaims(Map.of("name", Objects.toString(identity.name(), ""), "email", Objects.toString(identity.email(), ""),
-                        "username", Objects.toString(identity.username(), "")))
-                .setCreatedAt(Instant.now()).setLastLoginAt(Instant.now()));
-        sql.saveCommand(binding).setMode(SaveMode.INSERT_ONLY).execute();
+        repository.createBinding(identity.tenantId(), identity.sourceId(), poolUserId, identity.sourceType(), identity.subject(), Map.of("name", Objects.toString(identity.name(), ""), "email", Objects.toString(identity.email(), ""), "username", Objects.toString(identity.username(), "")));
     }
 
     // ==================== TenantContextHolder 便捷重载 ====================
@@ -284,7 +263,7 @@ public class SocialIdentityService {
 
     /** 查询租户下指定身份源，不存在时抛出异常。 */
     private SocialIdentitySourceEntity entity(UUID tenant, UUID id) {
-        return sql.createQuery(SOURCE).where(SOURCE.tenantId().eq(tenant), SOURCE.id().eq(id)).select(SOURCE)
+        return repository.sql().createQuery(SOURCE).where(SOURCE.tenantId().eq(tenant), SOURCE.id().eq(id)).select(SOURCE)
                 .fetchOptional().orElseThrow(this::missing);
     }
 
@@ -363,15 +342,4 @@ public class SocialIdentityService {
         return clean.isBlank() ? "social_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12) : clean;
     }
 
-    // ==================== 值对象 ====================
-
-    
-
-    
-
-    
-
-    
-
-    
 }

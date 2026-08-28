@@ -1,6 +1,6 @@
 package com.easy1auth.admin.delivery;
 
-import com.easy1auth.enterpriseidentity.EnterpriseIdentityService;
+import com.easy1auth.enterpriseidentity.service.EnterpriseIdentityService;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 

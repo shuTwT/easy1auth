@@ -1,6 +1,6 @@
 package com.easy1auth.oauth2;
 
-import com.easy1auth.application.ApplicationService;
+import com.easy1auth.application.service.ApplicationService;
 import com.easy1auth.application.model.OAuthApplicationEntity;
 import org.springframework.security.oauth2.core.*;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;

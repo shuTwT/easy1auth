@@ -5,11 +5,11 @@ import com.easy1auth.audit.Event;
 import com.easy1auth.audit.Query;
 import com.easy1auth.audit.Stats;
 import com.easy1auth.audit.model.*;
+import com.easy1auth.audit.repository.AuditEventRepository;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.id.UuidV7;
 import com.easy1auth.infrastructure.foundation.web.PageData;
 import com.easy1auth.tenant.TenantContextHolder;
-import org.babyfish.jimmer.sql.JSqlClient;
 import org.babyfish.jimmer.sql.ast.LikeMode;
 import org.babyfish.jimmer.sql.ast.mutation.SaveMode;
 import org.springframework.stereotype.Service;
@@ -32,10 +32,10 @@ public class AuditService {
     /** 需在审计详情中脱敏的敏感字段名（大小写不敏感） */
     private static final Set<String> SECRET_KEYS = Set.of("password", "token", "secret", "code", "authorization", "cookie", "privateKey", "refreshToken");
     /** jimmer SQL 客户端 */
-    private final JSqlClient sql;
+    private final AuditEventRepository repository;
 
-    public AuditService(JSqlClient sql) {
-        this.sql = sql;
+    public AuditService(AuditEventRepository repository) {
+        this.repository = repository;
     }
 
     /** 记录一条审计事件并返回事件 ID（敏感字段自动脱敏）。 */
@@ -43,7 +43,7 @@ public class AuditService {
     public UUID record(Event input) {
         UUID id = UuidV7.randomUuid();
         var e = AuditEventEntityDraft.$.produce(d -> d.setId(id).setTenantId(input.tenantId()).setActorType(clean(input.actorType(), 24, "system")).setActorId(input.actorId()).setActorName(trim(input.actorName(), 320)).setEventType(clean(input.eventType(), 100, "security")).setAction(clean(input.action(), 100, "unknown")).setResourceType(clean(input.resourceType(), 100, "unknown")).setResourceId(trim(input.resourceId(), 200)).setTraceId(trim(input.traceId(), 100)).setMethod(trim(input.method(), 16)).setIpAddress(trim(input.ipAddress(), 64)).setUserAgent(trim(input.userAgent(), 512)).setOutcome("failure".equals(input.outcome()) ? "failure" : "success").setErrorCode(trim(input.errorCode(), 100)).setDetails(redact(input.details())).setCreatedAt(Instant.now()));
-        sql.saveCommand(e).setMode(SaveMode.INSERT_ONLY).execute();
+        repository.sql().saveCommand(e).setMode(SaveMode.INSERT_ONLY).execute();
         return id;
     }
 
@@ -52,7 +52,7 @@ public class AuditService {
     public PageData<AuditEventEntity> list(int page, int size, Query q) {
         UUID tenant = TenantContextHolder.requireTenantId();
         int p = Math.max(1, page), s = Math.min(200, Math.max(1, size));
-        var query = sql.createQuery(EVENT).where(EVENT.tenantId().eq(tenant)).whereIf(q != null && q.actorName() != null && !q.actorName().isBlank(), () -> EVENT.actorName().ilike(q.actorName(), LikeMode.ANYWHERE)).whereIf(q != null && q.eventType() != null && !q.eventType().isBlank(), () -> EVENT.eventType().eq(q.eventType())).whereIf(q != null && q.action() != null && !q.action().isBlank(), () -> EVENT.action().eq(q.action())).whereIf(q != null && q.outcome() != null && !q.outcome().isBlank(), () -> EVENT.outcome().eq(q.outcome())).whereIf(q != null && q.start() != null, () -> EVENT.createdAt().ge(q.start())).whereIf(q != null && q.end() != null, () -> EVENT.createdAt().le(q.end())).orderBy(EVENT.createdAt().desc()).select(EVENT);
+        var query = repository.sql().createQuery(EVENT).where(EVENT.tenantId().eq(tenant)).whereIf(q != null && q.actorName() != null && !q.actorName().isBlank(), () -> EVENT.actorName().ilike(q.actorName(), LikeMode.ANYWHERE)).whereIf(q != null && q.eventType() != null && !q.eventType().isBlank(), () -> EVENT.eventType().eq(q.eventType())).whereIf(q != null && q.action() != null && !q.action().isBlank(), () -> EVENT.action().eq(q.action())).whereIf(q != null && q.outcome() != null && !q.outcome().isBlank(), () -> EVENT.outcome().eq(q.outcome())).whereIf(q != null && q.start() != null, () -> EVENT.createdAt().ge(q.start())).whereIf(q != null && q.end() != null, () -> EVENT.createdAt().le(q.end())).orderBy(EVENT.createdAt().desc()).select(EVENT);
         long total = query.fetchUnlimitedCount();
         return PageData.of(query.limit(s, (long) (p - 1) * s).execute(), p, s, total);
     }
@@ -61,7 +61,7 @@ public class AuditService {
     @Transactional(readOnly = true)
     public AuditEventEntity get(UUID id) {
         UUID tenant = TenantContextHolder.requireTenantId();
-        return sql.createQuery(EVENT).where(EVENT.tenantId().eq(tenant), EVENT.id().eq(id)).select(EVENT).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.AUDIT_EVENT_NOT_FOUND));
+        return repository.sql().createQuery(EVENT).where(EVENT.tenantId().eq(tenant), EVENT.id().eq(id)).select(EVENT).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.AUDIT_EVENT_NOT_FOUND));
     }
 
     /** 清理当前租户早于保留期（不少于 30 天）的审计事件，返回删除条数。 */
@@ -71,14 +71,14 @@ public class AuditService {
         if (days < 30) {
             throw new DomainException(ErrorCodeConstants.AUDIT_RETENTION_INVALID);
         }
-        return sql.createDelete(EVENT).where(EVENT.tenantId().eq(tenant), EVENT.createdAt().lt(Instant.now().minus(Duration.ofDays(days)))).execute();
+        return repository.sql().createDelete(EVENT).where(EVENT.tenantId().eq(tenant), EVENT.createdAt().lt(Instant.now().minus(Duration.ofDays(days)))).execute();
     }
 
     /** 统计当前租户审计事件总量、成功/失败数与今日发生数。 */
     @Transactional(readOnly = true)
     public Stats stats() {
         UUID tenant = TenantContextHolder.requireTenantId();
-        var rows = sql.createQuery(EVENT).where(EVENT.tenantId().eq(tenant)).select(EVENT.outcome(), EVENT.createdAt()).execute();
+        var rows = repository.sql().createQuery(EVENT).where(EVENT.tenantId().eq(tenant)).select(EVENT.outcome(), EVENT.createdAt()).execute();
         Instant day = LocalDate.now(ZoneOffset.UTC).atStartOfDay().toInstant(ZoneOffset.UTC);
         return new Stats(rows.size(), rows.stream().filter(r -> "success".equals(r.get_1())).count(), rows.stream().filter(r -> "failure".equals(r.get_1())).count(), rows.stream().filter(r -> r.get_2().isAfter(day)).count());
     }

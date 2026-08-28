@@ -1,5 +1,6 @@
-package com.easy1auth.adminaccess;
+package com.easy1auth.adminaccess.service;
 
+import com.easy1auth.adminaccess.*;
 import com.easy1auth.adminaccess.model.*;
 import com.easy1auth.adminidentity.service.AdminIdentityService;
 import com.easy1auth.adminidentity.model.*;
@@ -8,7 +9,7 @@ import com.easy1auth.infrastructure.foundation.id.UuidV7;
 import com.easy1auth.infrastructure.foundation.web.PageData;
 import com.easy1auth.tenant.TenantContext;
 import com.easy1auth.tenant.model.*;
-import org.babyfish.jimmer.sql.JSqlClient;
+import com.easy1auth.adminaccess.repository.AdminAccessRepository;
 import org.babyfish.jimmer.sql.ast.LikeMode;
 import org.babyfish.jimmer.sql.ast.mutation.SaveMode;
 import org.springframework.stereotype.Service;
@@ -34,14 +35,14 @@ public class AdminAccessService {
     /** admin_account 表静态描述符 */
     private static final AdminAccountEntityTable ACCOUNT = AdminAccountEntityTable.$;
     /** jimmer SQL 客户端 */
-    private final JSqlClient sql;
+    private final AdminAccessRepository repository;
     /** 管理端权限目录 */
     private final ManagementPermissionCatalog catalog;
     /** 管理账号身份服务 */
     private final AdminIdentityService identities;
 
-    public AdminAccessService(JSqlClient sql, ManagementPermissionCatalog catalog, AdminIdentityService identities) {
-        this.sql = sql;
+    public AdminAccessService(AdminAccessRepository repository, ManagementPermissionCatalog catalog, AdminIdentityService identities) {
+        this.repository = repository;
         this.catalog = catalog;
         this.identities = identities;
     }
@@ -50,7 +51,7 @@ public class AdminAccessService {
     @Transactional(readOnly = true)
     public PageData<AdminRoleView> roles(int page, int pageSize, String name, Boolean system) {
         int p = Math.max(1, page), size = Math.min(100, Math.max(1, pageSize));
-        var query = sql.createQuery(ROLE).whereIf(name != null, () -> ROLE.name().ilike(name, LikeMode.ANYWHERE)).whereIf(system != null, () -> ROLE.systemRole().eq(system)).orderBy(ROLE.createdAt().desc()).select(ROLE.fetch(AdminRoleEntityFetcher.$.allScalarFields().permissions().memberships()));
+        var query = repository.sql().createQuery(ROLE).whereIf(name != null, () -> ROLE.name().ilike(name, LikeMode.ANYWHERE)).whereIf(system != null, () -> ROLE.systemRole().eq(system)).orderBy(ROLE.createdAt().desc()).select(ROLE.fetch(AdminRoleEntityFetcher.$.allScalarFields().permissions().memberships()));
         long total = query.fetchUnlimitedCount();
         return PageData.of(query.limit(size, (long) (p - 1) * size).execute().stream().map(this::view).toList(), p, size, total);
     }
@@ -68,7 +69,7 @@ public class AdminAccessService {
         requireGrantable(c, codes);
         UUID id = UuidV7.randomUuid();
         Instant now = Instant.now();
-        sql.saveCommand(AdminRoleEntityDraft.$.produce(d -> d.setId(id).setTenantId(c.tenantId()).setName(name.strip()).setDescription(description).setSystemRole(false).setCreatedAt(now).setUpdatedAt(now))).setMode(SaveMode.INSERT_ONLY).execute();
+        repository.sql().saveCommand(AdminRoleEntityDraft.$.produce(d -> d.setId(id).setTenantId(c.tenantId()).setName(name.strip()).setDescription(description).setSystemRole(false).setCreatedAt(now).setUpdatedAt(now))).setMode(SaveMode.INSERT_ONLY).execute();
         replacePermissions(id, codes);
         return find(c.tenantId(), id);
     }
@@ -84,7 +85,7 @@ public class AdminAccessService {
         validateName(n);
         var codes = permissions == null ? catalog.validate(old.permissions().stream().map(ManagementPermissionEntity::code).toList(), ManagementPermissionScope.TENANT) : catalog.validate(permissions, ManagementPermissionScope.TENANT);
         requireGrantable(c, codes);
-        var update = sql.createUpdate(ROLE).set(ROLE.name(), n.strip()).set(ROLE.updatedAt(), Instant.now()).where(ROLE.id().eq(id), ROLE.tenantId().eq(c.tenantId()));
+        var update = repository.sql().createUpdate(ROLE).set(ROLE.name(), n.strip()).set(ROLE.updatedAt(), Instant.now()).where(ROLE.id().eq(id), ROLE.tenantId().eq(c.tenantId()));
         if (description != null) {
             update.set(ROLE.description(), description);
         }
@@ -99,7 +100,7 @@ public class AdminAccessService {
         if (findEntity(id).systemRole()) {
             throw immutable();
         }
-        sql.deleteById(AdminRoleEntity.class, id);
+        repository.sql().deleteById(AdminRoleEntity.class, id);
     }
 
     /** 分页查询管理员成员列表（支持按账号/邮箱/状态/角色过滤）。 */
@@ -110,7 +111,7 @@ public class AdminAccessService {
         var byAccount = memberships.stream().collect(java.util.stream.Collectors.groupingBy(TenantMembershipEntity::accountId));
         var roleMemberships = roleId == null ? null : membersForRole(roleId);
         var allowed = roleMemberships == null ? null : memberships.stream().filter(m -> roleMemberships.contains(m.id())).map(TenantMembershipEntity::accountId).collect(java.util.stream.Collectors.toSet());
-        var query = sql.createQuery(ACCOUNT).whereIf(allowed != null, () -> ACCOUNT.id().in(allowed)).whereIf(username != null, () -> ACCOUNT.username().ilike(username, LikeMode.ANYWHERE)).whereIf(email != null, () -> ACCOUNT.email().ilike(email, LikeMode.ANYWHERE)).whereIf(status != null, () -> ACCOUNT.status().eq(status)).orderBy(ACCOUNT.createdAt().desc(), ACCOUNT.id().asc()).select(ACCOUNT);
+        var query = repository.sql().createQuery(ACCOUNT).whereIf(allowed != null, () -> ACCOUNT.id().in(allowed)).whereIf(username != null, () -> ACCOUNT.username().ilike(username, LikeMode.ANYWHERE)).whereIf(email != null, () -> ACCOUNT.email().ilike(email, LikeMode.ANYWHERE)).whereIf(status != null, () -> ACCOUNT.status().eq(status)).orderBy(ACCOUNT.createdAt().desc(), ACCOUNT.id().asc()).select(ACCOUNT);
         long total = query.fetchUnlimitedCount();
         var rows = query.limit(size, (long) (p - 1) * size).execute().stream().map(a -> memberView(a, byAccount.getOrDefault(a.id(), List.of()))).toList();
         return PageData.of(rows, p, size, total);
@@ -128,7 +129,7 @@ public class AdminAccessService {
         findAccount(account);
         var m = findMembership(tenant, account);
         var current = rolesForMembership(m.id());
-        var associations = sql.getAssociations(AdminRoleEntityProps.MEMBERSHIPS);
+        var associations = repository.sql().getAssociations(AdminRoleEntityProps.MEMBERSHIPS);
         current.forEach(r -> associations.delete(r.id(), m.id()));
         for (UUID roleId : roleIds == null ? List.<UUID>of() : roleIds) {
             findEntity(tenant, roleId);
@@ -142,7 +143,7 @@ public class AdminAccessService {
     public void updateMemberStatus(UUID actor, UUID account, String status) {
         if ("disabled".equals(status)) {
             identities.lockActive(account);
-            var activeMemberships = sql.createQuery(MEMBERSHIP).where(MEMBERSHIP.accountId().eq(account), MEMBERSHIP.status().eq("active")).select(MEMBERSHIP.id()).forUpdate().execute();
+            var activeMemberships = repository.sql().createQuery(MEMBERSHIP).where(MEMBERSHIP.accountId().eq(account), MEMBERSHIP.status().eq("active")).select(MEMBERSHIP.id()).forUpdate().execute();
             if (!activeMemberships.isEmpty()) {
                 throw new DomainException(ErrorCodeConstants.ADMINISTRATOR_TRANSFER_REQUIRED);
             }
@@ -161,7 +162,7 @@ public class AdminAccessService {
     /** 统计角色总量、系统角色数、自定义角色数与关联管理员数。 */
     @Transactional(readOnly = true)
     public RoleStats roleStats() {
-        var roles = sql.createQuery(ROLE).select(ROLE.fetch(AdminRoleEntityFetcher.$.allScalarFields().memberships())).execute();
+        var roles = repository.sql().createQuery(ROLE).select(ROLE.fetch(AdminRoleEntityFetcher.$.allScalarFields().memberships())).execute();
         return new RoleStats(roles.size(), roles.stream().filter(AdminRoleEntity::systemRole).count(), roles.stream().filter(r -> !r.systemRole()).count(), roles.stream().flatMap(r -> r.memberships().stream()).map(TenantMembershipEntity::id).distinct().count());
     }
 
@@ -174,7 +175,7 @@ public class AdminAccessService {
     /** 统计管理员成员总量、启用/停用数、MFA 启用数与 owner 角色账号数。 */
     @Transactional(readOnly = true)
     public MemberStats memberStats() {
-        var accounts = sql.createQuery(ACCOUNT).select(ACCOUNT).execute();
+        var accounts = repository.sql().createQuery(ACCOUNT).select(ACCOUNT).execute();
         var memberships = activeMemberships();
         return new MemberStats(accounts.size(), accounts.stream().filter(a -> "active".equals(a.status())).count(), accounts.stream().filter(a -> "disabled".equals(a.status())).count(), accounts.stream().filter(AdminAccountEntity::mfaEnabled).count(), memberships.stream().filter(m -> "owner".equals(m.membershipRole())).map(TenantMembershipEntity::accountId).distinct().count());
     }
@@ -190,52 +191,52 @@ public class AdminAccessService {
 
     /** 按 ID 查询角色实体，不存在时抛出领域异常。 */
     private AdminRoleEntity findEntity(UUID id) {
-        return sql.createQuery(ROLE).where(ROLE.id().eq(id)).select(ROLE).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.ADMIN_ROLE_NOT_FOUND));
+        return repository.sql().createQuery(ROLE).where(ROLE.id().eq(id)).select(ROLE).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.ADMIN_ROLE_NOT_FOUND));
     }
 
     /** 按 ID 查询角色实体（含权限与成员关联），不存在时抛出领域异常。 */
     private AdminRoleEntity findEntityFetched(UUID id) {
-        return sql.createQuery(ROLE).where(ROLE.id().eq(id)).select(ROLE.fetch(AdminRoleEntityFetcher.$.allScalarFields().permissions().memberships())).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.ADMIN_ROLE_NOT_FOUND));
+        return repository.sql().createQuery(ROLE).where(ROLE.id().eq(id)).select(ROLE.fetch(AdminRoleEntityFetcher.$.allScalarFields().permissions().memberships())).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.ADMIN_ROLE_NOT_FOUND));
     }
 
     /** 按租户与 ID 查询角色实体，不存在时抛出领域异常。 */
     private AdminRoleEntity findEntity(UUID tenant, UUID id) {
-        return sql.createQuery(ROLE).where(ROLE.id().eq(id), ROLE.tenantId().eq(tenant)).select(ROLE).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.ADMIN_ROLE_NOT_FOUND));
+        return repository.sql().createQuery(ROLE).where(ROLE.id().eq(id), ROLE.tenantId().eq(tenant)).select(ROLE).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.ADMIN_ROLE_NOT_FOUND));
     }
 
     /** 按租户与 ID 查询角色实体（含权限与成员关联），不存在时抛出领域异常。 */
     private AdminRoleEntity findEntityFetched(UUID tenant, UUID id) {
-        return sql.createQuery(ROLE).where(ROLE.id().eq(id), ROLE.tenantId().eq(tenant)).select(ROLE.fetch(AdminRoleEntityFetcher.$.allScalarFields().permissions().memberships())).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.ADMIN_ROLE_NOT_FOUND));
+        return repository.sql().createQuery(ROLE).where(ROLE.id().eq(id), ROLE.tenantId().eq(tenant)).select(ROLE.fetch(AdminRoleEntityFetcher.$.allScalarFields().permissions().memberships())).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.ADMIN_ROLE_NOT_FOUND));
     }
 
     /** 查询角色关联的成员关系 ID 集合（用于按角色过滤成员）。 */
     private Set<UUID> membersForRole(UUID role) {
-        return sql.createQuery(ROLE).where(ROLE.id().eq(role)).select(ROLE.fetch(AdminRoleEntityFetcher.$.allScalarFields().memberships())).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.ADMIN_ROLE_NOT_FOUND)).memberships().stream().map(TenantMembershipEntity::id).collect(java.util.stream.Collectors.toSet());
+        return repository.sql().createQuery(ROLE).where(ROLE.id().eq(role)).select(ROLE.fetch(AdminRoleEntityFetcher.$.allScalarFields().memberships())).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.ADMIN_ROLE_NOT_FOUND)).memberships().stream().map(TenantMembershipEntity::id).collect(java.util.stream.Collectors.toSet());
     }
 
     /** 查询某成员关系被分配的全部角色。 */
     private List<AdminRoleEntity> rolesForMembership(UUID membership) {
-        return sql.createQuery(ROLE).where(ROLE.memberships(m -> m.id().eq(membership))).select(ROLE.fetch(AdminRoleEntityFetcher.$.allScalarFields().permissions())).execute();
+        return repository.sql().createQuery(ROLE).where(ROLE.memberships(m -> m.id().eq(membership))).select(ROLE.fetch(AdminRoleEntityFetcher.$.allScalarFields().permissions())).execute();
     }
 
     /** 查询账号在租户内的激活成员关系，不存在时抛出领域异常。 */
     private TenantMembershipEntity findMembership(UUID tenant, UUID account) {
-        return sql.createQuery(MEMBERSHIP).where(MEMBERSHIP.tenantId().eq(tenant), MEMBERSHIP.accountId().eq(account), MEMBERSHIP.status().eq("active")).select(MEMBERSHIP).fetchOptional().orElseThrow(this::memberMissing);
+        return repository.sql().createQuery(MEMBERSHIP).where(MEMBERSHIP.tenantId().eq(tenant), MEMBERSHIP.accountId().eq(account), MEMBERSHIP.status().eq("active")).select(MEMBERSHIP).fetchOptional().orElseThrow(this::memberMissing);
     }
 
     /** 查询全部激活成员关系（按创建时间、租户、ID 稳定排序）。 */
     private List<TenantMembershipEntity> activeMemberships() {
-        return sql.createQuery(MEMBERSHIP).where(MEMBERSHIP.status().eq("active")).orderBy(MEMBERSHIP.createdAt().asc(), MEMBERSHIP.tenantId().asc(), MEMBERSHIP.id().asc()).select(MEMBERSHIP).execute();
+        return repository.sql().createQuery(MEMBERSHIP).where(MEMBERSHIP.status().eq("active")).orderBy(MEMBERSHIP.createdAt().asc(), MEMBERSHIP.tenantId().asc(), MEMBERSHIP.id().asc()).select(MEMBERSHIP).execute();
     }
 
     /** 查询某账号名下全部激活成员关系。 */
     private List<TenantMembershipEntity> activeMemberships(UUID account) {
-        return sql.createQuery(MEMBERSHIP).where(MEMBERSHIP.accountId().eq(account), MEMBERSHIP.status().eq("active")).orderBy(MEMBERSHIP.createdAt().asc(), MEMBERSHIP.tenantId().asc(), MEMBERSHIP.id().asc()).select(MEMBERSHIP).execute();
+        return repository.sql().createQuery(MEMBERSHIP).where(MEMBERSHIP.accountId().eq(account), MEMBERSHIP.status().eq("active")).orderBy(MEMBERSHIP.createdAt().asc(), MEMBERSHIP.tenantId().asc(), MEMBERSHIP.id().asc()).select(MEMBERSHIP).execute();
     }
 
     /** 按 ID 查询管理账号，不存在时抛出领域异常。 */
     private AdminAccountEntity findAccount(UUID account) {
-        var entity = sql.findById(AdminAccountEntity.class, account);
+        var entity = repository.sql().findById(AdminAccountEntity.class, account);
         if (entity == null) {
             throw new DomainException(ErrorCodeConstants.ADMIN_ACCOUNT_NOT_FOUND);
         }
@@ -274,11 +275,11 @@ public class AdminAccessService {
 
     /** 确保租户存在指定系统预置角色，不存在则创建并绑定权限。 */
     private void ensureSystemRole(UUID tenant, String name, String description, List<ManagementPermissionCode> permissions) {
-        boolean exists = sql.createQuery(ROLE).where(ROLE.tenantId().eq(tenant), ROLE.name().eq(name)).select(ROLE.id()).exists();
+        boolean exists = repository.sql().createQuery(ROLE).where(ROLE.tenantId().eq(tenant), ROLE.name().eq(name)).select(ROLE.id()).exists();
         if (!exists) {
             UUID id = UuidV7.randomUuid();
             Instant now = Instant.now();
-            sql.saveCommand(AdminRoleEntityDraft.$.produce(d -> d.setId(id).setTenantId(tenant).setName(name).setDescription(description).setSystemRole(true).setCreatedAt(now).setUpdatedAt(now))).setMode(SaveMode.INSERT_ONLY).execute();
+            repository.sql().saveCommand(AdminRoleEntityDraft.$.produce(d -> d.setId(id).setTenantId(tenant).setName(name).setDescription(description).setSystemRole(true).setCreatedAt(now).setUpdatedAt(now))).setMode(SaveMode.INSERT_ONLY).execute();
             replacePermissions(id, permissions);
         }
     }
@@ -305,14 +306,14 @@ public class AdminAccessService {
 
     /** 全量替换角色的权限关联（先清空再写入）。 */
     private void replacePermissions(UUID role, List<ManagementPermissionCode> permissions) {
-        var associations = sql.getAssociations(AdminRoleEntityProps.PERMISSIONS);
+        var associations = repository.sql().getAssociations(AdminRoleEntityProps.PERMISSIONS);
         findEntityFetchedWithoutMemberships(role).permissions().forEach(permission -> associations.delete(role, permission.code()));
         permissions.forEach(permission -> associations.insert(role, permission.value()));
     }
 
     /** 按 ID 查询角色实体（仅含权限关联），用于替换权限。 */
     private AdminRoleEntity findEntityFetchedWithoutMemberships(UUID role) {
-        return sql.createQuery(ROLE).where(ROLE.id().eq(role)).select(ROLE.fetch(AdminRoleEntityFetcher.$.permissions())).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.ADMIN_ROLE_NOT_FOUND));
+        return repository.sql().createQuery(ROLE).where(ROLE.id().eq(role)).select(ROLE.fetch(AdminRoleEntityFetcher.$.permissions())).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.ADMIN_ROLE_NOT_FOUND));
     }
 
     /** 构造管理员成员缺失的领域异常。 */
