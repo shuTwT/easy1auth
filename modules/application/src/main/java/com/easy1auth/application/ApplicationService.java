@@ -1,9 +1,9 @@
 package com.easy1auth.application;
 
 import com.easy1auth.application.model.*;
-import com.easy1auth.foundation.error.DomainException;
-import com.easy1auth.foundation.id.UuidV7;
-import com.easy1auth.foundation.web.PageData;
+import com.easy1auth.infrastructure.foundation.error.DomainException;
+import com.easy1auth.infrastructure.foundation.id.UuidV7;
+import com.easy1auth.infrastructure.foundation.web.PageData;
 import com.easy1auth.tenant.TenantContextHolder;
 import com.easy1auth.tenant.TenantService;
 import org.babyfish.jimmer.sql.JSqlClient;

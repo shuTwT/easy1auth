@@ -1,6 +1,6 @@
 package com.easy1auth.social;
 
-import com.easy1auth.foundation.error.DomainException;
+import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
 

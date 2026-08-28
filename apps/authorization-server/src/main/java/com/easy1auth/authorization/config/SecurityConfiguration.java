@@ -1,10 +1,11 @@
 package com.easy1auth.authorization.config;
 
-import com.easy1auth.tenant.WebFramework;
+import com.easy1auth.poolidentity.service.DirectoryCatalogService;
 
-import com.easy1auth.directory.*;
+import com.easy1auth.poolidentity.service.PoolUserAuthenticationService;
+import com.easy1auth.poolidentity.service.PoolUserService;
 import com.easy1auth.oauth2.*;
-import com.easy1auth.useraccess.UserAccessCatalogService;
+import com.easy1auth.poolidentity.service.UserAccessCatalogService;
 import com.easy1auth.security.SecurityPolicyService;
 import com.easy1auth.authorization.security.IssuerHostValidationFilter;
 import com.easy1auth.authorization.security.TenantPrincipalValidationFilter;
@@ -33,9 +34,7 @@ import org.springframework.security.oauth2.server.authorization.config.annotatio
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
 import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
-import org.springframework.security.provisioning.UserDetailsManager;
 import org.springframework.security.web.*;
-import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;

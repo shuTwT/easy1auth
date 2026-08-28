@@ -1,8 +1,9 @@
 package com.easy1auth.adminidentity;
 
-import com.easy1auth.foundation.error.DomainException;
-import com.easy1auth.foundation.id.UuidV7;
-import com.easy1auth.foundation.security.ActiveAdminAccountLocker;
+import com.easy1auth.infrastructure.foundation.error.DomainException;
+import com.easy1auth.infrastructure.foundation.id.UuidV7;
+import com.easy1auth.infrastructure.foundation.error.ErrorCode;
+import com.easy1auth.infrastructure.foundation.security.ActiveAdminAccountLocker;
 import com.easy1auth.security.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.dao.DuplicateKeyException;
@@ -337,7 +338,7 @@ public class AdminIdentityService implements ActiveAdminAccountLocker {
     }
 
     /** 禁止对自身账号执行敏感操作（如重置密码、重置 MFA、修改状态）。 */
-    private static void assertNotActor(UUID actor, UUID account, com.easy1auth.foundation.error.ErrorCode errorCode) {
+    private static void assertNotActor(UUID actor, UUID account, ErrorCode errorCode) {
         if (actor != null && actor.equals(account)) {
             throw new DomainException(errorCode);
         }

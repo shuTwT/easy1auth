@@ -2,13 +2,12 @@ package com.easy1auth.authorization.web;
 
 import com.easy1auth.customization.CustomizationService;
 import com.easy1auth.customization.model.LoginStyleEntity;
-import com.easy1auth.foundation.error.DomainException;
+import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.social.SocialIdentityService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
-import org.springframework.security.web.savedrequest.SavedRequest;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;

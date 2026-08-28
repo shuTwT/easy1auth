@@ -1,6 +1,6 @@
 package com.easy1auth.tenant;
 
-import com.easy1auth.foundation.error.ErrorCode;
+import com.easy1auth.infrastructure.foundation.error.ErrorCode;
 
 /**
  * 租户模块错误码常量集合（错误码区间 11000-11031）。

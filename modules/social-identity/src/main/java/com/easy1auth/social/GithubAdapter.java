@@ -1,5 +1,6 @@
 package com.easy1auth.social;
 
+import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
 
@@ -47,12 +48,12 @@ public class GithubAdapter extends AbstractSocialIdentityAdapter {
         var token = postForm(TOKEN, form, null);
         String accessToken = string(token.get("access_token"));
         if (accessToken == null) {
-            throw new com.easy1auth.foundation.error.DomainException(ErrorCodeConstants.SOCIAL_TOKEN_EXCHANGE_FAILED);
+            throw new DomainException(ErrorCodeConstants.SOCIAL_TOKEN_EXCHANGE_FAILED);
         }
         var user = getJson(USER, accessToken);
         String id = string(user.get("id"));
         if (id == null) {
-            throw new com.easy1auth.foundation.error.DomainException(ErrorCodeConstants.SOCIAL_USERINFO_FAILED);
+            throw new DomainException(ErrorCodeConstants.SOCIAL_USERINFO_FAILED);
         }
         String email = string(user.get("email"));
         String name = string(user.get("name"));

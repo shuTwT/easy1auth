@@ -1,8 +1,9 @@
 package com.easy1auth.customization;
 
 import com.easy1auth.customization.model.*;
-import com.easy1auth.foundation.error.DomainException;
-import com.easy1auth.foundation.id.UuidV7;
+import com.easy1auth.infrastructure.foundation.error.DomainException;
+import com.easy1auth.infrastructure.foundation.id.UuidV7;
+import com.easy1auth.infrastructure.foundation.error.ErrorCode;
 import com.easy1auth.social.SocialIdentityService;
 import org.babyfish.jimmer.sql.JSqlClient;
 import org.babyfish.jimmer.sql.ast.mutation.SaveMode;
@@ -574,7 +575,7 @@ public class CustomizationService {
         return v;
     }
 
-    private static DomainException invalid(com.easy1auth.foundation.error.ErrorCode errorCode) {
+    private static DomainException invalid(ErrorCode errorCode) {
         return new DomainException(errorCode);
     }
 

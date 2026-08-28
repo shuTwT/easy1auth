@@ -1,9 +1,9 @@
 package com.easy1auth.tenant;
 
-import com.easy1auth.foundation.error.DomainException;
-import com.easy1auth.persistence.model.BaseTenantEntity;
-import com.easy1auth.persistence.model.BaseTenantEntityDraft;
-import com.easy1auth.persistence.model.BaseTenantEntityProps;
+import com.easy1auth.infrastructure.foundation.error.DomainException;
+import com.easy1auth.infrastructure.persistence.model.BaseTenantEntity;
+import com.easy1auth.infrastructure.persistence.model.BaseTenantEntityDraft;
+import com.easy1auth.infrastructure.persistence.model.BaseTenantEntityProps;
 import org.babyfish.jimmer.ImmutableObjects;
 import org.babyfish.jimmer.meta.TypedProp;
 import org.babyfish.jimmer.sql.DraftInterceptor;

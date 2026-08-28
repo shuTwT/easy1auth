@@ -1,13 +1,14 @@
 package com.easy1auth.adminaccess;
 
-import com.easy1auth.foundation.error.ErrorCode;
+import com.easy1auth.infrastructure.foundation.error.DomainException;
+import com.easy1auth.infrastructure.foundation.error.ErrorCode;
 
 /**
  * 管理端权限域（admin-access）错误码常量。
  *
  * <p>错误码统一以 13xxx 为前缀，定义该域内管理角色、权限目录、平台授权相关
  * 的领域异常消息。各常量由 {@link ErrorCode} 承载编码与中文提示，供抛出
- * {@link com.easy1auth.foundation.error.DomainException} 时使用。</p>
+ * {@link DomainException} 时使用。</p>
  */
 public interface ErrorCodeConstants {
     ErrorCode ADMINISTRATOR_TRANSFER_REQUIRED = new ErrorCode(13000, "账号仍是租户唯一管理员，请先完成租户管理员转移");

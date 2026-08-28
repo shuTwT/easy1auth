@@ -1,12 +1,13 @@
 package com.easy1auth.application;
 
-import com.easy1auth.foundation.error.ErrorCode;
+import com.easy1auth.infrastructure.foundation.error.DomainException;
+import com.easy1auth.infrastructure.foundation.error.ErrorCode;
 
 /**
  * OAuth2 应用域错误码常量（16000-16011）。
  *
  * <p>定义应用（OAuth 客户端）注册、更新、状态与授权类型等业务场景的错误码，
- * 供领域服务抛出 {@link com.easy1auth.foundation.error.DomainException} 使用。</p>
+ * 供领域服务抛出 {@link DomainException} 使用。</p>
  */
 public interface ErrorCodeConstants {
     ErrorCode APPLICATION_NAME_EXISTS = new ErrorCode(16000, "应用名称已存在");

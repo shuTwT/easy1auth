@@ -1,8 +1,9 @@
 package com.easy1auth.tenant;
 
-import com.easy1auth.foundation.id.UuidV7;
+import com.easy1auth.infrastructure.foundation.id.UuidV7;
+import com.easy1auth.infrastructure.foundation.error.ErrorCode;
 import com.easy1auth.tenant.model.*;
-import com.easy1auth.foundation.error.DomainException;
+import com.easy1auth.infrastructure.foundation.error.DomainException;
 import org.babyfish.jimmer.sql.JSqlClient;
 import org.babyfish.jimmer.sql.ast.mutation.SaveMode;
 import org.springframework.stereotype.Repository;
@@ -161,7 +162,7 @@ class TenantRepository {
     }
 
     /** 将配额错误码包装为领域异常。 */
-    private static DomainException quotaUnavailable(com.easy1auth.foundation.error.ErrorCode errorCode) {
+    private static DomainException quotaUnavailable(ErrorCode errorCode) {
         return new DomainException(errorCode);
     }
 

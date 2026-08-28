@@ -7,7 +7,7 @@ import com.easy1auth.admin.security.ManagementRouteKind;
 import com.easy1auth.adminaccess.ManagementPermissionCatalog;
 import com.easy1auth.adminaccess.ManagementPermissionType;
 import com.easy1auth.adminaccess.ManagementPermissionView;
-import com.easy1auth.foundation.web.ApiResponse;
+import com.easy1auth.infrastructure.foundation.web.ApiResponse;
 import com.easy1auth.tenant.TenantContext;
 import com.easy1auth.tenant.TenantPackageView;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 
 /**

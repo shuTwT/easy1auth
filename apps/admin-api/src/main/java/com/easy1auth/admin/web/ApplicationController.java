@@ -3,10 +3,9 @@ package com.easy1auth.admin.web;
 import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.ManagementPermissionCode;
 import com.easy1auth.application.ApplicationService;
-import com.easy1auth.foundation.web.ApiResponse;
+import com.easy1auth.infrastructure.foundation.web.ApiResponse;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Objects;
 import java.util.UUID;
 
 /**

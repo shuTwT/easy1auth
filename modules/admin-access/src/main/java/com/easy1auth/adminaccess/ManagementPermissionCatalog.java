@@ -2,7 +2,7 @@ package com.easy1auth.adminaccess;
 
 import com.easy1auth.adminaccess.model.ManagementPermissionEntity;
 import com.easy1auth.adminaccess.model.ManagementPermissionEntityTable;
-import com.easy1auth.foundation.error.DomainException;
+import com.easy1auth.infrastructure.foundation.error.DomainException;
 import org.babyfish.jimmer.sql.JSqlClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

@@ -1,6 +1,6 @@
 package com.easy1auth.admin.config;
 
-import com.easy1auth.foundation.security.SecretPolicy;
+import com.easy1auth.infrastructure.foundation.security.SecretPolicy;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;

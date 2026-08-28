@@ -1,6 +1,6 @@
 package com.easy1auth.enterpriseidentity;
 
-import com.easy1auth.foundation.error.ErrorCode;
+import com.easy1auth.infrastructure.foundation.error.ErrorCode;
 
 /**
  * 企业身份源域的领域错误码常量。

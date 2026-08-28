@@ -1,7 +1,7 @@
 package com.easy1auth.adminidentity;
 
 import com.easy1auth.adminidentity.model.*;
-import com.easy1auth.foundation.id.UuidV7;
+import com.easy1auth.infrastructure.foundation.id.UuidV7;
 import org.babyfish.jimmer.sql.JSqlClient;
 import org.babyfish.jimmer.sql.ast.Predicate;
 import org.babyfish.jimmer.sql.ast.mutation.SaveMode;

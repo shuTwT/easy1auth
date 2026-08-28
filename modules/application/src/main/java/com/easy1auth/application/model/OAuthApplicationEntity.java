@@ -1,14 +1,13 @@
 package com.easy1auth.application.model;
 
-import com.easy1auth.persistence.model.BaseEntity;
-import com.easy1auth.persistence.model.BaseTenantEntity;
+import com.easy1auth.infrastructure.persistence.model.BaseEntity;
+import com.easy1auth.infrastructure.persistence.model.BaseTenantEntity;
 
 import org.babyfish.jimmer.sql.*;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * OAuth2 应用实体（对应 oauth_application 表）。

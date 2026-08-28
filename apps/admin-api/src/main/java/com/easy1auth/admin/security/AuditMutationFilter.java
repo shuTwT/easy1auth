@@ -1,9 +1,8 @@
 package com.easy1auth.admin.security;
 
 import com.easy1auth.audit.AuditService;
-import com.easy1auth.foundation.trace.TraceIdFilter;
+import com.easy1auth.infrastructure.foundation.trace.TraceIdFilter;
 import com.easy1auth.tenant.WebFramework;
-import com.easy1auth.tenant.TenantContext;
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
 import org.springframework.security.oauth2.jwt.Jwt;

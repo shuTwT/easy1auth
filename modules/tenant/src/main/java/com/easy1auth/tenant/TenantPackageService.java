@@ -1,6 +1,7 @@
 package com.easy1auth.tenant;
 
-import com.easy1auth.foundation.error.DomainException;
+import com.easy1auth.infrastructure.foundation.error.DomainException;
+import com.easy1auth.infrastructure.foundation.error.ErrorCode;
 import com.easy1auth.tenant.model.TenantPackageEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -238,7 +239,7 @@ public class TenantPackageService {
     }
 
     /** 校验并返回去除首尾空白的文本：空或超过 maxLength 时抛出指定领域异常。 */
-    private static String requiredText(String value, int maxLength, com.easy1auth.foundation.error.ErrorCode errorCode) {
+    private static String requiredText(String value, int maxLength, ErrorCode errorCode) {
         String normalized = value == null ? "" : value.strip();
         if (normalized.isEmpty() || normalized.length() > maxLength) {
             throw new DomainException(errorCode);

@@ -4,7 +4,8 @@ import com.easy1auth.adminidentity.*;
 import com.easy1auth.admin.security.ManagementRouteClassification;
 import com.easy1auth.admin.security.ManagementRouteKind;
 import com.easy1auth.audit.DeliveryService;
-import com.easy1auth.foundation.web.ApiResponse;
+import com.easy1auth.infrastructure.foundation.web.ApiResponse;
+import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.security.SecurityPolicyService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -78,7 +79,7 @@ public class AdminSecurityController {
         UUID accountId = id(jwt);
         var challenge = security.consumeEmailChallenge(input.challengeToken(), input.code(), "admin", "email_change");
         if (!accountId.equals(challenge.subjectId()) || challenge.destination() == null) {
-            throw new com.easy1auth.foundation.error.DomainException(ErrorCodeConstants.EMAIL_CHANGE_CHALLENGE_INVALID);
+            throw new DomainException(ErrorCodeConstants.EMAIL_CHANGE_CHALLENGE_INVALID);
         }
         var account = identities.changeOwnEmail(accountId, challenge.destination());
         return ApiResponse.ok(new EmailChangeResponse(account.email()), "邮箱换绑成功，请重新登录");
@@ -89,7 +90,7 @@ public class AdminSecurityController {
     @PostMapping("/change-password")
     public ApiResponse<Void> change(@AuthenticationPrincipal Jwt jwt, @RequestBody ChangePassword input) {
         if (!Objects.equals(input.newPassword(), input.confirmPassword())) {
-            throw new com.easy1auth.foundation.error.DomainException(ErrorCodeConstants.PASSWORD_CONFIRM_MISMATCH);
+            throw new DomainException(ErrorCodeConstants.PASSWORD_CONFIRM_MISMATCH);
         }
         security.validatePassword(input.newPassword(), SecurityPolicyService.adminPolicy());
         identities.changePassword(id(jwt), input.currentPassword(), input.newPassword());

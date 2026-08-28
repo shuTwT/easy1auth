@@ -1,7 +1,7 @@
 package com.easy1auth.migration;
 
-import com.easy1auth.foundation.id.UuidV7;
-import com.easy1auth.foundation.security.SecretPolicy;
+import com.easy1auth.infrastructure.foundation.id.UuidV7;
+import com.easy1auth.infrastructure.foundation.security.SecretPolicy;
 import org.flywaydb.core.Flyway;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

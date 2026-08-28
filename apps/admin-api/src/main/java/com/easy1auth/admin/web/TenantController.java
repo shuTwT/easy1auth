@@ -5,8 +5,8 @@ import com.easy1auth.admin.security.ManagementRouteKind;
 import com.easy1auth.admin.security.PlatformManagementPermission;
 import com.easy1auth.adminaccess.ManagementPermissionCode;
 import com.easy1auth.adminaccess.PlatformAuthorizationResolver;
-import com.easy1auth.foundation.web.ApiResponse;
-import com.easy1auth.foundation.web.PageData;
+import com.easy1auth.infrastructure.foundation.web.ApiResponse;
+import com.easy1auth.infrastructure.foundation.web.PageData;
 import com.easy1auth.tenant.*;
 import org.springframework.web.bind.annotation.*;
 

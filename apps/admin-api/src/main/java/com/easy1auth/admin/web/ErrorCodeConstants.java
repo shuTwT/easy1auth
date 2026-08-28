@@ -1,6 +1,6 @@
 package com.easy1auth.admin.web;
 
-import com.easy1auth.foundation.error.ErrorCode;
+import com.easy1auth.infrastructure.foundation.error.ErrorCode;
 
 /**
  * 管理端接口错误码常量（包私有约定）。

@@ -1,9 +1,9 @@
 package com.easy1auth.social;
 
-import com.easy1auth.directory.PoolUserService;
-import com.easy1auth.foundation.error.DomainException;
-import com.easy1auth.foundation.id.UuidV7;
-import com.easy1auth.foundation.web.PageData;
+import com.easy1auth.poolidentity.service.PoolUserService;
+import com.easy1auth.infrastructure.foundation.error.DomainException;
+import com.easy1auth.infrastructure.foundation.id.UuidV7;
+import com.easy1auth.infrastructure.foundation.web.PageData;
 import com.easy1auth.security.SecurityDataCipher;
 import com.easy1auth.social.model.*;
 import com.easy1auth.tenant.TenantContextHolder;
@@ -17,7 +17,6 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 

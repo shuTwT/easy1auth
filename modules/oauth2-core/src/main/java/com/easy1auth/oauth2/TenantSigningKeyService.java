@@ -1,6 +1,6 @@
 package com.easy1auth.oauth2;
 
-import com.easy1auth.foundation.id.UuidV7;
+import com.easy1auth.infrastructure.foundation.id.UuidV7;
 import com.easy1auth.oauth2.model.*;
 import com.easy1auth.tenant.TenantService;
 import com.fasterxml.jackson.databind.ObjectMapper;

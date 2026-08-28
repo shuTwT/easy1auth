@@ -1,7 +1,7 @@
 package com.easy1auth.admin.security;
 
-import com.easy1auth.foundation.error.DomainException;
-import com.easy1auth.foundation.trace.TraceIdFilter;
+import com.easy1auth.infrastructure.foundation.error.DomainException;
+import com.easy1auth.infrastructure.foundation.trace.TraceIdFilter;
 import com.easy1auth.tenant.WebFramework;
 import com.easy1auth.tenant.*;
 import jakarta.servlet.*;

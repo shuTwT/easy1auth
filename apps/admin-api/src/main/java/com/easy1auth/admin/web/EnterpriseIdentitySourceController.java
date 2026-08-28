@@ -3,7 +3,7 @@ package com.easy1auth.admin.web;
 import com.easy1auth.admin.security.*;
 import com.easy1auth.adminaccess.ManagementPermissionCode;
 import com.easy1auth.enterpriseidentity.EnterpriseIdentityService;
-import com.easy1auth.foundation.web.ApiResponse;
+import com.easy1auth.infrastructure.foundation.web.ApiResponse;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;

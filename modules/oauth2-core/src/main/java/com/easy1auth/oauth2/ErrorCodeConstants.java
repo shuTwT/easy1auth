@@ -1,6 +1,6 @@
 package com.easy1auth.oauth2;
 
-import com.easy1auth.foundation.error.ErrorCode;
+import com.easy1auth.infrastructure.foundation.error.ErrorCode;
 
 /** OAuth2 授权服务相关的业务错误码常量。 */
 public interface ErrorCodeConstants {

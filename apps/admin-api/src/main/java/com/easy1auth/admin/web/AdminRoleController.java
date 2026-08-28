@@ -2,7 +2,7 @@ package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.*;
-import com.easy1auth.foundation.web.ApiResponse;
+import com.easy1auth.infrastructure.foundation.web.ApiResponse;
 import com.easy1auth.tenant.TenantContext;
 import com.easy1auth.tenant.WebFramework;
 import org.springframework.web.bind.annotation.*;

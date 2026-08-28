@@ -1,8 +1,9 @@
 package com.easy1auth.authorization.web;
 
 import com.easy1auth.customization.CustomizationService;
-import com.easy1auth.directory.PoolUserService;
-import com.easy1auth.directory.model.PoolUserEntityTable;
+import com.easy1auth.poolidentity.service.PoolUserService;
+import com.easy1auth.poolidentity.model.PoolUserEntityTable;
+import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.social.SocialIdentityService;
 import com.easy1auth.security.SecurityPolicyService;
 import com.easy1auth.authorization.config.SecurityConfiguration;
@@ -22,7 +23,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 import org.springframework.security.web.savedrequest.SavedRequest;
-import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
@@ -162,7 +162,7 @@ public class LoginController {
         com.easy1auth.security.SecurityPolicyService.Challenge challenge;
         try {
             challenge = security.issueEmailChallenge("registration", null, tenant, "register", email);
-        } catch (com.easy1auth.foundation.error.DomainException ex) {
+        } catch (DomainException ex) {
             return ResponseEntity.ok(new ApiError(ex.code(), ex.getMessage()));
         }
         mail.send(simpleMessage(email, "Easy1Auth 注册验证码", "您的注册验证码是 " + challenge.code() + "，10分钟内有效。"));
@@ -184,7 +184,7 @@ public class LoginController {
         com.easy1auth.security.SecurityPolicyService.ConsumedEmailChallenge consumed;
         try {
             consumed = security.consumeRegistrationEmailChallenge(input.token(), input.code(), "register");
-        } catch (com.easy1auth.foundation.error.DomainException ex) {
+        } catch (DomainException ex) {
             return ResponseEntity.ok(new ApiError(ErrorCodeConstants.VERIFICATION_CODE_INVALID.code(), ErrorCodeConstants.VERIFICATION_CODE_INVALID.message()));
         }
         String email = consumed.destination();
@@ -220,7 +220,7 @@ public class LoginController {
         com.easy1auth.security.SecurityPolicyService.Challenge challenge;
         try {
             challenge = security.issueEmailChallenge("pool_user", user.id(), tenant, "email_login", email);
-        } catch (com.easy1auth.foundation.error.DomainException ex) {
+        } catch (DomainException ex) {
             return ResponseEntity.ok(new ApiError(ex.code(), ex.getMessage()));
         }
         mail.send(simpleMessage(email, "Easy1Auth 登录验证码", "您的登录验证码是 " + challenge.code() + "，10分钟内有效。"));
@@ -241,7 +241,7 @@ public class LoginController {
         com.easy1auth.security.SecurityPolicyService.ConsumedEmailChallenge consumed;
         try {
             consumed = security.consumeEmailChallenge(input.token(), input.code(), "pool_user", "email_login");
-        } catch (com.easy1auth.foundation.error.DomainException ex) {
+        } catch (DomainException ex) {
             return ResponseEntity.ok(new ApiError(ErrorCodeConstants.VERIFICATION_CODE_INVALID.code(), ErrorCodeConstants.VERIFICATION_CODE_INVALID.message()));
         }
         var user = sql.createQuery(PoolUserEntityTable.$).where(PoolUserEntityTable.$.tenantId().eq(tenant), PoolUserEntityTable.$.id().eq(consumed.subjectId()), PoolUserEntityTable.$.status().eq("active")).select(PoolUserEntityTable.$).fetchOneOrNull();
@@ -373,7 +373,7 @@ public class LoginController {
     void socialStart(@PathVariable UUID tenant, @PathVariable UUID sourceId, HttpServletRequest request, HttpServletResponse response) throws IOException {
         UUID interactionTenant = interactions.requireTenant(request);
         if (!tenant.equals(interactionTenant)) {
-            throw new com.easy1auth.foundation.error.DomainException(ErrorCodeConstants.AUTH_INTERACTION_MISMATCH_CLIENT_TENANT);
+            throw new DomainException(ErrorCodeConstants.AUTH_INTERACTION_MISMATCH_CLIENT_TENANT);
         }
         response.sendRedirect(socialIdentity.authorize(tenant, sourceId, socialCallbackUrl(request)).authorizeUrl());
     }
@@ -392,7 +392,7 @@ public class LoginController {
         }
         var result = socialIdentity.callback(input.code(), input.state(), socialCallbackUrl(request));
         if (!tenant.equals(result.tenantId())) {
-            throw new com.easy1auth.foundation.error.DomainException(ErrorCodeConstants.AUTH_INTERACTION_MISMATCH_CLIENT_TENANT);
+            throw new DomainException(ErrorCodeConstants.AUTH_INTERACTION_MISMATCH_CLIENT_TENANT);
         }
         if (result.poolUserId() != null) {
             saveAuthentication(poolUserAuthentication(result.poolUserId(), tenant, false), request, response);
@@ -436,7 +436,7 @@ public class LoginController {
         }
         UUID tenant = interactions.requireTenant(request);
         if (!tenant.equals(identity.tenantId())) {
-            throw new com.easy1auth.foundation.error.DomainException(ErrorCodeConstants.AUTH_INTERACTION_MISMATCH_CLIENT_TENANT);
+            throw new DomainException(ErrorCodeConstants.AUTH_INTERACTION_MISMATCH_CLIENT_TENANT);
         }
         socialIdentity.bind(identity, poolUserId);
         session.removeAttribute(SOCIAL_PENDING_IDENTITY);
@@ -447,7 +447,7 @@ public class LoginController {
         HttpSession session = request.getSession(false);
         if (session == null || !(session.getAttribute(SOCIAL_PENDING_IDENTITY) instanceof SocialIdentityService.PendingIdentity identity)
                 || !tenant.equals(identity.tenantId())) {
-            throw new com.easy1auth.foundation.error.DomainException(ErrorCodeConstants.AUTH_INTERACTION_EXPIRED_LOGIN);
+            throw new DomainException(ErrorCodeConstants.AUTH_INTERACTION_EXPIRED_LOGIN);
         }
         return identity;
     }

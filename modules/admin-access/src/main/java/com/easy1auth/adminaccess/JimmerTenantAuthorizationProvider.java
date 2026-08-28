@@ -1,7 +1,7 @@
 package com.easy1auth.adminaccess;
 
 import com.easy1auth.adminidentity.model.AdminAccountEntityTable;
-import com.easy1auth.foundation.error.DomainException;
+import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.tenant.TenantAuthorization;
 import com.easy1auth.tenant.TenantAuthorizationProvider;
 import com.easy1auth.tenant.TenantAuthorizationRequest;

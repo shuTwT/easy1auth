@@ -1,11 +1,10 @@
 package com.easy1auth.security.model;
 
-import com.easy1auth.persistence.model.BaseEntity;
-import com.easy1auth.persistence.model.BaseTenantEntity;
+import com.easy1auth.infrastructure.persistence.model.BaseEntity;
+import com.easy1auth.infrastructure.persistence.model.BaseTenantEntity;
 import org.babyfish.jimmer.sql.*;
 
 import java.time.Instant;
-import java.util.UUID;
 
 /**
  * 安全策略实体（对应 security_policy 表）。

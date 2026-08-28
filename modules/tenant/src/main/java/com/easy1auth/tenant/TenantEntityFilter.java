@@ -1,6 +1,7 @@
 package com.easy1auth.tenant;
 
-import com.easy1auth.persistence.model.BaseTenantEntityProps;
+import com.easy1auth.infrastructure.persistence.model.BaseTenantEntity;
+import com.easy1auth.infrastructure.persistence.model.BaseTenantEntityProps;
 import org.babyfish.jimmer.sql.filter.Filter;
 import org.babyfish.jimmer.sql.filter.FilterArgs;
 import org.springframework.stereotype.Component;

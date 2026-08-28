@@ -1,6 +1,6 @@
 package com.easy1auth.tenant;
 
-import com.easy1auth.foundation.error.DomainException;
+import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.tenant.model.TenantMembershipEntityDraft;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;

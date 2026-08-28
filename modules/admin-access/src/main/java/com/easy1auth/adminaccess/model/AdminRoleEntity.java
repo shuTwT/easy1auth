@@ -1,11 +1,10 @@
 package com.easy1auth.adminaccess.model;
 
-import com.easy1auth.persistence.model.BaseEntity;
-import com.easy1auth.persistence.model.BaseTenantEntity;
+import com.easy1auth.infrastructure.persistence.model.BaseEntity;
+import com.easy1auth.infrastructure.persistence.model.BaseTenantEntity;
 import com.easy1auth.tenant.model.TenantMembershipEntity;
 import org.babyfish.jimmer.sql.Column;
 import org.babyfish.jimmer.sql.Entity;
-import org.babyfish.jimmer.sql.Id;
 import org.babyfish.jimmer.sql.JoinTable;
 import org.babyfish.jimmer.sql.ManyToMany;
 import org.babyfish.jimmer.sql.Table;
@@ -13,7 +12,6 @@ import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * 管理角色实体（对应 admin_role 表）。

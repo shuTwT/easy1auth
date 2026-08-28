@@ -1,7 +1,7 @@
 package com.easy1auth.adminidentity;
 
-import com.easy1auth.foundation.error.DomainException;
-import com.easy1auth.foundation.id.UuidV7;
+import com.easy1auth.infrastructure.foundation.error.DomainException;
+import com.easy1auth.infrastructure.foundation.id.UuidV7;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
