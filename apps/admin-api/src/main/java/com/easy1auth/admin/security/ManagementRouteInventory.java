@@ -1,8 +1,8 @@
 package com.easy1auth.admin.security;
 
-import com.easy1auth.adminaccess.ManagementPermissionCode;
-import com.easy1auth.adminaccess.ManagementPermissionScope;
-import com.easy1auth.adminaccess.ManagementPermissionType;
+import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
+import com.easy1auth.adminaccess.constant.ManagementPermissionScope;
+import com.easy1auth.adminaccess.constant.ManagementPermissionType;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.annotation.Qualifier;

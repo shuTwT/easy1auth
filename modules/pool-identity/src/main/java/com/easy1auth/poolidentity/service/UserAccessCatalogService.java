@@ -1,17 +1,14 @@
 package com.easy1auth.poolidentity.service;
 
-import com.easy1auth.poolidentity.model.PoolPermissionEntity;
-import com.easy1auth.poolidentity.model.PoolRoleEntity;
+import com.easy1auth.poolidentity.dto.*;
+import com.easy1auth.poolidentity.model.*;
 import com.easy1auth.tenant.util.TenantContextHolder;
 
-import com.easy1auth.poolidentity.PoolUserView;
-import com.easy1auth.poolidentity.model.PoolUserEntity;
-import com.easy1auth.poolidentity.model.PoolUserEntityTable;
+import com.easy1auth.poolidentity.dto.PoolUserView;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.id.UuidV7;
 import com.easy1auth.infrastructure.foundation.web.PageData;
-import com.easy1auth.poolidentity.ErrorCodeConstants;
-import com.easy1auth.poolidentity.model.*;
+import com.easy1auth.poolidentity.constant.ErrorCodeConstants;
 import com.easy1auth.poolidentity.repository.UserAccessCatalogRepository;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;

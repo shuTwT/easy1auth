@@ -1,7 +1,7 @@
 package com.easy1auth.admin.security;
 
 import com.easy1auth.admin.config.AdminJwtProperties;
-import com.easy1auth.adminidentity.AdminAccount;
+import com.easy1auth.adminidentity.dto.AdminAccount;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.*;
 import org.springframework.stereotype.Service;
@@ -12,7 +12,7 @@ import java.util.List;
 /**
  * 管理端 JWT 令牌签发服务。
  *
- * <p>为 {@link com.easy1auth.adminidentity.AdminAccount} 签发 HS256 签名的访问令牌，
+ * <p>为 {@link AdminAccount} 签发 HS256 签名的访问令牌，
  * 在声明中写入 subject_type=admin 与 security_version，供管理端资源服务器验签后使用。</p>
  */
 @Service

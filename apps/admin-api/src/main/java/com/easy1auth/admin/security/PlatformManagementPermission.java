@@ -1,6 +1,6 @@
 package com.easy1auth.admin.security;
 
-import com.easy1auth.adminaccess.ManagementPermissionCode;
+import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

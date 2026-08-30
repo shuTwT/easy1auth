@@ -4,7 +4,7 @@ import com.easy1auth.admin.config.AdminJwtProperties;
 import com.easy1auth.admin.security.AdminTokenService;
 import com.easy1auth.admin.security.ManagementRouteClassification;
 import com.easy1auth.admin.security.ManagementRouteKind;
-import com.easy1auth.adminidentity.*;
+import com.easy1auth.adminidentity.dto.AdminAccount;
 import com.easy1auth.adminidentity.service.AdminIdentityService;
 import com.easy1auth.adminidentity.service.RegistrationCodeService;
 import com.easy1auth.infrastructure.foundation.error.DomainException;

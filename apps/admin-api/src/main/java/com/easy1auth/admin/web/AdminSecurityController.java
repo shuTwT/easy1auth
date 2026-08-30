@@ -7,7 +7,7 @@ import com.easy1auth.audit.service.DeliveryService;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.security.service.SecurityPolicyService;
-import com.easy1auth.security.service.Policy;
+import com.easy1auth.security.dto.Policy;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.transaction.annotation.Transactional;

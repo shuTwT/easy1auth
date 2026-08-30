@@ -2,6 +2,7 @@ package com.easy1auth.admin.security;
 
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.trace.TraceIdFilter;
+import com.easy1auth.tenant.constant.ErrorCodeConstants;
 import com.easy1auth.tenant.util.WebFramework;
 import com.easy1auth.tenant.service.TenantService;
 import com.easy1auth.tenant.util.TenantContext;
@@ -59,7 +60,7 @@ public final class TenantContextFilter extends OncePerRequestFilter {
             try {
                 UUID tenantId = WebFramework.getTenantId(request);
                 if (tenantId == null) {
-                    throw new DomainException(com.easy1auth.tenant.ErrorCodeConstants.TENANT_CONTEXT_REQUIRED);
+                    throw new DomainException(ErrorCodeConstants.TENANT_CONTEXT_REQUIRED);
                 }
                 TenantContextHolder.setTenantId(tenantId);
                 TenantContextHolder.setIgnore(false);
@@ -67,7 +68,7 @@ public final class TenantContextFilter extends OncePerRequestFilter {
                         response.getHeader(TraceIdFilter.HEADER));
                 WebFramework.setTenantContext(request, context);
             } catch (IllegalArgumentException ex) {
-                writeError(request, response, new DomainException(com.easy1auth.tenant.ErrorCodeConstants.TENANT_INVALID));
+                writeError(request, response, new DomainException(ErrorCodeConstants.TENANT_INVALID));
                 return;
             } catch (DomainException ex) {
                 writeError(request, response, ex);

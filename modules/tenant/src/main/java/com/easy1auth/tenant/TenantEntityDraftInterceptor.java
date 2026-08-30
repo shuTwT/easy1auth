@@ -4,6 +4,7 @@ import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.persistence.model.BaseTenantEntity;
 import com.easy1auth.infrastructure.persistence.model.BaseTenantEntityDraft;
 import com.easy1auth.infrastructure.persistence.model.BaseTenantEntityProps;
+import com.easy1auth.tenant.constant.ErrorCodeConstants;
 import com.easy1auth.tenant.util.TenantContextHolder;
 import org.babyfish.jimmer.ImmutableObjects;
 import org.babyfish.jimmer.meta.TypedProp;

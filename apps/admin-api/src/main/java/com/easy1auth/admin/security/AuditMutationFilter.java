@@ -1,7 +1,7 @@
 package com.easy1auth.admin.security;
 
 import com.easy1auth.audit.service.AuditService;
-import com.easy1auth.audit.Event;
+import com.easy1auth.audit.dto.Event;
 import com.easy1auth.infrastructure.foundation.trace.TraceIdFilter;
 import com.easy1auth.tenant.util.WebFramework;
 import jakarta.servlet.*;

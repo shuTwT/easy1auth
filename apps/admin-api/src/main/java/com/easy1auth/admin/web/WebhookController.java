@@ -1,9 +1,9 @@
 package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.security.TenantManagementPermission;
-import com.easy1auth.adminaccess.ManagementPermissionCode;
+import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import com.easy1auth.audit.service.DeliveryService;
-import com.easy1auth.audit.SubscriptionInput;
+import com.easy1auth.audit.dto.SubscriptionInput;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
 import org.springframework.web.bind.annotation.*;
 

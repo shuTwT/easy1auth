@@ -1,10 +1,10 @@
 package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.security.TenantManagementPermission;
-import com.easy1auth.adminaccess.ManagementPermissionCode;
+import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
 import com.easy1auth.security.service.SecurityPolicyService;
-import com.easy1auth.security.service.Policy;
+import com.easy1auth.security.dto.Policy;
 import org.springframework.web.bind.annotation.*;
 
 /**

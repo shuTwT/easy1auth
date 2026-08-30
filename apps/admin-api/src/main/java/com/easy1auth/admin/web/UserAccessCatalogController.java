@@ -1,8 +1,10 @@
 package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.security.TenantManagementPermission;
-import com.easy1auth.adminaccess.ManagementPermissionCode;
+import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
+import com.easy1auth.poolidentity.dto.PermissionInput;
+import com.easy1auth.poolidentity.dto.RoleInput;
 import com.easy1auth.poolidentity.service.UserAccessCatalogService;
 import com.easy1auth.tenant.util.TenantContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -62,7 +64,7 @@ public class UserAccessCatalogController {
     /** 创建目录用户角色。 */
     @TenantManagementPermission(value = ManagementPermissionCode.USER_ROLE_CREATE)
     @PostMapping("/api/roles")
-    ApiResponse<?> createRole(@RequestBody com.easy1auth.poolidentity.service.RoleInput in) {
+    ApiResponse<?> createRole(@RequestBody RoleInput in) {
         UUID tenantId = TenantContextHolder.requireTenantId();
         return ApiResponse.ok(service.createRole(tenantId,in), "角色创建成功");
     }
@@ -70,7 +72,7 @@ public class UserAccessCatalogController {
     /** 更新指定目录用户角色的信息。 */
     @TenantManagementPermission(value = ManagementPermissionCode.USER_ROLE_UPDATE)
     @PutMapping("/api/roles/{id}")
-    ApiResponse<?> updateRole(@PathVariable UUID id, @RequestBody com.easy1auth.poolidentity.service.RoleInput in) {
+    ApiResponse<?> updateRole(@PathVariable UUID id, @RequestBody RoleInput in) {
         UUID tenantId = TenantContextHolder.requireTenantId();
         return ApiResponse.ok(service.updateRole(tenantId,id, in), "角色更新成功");
     }
@@ -156,14 +158,14 @@ public class UserAccessCatalogController {
     /** 创建数据权限。 */
     @TenantManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_CREATE)
     @PostMapping("/api/permissions")
-    ApiResponse<?> createPermission(@RequestBody com.easy1auth.poolidentity.service.PermissionInput in) {
+    ApiResponse<?> createPermission(@RequestBody PermissionInput in) {
         return ApiResponse.ok(service.createPermission(in), "创建权限成功");
     }
 
     /** 更新指定数据权限。 */
     @TenantManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_UPDATE)
     @PutMapping("/api/permissions/{id}")
-    ApiResponse<?> updatePermission(@PathVariable UUID id, @RequestBody com.easy1auth.poolidentity.service.PermissionInput in) {
+    ApiResponse<?> updatePermission(@PathVariable UUID id, @RequestBody PermissionInput in) {
         return ApiResponse.ok(service.updatePermission(id, in), "更新权限成功");
     }
 

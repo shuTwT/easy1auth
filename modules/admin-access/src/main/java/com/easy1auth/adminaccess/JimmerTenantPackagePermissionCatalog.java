@@ -1,5 +1,7 @@
 package com.easy1auth.adminaccess;
 
+import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
+import com.easy1auth.adminaccess.constant.ManagementPermissionScope;
 import com.easy1auth.tenant.TenantPackagePermissionCatalog;
 import org.springframework.stereotype.Component;
 

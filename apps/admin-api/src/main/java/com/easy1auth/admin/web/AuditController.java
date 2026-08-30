@@ -1,8 +1,8 @@
 package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.security.TenantManagementPermission;
-import com.easy1auth.adminaccess.ManagementPermissionCode;
-import com.easy1auth.audit.*;
+import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
+import com.easy1auth.audit.dto.Query;
 import com.easy1auth.audit.service.AuditService;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
 import com.easy1auth.infrastructure.foundation.web.PageData;

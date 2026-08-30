@@ -4,6 +4,8 @@ import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.id.UuidV7;
 import com.easy1auth.security.ErrorCodeConstants;
 import com.easy1auth.security.SecurityDataCipher;
+import com.easy1auth.security.dto.*;
+import com.easy1auth.security.dto.Policy;
 import com.easy1auth.security.model.*;
 import org.babyfish.jimmer.sql.JSqlClient;
 import org.babyfish.jimmer.sql.ast.Predicate;
@@ -51,25 +53,25 @@ public class SecurityPolicyService {
     }
 
     /** 平台管理员的默认安全策略（不落库，直接返回）。 */
-    public static Policy adminPolicy() {
-        return new Policy(12, true, true, true, true, 90, 5, false, 5, 1800);
+    public static com.easy1auth.security.dto.Policy adminPolicy() {
+        return new com.easy1auth.security.dto.Policy(12, true, true, true, true, 90, 5, false, 5, 1800);
     }
 
     /** 读取全局（平台）安全策略，不存在时按默认值初始化。 */
     @Transactional
-    public Policy policy() {
+    public com.easy1auth.security.dto.Policy policy() {
         return view(policyEntity());
     }
 
     /** 读取指定租户的安全策略，不存在时按默认值初始化。 */
     @Transactional
-    public Policy policy(UUID tenant) {
+    public com.easy1auth.security.dto.Policy policy(UUID tenant) {
         return view(policyEntity(tenant));
     }
 
     /** 更新安全策略：先校验取值范围，再整体覆盖保存。 */
     @Transactional
-    public Policy update(Policy p) {
+    public com.easy1auth.security.dto.Policy update(com.easy1auth.security.dto.Policy p) {
         validate(p);
         var old = policyEntity();
         var e = SecurityPolicyEntityDraft.$.produce(d -> d.setId(old.id()).setPasswordMinLength(p.minLength()).setPasswordRequireUpper(p.requireUpper()).setPasswordRequireLower(p.requireLower()).setPasswordRequireNumber(p.requireNumber()).setPasswordRequireSpecial(p.requireSpecial()).setPasswordMaxAgeDays(p.maxAgeDays()).setPasswordHistoryCount(p.historyCount()).setMfaRequired(p.mfaRequired()).setLoginAttemptLimit(p.loginAttemptLimit()).setLockoutDurationSeconds(p.lockoutSeconds()).setUpdatedAt(Instant.now()));
@@ -78,7 +80,7 @@ public class SecurityPolicyService {
     }
 
     /** 校验密码是否符合策略：长度 8-128，并按需要求大小写字母、数字与特殊字符。 */
-    public void validatePassword(String password, Policy p) {
+    public void validatePassword(String password, com.easy1auth.security.dto.Policy p) {
         if (password == null || password.length() < p.minLength() || password.length() > 128 || (p.requireUpper() && !password.matches(".*[A-Z].*")) || (p.requireLower() && !password.matches(".*[a-z].*")) || (p.requireNumber() && !password.matches(".*\\d.*")) || (p.requireSpecial() && !password.matches(".*[^A-Za-z0-9].*"))) {
             throw new DomainException(ErrorCodeConstants.PASSWORD_WEAK);
         }
@@ -319,8 +321,8 @@ public class SecurityPolicyService {
     }
 
     /** 将策略实体转为视图对象。 */
-    private static Policy view(SecurityPolicyEntity e) {
-        return new Policy(e.passwordMinLength(), e.passwordRequireUpper(), e.passwordRequireLower(), e.passwordRequireNumber(), e.passwordRequireSpecial(), e.passwordMaxAgeDays(), e.passwordHistoryCount(), e.mfaRequired(), e.loginAttemptLimit(), e.lockoutDurationSeconds());
+    private static com.easy1auth.security.dto.Policy view(SecurityPolicyEntity e) {
+        return new com.easy1auth.security.dto.Policy(e.passwordMinLength(), e.passwordRequireUpper(), e.passwordRequireLower(), e.passwordRequireNumber(), e.passwordRequireSpecial(), e.passwordMaxAgeDays(), e.passwordHistoryCount(), e.mfaRequired(), e.loginAttemptLimit(), e.lockoutDurationSeconds());
     }
 
     /** 校验策略参数取值范围：密码长度 8-128、历史 0-24、锁定时长等下限约束。 */

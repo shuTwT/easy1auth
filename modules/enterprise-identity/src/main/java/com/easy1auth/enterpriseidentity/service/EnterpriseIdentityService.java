@@ -1,10 +1,10 @@
 package com.easy1auth.enterpriseidentity.service;
 
-import com.easy1auth.enterpriseidentity.*;
+import com.easy1auth.enterpriseidentity.constant.ErrorCodeConstants;
 import com.easy1auth.enterpriseidentity.dto.*;
 import com.easy1auth.poolidentity.model.*;
 import com.easy1auth.poolidentity.service.PoolUserService;
-import com.easy1auth.poolidentity.service.PoolUserInput;
+import com.easy1auth.poolidentity.dto.PoolUserInput;
 import com.easy1auth.enterpriseidentity.model.*;
 import com.easy1auth.enterpriseidentity.repository.EnterpriseIdentityRepository;
 import com.easy1auth.infrastructure.foundation.error.DomainException;

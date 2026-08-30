@@ -2,6 +2,7 @@ package com.easy1auth.adminidentity.repository;
 
 import com.easy1auth.adminidentity.*;
 
+import com.easy1auth.adminidentity.dto.AdminAccount;
 import com.easy1auth.adminidentity.model.*;
 import com.easy1auth.infrastructure.foundation.id.UuidV7;
 import org.babyfish.jimmer.spring.repository.JRepository;

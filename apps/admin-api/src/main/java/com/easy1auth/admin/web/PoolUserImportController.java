@@ -1,9 +1,9 @@
 package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.security.TenantManagementPermission;
-import com.easy1auth.adminaccess.ManagementPermissionCode;
+import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import com.easy1auth.poolidentity.service.PoolUserService;
-import com.easy1auth.poolidentity.service.PoolUserInput;
+import com.easy1auth.poolidentity.dto.PoolUserInput;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
 import org.apache.poi.ss.usermodel.*;

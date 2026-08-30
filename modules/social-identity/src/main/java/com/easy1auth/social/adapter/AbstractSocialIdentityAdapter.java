@@ -1,7 +1,7 @@
 package com.easy1auth.social.adapter;
 
 import com.easy1auth.infrastructure.foundation.error.DomainException;
-import com.easy1auth.social.ErrorCodeConstants;
+import com.easy1auth.social.constant.ErrorCodeConstants;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 

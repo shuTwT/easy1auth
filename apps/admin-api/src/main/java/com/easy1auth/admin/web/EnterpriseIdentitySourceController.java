@@ -1,7 +1,7 @@
 package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.security.*;
-import com.easy1auth.adminaccess.ManagementPermissionCode;
+import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import com.easy1auth.enterpriseidentity.service.EnterpriseIdentityService;
 import com.easy1auth.enterpriseidentity.dto.EnterpriseIdentityInput;
 import com.easy1auth.enterpriseidentity.dto.FeishuEventResponse;

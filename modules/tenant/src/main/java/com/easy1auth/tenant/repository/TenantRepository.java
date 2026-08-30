@@ -2,7 +2,7 @@ package com.easy1auth.tenant.repository;
 
 import com.easy1auth.infrastructure.foundation.id.UuidV7;
 import com.easy1auth.infrastructure.foundation.error.ErrorCode;
-import com.easy1auth.tenant.ErrorCodeConstants;
+import com.easy1auth.tenant.constant.ErrorCodeConstants;
 import com.easy1auth.tenant.model.*;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import org.babyfish.jimmer.sql.JSqlClient;

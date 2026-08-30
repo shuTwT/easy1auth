@@ -1,6 +1,6 @@
 package com.easy1auth.admin.web;
 
-import com.easy1auth.adminaccess.ManagementPermissionCode;
+import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import com.easy1auth.adminaccess.PlatformAuthorizationResolver;
 import com.easy1auth.admin.security.PlatformManagementPermission;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
@@ -123,7 +123,7 @@ public class TenantPackageController {
     /** 将套餐输入转换为服务层变更对象，输入为空时抛出套餐缺失异常。 */
     private static TenantPackageMutation mutation(TenantPackageInput input) {
         if (input == null) {
-            throw new DomainException(com.easy1auth.tenant.ErrorCodeConstants.TENANT_PACKAGE_REQUIRED);
+            throw new DomainException(com.easy1auth.tenant.constant.ErrorCodeConstants.TENANT_PACKAGE_REQUIRED);
         }
         return input.toMutation();
     }

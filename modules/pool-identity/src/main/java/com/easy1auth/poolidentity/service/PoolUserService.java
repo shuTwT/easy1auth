@@ -1,7 +1,10 @@
 package com.easy1auth.poolidentity.service;
 
-import com.easy1auth.poolidentity.ErrorCodeConstants;
-import com.easy1auth.poolidentity.PoolUserView;
+import com.easy1auth.poolidentity.constant.ErrorCodeConstants;
+import com.easy1auth.poolidentity.dto.PoolUserView;
+import com.easy1auth.poolidentity.dto.PoolUserInput;
+import com.easy1auth.poolidentity.dto.RecentLogin;
+import com.easy1auth.poolidentity.dto.UserStats;
 import com.easy1auth.poolidentity.model.PoolUserEntity;
 import com.easy1auth.poolidentity.model.PoolUserEntityDraft;
 import com.easy1auth.poolidentity.model.PoolUserEntityTable;

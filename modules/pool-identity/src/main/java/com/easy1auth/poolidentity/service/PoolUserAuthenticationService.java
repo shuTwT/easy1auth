@@ -1,11 +1,11 @@
 package com.easy1auth.poolidentity.service;
 
+import com.easy1auth.poolidentity.dto.PoolPrincipal;
 import com.easy1auth.poolidentity.model.PoolUserEntityTable;
 import com.easy1auth.security.service.LoginProtectionService;
 import com.easy1auth.security.service.SecurityPolicyService;
 import org.babyfish.jimmer.sql.JSqlClient;
 import org.babyfish.jimmer.sql.ast.Predicate;
-import org.jspecify.annotations.Nullable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

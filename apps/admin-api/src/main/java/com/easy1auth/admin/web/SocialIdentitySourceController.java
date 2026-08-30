@@ -1,11 +1,11 @@
 package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.security.TenantManagementPermission;
-import com.easy1auth.adminaccess.ManagementPermissionCode;
+import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
 import com.easy1auth.social.service.SocialIdentityService;
-import com.easy1auth.social.service.SocialIdentityInput;
-import com.easy1auth.social.service.SourceView;
+import com.easy1auth.social.dto.SocialIdentityInput;
+import com.easy1auth.social.dto.SourceView;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;

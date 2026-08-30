@@ -1,7 +1,7 @@
 package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.security.TenantManagementPermission;
-import com.easy1auth.adminaccess.ManagementPermissionCode;
+import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import com.easy1auth.application.service.ApplicationService;
 import com.easy1auth.poolidentity.service.PoolUserService;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
@@ -50,7 +50,7 @@ public class DashboardController {
         var userStats = users.stats();
         var applicationStats = applications.stats();
         Instant today = LocalDate.now(ZoneOffset.UTC).atStartOfDay().toInstant(ZoneOffset.UTC);
-        List<com.easy1auth.poolidentity.service.RecentLogin> loginRows = users.recentLogins(20);
+        List<com.easy1auth.poolidentity.dto.RecentLogin> loginRows = users.recentLogins(20);
         List<RecentLogin> recentLogins = loginRows.stream()
                 .limit(5)
                 .map(login -> new RecentLogin(login.username(), login.email(), "", login.time(), "success"))

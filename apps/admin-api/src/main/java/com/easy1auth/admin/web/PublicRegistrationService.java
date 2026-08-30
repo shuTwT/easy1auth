@@ -2,7 +2,7 @@ package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.config.AdminJwtProperties;
 import com.easy1auth.adminidentity.service.AdminIdentityService;
-import com.easy1auth.adminidentity.AuthenticatedAdmin;
+import com.easy1auth.adminidentity.dto.AuthenticatedAdmin;
 import com.easy1auth.tenant.service.TenantService;
 import com.easy1auth.tenant.dto.TenantSummary;
 import org.springframework.stereotype.Service;

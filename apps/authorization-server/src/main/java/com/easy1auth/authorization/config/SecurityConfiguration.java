@@ -1,5 +1,7 @@
 package com.easy1auth.authorization.config;
 
+import com.easy1auth.poolidentity.dto.GroupView;
+import com.easy1auth.poolidentity.dto.RoleView;
 import com.easy1auth.poolidentity.service.DirectoryCatalogService;
 
 import com.easy1auth.poolidentity.service.PoolUserAuthenticationService;
@@ -241,7 +243,7 @@ public class SecurityConfiguration {
                 if (user.position() != null) {
                     context.getClaims().claim("position", user.position());
                 }
-                context.getClaims().claim("roles", new ArrayList<>(access.rolesForUser(tenant, userId).stream().map(com.easy1auth.poolidentity.service.RoleView::code).toList())).claim("groups", new ArrayList<>(directory.groupsForUser(tenant, userId).stream().map(com.easy1auth.poolidentity.service.GroupView::name).toList()));
+                context.getClaims().claim("roles", new ArrayList<>(access.rolesForUser(tenant, userId).stream().map(RoleView::code).toList())).claim("groups", new ArrayList<>(directory.groupsForUser(tenant, userId).stream().map(GroupView::name).toList()));
             } catch (IllegalArgumentException ignored) {
             }
         };

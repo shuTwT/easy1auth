@@ -1,5 +1,8 @@
 package com.easy1auth.adminaccess;
 
+import com.easy1auth.adminaccess.constant.ErrorCodeConstants;
+import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
+import com.easy1auth.adminaccess.constant.ManagementPermissionScope;
 import com.easy1auth.adminidentity.model.AdminAccountEntityTable;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.tenant.dto.TenantAuthorization;

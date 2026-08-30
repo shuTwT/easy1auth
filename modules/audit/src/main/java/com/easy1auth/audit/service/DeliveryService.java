@@ -1,8 +1,8 @@
 package com.easy1auth.audit.service;
 
-import com.easy1auth.audit.ErrorCodeConstants;
-import com.easy1auth.audit.SubscriptionInput;
-import com.easy1auth.audit.SubscriptionView;
+import com.easy1auth.audit.constant.ErrorCodeConstants;
+import com.easy1auth.audit.dto.SubscriptionInput;
+import com.easy1auth.audit.dto.SubscriptionView;
 import com.easy1auth.audit.model.*;
 import com.easy1auth.audit.repository.DeliveryRepository;
 import com.easy1auth.infrastructure.foundation.error.DomainException;

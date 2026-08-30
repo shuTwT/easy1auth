@@ -1,5 +1,6 @@
 package com.easy1auth.admin.security;
 
+import com.easy1auth.adminaccess.constant.ErrorCodeConstants;
 import com.easy1auth.tenant.util.TenantContext;
 import com.easy1auth.tenant.util.WebFramework;
 import jakarta.servlet.FilterChain;
@@ -52,11 +53,11 @@ public final class TenantSecurityFilter extends OncePerRequestFilter {
 
         TenantContext context = WebFramework.getTenantContext(request);
         if (context == null) {
-            errors.write(request, response, com.easy1auth.tenant.ErrorCodeConstants.TENANT_CONTEXT_REQUIRED);
+            errors.write(request, response, com.easy1auth.tenant.constant.ErrorCodeConstants.TENANT_CONTEXT_REQUIRED);
             return;
         }
         if (!context.hasPermission(requirement.get().value())) {
-            errors.write(request, response, com.easy1auth.adminaccess.ErrorCodeConstants.PERMISSION_DENIED);
+            errors.write(request, response, ErrorCodeConstants.PERMISSION_DENIED);
             return;
         }
         chain.doFilter(request, response);

@@ -1,5 +1,6 @@
 package com.easy1auth.adminaccess.model;
 
+import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import org.babyfish.jimmer.sql.Column;
 import org.babyfish.jimmer.sql.Entity;
 import org.babyfish.jimmer.sql.Id;
@@ -10,7 +11,7 @@ import org.jspecify.annotations.Nullable;
  * 管理端权限实体（对应 management_permission 表）。
  *
  * <p>管理端权限目录的数据源，记录所有可授权的权限码及其元数据。权限码的
- * 类型、作用域由枚举（{@link com.easy1auth.adminaccess.ManagementPermissionCode}）
+ * 类型、作用域由枚举（{@link ManagementPermissionCode}）
  * 承载并在解析时校验，type 字段保存对应的数据库值。active 控制该权限是否
  * 可被授予。</p>
  */
