@@ -7,7 +7,7 @@ import com.easy1auth.tenant.constant.ErrorCodeConstants;
 import com.easy1auth.tenant.dto.TenantPackageMutation;
 import com.easy1auth.tenant.dto.TenantPackageView;
 import com.easy1auth.tenant.model.TenantPackageEntity;
-import com.easy1auth.tenant.repository.TenantPackageRepository;
+import com.easy1auth.tenant.infrastructure.repository.TenantPackageRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

@@ -1,4 +1,4 @@
-package com.easy1auth.tenant.repository;
+package com.easy1auth.tenant.dto;
 
 import com.easy1auth.tenant.model.TenantEntity;
 
