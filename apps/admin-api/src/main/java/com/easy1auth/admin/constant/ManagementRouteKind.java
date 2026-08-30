@@ -1,4 +1,7 @@
-package com.easy1auth.admin.security;
+package com.easy1auth.admin.constant;
+
+import com.easy1auth.admin.annotation.ManagementRouteClassification;
+import com.easy1auth.admin.security.ManagementRouteInventory;
 
 /**
  * 管理路由分类枚举。

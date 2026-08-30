@@ -1,5 +1,7 @@
-package com.easy1auth.admin.security;
+package com.easy1auth.admin.annotation;
 
+import com.easy1auth.admin.security.ManagementRouteInventory;
+import com.easy1auth.admin.security.TenantSecurityFilter;
 import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 
 import java.lang.annotation.ElementType;

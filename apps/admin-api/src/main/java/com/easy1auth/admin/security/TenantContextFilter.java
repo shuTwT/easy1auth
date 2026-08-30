@@ -1,15 +1,16 @@
 package com.easy1auth.admin.security;
 
 import com.easy1auth.infrastructure.foundation.error.DomainException;
-import com.easy1auth.infrastructure.foundation.trace.TraceIdFilter;
 import com.easy1auth.tenant.constant.ErrorCodeConstants;
-import com.easy1auth.tenant.util.WebFramework;
+import com.easy1auth.infrastructure.foundation.util.WebFrameworkUtils;
 import com.easy1auth.tenant.service.TenantService;
 import com.easy1auth.tenant.util.TenantContext;
 import com.easy1auth.tenant.util.TenantContextHolder;
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
+import org.jspecify.annotations.NonNull;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -27,11 +28,17 @@ import java.util.UUID;
  */
 @Component
 public final class TenantContextFilter extends OncePerRequestFilter {
-    /** 租户服务，负责解析租户上下文与权限 */
+    /**
+     * 租户服务，负责解析租户上下文与权限
+     */
     private final TenantService tenants;
-    /** 管理路由清单，用于判断当前请求是否需要租户上下文 */
+    /**
+     * 管理路由清单，用于判断当前请求是否需要租户上下文
+     */
     private final ManagementRouteInventory routes;
-    /** 业务错误写入器，用于以统一 JSON 格式返回租户上下文错误 */
+    /**
+     * 业务错误写入器，用于以统一 JSON 格式返回租户上下文错误
+     */
     private final ApiErrorWriter errors;
 
     public TenantContextFilter(TenantService tenants, ManagementRouteInventory routes, ApiErrorWriter errors) {
@@ -40,49 +47,27 @@ public final class TenantContextFilter extends OncePerRequestFilter {
         this.errors = errors;
     }
 
-    /** 仅对需要租户上下文的路由执行解析，其余请求直接放行。 */
+    /**
+     * 仅对需要租户上下文的路由执行解析，其余请求直接放行。
+     */
     @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) {
+    protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
         return !routes.requiresTenantContext(request);
     }
 
-    /** 解析租户上下文并放行请求，结束时恢复线程原有的租户上下文。 */
+    /**
+     * 解析租户上下文并放行请求，结束时恢复线程原有的租户上下文。
+     */
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws ServletException, IOException {
-        Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !(auth.getPrincipal() instanceof Jwt jwt)) {
-            chain.doFilter(request, response);
-            return;
+    protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain chain) throws ServletException, IOException {
+        UUID tenantId = WebFrameworkUtils.getTenantId(request);
+        if(tenantId!= null){
+            TenantContextHolder.setTenantId(tenantId);
         }
-        UUID previousTenantId = TenantContextHolder.getTenantId();
-        boolean previousIgnore = TenantContextHolder.isIgnore();
         try {
-            try {
-                UUID tenantId = WebFramework.getTenantId(request);
-                if (tenantId == null) {
-                    throw new DomainException(ErrorCodeConstants.TENANT_CONTEXT_REQUIRED);
-                }
-                TenantContextHolder.setTenantId(tenantId);
-                TenantContextHolder.setIgnore(false);
-                TenantContext context = tenants.resolve(UUID.fromString(jwt.getSubject()), tenantId,
-                        response.getHeader(TraceIdFilter.HEADER));
-                WebFramework.setTenantContext(request, context);
-            } catch (IllegalArgumentException ex) {
-                writeError(request, response, new DomainException(ErrorCodeConstants.TENANT_INVALID));
-                return;
-            } catch (DomainException ex) {
-                writeError(request, response, ex);
-                return;
-            }
             chain.doFilter(request, response);
         } finally {
-            TenantContextHolder.setTenantId(previousTenantId);
-            TenantContextHolder.setIgnore(previousIgnore);
+            TenantContextHolder.setTenantId(tenantId);
         }
-    }
-
-    /** 以统一 JSON 格式写出租户上下文相关错误。 */
-    private void writeError(HttpServletRequest request, HttpServletResponse response, DomainException ex) throws IOException {
-        errors.write(request, response, ex.errorCode());
     }
 }

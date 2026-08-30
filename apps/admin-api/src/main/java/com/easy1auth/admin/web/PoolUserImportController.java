@@ -2,7 +2,7 @@ package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.constant.ErrorCodeConstants;
 import com.easy1auth.admin.web.dto.*;
-import com.easy1auth.admin.security.TenantManagementPermission;
+import com.easy1auth.admin.annotation.TenantManagementPermission;
 import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import com.easy1auth.poolidentity.service.PoolUserService;
 import com.easy1auth.poolidentity.dto.PoolUserInput;

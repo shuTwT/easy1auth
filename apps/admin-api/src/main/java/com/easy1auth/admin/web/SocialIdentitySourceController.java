@@ -1,7 +1,7 @@
 package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.web.dto.SocialSourceStatsResponse;
-import com.easy1auth.admin.security.TenantManagementPermission;
+import com.easy1auth.admin.annotation.TenantManagementPermission;
 import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
 import com.easy1auth.social.service.SocialIdentityService;

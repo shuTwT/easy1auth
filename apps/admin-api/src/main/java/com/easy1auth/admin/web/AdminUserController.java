@@ -5,7 +5,7 @@ import com.easy1auth.admin.web.dto.*;
 import com.easy1auth.adminaccess.service.AdminAccessService;
 import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import com.easy1auth.adminaccess.PlatformAuthorizationResolver;
-import com.easy1auth.admin.security.PlatformManagementPermission;
+import com.easy1auth.admin.annotation.PlatformManagementPermission;
 import com.easy1auth.adminidentity.service.AdminIdentityService;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;

@@ -1,5 +1,9 @@
 package com.easy1auth.admin.security;
 
+import com.easy1auth.admin.annotation.ManagementRouteClassification;
+import com.easy1auth.admin.annotation.PlatformManagementPermission;
+import com.easy1auth.admin.annotation.TenantManagementPermission;
+import com.easy1auth.admin.constant.ManagementRouteKind;
 import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import com.easy1auth.adminaccess.constant.ManagementPermissionScope;
 import com.easy1auth.adminaccess.constant.ManagementPermissionType;

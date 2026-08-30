@@ -1,7 +1,7 @@
 package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.web.dto.ApplicationStatusInput;
-import com.easy1auth.admin.security.TenantManagementPermission;
+import com.easy1auth.admin.annotation.TenantManagementPermission;
 import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import com.easy1auth.application.service.ApplicationService;
 import com.easy1auth.application.dto.ApplicationInput;

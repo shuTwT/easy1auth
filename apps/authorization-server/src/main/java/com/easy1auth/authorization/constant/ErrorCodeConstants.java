@@ -1,4 +1,4 @@
-package com.easy1auth.authorization.web;
+package com.easy1auth.authorization.constant;
 
 import com.easy1auth.infrastructure.foundation.error.ErrorCode;
 

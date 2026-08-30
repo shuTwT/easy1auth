@@ -1,23 +1,21 @@
 package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.web.dto.AuthorizationContextResponse;
-import com.easy1auth.tenant.util.WebFramework;
+import com.easy1auth.infrastructure.foundation.util.WebFrameworkUtils;
 
-import com.easy1auth.admin.security.ManagementRouteClassification;
-import com.easy1auth.admin.security.ManagementRouteKind;
+import com.easy1auth.admin.annotation.ManagementRouteClassification;
+import com.easy1auth.admin.constant.ManagementRouteKind;
 import com.easy1auth.adminaccess.ManagementPermissionCatalog;
 import com.easy1auth.adminaccess.constant.ManagementPermissionType;
 import com.easy1auth.adminaccess.dto.ManagementPermissionView;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
 import com.easy1auth.tenant.util.TenantContext;
-import com.easy1auth.tenant.dto.TenantPackageView;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.UUID;
 
 /**
  * 授权上下文接口。
@@ -41,7 +39,7 @@ public class AuthorizationContextController {
     @ManagementRouteClassification(ManagementRouteKind.AUTHORIZATION_CONTEXT)
     @GetMapping("/context")
     public ApiResponse<AuthorizationContextResponse> context(
-            @RequestAttribute(WebFramework.TENANT_CONTEXT_ATTRIBUTE) TenantContext context) {
+            @RequestAttribute(WebFrameworkUtils.TENANT_CONTEXT_ATTRIBUTE) TenantContext context) {
         return ApiResponse.ok(new AuthorizationContextResponse(
                 context.tenantId(),
                 context.membershipRole(),

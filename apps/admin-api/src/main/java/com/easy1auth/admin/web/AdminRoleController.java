@@ -1,12 +1,12 @@
 package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.web.dto.*;
-import com.easy1auth.admin.security.TenantManagementPermission;
+import com.easy1auth.admin.annotation.TenantManagementPermission;
 import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import com.easy1auth.adminaccess.service.AdminAccessService;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
 import com.easy1auth.tenant.util.TenantContext;
-import com.easy1auth.tenant.util.WebFramework;
+import com.easy1auth.infrastructure.foundation.util.WebFrameworkUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -61,14 +61,14 @@ public class AdminRoleController {
     /** 创建管理员角色并绑定权限集合。 */
     @TenantManagementPermission(value = ManagementPermissionCode.ADMIN_ROLE_CREATE)
     @PostMapping
-    public ApiResponse<?> create(@RequestAttribute(WebFramework.TENANT_CONTEXT_ATTRIBUTE) TenantContext context, @RequestBody RoleInput in) {
+    public ApiResponse<?> create(@RequestAttribute(WebFrameworkUtils.TENANT_CONTEXT_ATTRIBUTE) TenantContext context, @RequestBody RoleInput in) {
         return ApiResponse.ok(access.create(context, in.name(), in.description(), in.permissions()), "管理员角色创建成功");
     }
 
     /** 更新指定管理员角色的名称、描述与权限集合。 */
     @TenantManagementPermission(value = ManagementPermissionCode.ADMIN_ROLE_UPDATE)
     @PutMapping("/{id}")
-    public ApiResponse<?> update(@RequestAttribute(WebFramework.TENANT_CONTEXT_ATTRIBUTE) TenantContext context, @PathVariable UUID id, @RequestBody RoleInput in) {
+    public ApiResponse<?> update(@RequestAttribute(WebFrameworkUtils.TENANT_CONTEXT_ATTRIBUTE) TenantContext context, @PathVariable UUID id, @RequestBody RoleInput in) {
         return ApiResponse.ok(access.update(context, id, in.name(), in.description(), in.permissions()), "管理员角色更新成功");
     }
 

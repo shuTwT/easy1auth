@@ -1,15 +1,14 @@
 package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.web.dto.*;
-import com.easy1auth.admin.security.ManagementRouteClassification;
-import com.easy1auth.admin.security.ManagementRouteKind;
-import com.easy1auth.admin.security.PlatformManagementPermission;
+import com.easy1auth.admin.annotation.ManagementRouteClassification;
+import com.easy1auth.admin.constant.ManagementRouteKind;
+import com.easy1auth.admin.annotation.PlatformManagementPermission;
 import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import com.easy1auth.adminaccess.PlatformAuthorizationResolver;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
 import com.easy1auth.infrastructure.foundation.web.PageData;
 import com.easy1auth.tenant.dto.TenantControlView;
-import com.easy1auth.tenant.dto.TenantPackageView;
 import com.easy1auth.tenant.dto.TenantSummary;
 import com.easy1auth.tenant.service.TenantService;
 import com.easy1auth.tenant.util.TenantContextHolder;

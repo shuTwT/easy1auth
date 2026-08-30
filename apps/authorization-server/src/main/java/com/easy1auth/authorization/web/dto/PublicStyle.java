@@ -1,4 +1,5 @@
-package com.easy1auth.authorization.web;
+package com.easy1auth.authorization.web.dto;
+
 import java.util.*;
 
 /** 授权页公开登录样式及法律文档视图。 */

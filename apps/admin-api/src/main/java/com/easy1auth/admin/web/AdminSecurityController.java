@@ -2,8 +2,8 @@ package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.constant.ErrorCodeConstants;
 import com.easy1auth.admin.web.dto.*;
-import com.easy1auth.admin.security.ManagementRouteClassification;
-import com.easy1auth.admin.security.ManagementRouteKind;
+import com.easy1auth.admin.annotation.ManagementRouteClassification;
+import com.easy1auth.admin.constant.ManagementRouteKind;
 import com.easy1auth.adminidentity.service.AdminIdentityService;
 import com.easy1auth.audit.service.DeliveryService;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;

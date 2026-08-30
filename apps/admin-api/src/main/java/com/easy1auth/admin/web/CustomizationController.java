@@ -2,9 +2,9 @@ package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.web.dto.DomainInput;
 import com.easy1auth.admin.web.dto.PublicStyleView;
-import com.easy1auth.admin.security.ManagementRouteClassification;
-import com.easy1auth.admin.security.ManagementRouteKind;
-import com.easy1auth.admin.security.TenantManagementPermission;
+import com.easy1auth.admin.annotation.ManagementRouteClassification;
+import com.easy1auth.admin.constant.ManagementRouteKind;
+import com.easy1auth.admin.annotation.TenantManagementPermission;
 import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import com.easy1auth.customization.dto.DraftInput;
 import com.easy1auth.customization.dto.MessageTemplateInput;

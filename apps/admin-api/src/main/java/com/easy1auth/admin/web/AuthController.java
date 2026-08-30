@@ -4,14 +4,14 @@ import com.easy1auth.admin.constant.ErrorCodeConstants;
 import com.easy1auth.admin.web.dto.*;
 import com.easy1auth.admin.config.AdminJwtProperties;
 import com.easy1auth.admin.security.AdminTokenService;
-import com.easy1auth.admin.security.ManagementRouteClassification;
-import com.easy1auth.admin.security.ManagementRouteKind;
+import com.easy1auth.admin.annotation.ManagementRouteClassification;
+import com.easy1auth.admin.constant.ManagementRouteKind;
 import com.easy1auth.adminidentity.dto.AdminAccount;
 import com.easy1auth.adminidentity.service.AdminIdentityService;
 import com.easy1auth.adminidentity.service.RegistrationCodeService;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
-import com.easy1auth.tenant.util.WebFramework;
+import com.easy1auth.infrastructure.foundation.util.WebFrameworkUtils;
 import com.easy1auth.tenant.service.TenantService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -75,7 +75,7 @@ public class AuthController {
         if (!"password".equals(request.loginType())) {
             throw new DomainException(ErrorCodeConstants.LOGIN_TYPE_UNSUPPORTED);
         }
-        var result = identities.authenticate(request.username(), request.password(), jwt.refreshTtl(), WebFramework.getUserAgent(http), http.getRemoteAddr());
+        var result = identities.authenticate(request.username(), request.password(), jwt.refreshTtl(), WebFrameworkUtils.getUserAgent(http), http.getRemoteAddr());
         if (result.account().mfaEnabled()) {
             identities.logout(result.refreshToken());
             var challenge = security.issueTotpChallenge("admin", result.account().id(), null, "login");
@@ -89,7 +89,7 @@ public class AuthController {
     @PostMapping("/mfa/verify")
     public ApiResponse<LoginResponse> verifyMfa(@RequestBody MfaLoginRequest request, HttpServletRequest http) {
         UUID account = security.consumeTotpChallenge(request.challengeToken(), request.code(), "admin", "login");
-        var result = identities.completeMfa(account, jwt.refreshTtl(), WebFramework.getUserAgent(http), http.getRemoteAddr());
+        var result = identities.completeMfa(account, jwt.refreshTtl(), WebFrameworkUtils.getUserAgent(http), http.getRemoteAddr());
         return ApiResponse.ok(response(result.account(), result.refreshToken()));
     }
 
@@ -98,7 +98,7 @@ public class AuthController {
     @PostMapping("/register")
     public ApiResponse<LoginResponse> register(@RequestBody RegisterRequest request, HttpServletRequest http) {
         String username = request.username() == null || request.username().isBlank() ? request.email().split("@", 2)[0] : request.username();
-        var result = registrations.register(username, request.email(), request.password(), request.code(), WebFramework.getUserAgent(http), http.getRemoteAddr());
+        var result = registrations.register(username, request.email(), request.password(), request.code(), WebFrameworkUtils.getUserAgent(http), http.getRemoteAddr());
         return ApiResponse.ok(response(result.identity().account(), result.identity().refreshToken()), "注册成功");
     }
 
@@ -136,7 +136,7 @@ public class AuthController {
     @ManagementRouteClassification(ManagementRouteKind.AUTHENTICATION)
     @PostMapping("/refresh")
     public ApiResponse<RefreshResponse> refresh(@RequestBody RefreshRequest request, HttpServletRequest http) {
-        var result = identities.rotate(request.refreshToken(), jwt.refreshTtl(), WebFramework.getUserAgent(http), http.getRemoteAddr());
+        var result = identities.rotate(request.refreshToken(), jwt.refreshTtl(), WebFrameworkUtils.getUserAgent(http), http.getRemoteAddr());
         return ApiResponse.ok(new RefreshResponse(tokens.issue(result.account()), result.replacementToken()));
     }
 
@@ -163,7 +163,7 @@ public class AuthController {
             var totp = security.issueTotpChallenge("admin", account.id(), null, "login");
             return ApiResponse.ok(LoginResponse.mfa(totp.token(), totp.expiresIn()));
         }
-        var result = identities.completeMfa(account.id(), jwt.refreshTtl(), WebFramework.getUserAgent(http), http.getRemoteAddr());
+        var result = identities.completeMfa(account.id(), jwt.refreshTtl(), WebFrameworkUtils.getUserAgent(http), http.getRemoteAddr());
         return ApiResponse.ok(response(result.account(), result.refreshToken()));
     }
 

@@ -1,4 +1,7 @@
-package com.easy1auth.admin.security;
+package com.easy1auth.admin.annotation;
+
+import com.easy1auth.admin.constant.ManagementRouteKind;
+import com.easy1auth.admin.security.ManagementRouteInventory;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

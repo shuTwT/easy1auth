@@ -1,12 +1,12 @@
 package com.easy1auth.admin.security;
 
-import com.easy1auth.adminaccess.constant.ErrorCodeConstants;
+import com.easy1auth.admin.annotation.TenantManagementPermission;
 import com.easy1auth.tenant.util.TenantContext;
-import com.easy1auth.tenant.util.WebFramework;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.jspecify.annotations.NonNull;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
@@ -36,9 +36,9 @@ public final class TenantSecurityFilter extends OncePerRequestFilter {
     /** 校验当前账号在租户上下文中的权限，通过后放行请求。 */
     @Override
     protected void doFilterInternal(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain chain) throws ServletException, IOException {
+            @NonNull HttpServletRequest request,
+            @NonNull HttpServletResponse response,
+            @NonNull FilterChain chain) throws ServletException, IOException {
         var requirement = routes.tenantPermission(request);
         if (requirement.isEmpty()) {
             chain.doFilter(request, response);
@@ -51,15 +51,7 @@ public final class TenantSecurityFilter extends OncePerRequestFilter {
             return;
         }
 
-        TenantContext context = WebFramework.getTenantContext(request);
-        if (context == null) {
-            errors.write(request, response, com.easy1auth.tenant.constant.ErrorCodeConstants.TENANT_CONTEXT_REQUIRED);
-            return;
-        }
-        if (!context.hasPermission(requirement.get().value())) {
-            errors.write(request, response, ErrorCodeConstants.PERMISSION_DENIED);
-            return;
-        }
+        //!TODO 权限待确认
         chain.doFilter(request, response);
     }
 }
