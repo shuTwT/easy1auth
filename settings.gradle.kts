@@ -11,7 +11,7 @@ dependencyResolutionManagement {
 rootProject.name = "easy1auth-backend"
 
 include(
-    "modules:infrastructure", "modules:tenant",
+    "common", "modules:tenant",
     "modules:admin-identity", "modules:admin-access", "modules:pool-identity",
     "modules:application", "modules:security-policy",
     "modules:social-identity", "modules:enterprise-identity", "modules:customization", "modules:audit", "modules:oauth2-core",

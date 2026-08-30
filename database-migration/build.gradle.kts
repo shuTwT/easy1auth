@@ -1,7 +1,7 @@
 plugins { id("easy1auth.spring-application") }
 
 dependencies {
-    implementation(project(":modules:infrastructure"))
+    implementation(project(":common"))
     implementation(libs.spring.jdbc)
     implementation(libs.spring.security)
     implementation(libs.flyway.core)
