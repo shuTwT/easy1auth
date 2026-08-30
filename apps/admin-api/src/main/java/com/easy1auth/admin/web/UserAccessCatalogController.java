@@ -4,11 +4,11 @@ import com.easy1auth.admin.web.dto.UserAccessRoleIds;
 import com.easy1auth.admin.web.dto.UserAccessUserIds;
 import com.easy1auth.admin.annotation.TenantManagementPermission;
 import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
-import com.easy1auth.infrastructure.foundation.web.ApiResponse;
+import com.easy1auth.common.foundation.web.ApiResponse;
 import com.easy1auth.poolidentity.dto.PermissionInput;
 import com.easy1auth.poolidentity.dto.RoleInput;
 import com.easy1auth.poolidentity.service.UserAccessCatalogService;
-import com.easy1auth.infrastructure.foundation.util.TenantContextHolder;
+import com.easy1auth.common.foundation.util.TenantContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;

@@ -1,9 +1,9 @@
 package com.easy1auth.admin.config;
 
-import com.easy1auth.infrastructure.foundation.error.DomainException;
-import com.easy1auth.infrastructure.foundation.error.ErrorCode;
-import com.easy1auth.infrastructure.foundation.error.ErrorCodeConstants;
-import com.easy1auth.infrastructure.foundation.web.ApiResponse;
+import com.easy1auth.common.foundation.error.DomainException;
+import com.easy1auth.common.foundation.error.ErrorCode;
+import com.easy1auth.common.foundation.error.ErrorCodeConstants;
+import com.easy1auth.common.foundation.web.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

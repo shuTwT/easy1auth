@@ -6,8 +6,8 @@ import com.easy1auth.adminidentity.dto.IssuedCode;
 import com.easy1auth.adminidentity.repository.AdminIdentityRepository;
 import com.easy1auth.adminidentity.util.AdminIdentityNormalizer;
 import com.easy1auth.adminidentity.util.TokenHash;
-import com.easy1auth.infrastructure.foundation.error.DomainException;
-import com.easy1auth.infrastructure.foundation.id.UuidV7;
+import com.easy1auth.common.foundation.error.DomainException;
+import com.easy1auth.common.foundation.id.UuidV7;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

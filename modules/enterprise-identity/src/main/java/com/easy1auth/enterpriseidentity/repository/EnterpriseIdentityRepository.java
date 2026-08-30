@@ -2,7 +2,7 @@ package com.easy1auth.enterpriseidentity.repository;
 
 import com.easy1auth.enterpriseidentity.dto.EnterpriseIdentityInput;
 import com.easy1auth.enterpriseidentity.model.*;
-import com.easy1auth.infrastructure.foundation.web.PageData;
+import com.easy1auth.common.foundation.web.PageData;
 import com.easy1auth.poolidentity.model.*;
 import java.time.Instant;
 import java.util.List;

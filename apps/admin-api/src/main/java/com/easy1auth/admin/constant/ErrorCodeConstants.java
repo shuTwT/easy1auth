@@ -1,7 +1,7 @@
 package com.easy1auth.admin.constant;
 
 import com.easy1auth.admin.config.GlobalExceptionHandler;
-import com.easy1auth.infrastructure.foundation.error.ErrorCode;
+import com.easy1auth.common.foundation.error.ErrorCode;
 
 /**
  * 管理端接口错误码常量（包私有约定）。

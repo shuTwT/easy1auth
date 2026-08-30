@@ -7,7 +7,7 @@ import com.easy1auth.adminaccess.constant.ManagementPermissionType;
 import com.easy1auth.adminaccess.dto.ManagementPermissionView;
 import com.easy1auth.adminaccess.model.ManagementPermissionEntity;
 import com.easy1auth.adminaccess.model.ManagementPermissionEntityTable;
-import com.easy1auth.infrastructure.foundation.error.DomainException;
+import com.easy1auth.common.foundation.error.DomainException;
 import org.babyfish.jimmer.sql.JSqlClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

@@ -1,6 +1,6 @@
 package com.easy1auth.authorization.constant;
 
-import com.easy1auth.infrastructure.foundation.error.ErrorCode;
+import com.easy1auth.common.foundation.error.ErrorCode;
 
 /**
  * 授权门户业务错误码常量。

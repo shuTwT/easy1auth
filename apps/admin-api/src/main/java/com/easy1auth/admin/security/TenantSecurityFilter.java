@@ -1,7 +1,6 @@
 package com.easy1auth.admin.security;
 
 import com.easy1auth.admin.annotation.TenantManagementPermission;
-import com.easy1auth.tenant.util.TenantContext;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,8 +17,7 @@ import java.io.IOException;
  * 租户安全校验过滤器。
  *
  * <p>对声明了 {@link TenantManagementPermission} 的路由，基于已解析的
- * {@link TenantContext} 校验当前账号是否具备所要求的租户级权限；无权限、无租户上下文
- * 或未认证时返回相应业务错误，防止越权访问。</p>
+ * 无权限、无租户上下文或未认证时返回相应业务错误，防止越权访问。</p>
  */
 @Component
 public final class TenantSecurityFilter extends OncePerRequestFilter {

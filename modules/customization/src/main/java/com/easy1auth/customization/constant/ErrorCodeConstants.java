@@ -1,6 +1,6 @@
 package com.easy1auth.customization.constant;
 
-import com.easy1auth.infrastructure.foundation.error.ErrorCode;
+import com.easy1auth.common.foundation.error.ErrorCode;
 
 /**
  * 品牌定制域的领域错误码常量。

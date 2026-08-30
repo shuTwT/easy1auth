@@ -1,6 +1,6 @@
 package com.easy1auth.authorization.web;
 
-import com.easy1auth.infrastructure.foundation.error.DomainException;
+import com.easy1auth.common.foundation.error.DomainException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;

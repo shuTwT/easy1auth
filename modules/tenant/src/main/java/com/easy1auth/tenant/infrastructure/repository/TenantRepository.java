@@ -1,12 +1,12 @@
 package com.easy1auth.tenant.infrastructure.repository;
 
-import com.easy1auth.infrastructure.foundation.id.UuidV7;
-import com.easy1auth.infrastructure.foundation.error.ErrorCode;
+import com.easy1auth.common.foundation.id.UuidV7;
+import com.easy1auth.common.foundation.error.ErrorCode;
 import com.easy1auth.tenant.constant.ErrorCodeConstants;
 import com.easy1auth.tenant.dto.MembershipState;
 import com.easy1auth.tenant.dto.TenantState;
 import com.easy1auth.tenant.model.*;
-import com.easy1auth.infrastructure.foundation.error.DomainException;
+import com.easy1auth.common.foundation.error.DomainException;
 import org.babyfish.jimmer.sql.JSqlClient;
 import org.babyfish.jimmer.sql.ast.mutation.SaveMode;
 import org.springframework.stereotype.Repository;

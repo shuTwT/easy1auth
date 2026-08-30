@@ -1,8 +1,8 @@
 package com.easy1auth.foundation.error;
 
-import com.easy1auth.infrastructure.foundation.error.DomainException;
-import com.easy1auth.infrastructure.foundation.error.ErrorCode;
-import com.easy1auth.infrastructure.foundation.web.ApiResponse;
+import com.easy1auth.common.foundation.error.DomainException;
+import com.easy1auth.common.foundation.error.ErrorCode;
+import com.easy1auth.common.foundation.web.ApiResponse;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;

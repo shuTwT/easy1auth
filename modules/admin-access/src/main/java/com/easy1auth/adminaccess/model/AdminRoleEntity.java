@@ -1,7 +1,7 @@
 package com.easy1auth.adminaccess.model;
 
-import com.easy1auth.infrastructure.persistence.model.BaseEntity;
-import com.easy1auth.infrastructure.persistence.model.BaseTenantEntity;
+import com.easy1auth.common.persistence.model.BaseEntity;
+import com.easy1auth.common.persistence.model.BaseTenantEntity;
 import com.easy1auth.tenant.model.TenantMembershipEntity;
 import org.babyfish.jimmer.sql.Column;
 import org.babyfish.jimmer.sql.Entity;

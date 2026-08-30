@@ -5,7 +5,7 @@ import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import com.easy1auth.adminaccess.constant.ManagementPermissionScope;
 import com.easy1auth.adminaccess.dto.PlatformAuthorization;
 import com.easy1auth.adminidentity.model.AdminAccountEntityTable;
-import com.easy1auth.infrastructure.foundation.error.DomainException;
+import com.easy1auth.common.foundation.error.DomainException;
 import com.easy1auth.tenant.model.TenantEntity;
 import com.easy1auth.tenant.model.TenantEntityTable;
 import com.easy1auth.tenant.model.TenantMembershipEntityTable;

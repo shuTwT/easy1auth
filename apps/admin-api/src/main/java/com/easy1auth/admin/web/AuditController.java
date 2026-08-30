@@ -3,10 +3,10 @@ package com.easy1auth.admin.web;
 import com.easy1auth.admin.web.dto.*;
 import com.easy1auth.admin.annotation.TenantManagementPermission;
 import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
-import com.easy1auth.audit.dto.Query;
+import com.easy1auth.audit.dto.AuditQuery;
 import com.easy1auth.audit.service.AuditService;
-import com.easy1auth.infrastructure.foundation.web.ApiResponse;
-import com.easy1auth.infrastructure.foundation.web.PageData;
+import com.easy1auth.common.foundation.web.ApiResponse;
+import com.easy1auth.common.foundation.web.PageData;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
@@ -35,7 +35,7 @@ public class AuditController {
     @TenantManagementPermission(value = ManagementPermissionCode.AUDIT_LIST)
     @GetMapping
     ApiResponse<?> list(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int pageSize, @RequestParam(required = false) String username, @RequestParam(required = false) String type, @RequestParam(required = false) String action, @RequestParam(required = false) String status, @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startDate, @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endDate) {
-        var p = service.list(page, pageSize, new Query(username, type, action, "failed".equals(status) ? "failure" : status, startDate, endDate));
+        var p = service.list(page, pageSize, new AuditQuery(username, type, action, "failed".equals(status) ? "failure" : status, startDate, endDate));
         return ApiResponse.ok(PageData.of(p.items().stream().map(AuditController::legacy).toList(), p.page(), p.pageSize(), p.total()));
     }
 

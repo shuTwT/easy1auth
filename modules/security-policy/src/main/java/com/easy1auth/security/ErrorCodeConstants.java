@@ -1,7 +1,7 @@
 package com.easy1auth.security;
 
-import com.easy1auth.infrastructure.foundation.error.DomainException;
-import com.easy1auth.infrastructure.foundation.error.ErrorCode;
+import com.easy1auth.common.foundation.error.DomainException;
+import com.easy1auth.common.foundation.error.ErrorCode;
 
 /**
  * 安全策略域错误码常量（17000-17011）。

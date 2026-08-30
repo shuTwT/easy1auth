@@ -1,7 +1,7 @@
 package com.easy1auth.social.constant;
 
-import com.easy1auth.infrastructure.foundation.error.DomainException;
-import com.easy1auth.infrastructure.foundation.error.ErrorCode;
+import com.easy1auth.common.foundation.error.DomainException;
+import com.easy1auth.common.foundation.error.ErrorCode;
 
 /**
  * 社会化身份域错误码常量（18000-18012）。

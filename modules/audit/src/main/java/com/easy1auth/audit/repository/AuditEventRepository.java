@@ -1,9 +1,9 @@
 package com.easy1auth.audit.repository;
 
-import com.easy1auth.audit.dto.Query;
+import com.easy1auth.audit.dto.AuditQuery;
 import com.easy1auth.audit.model.AuditEventEntity;
 import com.easy1auth.audit.model.AuditEventEntityTable;
-import com.easy1auth.infrastructure.foundation.web.PageData;
+import com.easy1auth.common.foundation.web.PageData;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -27,7 +27,7 @@ public interface AuditEventRepository extends JRepository<AuditEventEntity, UUID
         .execute();
   }
 
-  default PageData<AuditEventEntity> page(UUID tenant, int page, int size, Query queryInput) {
+  default PageData<AuditEventEntity> page(UUID tenant, int page, int size, AuditQuery queryInput) {
     var query =
         sql()
             .createQuery(EVENT)

@@ -5,7 +5,7 @@ import com.easy1auth.customization.service.CustomizationService;
 import com.easy1auth.poolidentity.service.PoolUserService;
 import com.easy1auth.poolidentity.dto.PoolUserInput;
 import com.easy1auth.poolidentity.model.PoolUserEntityTable;
-import com.easy1auth.infrastructure.foundation.error.DomainException;
+import com.easy1auth.common.foundation.error.DomainException;
 import com.easy1auth.social.service.SocialIdentityService;
 import com.easy1auth.social.dto.PendingIdentity;
 import com.easy1auth.security.service.SecurityPolicyService;

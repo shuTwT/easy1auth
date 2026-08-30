@@ -1,7 +1,7 @@
 package com.easy1auth.adminaccess.constant;
 
-import com.easy1auth.infrastructure.foundation.error.DomainException;
-import com.easy1auth.infrastructure.foundation.error.ErrorCode;
+import com.easy1auth.common.foundation.error.DomainException;
+import com.easy1auth.common.foundation.error.ErrorCode;
 
 /**
  * 管理端权限域（admin-access）错误码常量。

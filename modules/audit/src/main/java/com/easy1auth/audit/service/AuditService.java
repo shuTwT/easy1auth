@@ -1,15 +1,15 @@
 package com.easy1auth.audit.service;
 
 import com.easy1auth.audit.constant.ErrorCodeConstants;
-import com.easy1auth.audit.dto.Event;
-import com.easy1auth.audit.dto.Query;
-import com.easy1auth.audit.dto.Stats;
+import com.easy1auth.audit.dto.AuditEvent;
+import com.easy1auth.audit.dto.AuditQuery;
+import com.easy1auth.audit.dto.AuditStats;
 import com.easy1auth.audit.model.*;
 import com.easy1auth.audit.repository.AuditEventRepository;
-import com.easy1auth.infrastructure.foundation.error.DomainException;
-import com.easy1auth.infrastructure.foundation.id.UuidV7;
-import com.easy1auth.infrastructure.foundation.web.PageData;
-import com.easy1auth.infrastructure.foundation.util.TenantContextHolder;
+import com.easy1auth.common.foundation.error.DomainException;
+import com.easy1auth.common.foundation.id.UuidV7;
+import com.easy1auth.common.foundation.web.PageData;
+import com.easy1auth.common.foundation.util.TenantContextHolder;
 import java.time.*;
 import java.util.*;
 import org.springframework.stereotype.Service;
@@ -43,7 +43,7 @@ public class AuditService {
 
   /** 记录一条审计事件并返回事件 ID（敏感字段自动脱敏）。 */
   @Transactional
-  public UUID record(Event input) {
+  public UUID record(AuditEvent input) {
     UUID id = UuidV7.randomUuid();
     var e =
         AuditEventEntityDraft.$.produce(
@@ -71,7 +71,7 @@ public class AuditService {
 
   /** 分页查询当前租户的审计事件（支持按操作者、事件类型、动作、结果与时间范围过滤）。 */
   @Transactional(readOnly = true)
-  public PageData<AuditEventEntity> list(int page, int size, Query q) {
+  public PageData<AuditEventEntity> list(int page, int size, AuditQuery q) {
     UUID tenant = TenantContextHolder.requireTenantId();
     int p = Math.max(1, page), s = Math.min(200, Math.max(1, size));
     return repository.page(tenant, p, s, q);
@@ -98,11 +98,11 @@ public class AuditService {
 
   /** 统计当前租户审计事件总量、成功/失败数与今日发生数。 */
   @Transactional(readOnly = true)
-  public Stats stats() {
+  public AuditStats stats() {
     UUID tenant = TenantContextHolder.requireTenantId();
     var rows = repository.statsRows(tenant);
     Instant day = LocalDate.now(ZoneOffset.UTC).atStartOfDay().toInstant(ZoneOffset.UTC);
-    return new Stats(
+    return new AuditStats(
         rows.size(),
         rows.stream().filter(r -> "success".equals(r.get_1())).count(),
         rows.stream().filter(r -> "failure".equals(r.get_1())).count(),

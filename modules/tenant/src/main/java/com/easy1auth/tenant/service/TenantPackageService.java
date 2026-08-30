@@ -1,7 +1,7 @@
 package com.easy1auth.tenant.service;
 
-import com.easy1auth.infrastructure.foundation.error.DomainException;
-import com.easy1auth.infrastructure.foundation.error.ErrorCode;
+import com.easy1auth.common.foundation.error.DomainException;
+import com.easy1auth.common.foundation.error.ErrorCode;
 import com.easy1auth.tenant.*;
 import com.easy1auth.tenant.constant.ErrorCodeConstants;
 import com.easy1auth.tenant.dto.TenantPackageMutation;

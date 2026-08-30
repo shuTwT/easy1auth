@@ -1,14 +1,14 @@
 package com.easy1auth.audit.service;
 
 import com.easy1auth.audit.constant.ErrorCodeConstants;
-import com.easy1auth.audit.dto.SubscriptionInput;
-import com.easy1auth.audit.dto.SubscriptionView;
+import com.easy1auth.audit.dto.AuditSubscriptionInput;
+import com.easy1auth.audit.dto.AuditSubscriptionView;
 import com.easy1auth.audit.model.*;
 import com.easy1auth.audit.repository.DeliveryRepository;
-import com.easy1auth.infrastructure.foundation.error.DomainException;
-import com.easy1auth.infrastructure.foundation.id.UuidV7;
+import com.easy1auth.common.foundation.error.DomainException;
+import com.easy1auth.common.foundation.id.UuidV7;
 import com.easy1auth.security.SecurityDataCipher;
-import com.easy1auth.infrastructure.foundation.util.TenantContextHolder;
+import com.easy1auth.common.foundation.util.TenantContextHolder;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
@@ -41,7 +41,7 @@ public class DeliveryService {
 
   /** 创建 Webhook 订阅，生成并加密存储订阅密钥，返回含密钥的订阅视图。 */
   @Transactional
-  public SubscriptionView create(SubscriptionInput in) {
+  public AuditSubscriptionView create(AuditSubscriptionInput in) {
     UUID tenant = TenantContextHolder.requireTenantId();
     validate(in);
     UUID id = UuidV7.randomUuid();
@@ -66,13 +66,13 @@ public class DeliveryService {
 
   /** 查询当前租户全部 Webhook 订阅（按创建时间倒序，不返回密钥）。 */
   @Transactional(readOnly = true)
-  public List<SubscriptionView> list() {
+  public List<AuditSubscriptionView> list() {
     return repository.listSubscriptions().stream().map(e -> view(e, null)).toList();
   }
 
   /** 更新 Webhook 订阅信息（名称/地址/事件/重试次数/状态），仅更新传入的非空字段。 */
   @Transactional
-  public SubscriptionView update(UUID id, SubscriptionInput in) {
+  public AuditSubscriptionView update(UUID id, AuditSubscriptionInput in) {
     var old = entity(id);
     validate(in);
     repository.updateSubscription(
@@ -88,7 +88,7 @@ public class DeliveryService {
 
   /** 轮换 Webhook 订阅密钥并返回新密钥（旧密钥失效）。 */
   @Transactional
-  public SubscriptionView rotate(UUID id) {
+  public AuditSubscriptionView rotate(UUID id) {
     var old = entity(id);
     String secret = token(32);
     repository.rotateSubscriptionSecret(
@@ -216,7 +216,7 @@ public class DeliveryService {
   }
 
   /** 校验订阅输入：名称、事件非空，地址须为公网 HTTPS，重试次数在 0-20 之间。 */
-  private static void validate(SubscriptionInput in) {
+  private static void validate(AuditSubscriptionInput in) {
     if (in == null
         || in.name() == null
         || in.name().isBlank()
@@ -277,8 +277,8 @@ public class DeliveryService {
   }
 
   /** 组装订阅视图（secret 仅在创建/轮换后非空）。 */
-  private static SubscriptionView view(WebhookSubscriptionEntity e, String secret) {
-    return new SubscriptionView(
+  private static AuditSubscriptionView view(WebhookSubscriptionEntity e, String secret) {
+    return new AuditSubscriptionView(
         e.id(),
         e.tenantId(),
         e.name(),

@@ -6,12 +6,12 @@ import com.easy1auth.admin.constant.ManagementRouteKind;
 import com.easy1auth.admin.annotation.PlatformManagementPermission;
 import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import com.easy1auth.adminaccess.PlatformAuthorizationResolver;
-import com.easy1auth.infrastructure.foundation.web.ApiResponse;
-import com.easy1auth.infrastructure.foundation.web.PageData;
+import com.easy1auth.common.foundation.web.ApiResponse;
+import com.easy1auth.common.foundation.web.PageData;
 import com.easy1auth.tenant.dto.TenantControlView;
 import com.easy1auth.tenant.dto.TenantSummary;
 import com.easy1auth.tenant.service.TenantService;
-import com.easy1auth.infrastructure.foundation.util.TenantContextHolder;
+import com.easy1auth.common.foundation.util.TenantContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;

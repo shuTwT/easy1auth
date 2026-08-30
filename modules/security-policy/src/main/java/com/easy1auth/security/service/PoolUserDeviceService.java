@@ -1,6 +1,6 @@
 package com.easy1auth.security.service;
 
-import com.easy1auth.infrastructure.foundation.id.UuidV7;
+import com.easy1auth.common.foundation.id.UuidV7;
 import com.easy1auth.security.model.*;
 import org.babyfish.jimmer.sql.JSqlClient;
 import org.babyfish.jimmer.sql.ast.mutation.SaveMode;

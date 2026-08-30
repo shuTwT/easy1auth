@@ -6,7 +6,7 @@ import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import com.easy1auth.poolidentity.service.DirectoryCatalogService;
 import com.easy1auth.poolidentity.dto.GroupInput;
 import com.easy1auth.poolidentity.dto.PositionInput;
-import com.easy1auth.infrastructure.foundation.web.ApiResponse;
+import com.easy1auth.common.foundation.web.ApiResponse;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;

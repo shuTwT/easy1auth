@@ -1,6 +1,6 @@
 package com.easy1auth.social.repository;
 
-import com.easy1auth.infrastructure.foundation.web.PageData;
+import com.easy1auth.common.foundation.web.PageData;
 import com.easy1auth.social.dto.SocialIdentityInput;
 import com.easy1auth.social.model.SocialIdentityBindingEntity;
 import com.easy1auth.social.model.SocialIdentityBindingEntityDraft;

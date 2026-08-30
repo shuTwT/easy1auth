@@ -1,7 +1,7 @@
 package com.easy1auth.enterpriseidentity.model;
 
-import com.easy1auth.infrastructure.persistence.model.BaseEntity;
-import com.easy1auth.infrastructure.persistence.model.BaseTenantEntity;
+import com.easy1auth.common.persistence.model.BaseEntity;
+import com.easy1auth.common.persistence.model.BaseTenantEntity;
 import org.babyfish.jimmer.sql.*;
 import org.jspecify.annotations.Nullable;
 

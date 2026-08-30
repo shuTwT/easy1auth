@@ -1,7 +1,7 @@
 package com.easy1auth.application.constant;
 
-import com.easy1auth.infrastructure.foundation.error.DomainException;
-import com.easy1auth.infrastructure.foundation.error.ErrorCode;
+import com.easy1auth.common.foundation.error.DomainException;
+import com.easy1auth.common.foundation.error.ErrorCode;
 
 /**
  * OAuth2 应用域错误码常量（16000-16011）。

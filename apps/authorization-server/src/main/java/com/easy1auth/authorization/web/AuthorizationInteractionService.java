@@ -4,7 +4,7 @@ import com.easy1auth.authorization.constant.ErrorCodeConstants;
 import com.easy1auth.authorization.web.dto.*;
 import com.easy1auth.customization.service.CustomizationService;
 import com.easy1auth.customization.model.LoginStyleEntity;
-import com.easy1auth.infrastructure.foundation.error.DomainException;
+import com.easy1auth.common.foundation.error.DomainException;
 import com.easy1auth.social.service.SocialIdentityService;
 import com.easy1auth.social.dto.SourceView;
 import jakarta.servlet.http.HttpServletRequest;

@@ -1,9 +1,8 @@
 package com.easy1auth.admin.security;
 
-import com.easy1auth.infrastructure.foundation.util.WebFrameworkUtils;
+import com.easy1auth.common.foundation.util.WebFrameworkUtils;
 import com.easy1auth.tenant.service.TenantService;
-import com.easy1auth.tenant.util.TenantContext;
-import com.easy1auth.infrastructure.foundation.util.TenantContextHolder;
+import com.easy1auth.common.foundation.util.TenantContextHolder;
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
 import org.jspecify.annotations.NonNull;
@@ -18,7 +17,6 @@ import java.util.UUID;
  *
  * <p>对需要租户上下文的认证请求，从 {@code tenant-id} 请求头解析租户并调用
  * {@link TenantService#resolve} 校验账号在该租户的有效成员关系与角色，构建
- * {@link TenantContext} 供后续权限判断；解析失败时直接返回业务错误。请求结束后恢复
  * 之前的租户上下文，避免污染其他请求。</p>
  */
 @Component

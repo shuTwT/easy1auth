@@ -1,6 +1,6 @@
 package com.easy1auth.oauth2;
 
-import com.easy1auth.infrastructure.foundation.error.DomainException;
+import com.easy1auth.common.foundation.error.DomainException;
 import com.easy1auth.oauth2.constant.ErrorCodeConstants;
 import org.springframework.security.oauth2.server.authorization.context.AuthorizationServerContextHolder;
 

@@ -1,14 +1,14 @@
 package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.web.dto.AuthorizationContextResponse;
-import com.easy1auth.infrastructure.foundation.util.WebFrameworkUtils;
+import com.easy1auth.common.foundation.util.WebFrameworkUtils;
 
 import com.easy1auth.admin.annotation.ManagementRouteClassification;
 import com.easy1auth.admin.constant.ManagementRouteKind;
 import com.easy1auth.adminaccess.ManagementPermissionCatalog;
 import com.easy1auth.adminaccess.constant.ManagementPermissionType;
 import com.easy1auth.adminaccess.dto.ManagementPermissionView;
-import com.easy1auth.infrastructure.foundation.web.ApiResponse;
+import com.easy1auth.common.foundation.web.ApiResponse;
 import com.easy1auth.tenant.util.TenantContext;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
@@ -22,8 +22,7 @@ import java.util.List;
  *
  * <p>管理端 REST 入口，基路径 {@code /api/authorization}，返回当前租户上下文下的
  * 成员角色、权限集合、租户套餐以及可见菜单，供前端初始化界面与菜单渲染使用。
- * 该接口基于 {@link TenantContext} 的已解析授权信息，并以 {@link ApiResponse}
- * 统一包装返回。</p>
+ * 该接口以 {@link ApiResponse} 统一包装返回。</p>
  */
 @RestController
 @RequestMapping("/api/authorization")

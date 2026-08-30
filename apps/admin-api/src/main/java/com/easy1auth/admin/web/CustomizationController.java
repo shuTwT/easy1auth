@@ -9,7 +9,7 @@ import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import com.easy1auth.customization.dto.DraftInput;
 import com.easy1auth.customization.dto.MessageTemplateInput;
 import com.easy1auth.customization.service.CustomizationService;
-import com.easy1auth.infrastructure.foundation.web.ApiResponse;
+import com.easy1auth.common.foundation.web.ApiResponse;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
