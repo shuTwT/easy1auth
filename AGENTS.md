@@ -85,6 +85,7 @@ Vite 将 `/api` 代理到 `http://localhost:18848`，配置见 `frontend/vite.co
 ### 后端约定
 
 - 在使用`jimmer`时需要调用`context7`来查询文档，禁止使用已有记忆进行猜测
+- 禁止使用单行写法
 
 ## 当前缺失项
 
