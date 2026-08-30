@@ -11,7 +11,7 @@ import com.easy1auth.poolidentity.dto.PoolUserInput;
 import com.easy1auth.poolidentity.model.*;
 import com.easy1auth.poolidentity.service.PoolUserService;
 import com.easy1auth.security.SecurityDataCipher;
-import com.easy1auth.tenant.util.TenantContextHolder;
+import com.easy1auth.infrastructure.foundation.util.TenantContextHolder;
 import com.easy1auth.tenant.util.TenantUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

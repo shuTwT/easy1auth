@@ -8,7 +8,7 @@ import com.easy1auth.audit.repository.DeliveryRepository;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.id.UuidV7;
 import com.easy1auth.security.SecurityDataCipher;
-import com.easy1auth.tenant.util.TenantContextHolder;
+import com.easy1auth.infrastructure.foundation.util.TenantContextHolder;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.security.*;

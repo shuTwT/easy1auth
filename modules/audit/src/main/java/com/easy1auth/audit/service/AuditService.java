@@ -9,7 +9,7 @@ import com.easy1auth.audit.repository.AuditEventRepository;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.id.UuidV7;
 import com.easy1auth.infrastructure.foundation.web.PageData;
-import com.easy1auth.tenant.util.TenantContextHolder;
+import com.easy1auth.infrastructure.foundation.util.TenantContextHolder;
 import java.time.*;
 import java.util.*;
 import org.springframework.stereotype.Service;

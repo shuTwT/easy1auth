@@ -8,7 +8,7 @@ import com.easy1auth.poolidentity.dto.UserStats;
 import com.easy1auth.poolidentity.model.PoolUserEntity;
 import com.easy1auth.poolidentity.model.PoolUserEntityDraft;
 import com.easy1auth.poolidentity.model.PoolUserEntityTable;
-import com.easy1auth.tenant.util.TenantContextHolder;
+import com.easy1auth.infrastructure.foundation.util.TenantContextHolder;
 import com.easy1auth.security.service.SecurityPolicyService;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.id.UuidV7;

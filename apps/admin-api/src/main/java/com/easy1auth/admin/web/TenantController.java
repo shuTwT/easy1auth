@@ -11,7 +11,7 @@ import com.easy1auth.infrastructure.foundation.web.PageData;
 import com.easy1auth.tenant.dto.TenantControlView;
 import com.easy1auth.tenant.dto.TenantSummary;
 import com.easy1auth.tenant.service.TenantService;
-import com.easy1auth.tenant.util.TenantContextHolder;
+import com.easy1auth.infrastructure.foundation.util.TenantContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;

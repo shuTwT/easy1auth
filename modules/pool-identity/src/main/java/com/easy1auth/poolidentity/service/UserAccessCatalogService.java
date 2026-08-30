@@ -2,7 +2,7 @@ package com.easy1auth.poolidentity.service;
 
 import com.easy1auth.poolidentity.dto.*;
 import com.easy1auth.poolidentity.model.*;
-import com.easy1auth.tenant.util.TenantContextHolder;
+import com.easy1auth.infrastructure.foundation.util.TenantContextHolder;
 
 import com.easy1auth.poolidentity.dto.PoolUserView;
 import com.easy1auth.infrastructure.foundation.error.DomainException;

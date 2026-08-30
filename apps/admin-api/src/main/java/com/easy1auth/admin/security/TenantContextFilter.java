@@ -1,17 +1,12 @@
 package com.easy1auth.admin.security;
 
-import com.easy1auth.infrastructure.foundation.error.DomainException;
-import com.easy1auth.tenant.constant.ErrorCodeConstants;
 import com.easy1auth.infrastructure.foundation.util.WebFrameworkUtils;
 import com.easy1auth.tenant.service.TenantService;
 import com.easy1auth.tenant.util.TenantContext;
-import com.easy1auth.tenant.util.TenantContextHolder;
+import com.easy1auth.infrastructure.foundation.util.TenantContextHolder;
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
 import org.jspecify.annotations.NonNull;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 

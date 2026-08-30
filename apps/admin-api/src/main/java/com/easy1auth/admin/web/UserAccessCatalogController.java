@@ -8,7 +8,7 @@ import com.easy1auth.infrastructure.foundation.web.ApiResponse;
 import com.easy1auth.poolidentity.dto.PermissionInput;
 import com.easy1auth.poolidentity.dto.RoleInput;
 import com.easy1auth.poolidentity.service.UserAccessCatalogService;
-import com.easy1auth.tenant.util.TenantContextHolder;
+import com.easy1auth.infrastructure.foundation.util.TenantContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;

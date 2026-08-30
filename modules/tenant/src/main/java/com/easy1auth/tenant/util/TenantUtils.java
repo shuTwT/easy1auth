@@ -1,5 +1,7 @@
 package com.easy1auth.tenant.util;
 
+import com.easy1auth.infrastructure.foundation.util.TenantContextHolder;
+
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.Callable;

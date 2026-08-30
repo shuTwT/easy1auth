@@ -1,4 +1,4 @@
-package com.easy1auth.tenant.util;
+package com.easy1auth.infrastructure.foundation.util;
 
 import java.util.Objects;
 import java.util.UUID;
@@ -7,8 +7,7 @@ import java.util.UUID;
  * 租户上下文持有器：以线程局部变量（{@link ThreadLocal}）保存当前线程的租户 ID
  * 与忽略租户过滤标志，供过滤器、拦截器与领域服务在多租户语义下读取。
  *
- * <p>上下文不会自动跨线程传播，向其他线程提交任务时需显式传播
- * （参见 {@link TenantUtils}）。</p>
+ * <p>上下文不会自动跨线程传播，向其他线程提交任务时需显式传播</p>
  */
 public final class TenantContextHolder {
     /** 当前线程的租户 ID（无租户上下文时为 null） */

@@ -11,7 +11,7 @@ import com.easy1auth.social.constant.ErrorCodeConstants;
 import com.easy1auth.social.dto.*;
 import com.easy1auth.social.model.*;
 import com.easy1auth.social.repository.SocialIdentityRepository;
-import com.easy1auth.tenant.util.TenantContextHolder;
+import com.easy1auth.infrastructure.foundation.util.TenantContextHolder;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
