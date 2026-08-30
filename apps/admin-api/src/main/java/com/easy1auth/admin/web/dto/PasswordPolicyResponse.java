@@ -1,6 +1,6 @@
 package com.easy1auth.admin.web.dto;
 
-import com.easy1auth.security.dto.Policy;
+import com.easy1auth.security.dto.PolicyView;
 
-public record PasswordPolicyResponse(Policy policy, ExpiryStatus expiryStatus) {
+public record PasswordPolicyResponse(PolicyView policyView, ExpiryStatus expiryStatus) {
 }

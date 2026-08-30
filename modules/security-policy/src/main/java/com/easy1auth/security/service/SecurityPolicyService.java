@@ -5,7 +5,7 @@ import com.easy1auth.common.foundation.id.UuidV7;
 import com.easy1auth.security.ErrorCodeConstants;
 import com.easy1auth.security.SecurityDataCipher;
 import com.easy1auth.security.dto.*;
-import com.easy1auth.security.dto.Policy;
+import com.easy1auth.security.dto.PolicyView;
 import com.easy1auth.security.model.*;
 import org.babyfish.jimmer.sql.JSqlClient;
 import org.babyfish.jimmer.sql.ast.Predicate;
@@ -53,25 +53,25 @@ public class SecurityPolicyService {
     }
 
     /** 平台管理员的默认安全策略（不落库，直接返回）。 */
-    public static com.easy1auth.security.dto.Policy adminPolicy() {
-        return new com.easy1auth.security.dto.Policy(12, true, true, true, true, 90, 5, false, 5, 1800);
+    public static PolicyView adminPolicy() {
+        return new PolicyView(12, true, true, true, true, 90, 5, false, 5, 1800);
     }
 
     /** 读取全局（平台）安全策略，不存在时按默认值初始化。 */
     @Transactional
-    public com.easy1auth.security.dto.Policy policy() {
+    public PolicyView policy() {
         return view(policyEntity());
     }
 
     /** 读取指定租户的安全策略，不存在时按默认值初始化。 */
     @Transactional
-    public com.easy1auth.security.dto.Policy policy(UUID tenant) {
+    public PolicyView policy(UUID tenant) {
         return view(policyEntity(tenant));
     }
 
     /** 更新安全策略：先校验取值范围，再整体覆盖保存。 */
     @Transactional
-    public com.easy1auth.security.dto.Policy update(com.easy1auth.security.dto.Policy p) {
+    public PolicyView update(PolicyView p) {
         validate(p);
         var old = policyEntity();
         var e = SecurityPolicyEntityDraft.$.produce(d -> d.setId(old.id()).setPasswordMinLength(p.minLength()).setPasswordRequireUpper(p.requireUpper()).setPasswordRequireLower(p.requireLower()).setPasswordRequireNumber(p.requireNumber()).setPasswordRequireSpecial(p.requireSpecial()).setPasswordMaxAgeDays(p.maxAgeDays()).setPasswordHistoryCount(p.historyCount()).setMfaRequired(p.mfaRequired()).setLoginAttemptLimit(p.loginAttemptLimit()).setLockoutDurationSeconds(p.lockoutSeconds()).setUpdatedAt(Instant.now()));
@@ -80,7 +80,7 @@ public class SecurityPolicyService {
     }
 
     /** 校验密码是否符合策略：长度 8-128，并按需要求大小写字母、数字与特殊字符。 */
-    public void validatePassword(String password, com.easy1auth.security.dto.Policy p) {
+    public void validatePassword(String password, PolicyView p) {
         if (password == null || password.length() < p.minLength() || password.length() > 128 || (p.requireUpper() && !password.matches(".*[A-Z].*")) || (p.requireLower() && !password.matches(".*[a-z].*")) || (p.requireNumber() && !password.matches(".*\\d.*")) || (p.requireSpecial() && !password.matches(".*[^A-Za-z0-9].*"))) {
             throw new DomainException(ErrorCodeConstants.PASSWORD_WEAK);
         }
@@ -117,7 +117,7 @@ public class SecurityPolicyService {
 
     /** 为指定主体初始化 TOTP：生成密钥并签发 10 个一次性备用码，返回设置信息。 */
     @Transactional
-    public Setup setupTotp(String subjectType, UUID subject, UUID tenant, String label) {
+    public SetupView setupTotp(String subjectType, UUID subject, UUID tenant, String label) {
         var old = findFactor(subjectType, subject, "totp");
         if (old != null && old.enabled()) {
             throw new DomainException(ErrorCodeConstants.MFA_ALREADY_ENABLED);
@@ -135,7 +135,7 @@ public class SecurityPolicyService {
             var saved = AuthenticationRecoveryCodeEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setFactorId(id).setCodeHash(hash(code)).setUsedAt(null).setCreatedAt(now));
             sql.saveCommand(saved).setMode(SaveMode.INSERT_ONLY).execute();
         }
-        return new Setup(secret, "otpauth://totp/Easy1Auth:" + url(label) + "?secret=" + secret + "&issuer=Easy1Auth&digits=6&period=30", recovery);
+        return new SetupView(secret, "otpauth://totp/Easy1Auth:" + url(label) + "?secret=" + secret + "&issuer=Easy1Auth&digits=6&period=30", recovery);
     }
 
     /** 启用 TOTP：校验一次性验证码通过后置 enabled 并记录当前时间步。 */
@@ -174,7 +174,7 @@ public class SecurityPolicyService {
 
     /** 签发邮箱验证码挑战（用于登录等常规场景，60 秒内同主体/目的地限发一次）。 */
     @Transactional
-    public Challenge issueEmailChallenge(String subjectType, UUID subject, UUID tenant, String purpose) {
+    public ChallengeView issueEmailChallenge(String subjectType, UUID subject, UUID tenant, String purpose) {
         return issueEmailChallenge(subjectType, subject, tenant, purpose, null);
     }
 
@@ -184,7 +184,7 @@ public class SecurityPolicyService {
      * @param destination 发送目的地（邮箱），在 subject 为 null 时用于限流判断
      */
     @Transactional
-    public Challenge issueEmailChallenge(String subjectType, UUID subject, UUID tenant, String purpose, String destination) {
+    public ChallengeView issueEmailChallenge(String subjectType, UUID subject, UUID tenant, String purpose, String destination) {
         Instant now = Instant.now();
         var recentQuery = sql.createQuery(CHALLENGE).where(CHALLENGE.subjectType().eq(subjectType), CHALLENGE.purpose().eq(purpose), CHALLENGE.factorType().eq("email"), CHALLENGE.createdAt().gt(now.minusSeconds(60)));
         if (subject != null) {
@@ -198,7 +198,7 @@ public class SecurityPolicyService {
         String token = randomToken(32), code = String.format(Locale.ROOT, "%06d", random.nextInt(1_000_000));
         var e = AuthenticationChallengeEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTokenHash(hash(token)).setSubjectType(subjectType).setSubjectId(subject).setTenantId(tenant).setPurpose(purpose).setDestination(destination).setFactorType("email").setCodeHash(hash(code)).setAttempts(0).setMaxAttempts(5).setExpiresAt(now.plusSeconds(600)).setConsumedAt(null).setCreatedAt(now).setLastSentAt(now));
         sql.saveCommand(e).setMode(SaveMode.INSERT_ONLY).execute();
-        return new Challenge(token, code, 600);
+        return new ChallengeView(token, code, 600);
     }
 
     /** 生成一个伪挑战 token（不落库），用于防探测的应答混淆。 */
@@ -208,7 +208,7 @@ public class SecurityPolicyService {
 
     /** 消费邮箱验证码挑战：校验过期/次数/重放后返回已确认的主体与目的地。 */
     @Transactional
-    public ConsumedEmailChallenge consumeEmailChallenge(String token, String code, String subjectType, String purpose) {
+    public ConsumedEmailChallengeView consumeEmailChallenge(String token, String code, String subjectType, String purpose) {
         var row = sql.createQuery(CHALLENGE).where(CHALLENGE.tokenHash().eq(hash(token)), CHALLENGE.subjectType().eq(subjectType), CHALLENGE.purpose().eq(purpose), CHALLENGE.factorType().eq("email")).select(CHALLENGE).forUpdate().fetchOneOrNull();
         if (row == null || row.subjectId() == null || row.consumedAt() != null || row.expiresAt().isBefore(Instant.now()) || row.attempts() >= row.maxAttempts()) {
             throw new DomainException(ErrorCodeConstants.MFA_CHALLENGE_INVALID);
@@ -220,7 +220,7 @@ public class SecurityPolicyService {
         if (sql.createUpdate(CHALLENGE).set(CHALLENGE.consumedAt(), Instant.now()).where(CHALLENGE.id().eq(row.id()), CHALLENGE.consumedAt().isNull()).execute() != 1) {
             throw new DomainException(ErrorCodeConstants.MFA_CHALLENGE_REPLAYED);
         }
-        return new ConsumedEmailChallenge(row.subjectId(), row.destination());
+        return new ConsumedEmailChallengeView(row.subjectId(), row.destination());
     }
 
     /**
@@ -231,7 +231,7 @@ public class SecurityPolicyService {
      * 与普通邮箱挑战一致。</p>
      */
     @Transactional
-    public ConsumedEmailChallenge consumeRegistrationEmailChallenge(String token, String code, String purpose) {
+    public ConsumedEmailChallengeView consumeRegistrationEmailChallenge(String token, String code, String purpose) {
         var row = sql.createQuery(CHALLENGE).where(CHALLENGE.tokenHash().eq(hash(token)), CHALLENGE.subjectType().eq("registration"), CHALLENGE.purpose().eq(purpose), CHALLENGE.factorType().eq("email")).select(CHALLENGE).forUpdate().fetchOneOrNull();
         if (row == null || row.consumedAt() != null || row.expiresAt().isBefore(Instant.now()) || row.attempts() >= row.maxAttempts()) {
             throw new DomainException(ErrorCodeConstants.MFA_CHALLENGE_INVALID);
@@ -243,12 +243,12 @@ public class SecurityPolicyService {
         if (sql.createUpdate(CHALLENGE).set(CHALLENGE.consumedAt(), Instant.now()).where(CHALLENGE.id().eq(row.id()), CHALLENGE.consumedAt().isNull()).execute() != 1) {
             throw new DomainException(ErrorCodeConstants.MFA_CHALLENGE_REPLAYED);
         }
-        return new ConsumedEmailChallenge(null, row.destination());
+        return new ConsumedEmailChallengeView(null, row.destination());
     }
 
     /** 签发 TOTP 挑战（不存验证码，验证码在消费时实时计算比对）。 */
     @Transactional
-    public Challenge issueTotpChallenge(String subjectType, UUID subject, UUID tenant, String purpose) {
+    public ChallengeView issueTotpChallenge(String subjectType, UUID subject, UUID tenant, String purpose) {
         var factor = requireFactor(subjectType, subject, "totp");
         if (!factor.enabled()) {
             throw new DomainException(ErrorCodeConstants.MFA_NOT_ENABLED);
@@ -257,7 +257,7 @@ public class SecurityPolicyService {
         Instant now = Instant.now();
         var e = AuthenticationChallengeEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTokenHash(hash(token)).setSubjectType(subjectType).setSubjectId(subject).setTenantId(tenant).setPurpose(purpose).setFactorType("totp").setCodeHash(null).setAttempts(0).setMaxAttempts(5).setExpiresAt(now.plusSeconds(600)).setConsumedAt(null).setCreatedAt(now).setLastSentAt(null));
         sql.saveCommand(e).setMode(SaveMode.INSERT_ONLY).execute();
-        return new Challenge(token, null, 600);
+        return new ChallengeView(token, null, 600);
     }
 
     /** 消费 TOTP 挑战：实时校验验证码成功后标记已用，返回被认证的主体 ID。 */
@@ -281,9 +281,9 @@ public class SecurityPolicyService {
 
     /** 查询主体已启用的多因素认证方式列表。 */
     @Transactional(readOnly = true)
-    public Status status(String type, UUID subject) {
+    public StatusView status(String type, UUID subject) {
         var rows = sql.createQuery(FACTOR).where(FACTOR.subjectType().eq(type), FACTOR.subjectId().eq(subject), FACTOR.enabled().eq(true)).select(FACTOR.factorType()).execute();
-        return new Status(!rows.isEmpty(), rows);
+        return new StatusView(!rows.isEmpty(), rows);
     }
 
     /** 查询指定主体的某类认证因子（不存在返回 null）。 */
@@ -321,12 +321,12 @@ public class SecurityPolicyService {
     }
 
     /** 将策略实体转为视图对象。 */
-    private static com.easy1auth.security.dto.Policy view(SecurityPolicyEntity e) {
-        return new com.easy1auth.security.dto.Policy(e.passwordMinLength(), e.passwordRequireUpper(), e.passwordRequireLower(), e.passwordRequireNumber(), e.passwordRequireSpecial(), e.passwordMaxAgeDays(), e.passwordHistoryCount(), e.mfaRequired(), e.loginAttemptLimit(), e.lockoutDurationSeconds());
+    private static PolicyView view(SecurityPolicyEntity e) {
+        return new PolicyView(e.passwordMinLength(), e.passwordRequireUpper(), e.passwordRequireLower(), e.passwordRequireNumber(), e.passwordRequireSpecial(), e.passwordMaxAgeDays(), e.passwordHistoryCount(), e.mfaRequired(), e.loginAttemptLimit(), e.lockoutDurationSeconds());
     }
 
     /** 校验策略参数取值范围：密码长度 8-128、历史 0-24、锁定时长等下限约束。 */
-    private static void validate(Policy p) {
+    private static void validate(PolicyView p) {
         if (p == null || p.minLength() < 8 || p.minLength() > 128 || p.historyCount() < 0 || p.historyCount() > 24 || p.loginAttemptLimit() < 1 || p.lockoutSeconds() < 60) {
             throw new DomainException(ErrorCodeConstants.SECURITY_POLICY_INVALID);
         }
