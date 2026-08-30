@@ -1,5 +1,7 @@
 package com.easy1auth.admin.web;
 
+import com.easy1auth.admin.constant.ErrorCodeConstants;
+import com.easy1auth.admin.web.dto.*;
 import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import com.easy1auth.adminaccess.PlatformAuthorizationResolver;
 import com.easy1auth.admin.security.PlatformManagementPermission;
@@ -137,31 +139,16 @@ public class TenantPackageController {
      * @param maxApps         允许的最大应用数
      * @param permissionCodes 套餐包含的权限代码列表
      */
-    public record TenantPackageInput(
-            String code,
-            String name,
-            int maxUsers,
-            int maxApps,
-            List<String> permissionCodes
-    ) {
-        TenantPackageMutation toMutation() {
-            return new TenantPackageMutation(code, name, false, maxUsers, maxApps, permissionCodes);
-        }
-    }
 
     /**
      * 套餐状态更新输入。
      *
      * @param status 目标状态：active / inactive
      */
-    public record TenantPackageStatusInput(String status) {
-    }
 
     /**
      * 套餐权限替换输入。
      *
      * @param permissionCodes 新的权限代码列表
      */
-    public record TenantPackagePermissionsInput(List<String> permissionCodes) {
-    }
 }

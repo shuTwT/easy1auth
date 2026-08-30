@@ -1,4 +1,4 @@
-package com.easy1auth.admin.web;
+package com.easy1auth.admin.config;
 
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.error.ErrorCode;

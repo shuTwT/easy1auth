@@ -1,5 +1,6 @@
-package com.easy1auth.admin.web;
+package com.easy1auth.admin.constant;
 
+import com.easy1auth.admin.config.GlobalExceptionHandler;
 import com.easy1auth.infrastructure.foundation.error.ErrorCode;
 
 /**

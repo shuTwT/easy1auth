@@ -1,5 +1,6 @@
 package com.easy1auth.admin.web;
 
+import com.easy1auth.admin.web.dto.*;
 import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import com.easy1auth.adminaccess.service.AdminAccessService;
@@ -86,14 +87,10 @@ public class AdminRoleController {
      * @param description 角色描述（可选）
      * @param permissions 角色拥有的权限代码列表（可选）
      */
-    public record RoleInput(String name, String description, List<String> permissions) {
-    }
 
     /**
      * 权限目录响应。
      *
      * @param permissions 可分配的权限目录列表
      */
-    public record PermissionCatalogResponse(List<?> permissions) {
-    }
 }

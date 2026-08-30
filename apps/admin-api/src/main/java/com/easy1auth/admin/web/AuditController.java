@@ -1,5 +1,6 @@
 package com.easy1auth.admin.web;
 
+import com.easy1auth.admin.web.dto.*;
 import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import com.easy1auth.audit.dto.Query;
@@ -81,17 +82,12 @@ public class AuditController {
      * @param topUsers     高频操作用户排行（当前未统计，为空）
      * @param topIps       高频来源 IP 排行（当前未统计，为空）
      */
-    public record AuditStatsResponse(long totalLogs, long successLogs, long failedLogs, long todayLogs,
-                                     long weekLogs, long monthLogs, List<?> topActions, List<?> topUsers, List<?> topIps) {
-    }
 
     /**
      * 清理结果。
      *
      * @param deletedCount 被清理的日志条数
      */
-    public record CleanupResponse(int deletedCount) {
-    }
 
     /**
      * 审计日志响应（接口层视图）。
@@ -113,9 +109,4 @@ public class AuditController {
      * @param changes      变更内容明细
      * @param createdAt    日志产生时间
      */
-    public record AuditLogResponse(UUID id, UUID tenantId, UUID userId, String username, String type, String action,
-                                   String resource, String resourceId, String method, String ip, String userAgent,
-                                   Object location, String status, String errorMessage, Map<String, Object> changes,
-                                   Instant createdAt) {
-    }
 }

@@ -1,5 +1,7 @@
 package com.easy1auth.admin.web;
 
+import com.easy1auth.admin.constant.ErrorCodeConstants;
+import com.easy1auth.admin.web.dto.*;
 import com.easy1auth.adminaccess.service.AdminAccessService;
 import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import com.easy1auth.adminaccess.PlatformAuthorizationResolver;
@@ -74,7 +76,7 @@ public class AdminUserController {
     /** 更新指定管理员账号的资料（用户名、邮箱、手机号）。 */
     @PlatformManagementPermission(value = ManagementPermissionCode.ADMIN_USER_UPDATE)
     @PutMapping("/{id}")
-    public ApiResponse<?> update(@AuthenticationPrincipal Jwt actor, @PathVariable UUID id, @RequestBody ProfileInput in) {
+    public ApiResponse<?> update(@AuthenticationPrincipal Jwt actor, @PathVariable UUID id, @RequestBody AdminUserProfileInput in) {
         require(actor, ManagementPermissionCode.ADMIN_USER_UPDATE);
         access.member(id);
         identities.updateProfile(id, in.username(), in.email(), in.phone());
@@ -84,7 +86,7 @@ public class AdminUserController {
     /** 更新指定管理员账号的启停状态。 */
     @PlatformManagementPermission(value = ManagementPermissionCode.ADMIN_USER_STATUS)
     @PutMapping("/{id}/status")
-    public ApiResponse<?> status(@AuthenticationPrincipal Jwt actor, @PathVariable UUID id, @RequestBody StatusInput in) {
+    public ApiResponse<?> status(@AuthenticationPrincipal Jwt actor, @PathVariable UUID id, @RequestBody AdminUserStatusInput in) {
         require(actor, ManagementPermissionCode.ADMIN_USER_STATUS);
         access.member(id);
         access.updateMemberStatus(accountId(actor), id, in.status());
@@ -94,7 +96,7 @@ public class AdminUserController {
     /** 重置指定管理员账号的登录密码。 */
     @PlatformManagementPermission(value = ManagementPermissionCode.ADMIN_USER_RESET_PASSWORD)
     @PostMapping("/{id}/reset-password")
-    public ApiResponse<?> password(@AuthenticationPrincipal Jwt actor, @PathVariable UUID id, @RequestBody PasswordInput in) {
+    public ApiResponse<?> password(@AuthenticationPrincipal Jwt actor, @PathVariable UUID id, @RequestBody AdminUserPasswordInput in) {
         require(actor, ManagementPermissionCode.ADMIN_USER_RESET_PASSWORD);
         access.member(id);
         identities.resetPassword(accountId(actor), id, in.newPassword());
@@ -143,8 +145,6 @@ public class AdminUserController {
      * @param email    邮箱
      * @param password 初始密码
      */
-    public record CreateInput(String username, String email, String password) {
-    }
 
     /**
      * 管理员资料更新输入。
@@ -153,24 +153,18 @@ public class AdminUserController {
      * @param email    邮箱（可选）
      * @param phone    手机号（可选）
      */
-    public record ProfileInput(String username, String email, String phone) {
-    }
 
     /**
      * 管理员状态输入。
      *
      * @param status 目标状态：active / disabled
      */
-    public record StatusInput(String status) {
-    }
 
     /**
      * 密码重置输入。
      *
      * @param newPassword 新密码
      */
-    public record PasswordInput(String newPassword) {
-    }
 
     /**
      * 角色分配输入。
@@ -178,6 +172,4 @@ public class AdminUserController {
      * @param tenantId 目标租户 ID
      * @param roleIds  待分配的角色 ID 列表
      */
-    public record RolesInput(UUID tenantId, List<UUID> roleIds) {
-    }
 }

@@ -1,5 +1,6 @@
 package com.easy1auth.admin.web;
 
+import com.easy1auth.admin.web.dto.*;
 import com.easy1auth.admin.security.ManagementRouteClassification;
 import com.easy1auth.admin.security.ManagementRouteKind;
 import com.easy1auth.admin.security.PlatformManagementPermission;
@@ -159,8 +160,6 @@ public class TenantController {
      * @param packageId            绑定的套餐 ID
      * @param administratorAccountId 管理员账号 ID（预留，当前以登录账号为准）
      */
-    public record CreateTenant(String name, long packageId, UUID administratorAccountId) {
-    }
 
     /**
      * 可分配套餐选项。
@@ -170,11 +169,6 @@ public class TenantController {
      * @param maxUsers 允许的最大用户数
      * @param maxApps  允许的最大应用数
      */
-    public record TenantPackageOption(long id, String name, int maxUsers, int maxApps) {
-        static TenantPackageOption from(TenantPackageView item) {
-            return new TenantPackageOption(item.id(), item.name(), item.maxUsers(), item.maxApps());
-        }
-    }
 
     /**
      * 租户更新请求。
@@ -182,22 +176,16 @@ public class TenantController {
      * @param name      新名称（可为 null，表示不修改）
      * @param packageId 新套餐 ID（可为 null，表示不修改）
      */
-    public record TenantUpdateInput(String name, Long packageId) {
-    }
 
     /**
      * 租户状态更新请求。
      *
      * @param status 目标状态：active / suspended
      */
-    public record TenantStatusInput(String status) {
-    }
 
     /**
      * 租户管理员转移请求。
      *
      * @param administratorAccountId 新管理员账号 ID
      */
-    public record TenantAdministratorTransferInput(UUID administratorAccountId) {
-    }
 }

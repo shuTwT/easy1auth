@@ -1,5 +1,7 @@
 package com.easy1auth.admin.web;
 
+import com.easy1auth.admin.web.dto.UserAccessRoleIds;
+import com.easy1auth.admin.web.dto.UserAccessUserIds;
 import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
@@ -97,7 +99,7 @@ public class UserAccessCatalogController {
     /** 向指定角色批量分配用户。 */
     @TenantManagementPermission(value = ManagementPermissionCode.USER_ROLE_USERS_ASSIGN)
     @PostMapping("/api/roles/{id}/users")
-    ApiResponse<Void> assignUsers(@PathVariable UUID id, @RequestBody UserIds in) {
+    ApiResponse<Void> assignUsers(@PathVariable UUID id, @RequestBody UserAccessUserIds in) {
         UUID tenantId = TenantContextHolder.requireTenantId();
         service.assignUsers(id, in.userIds());
         return ApiResponse.ok(null, "分配用户成功");
@@ -106,7 +108,7 @@ public class UserAccessCatalogController {
     /** 从指定角色批量移除用户。 */
     @TenantManagementPermission(value = ManagementPermissionCode.USER_ROLE_USERS_REMOVE)
     @DeleteMapping("/api/roles/{id}/users")
-    ApiResponse<Void> removeUsers(@PathVariable UUID id, @RequestBody UserIds in) {
+    ApiResponse<Void> removeUsers(@PathVariable UUID id, @RequestBody UserAccessUserIds in) {
         service.removeUsers(id, in.userIds());
         return ApiResponse.ok(null, "移除用户成功");
     }
@@ -121,7 +123,7 @@ public class UserAccessCatalogController {
     /** 全量替换指定用户的角色分配。 */
     @TenantManagementPermission(value = ManagementPermissionCode.USER_ROLE_USER_ROLES_REPLACE)
     @PostMapping("/api/roles/user/{userId}")
-    ApiResponse<Void> replaceRoles(@PathVariable UUID userId, @RequestBody RoleIds in) {
+    ApiResponse<Void> replaceRoles(@PathVariable UUID userId, @RequestBody UserAccessRoleIds in) {
         service.replaceUserRoles(userId, in.roleIds());
         return ApiResponse.ok(null, "分配角色成功");
     }
@@ -182,20 +184,10 @@ public class UserAccessCatalogController {
      *
      * @param userIds 用户 ID 列表，为空时按空列表处理
      */
-    public record UserIds(List<UUID> userIds) {
-        public UserIds {
-            userIds = userIds == null ? List.of() : List.copyOf(userIds);
-        }
-    }
 
     /**
      * 角色 ID 集合请求体。
      *
      * @param roleIds 角色 ID 列表，为空时按空列表处理
      */
-    public record RoleIds(List<UUID> roleIds) {
-        public RoleIds {
-            roleIds = roleIds == null ? List.of() : List.copyOf(roleIds);
-        }
-    }
 }

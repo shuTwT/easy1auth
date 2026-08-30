@@ -1,5 +1,6 @@
 package com.easy1auth.admin.web;
 
+import com.easy1auth.admin.web.dto.RegistrationResult;
 import com.easy1auth.admin.config.AdminJwtProperties;
 import com.easy1auth.adminidentity.service.AdminIdentityService;
 import com.easy1auth.adminidentity.dto.AuthenticatedAdmin;

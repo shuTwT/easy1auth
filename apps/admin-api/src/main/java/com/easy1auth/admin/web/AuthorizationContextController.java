@@ -1,5 +1,6 @@
 package com.easy1auth.admin.web;
 
+import com.easy1auth.admin.web.dto.AuthorizationContextResponse;
 import com.easy1auth.tenant.util.WebFramework;
 
 import com.easy1auth.admin.security.ManagementRouteClassification;
@@ -67,11 +68,4 @@ public class AuthorizationContextController {
      * @param tenantPackage   租户绑定的套餐视图
      * @param menus           当前上下文可见的菜单与目录
      */
-    public record AuthorizationContextResponse(
-            UUID tenantId,
-            String membershipRole,
-            List<String> permissions,
-            TenantPackageView tenantPackage,
-            List<ManagementPermissionView> menus) {
-    }
 }

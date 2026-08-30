@@ -1,5 +1,6 @@
 package com.easy1auth.admin.web;
 
+import com.easy1auth.admin.web.dto.*;
 import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import com.easy1auth.application.service.ApplicationService;
@@ -70,8 +71,6 @@ public class DashboardController {
      * @param stats        统计信息
      * @param recentLogins 最近登录动态列表
      */
-    public record DashboardData(DashboardStats stats, List<RecentLogin> recentLogins) {
-    }
 
     /**
      * 看板统计信息。
@@ -81,8 +80,6 @@ public class DashboardController {
      * @param applicationCount 应用总数
      * @param todayLoginCount  今日成功登录次数
      */
-    public record DashboardStats(long tenantCount, long userCount, long applicationCount, long todayLoginCount) {
-    }
 
     /**
      * 最近一次登录动态。
@@ -93,6 +90,4 @@ public class DashboardController {
      * @param time     登录时间
      * @param status   登录结果状态：success / failed
      */
-    public record RecentLogin(String username, @Nullable String email, String ip, Instant time, String status) {
-    }
 }

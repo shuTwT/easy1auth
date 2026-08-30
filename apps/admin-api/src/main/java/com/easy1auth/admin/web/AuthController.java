@@ -1,5 +1,7 @@
 package com.easy1auth.admin.web;
 
+import com.easy1auth.admin.constant.ErrorCodeConstants;
+import com.easy1auth.admin.web.dto.*;
 import com.easy1auth.admin.config.AdminJwtProperties;
 import com.easy1auth.admin.security.AdminTokenService;
 import com.easy1auth.admin.security.ManagementRouteClassification;
@@ -21,7 +23,6 @@ import com.easy1auth.audit.service.DeliveryService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import java.util.*;
-import com.fasterxml.jackson.annotation.JsonInclude;
 
 /**
  * 管理端认证接口。
@@ -187,9 +188,6 @@ public class AuthController {
      * @param challengeToken 邮箱登录挑战凭证（可选）
      * @param loginType      登录方式：password / email
      */
-    public record LoginRequest(String username, String password, String email, String code, String challengeToken,
-                               String loginType) {
-    }
 
     /**
      * 注册请求。
@@ -199,16 +197,12 @@ public class AuthController {
      * @param code     注册验证码
      * @param username 用户名（可选，缺省时取邮箱前缀）
      */
-    public record RegisterRequest(String email, String password, String code, String username) {
-    }
 
     /**
      * 刷新令牌请求。
      *
      * @param refreshToken 刷新令牌
      */
-    public record RefreshRequest(String refreshToken) {
-    }
 
     /**
      * 发送验证码请求。
@@ -216,8 +210,6 @@ public class AuthController {
      * @param email 目标邮箱
      * @param type  验证码用途：register（注册）/ login（登录）
      */
-    public record SendCodeRequest(String email, String type) {
-    }
 
     /**
      * 发送验证码响应（仅在配置允许时返回明文验证码）。
@@ -225,9 +217,6 @@ public class AuthController {
      * @param code           明文验证码（可为 null）
      * @param challengeToken 挑战令牌（登录场景返回）
      */
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    public record SendCodeResponse(String code, String challengeToken) {
-    }
 
     /**
      * 刷新响应。
@@ -235,8 +224,6 @@ public class AuthController {
      * @param token        新签发的访问令牌
      * @param refreshToken 替换后的刷新令牌
      */
-    public record RefreshResponse(String token, String refreshToken) {
-    }
 
     /**
      * MFA 登录请求。
@@ -244,8 +231,6 @@ public class AuthController {
      * @param challengeToken MFA 挑战凭证
      * @param code           TOTP 验证码
      */
-    public record MfaLoginRequest(String challengeToken, String code) {
-    }
 
     /**
      * 登录用户信息。
@@ -256,8 +241,6 @@ public class AuthController {
      * @param avatar          头像地址（可为 null）
      * @param currentTenantId 当前选中的租户 ID（可为 null）
      */
-    public record LoginUser(UUID id, String username, String email, String avatar, UUID currentTenantId) {
-    }
 
     /**
      * 登录响应。
@@ -271,14 +254,4 @@ public class AuthController {
      * @param methods        可用的 MFA 方式（需要 MFA 时返回）
      * @param expiresIn      MFA 挑战有效秒数（需要 MFA 时返回）
      */
-    public record LoginResponse(String status, String token, String refreshToken, LoginUser user, List<?> tenants,
-                                String challengeToken, List<String> methods, Integer expiresIn) {
-        static LoginResponse success(String token, String refresh, LoginUser user, List<?> tenants) {
-            return new LoginResponse("success", token, refresh, user, tenants, null, null, null);
-        }
-
-        static LoginResponse mfa(String challenge, int expires) {
-            return new LoginResponse("mfa_required", null, null, null, List.of(), challenge, List.of("totp"), expires);
-        }
-    }
 }

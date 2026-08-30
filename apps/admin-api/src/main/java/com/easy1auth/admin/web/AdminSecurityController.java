@@ -1,5 +1,7 @@
 package com.easy1auth.admin.web;
 
+import com.easy1auth.admin.constant.ErrorCodeConstants;
+import com.easy1auth.admin.web.dto.*;
 import com.easy1auth.admin.security.ManagementRouteClassification;
 import com.easy1auth.admin.security.ManagementRouteKind;
 import com.easy1auth.adminidentity.service.AdminIdentityService;
@@ -7,7 +9,6 @@ import com.easy1auth.audit.service.DeliveryService;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.security.service.SecurityPolicyService;
-import com.easy1auth.security.dto.Policy;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.transaction.annotation.Transactional;
@@ -56,7 +57,7 @@ public class AdminSecurityController {
     /** 更新当前管理账号的个人资料（用户名、手机号）。 */
     @ManagementRouteClassification(ManagementRouteKind.AUTHENTICATED_SELF)
     @PutMapping("/profile")
-    public ApiResponse<?> updateProfile(@AuthenticationPrincipal Jwt jwt, @RequestBody ProfileInput input) {
+    public ApiResponse<?> updateProfile(@AuthenticationPrincipal Jwt jwt, @RequestBody AdminSecurityProfileInput input) {
         return ApiResponse.ok(identities.updateOwnProfile(id(jwt), input.username(), input.phone()), "个人资料更新成功");
     }
 
@@ -165,8 +166,6 @@ public class AdminSecurityController {
      * @param newPassword     新密码
      * @param confirmPassword 确认新密码（需与 newPassword 一致）
      */
-    public record ChangePassword(String currentPassword, String newPassword, String confirmPassword) {
-    }
 
     /**
      * 个人资料更新输入。
@@ -174,16 +173,12 @@ public class AdminSecurityController {
      * @param username 用户名（可选）
      * @param phone    手机号（可选）
      */
-    public record ProfileInput(String username, String phone) {
-    }
 
     /**
      * 邮箱换绑请求。
      *
      * @param email 新邮箱地址
      */
-    public record EmailChangeRequest(String email) {
-    }
 
     /**
      * 邮箱验证请求。
@@ -191,8 +186,6 @@ public class AdminSecurityController {
      * @param challengeToken 换绑挑战凭证
      * @param code           收到的验证码
      */
-    public record EmailVerifyRequest(String challengeToken, String code) {
-    }
 
     /**
      * MFA 令牌输入。
@@ -201,8 +194,6 @@ public class AdminSecurityController {
      * @param challengeToken  挑战凭证（可选）
      * @param type            验证类型（可选）
      */
-    public record TokenInput(String token, String challengeToken, String type) {
-    }
 
     /**
      * 密码过期状态。
@@ -210,8 +201,6 @@ public class AdminSecurityController {
      * @param expired         是否已过期
      * @param daysUntilExpiry 距离过期剩余天数
      */
-    public record ExpiryStatus(boolean expired, int daysUntilExpiry) {
-    }
 
     /**
      * 密码策略响应。
@@ -219,8 +208,6 @@ public class AdminSecurityController {
      * @param policy        密码策略
      * @param expiryStatus  密码过期状态
      */
-    public record PasswordPolicyResponse(Policy policy, ExpiryStatus expiryStatus) {
-    }
 
     /**
      * 挑战凭证响应。
@@ -228,16 +215,12 @@ public class AdminSecurityController {
      * @param challengeToken 挑战令牌
      * @param expiresIn      有效秒数
      */
-    public record ChallengeResponse(String challengeToken, int expiresIn) {
-    }
 
     /**
      * 邮箱换绑结果。
      *
      * @param email 换绑后的新邮箱
      */
-    public record EmailChangeResponse(String email) {
-    }
 
     /**
      * MFA 状态响应。
@@ -245,14 +228,10 @@ public class AdminSecurityController {
      * @param enabled 是否已启用 MFA
      * @param type    MFA 方式（如 totp），未启用时为空串
      */
-    public record MfaStatusResponse(boolean enabled, String type) {
-    }
 
     /**
      * 挑战令牌响应。
      *
      * @param challengeToken 挑战令牌
      */
-    public record ChallengeTokenResponse(String challengeToken) {
-    }
 }

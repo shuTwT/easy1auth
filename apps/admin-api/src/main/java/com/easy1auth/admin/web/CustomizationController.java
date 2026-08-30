@@ -1,5 +1,7 @@
 package com.easy1auth.admin.web;
 
+import com.easy1auth.admin.web.dto.DomainInput;
+import com.easy1auth.admin.web.dto.PublicStyleView;
 import com.easy1auth.admin.security.ManagementRouteClassification;
 import com.easy1auth.admin.security.ManagementRouteKind;
 import com.easy1auth.admin.security.TenantManagementPermission;
@@ -85,11 +87,6 @@ public class CustomizationController {
      * @param termsOfService   服务条款内容（可为 null）
      * @param privacyPolicy    隐私政策内容（可为 null）
      */
-    record PublicStyleView(String logo, String logoDark, String backgroundImage, String backgroundColor,
-                           String primaryColor, String title, String subtitle, List<String> loginMethods,
-                           List<String> socialProviders, Map<String, Object> config,
-                           String termsOfService, String privacyPolicy) {
-    }
 
     /** 查询当前租户的自定义域名列表。 */
     @TenantManagementPermission(value = ManagementPermissionCode.CUSTOM_DOMAIN_LIST)
@@ -171,7 +168,5 @@ public class CustomizationController {
      * @param domain             要登记的域名
      * @param verificationMethod 所有权验证方式
      */
-    public record DomainInput(String domain, String verificationMethod) {
-    }
 
 }

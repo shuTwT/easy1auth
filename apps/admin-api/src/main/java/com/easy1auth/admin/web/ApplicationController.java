@@ -1,5 +1,6 @@
 package com.easy1auth.admin.web;
 
+import com.easy1auth.admin.web.dto.ApplicationStatusInput;
 import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import com.easy1auth.application.service.ApplicationService;
@@ -74,7 +75,7 @@ public class ApplicationController {
     /** 更新指定应用的启停状态。 */
     @TenantManagementPermission(value = ManagementPermissionCode.APPLICATION_STATUS)
     @PutMapping("/{id}/status")
-    ApiResponse<?> status(@PathVariable UUID id, @RequestBody StatusInput input) {
+    ApiResponse<?> status(@PathVariable UUID id, @RequestBody ApplicationStatusInput input) {
         return ApiResponse.ok(applications.status(id, input.status()), "状态更新成功");
     }
 
@@ -90,6 +91,4 @@ public class ApplicationController {
      *
      * @param status 目标状态：active / disabled
      */
-    public record StatusInput(String status) {
-    }
 }

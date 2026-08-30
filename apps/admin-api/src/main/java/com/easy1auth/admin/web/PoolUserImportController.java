@@ -1,5 +1,7 @@
 package com.easy1auth.admin.web;
 
+import com.easy1auth.admin.constant.ErrorCodeConstants;
+import com.easy1auth.admin.web.dto.*;
 import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import com.easy1auth.poolidentity.service.PoolUserService;
@@ -113,8 +115,6 @@ public class PoolUserImportController {
      * @param username 该行对应的用户名
      * @param error    失败原因描述
      */
-    public record ImportError(int row, String username, String error) {
-    }
 
     /**
      * 成功导入的用户信息。
@@ -123,8 +123,6 @@ public class PoolUserImportController {
      * @param email    邮箱
      * @param name     姓名
      */
-    public record ImportedUser(String username, String email, String name) {
-    }
 
     /**
      * 导入结果汇总。
@@ -135,7 +133,4 @@ public class PoolUserImportController {
      * @param errors        失败行的错误明细
      * @param importedUsers 成功导入的用户明细
      */
-    public record ImportResponse(int success, int failed, int total, List<ImportError> errors,
-                                 List<ImportedUser> importedUsers) {
-    }
 }

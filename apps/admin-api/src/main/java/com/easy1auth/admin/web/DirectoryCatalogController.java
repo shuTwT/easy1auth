@@ -1,5 +1,6 @@
 package com.easy1auth.admin.web;
 
+import com.easy1auth.admin.web.dto.DirectoryUserIds;
 import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import com.easy1auth.poolidentity.service.DirectoryCatalogService;
@@ -89,7 +90,7 @@ public class DirectoryCatalogController {
     /** 向指定用户组批量添加成员。 */
     @TenantManagementPermission(value = ManagementPermissionCode.GROUP_MEMBERS_ADD)
     @PostMapping("/api/groups/{id}/members")
-    ApiResponse<Void> addMembers(@PathVariable UUID id, @RequestBody UserIds in) {
+    ApiResponse<Void> addMembers(@PathVariable UUID id, @RequestBody DirectoryUserIds in) {
         catalog.addMembers(id, in.userIds());
         return ApiResponse.ok(null, "成员添加成功");
     }
@@ -97,7 +98,7 @@ public class DirectoryCatalogController {
     /** 从指定用户组批量移除成员。 */
     @TenantManagementPermission(value = ManagementPermissionCode.GROUP_MEMBERS_REMOVE)
     @DeleteMapping("/api/groups/{id}/members")
-    ApiResponse<Void> removeMembers(@PathVariable UUID id, @RequestBody UserIds in) {
+    ApiResponse<Void> removeMembers(@PathVariable UUID id, @RequestBody DirectoryUserIds in) {
         catalog.removeMembers(id, in.userIds());
         return ApiResponse.ok(null, "成员移除成功");
     }
@@ -105,7 +106,7 @@ public class DirectoryCatalogController {
     /** 向指定用户组批量添加管理员。 */
     @TenantManagementPermission(value = ManagementPermissionCode.GROUP_ADMIN_ADD)
     @PostMapping("/api/groups/{id}/admins")
-    ApiResponse<Void> addAdmins(@PathVariable UUID id, @RequestBody UserIds in) {
+    ApiResponse<Void> addAdmins(@PathVariable UUID id, @RequestBody DirectoryUserIds in) {
         catalog.addAdmins(id, in.userIds());
         return ApiResponse.ok(null, "管理员添加成功");
     }
@@ -113,7 +114,7 @@ public class DirectoryCatalogController {
     /** 从指定用户组批量移除管理员。 */
     @TenantManagementPermission(value = ManagementPermissionCode.GROUP_ADMIN_REMOVE)
     @DeleteMapping("/api/groups/{id}/admins")
-    ApiResponse<Void> removeAdmins(@PathVariable UUID id, @RequestBody UserIds in) {
+    ApiResponse<Void> removeAdmins(@PathVariable UUID id, @RequestBody DirectoryUserIds in) {
         catalog.removeAdmins(id, in.userIds());
         return ApiResponse.ok(null, "管理员移除成功");
     }
@@ -169,9 +170,4 @@ public class DirectoryCatalogController {
      *
      * @param userIds 用户 ID 列表，为空时按空列表处理
      */
-    public record UserIds(List<UUID> userIds) {
-        public UserIds {
-            userIds = userIds == null ? List.of() : List.copyOf(userIds);
-        }
-    }
 }

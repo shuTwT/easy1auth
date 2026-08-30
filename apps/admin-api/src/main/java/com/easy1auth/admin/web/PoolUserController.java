@@ -1,5 +1,6 @@
 package com.easy1auth.admin.web;
 
+import com.easy1auth.admin.web.dto.*;
 import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import com.easy1auth.poolidentity.service.DirectoryCatalogService;
@@ -82,14 +83,14 @@ public class PoolUserController {
     /** 更新指定目录用户的启停状态。 */
     @TenantManagementPermission(value = ManagementPermissionCode.USER_STATUS)
     @PutMapping("/{id}/status")
-    public ApiResponse<?> status(@PathVariable UUID id, @RequestBody StatusInput in) {
+    public ApiResponse<?> status(@PathVariable UUID id, @RequestBody PoolUserStatusInput in) {
         return ApiResponse.ok(users.status(id, in.status()), "状态更新成功");
     }
 
     /** 重置指定目录用户的登录密码。 */
     @TenantManagementPermission(value = ManagementPermissionCode.USER_RESET_PASSWORD)
     @PostMapping("/{id}/reset-password")
-    public ApiResponse<Void> password(@PathVariable UUID id, @RequestBody PasswordInput in) {
+    public ApiResponse<Void> password(@PathVariable UUID id, @RequestBody PoolUserPasswordInput in) {
         users.resetPassword(id, in.newPassword());
         return ApiResponse.ok(null, "密码重置成功");
     }
@@ -112,7 +113,7 @@ public class PoolUserController {
     /** 全量替换指定目录用户的角色分配。 */
     @TenantManagementPermission(value = ManagementPermissionCode.USER_ROLES_ASSIGN)
     @PostMapping("/{id}/roles")
-    public ApiResponse<Void> assignRoles(@PathVariable UUID id, @RequestBody RoleIds in) {
+    public ApiResponse<Void> assignRoles(@PathVariable UUID id, @RequestBody PoolUserRoleIds in) {
         access.replaceUserRoles(id, in.roleIds());
         return ApiResponse.ok(null, "角色分配成功");
     }
@@ -137,16 +138,12 @@ public class PoolUserController {
      *
      * @param status 目标状态：active / disabled
      */
-    public record StatusInput(String status) {
-    }
 
     /**
      * 密码重置输入。
      *
      * @param newPassword 新密码
      */
-    public record PasswordInput(String newPassword) {
-    }
 
     /**
      * 密码修改输入。
@@ -154,22 +151,16 @@ public class PoolUserController {
      * @param oldPassword 原密码
      * @param newPassword 新密码
      */
-    public record ChangePasswordInput(String oldPassword, String newPassword) {
-    }
 
     /**
      * 角色 ID 集合。
      *
      * @param roleIds 待分配的角色 ID 列表
      */
-    public record RoleIds(List<UUID> roleIds) {
-    }
 
     /**
      * 用户组 ID 集合。
      *
      * @param groupIds 待分配的用户组 ID 列表
      */
-    public record GroupIds(List<UUID> groupIds) {
-    }
 }

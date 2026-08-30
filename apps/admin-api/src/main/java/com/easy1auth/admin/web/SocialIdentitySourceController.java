@@ -1,5 +1,6 @@
 package com.easy1auth.admin.web;
 
+import com.easy1auth.admin.web.dto.SocialSourceStatsResponse;
 import com.easy1auth.admin.security.TenantManagementPermission;
 import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
@@ -85,7 +86,4 @@ public class SocialIdentitySourceController {
      * @param inactiveSources 未启用的身份源数
      * @param byType          按类型分组的数量映射
      */
-    public record SocialSourceStatsResponse(long totalSources, long activeSources, long inactiveSources,
-                                            Map<String, Long> byType) {
-    }
 }

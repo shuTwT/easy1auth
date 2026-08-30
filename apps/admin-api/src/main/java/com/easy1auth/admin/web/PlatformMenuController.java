@@ -1,10 +1,11 @@
 package com.easy1auth.admin.web;
 
+import com.easy1auth.admin.constant.ErrorCodeConstants;
+import com.easy1auth.admin.web.dto.MenuCatalogResponse;
 import com.easy1auth.admin.security.PlatformManagementPermission;
 import com.easy1auth.adminaccess.ManagementPermissionCatalog;
 import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import com.easy1auth.adminaccess.constant.ManagementPermissionType;
-import com.easy1auth.adminaccess.dto.ManagementPermissionView;
 import com.easy1auth.adminaccess.PlatformAuthorizationResolver;
 import com.easy1auth.infrastructure.foundation.error.DomainException;
 import com.easy1auth.infrastructure.foundation.web.ApiResponse;
@@ -14,7 +15,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -68,8 +68,4 @@ public class PlatformMenuController {
      * @param menus       当前可展示的菜单与目录（按权限类型过滤）
      * @param permissions 完整的权限目录视图
      */
-    public record MenuCatalogResponse(
-            List<ManagementPermissionView> menus,
-            List<ManagementPermissionView> permissions) {
-    }
 }

@@ -1,5 +1,6 @@
 package com.easy1auth.admin;
 
+import org.babyfish.jimmer.spring.repository.EnableJimmerRepositories;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -10,8 +11,9 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * <p>以 {@code com.easy1auth} 为扫描根启动 Spring Boot 应用，并开启定时调度
  * （支撑投递 worker 等后台任务）。管理 API 默认监听 18848 端口。</p>
  */
-@SpringBootApplication(scanBasePackages = "com.easy1auth")
 @EnableScheduling
+@SpringBootApplication(scanBasePackages = "com.easy1auth")
+@EnableJimmerRepositories(basePackages = "com.easy1auth")
 public class AdminApiApplication {
     /** 应用启动入口。 */
     public static void main(String[] args) {
