@@ -1,4 +1,4 @@
-package com.easy1auth.enterpriseidentity.dto;
+package com.easy1auth.connection.dto;
 
 import java.time.Instant;
 import java.util.Map;

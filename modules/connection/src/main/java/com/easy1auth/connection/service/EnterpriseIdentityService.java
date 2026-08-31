@@ -1,9 +1,11 @@
-package com.easy1auth.enterpriseidentity.service;
+package com.easy1auth.connection.service;
 
-import com.easy1auth.enterpriseidentity.constant.ErrorCodeConstants;
-import com.easy1auth.enterpriseidentity.dto.*;
-import com.easy1auth.enterpriseidentity.model.*;
-import com.easy1auth.enterpriseidentity.repository.EnterpriseIdentityRepository;
+import com.easy1auth.connection.constant.ErrorCodeConstants;
+import com.easy1auth.connection.dto.*;
+import com.easy1auth.connection.enterpriseidentity.model.*;
+import com.easy1auth.connection.model.EnterpriseIdentitySourceEntity;
+import com.easy1auth.connection.model.EnterpriseIdentitySyncTaskEntity;
+import com.easy1auth.connection.repository.EnterpriseIdentityRepository;
 import com.easy1auth.common.foundation.error.DomainException;
 import com.easy1auth.common.foundation.id.UuidV7;
 import com.easy1auth.common.foundation.web.PageData;

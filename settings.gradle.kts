@@ -14,6 +14,6 @@ include(
     "common", "modules:tenant",
     "modules:admin-identity", "modules:admin-access", "modules:pool-identity",
     "modules:application", "modules:security-policy",
-    "modules:connection", "modules:enterprise-identity", "modules:customization", "modules:audit", "modules:oauth2-core",
+    "modules:connection", "modules:customization", "modules:audit", "modules:oauth2-core",
     "apps:admin-api", "apps:authorization-server", "database-migration"
 )

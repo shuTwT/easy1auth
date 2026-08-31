@@ -1,4 +1,4 @@
-package com.easy1auth.enterpriseidentity.dto;
+package com.easy1auth.connection.dto;
 
 /**
  * 身份源数量统计视图。

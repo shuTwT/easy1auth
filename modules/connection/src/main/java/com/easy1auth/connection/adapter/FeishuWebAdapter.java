@@ -12,7 +12,7 @@ import java.util.Map;
  * 飞书网页授权 SSO 适配器。
  *
  * <p>流程：authorize -> code -> OAuth v3 user_access_token -> user_info。
- * 注意：这与 enterprise-identity 模块的飞书「通讯录目录同步」是完全不同的两套场景，
+ * 注意：这与 connection 模块中企业身份源的飞书「通讯录目录同步」是完全不同的两套场景，
  * 本适配器只负责飞书账号 SSO 登录。</p>
  */
 @Component

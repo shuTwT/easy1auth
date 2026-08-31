@@ -23,4 +23,13 @@ public interface ErrorCodeConstants {
     ErrorCode SOCIAL_TYPE_NOT_SUPPORTED = new ErrorCode(18010, "不支持的社会化身份源类型");
     ErrorCode SOCIAL_API_ERROR = new ErrorCode(18011, "社交平台返回错误");
     ErrorCode SOCIAL_BINDING_CONFLICT = new ErrorCode(18012, "该外部身份已绑定其他用户");
+    ErrorCode ENTERPRISE_IDENTITY_SOURCE_DISABLED = new ErrorCode(19000, "身份源已停用");
+    ErrorCode ENTERPRISE_IDENTITY_SOURCE_INVALID = new ErrorCode(19001, "飞书身份源配置不完整");
+    ErrorCode ENTERPRISE_IDENTITY_SOURCE_NOT_FOUND = new ErrorCode(19002, "企业身份源不存在");
+    ErrorCode ENTERPRISE_IDENTITY_SOURCE_STATUS_INVALID = new ErrorCode(19003, "身份源状态无效");
+    ErrorCode FEISHU_API_FAILED = new ErrorCode(19004, "飞书通讯录请求失败");
+    ErrorCode FEISHU_EVENT_DECRYPT_FAILED = new ErrorCode(19005, "飞书事件解密失败");
+    ErrorCode FEISHU_EVENT_INVALID = new ErrorCode(19006, "飞书事件缺少 event_id");
+    ErrorCode FEISHU_EVENT_UNAUTHORIZED = new ErrorCode(19007, "飞书事件校验失败");
+    ErrorCode FEISHU_TOKEN_FAILED = new ErrorCode(19008, "无法获取飞书 tenant_access_token");
 }

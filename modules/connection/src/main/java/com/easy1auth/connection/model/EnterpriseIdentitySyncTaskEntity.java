@@ -1,4 +1,4 @@
-package com.easy1auth.enterpriseidentity.model;
+package com.easy1auth.connection.model;
 
 import com.easy1auth.common.persistence.model.BaseEntity;
 import com.easy1auth.common.persistence.model.BaseTenantEntity;
