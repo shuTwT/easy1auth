@@ -130,7 +130,7 @@ public class SocialIdentityService {
 
   /** 发起社交登录：校验身份源后生成 state/nonce/PKCE，落库事务并返回跳转授权 URL。 */
   @Transactional
-  public AuthorizationStart authorize(UUID tenant, UUID sourceId, String redirectUri) {
+  public AuthorizationStartView authorize(UUID tenant, UUID sourceId, String redirectUri) {
     var s = entity(tenant, sourceId);
     if (!"active".equals(s.status())) {
       throw new DomainException(ErrorCodeConstants.SOCIAL_SOURCE_DISABLED);
@@ -155,12 +155,12 @@ public class SocialIdentityService {
             now.plusSeconds(600));
     var result =
         adapter.authorize(s.clientId(), callback, state, adapter.defaultScope(), challenge);
-    return new AuthorizationStart(result.authorizeUrl().toString(), state, 600);
+    return new AuthorizationStartView(result.authorizeUrl().toString(), state, 600);
   }
 
   /** 处理回调：校验事务并拉取用户信息，若已有绑定则返回该用户并刷新最后登录时间。 */
   @Transactional
-  public CallbackResult callback(String code, String state, String redirectUri) {
+  public CallbackResultView callback(String code, String state, String redirectUri) {
     var tx = repository.findTransactionForUpdate(hash(state));
     if (tx == null
         || tx.consumedAt() != null
@@ -197,7 +197,7 @@ public class SocialIdentityService {
             info.name(),
             info.email(),
             info.avatar());
-    return new CallbackResult(tenant, sourceId, userId, identity);
+    return new CallbackResultView(tenant, sourceId, userId, identity);
   }
 
   /** 用户明确确认后，创建一个新的 pool_user 并绑定已验证的社会化身份。 */

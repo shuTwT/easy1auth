@@ -164,16 +164,16 @@ public class EnterpriseIdentityService {
 
   /** 统计当前租户身份源的总数及启用 / 停用数量。 */
   @Transactional(readOnly = true)
-  public EnterpriseIdentityStats stats() {
+  public EnterpriseIdentityStatsView stats() {
     UUID tenant = TenantContextHolder.requireTenantId();
     var rows = repository.findSourceStatuses(tenant);
     long active = rows.stream().filter("active"::equals).count();
-    return new EnterpriseIdentityStats(rows.size(), active, rows.size() - active);
+    return new EnterpriseIdentityStatsView(rows.size(), active, rows.size() - active);
   }
 
   /** 飞书事件回调入口：不依赖请求中的租户头，直接按 sourceId 解析身份源， 完成事件解密与验证后入队处理（含 url_verification 挑战应答）。 */
   @Transactional
-  public FeishuEventResponse acceptFeishuEvent(UUID sourceId, Map<String, Object> envelope) {
+  public FeishuEventResponseView acceptFeishuEvent(UUID sourceId, Map<String, Object> envelope) {
     EnterpriseIdentitySourceEntity source = ignored(() -> repository.findSource(sourceId));
     if (source == null || !"feishu".equals(source.provider())) {
       throw new DomainException(ErrorCodeConstants.ENTERPRISE_IDENTITY_SOURCE_NOT_FOUND);
@@ -186,10 +186,10 @@ public class EnterpriseIdentityService {
       throw new DomainException(ErrorCodeConstants.FEISHU_EVENT_UNAUTHORIZED);
     }
     if ("url_verification".equals(string(event.get("type")))) {
-      return new FeishuEventResponse(string(event.get("challenge")));
+      return new FeishuEventResponseView(string(event.get("challenge")));
     }
     if (!"active".equals(source.status())) {
-      return new FeishuEventResponse(null);
+      return new FeishuEventResponseView(null);
     }
     Map<String, Object> header = map(event.get("header"));
     String eventId = string(header.get("event_id"));
@@ -206,7 +206,7 @@ public class EnterpriseIdentityService {
         throw ex;
       }
     }
-    return new FeishuEventResponse(null);
+    return new FeishuEventResponseView(null);
   }
 
   /** worker 领取待处理（pending）任务并置为 processing，返回实际领取的任务列表。 */

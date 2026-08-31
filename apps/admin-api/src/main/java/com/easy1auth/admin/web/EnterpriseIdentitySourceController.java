@@ -6,7 +6,7 @@ import com.easy1auth.admin.constant.ManagementRouteKind;
 import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import com.easy1auth.enterpriseidentity.service.EnterpriseIdentityService;
 import com.easy1auth.enterpriseidentity.dto.EnterpriseIdentityInput;
-import com.easy1auth.enterpriseidentity.dto.FeishuEventResponse;
+import com.easy1auth.enterpriseidentity.dto.FeishuEventResponseView;
 import com.easy1auth.common.foundation.web.ApiResponse;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -97,7 +97,7 @@ public class EnterpriseIdentitySourceController {
     /** 接收飞书平台推送的事件回调（公开路由，无需登录）。 */
     @ManagementRouteClassification(ManagementRouteKind.PUBLIC)
     @PostMapping("/{id}/feishu/events")
-    public FeishuEventResponse feishuEvent(@PathVariable UUID id, @RequestBody FeishuEventRequest event) {
+    public FeishuEventResponseView feishuEvent(@PathVariable UUID id, @RequestBody FeishuEventRequest event) {
         return service.acceptFeishuEvent(id, json.convertValue(event.fields, new TypeReference<>() {
         }));
     }
