@@ -8,7 +8,7 @@ dependencies {
     implementation(project(":modules:pool-identity"))
     implementation(project(":modules:application"))
     implementation(project(":modules:security-policy"))
-    implementation(project(":modules:social-identity"))
+    implementation(project(":modules:connection"))
     implementation(project(":modules:enterprise-identity"))
     implementation(project(":modules:customization"))
     implementation(project(":modules:audit"))

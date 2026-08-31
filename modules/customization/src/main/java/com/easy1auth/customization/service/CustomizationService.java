@@ -7,7 +7,7 @@ import com.easy1auth.customization.repository.CustomizationRepository;
 import com.easy1auth.common.foundation.error.DomainException;
 import com.easy1auth.common.foundation.id.UuidV7;
 import com.easy1auth.common.foundation.error.ErrorCode;
-import com.easy1auth.social.service.SocialIdentityService;
+import com.easy1auth.connection.service.SocialIdentityService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

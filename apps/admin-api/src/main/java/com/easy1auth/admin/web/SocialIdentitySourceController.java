@@ -4,9 +4,9 @@ import com.easy1auth.admin.web.dto.SocialSourceStatsResponse;
 import com.easy1auth.admin.annotation.TenantManagementPermission;
 import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
 import com.easy1auth.common.foundation.web.ApiResponse;
-import com.easy1auth.social.service.SocialIdentityService;
-import com.easy1auth.social.dto.SocialIdentityInput;
-import com.easy1auth.social.dto.SourceView;
+import com.easy1auth.connection.service.SocialIdentityService;
+import com.easy1auth.connection.dto.SocialIdentityInput;
+import com.easy1auth.connection.dto.SourceView;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
