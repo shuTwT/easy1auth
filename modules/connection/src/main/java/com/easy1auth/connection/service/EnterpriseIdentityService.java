@@ -2,7 +2,7 @@ package com.easy1auth.connection.service;
 
 import com.easy1auth.connection.constant.ErrorCodeConstants;
 import com.easy1auth.connection.dto.*;
-import com.easy1auth.connection.enterpriseidentity.model.*;
+import com.easy1auth.connection.model.*;
 import com.easy1auth.connection.model.EnterpriseIdentitySourceEntity;
 import com.easy1auth.connection.model.EnterpriseIdentitySyncTaskEntity;
 import com.easy1auth.connection.repository.EnterpriseIdentityRepository;

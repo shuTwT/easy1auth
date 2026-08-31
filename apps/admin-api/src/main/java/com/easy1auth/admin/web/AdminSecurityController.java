@@ -1,11 +1,12 @@
 package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.constant.ErrorCodeConstants;
+import com.easy1auth.admin.mq.producer.MailSendProducer;
 import com.easy1auth.admin.web.dto.*;
 import com.easy1auth.admin.annotation.ManagementRouteClassification;
 import com.easy1auth.admin.constant.ManagementRouteKind;
 import com.easy1auth.adminidentity.service.AdminIdentityService;
-import com.easy1auth.audit.service.DeliveryService;
+import com.easy1auth.admin.mq.message.MailSendMessage;
 import com.easy1auth.common.foundation.web.ApiResponse;
 import com.easy1auth.common.foundation.error.DomainException;
 import com.easy1auth.security.service.SecurityPolicyService;
@@ -31,13 +32,13 @@ public class AdminSecurityController {
     private final AdminIdentityService identities;
     /** 安全策略服务（密码校验、挑战码、MFA） */
     private final SecurityPolicyService security;
-    /** 消息投递服务（发送验证码邮件） */
-    private final DeliveryService delivery;
+    /** Redis Stream 消息生产者（发送验证码邮件） */
+    private final MailSendProducer mailSendProducer;
 
-    AdminSecurityController(AdminIdentityService identities, SecurityPolicyService security, DeliveryService delivery) {
+    AdminSecurityController(AdminIdentityService identities, SecurityPolicyService security, MailSendProducer mailSendProducer) {
         this.identities = identities;
         this.security = security;
-        this.delivery = delivery;
+        this.mailSendProducer = mailSendProducer;
     }
 
     /** 查询管理账号适用的密码策略及当前密码的过期状态。 */
@@ -69,7 +70,7 @@ public class AdminSecurityController {
         UUID accountId = id(jwt);
         String email = identities.prepareOwnEmailChange(accountId, input.email());
         var challenge = security.issueEmailChallenge("admin", accountId, null, "email_change", email);
-        delivery.enqueueEmail(null, email, "Easy1Auth 邮箱换绑验证码", "您的邮箱换绑验证码是 " + challenge.code() + "，10分钟内有效。", "email-change:" + accountId + ":" + java.time.Instant.now().getEpochSecond() / 60);
+        sendEmail(email, "Easy1Auth 邮箱换绑验证码", "您的邮箱换绑验证码是 " + challenge.code() + "，10分钟内有效。");
         return ApiResponse.ok(new ChallengeResponse(challenge.token(), challenge.expiresIn()), "验证码已发送到新邮箱");
     }
 
@@ -147,7 +148,7 @@ public class AdminSecurityController {
     public ApiResponse<?> email(@AuthenticationPrincipal Jwt jwt) {
         var account = identities.account(id(jwt));
         var c = security.issueEmailChallenge("admin", account.id(), null, "step_up");
-        delivery.enqueueEmail(null, account.email(), "Easy1Auth 安全验证码", "您的验证码是 " + c.code() + "，10分钟内有效。", "mfa-email:" + c.token());
+        sendEmail(account.email(), "Easy1Auth 安全验证码", "您的验证码是 " + c.code() + "，10分钟内有效。");
         return ApiResponse.ok(new ChallengeTokenResponse(c.token()), "验证码已发送");
     }
 
@@ -157,6 +158,11 @@ public class AdminSecurityController {
 
     private static ApiResponse<Void> ok(String message) {
         return ApiResponse.ok(null, message);
+    }
+
+    /** 发布验证码邮件消息，由 Redis Stream 消费者异步发送。 */
+    private void sendEmail(String recipient, String subject, String body) {
+        mailSendProducer.sendMailMessage(new MailSendMessage(recipient, subject, body));
     }
 
     /**

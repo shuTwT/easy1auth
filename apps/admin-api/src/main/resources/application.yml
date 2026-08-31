@@ -8,6 +8,10 @@ spring:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/easy1auth}
     username: ${DATABASE_USERNAME:easy1auth}
     password: ${DATABASE_PASSWORD:easy1auth}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
   flyway.enabled: false
   lifecycle.timeout-per-shutdown-phase: 20s
 jimmer:
@@ -35,6 +39,10 @@ easy1auth.security:
   data-encryption-secret: ${SECURITY_DATA_ENCRYPTION_SECRET:}
 easy1auth.enterprise-identity:
   public-base-url: ${ENTERPRISE_IDENTITY_PUBLIC_BASE_URL:}
+easy1auth.messaging:
+  stream-prefix: ${MESSAGING_STREAM_PREFIX:easy1auth:mq}
+  consumer-name: ${MESSAGING_CONSUMER_NAME:${HOSTNAME:admin-api}}
+  batch-size: ${MESSAGING_BATCH_SIZE:20}
 spring.mail:
   host: ${MAIL_HOST:localhost}
   port: ${MAIL_PORT:465}

@@ -1,6 +1,7 @@
 package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.constant.ErrorCodeConstants;
+import com.easy1auth.admin.mq.producer.MailSendProducer;
 import com.easy1auth.admin.web.dto.*;
 import com.easy1auth.admin.config.AdminJwtProperties;
 import com.easy1auth.admin.security.AdminTokenService;
@@ -18,8 +19,8 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.transaction.annotation.Transactional;
 import com.easy1auth.admin.config.RegistrationProperties;
+import com.easy1auth.admin.mq.message.MailSendMessage;
 import com.easy1auth.security.service.SecurityPolicyService;
-import com.easy1auth.audit.service.DeliveryService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import java.util.*;
@@ -50,10 +51,10 @@ public class AuthController {
     private final RegistrationProperties registration;
     /** 安全策略服务（挑战码、MFA、密码校验） */
     private final SecurityPolicyService security;
-    /** 消息投递服务（发送验证码邮件） */
-    private final DeliveryService delivery;
+    /** Redis Stream 消息生产者（发送验证码邮件） */
+    private final MailSendProducer mailSendProducer;
 
-    AuthController(AdminIdentityService identities, AdminTokenService tokens, TenantService tenants, AdminJwtProperties jwt, PublicRegistrationService registrations, RegistrationCodeService registrationCodes, RegistrationProperties registration, SecurityPolicyService security, DeliveryService delivery) {
+    AuthController(AdminIdentityService identities, AdminTokenService tokens, TenantService tenants, AdminJwtProperties jwt, PublicRegistrationService registrations, RegistrationCodeService registrationCodes, RegistrationProperties registration, SecurityPolicyService security, MailSendProducer mailSendProducer) {
         this.identities = identities;
         this.tokens = tokens;
         this.tenants = tenants;
@@ -62,7 +63,7 @@ public class AuthController {
         this.registrationCodes = registrationCodes;
         this.registration = registration;
         this.security = security;
-        this.delivery = delivery;
+        this.mailSendProducer = mailSendProducer;
     }
 
     /** 管理账号登录：支持密码登录与邮箱验证码登录；已开启 MFA 时返回 MFA 挑战。 */
@@ -111,7 +112,7 @@ public class AuthController {
         String challengeToken = null;
         if ("register".equals(request.type())) {
             var issued = registrationCodes.issue(request.email());
-            delivery.enqueueEmail(null, issued.email(), "Easy1Auth 注册验证码", "您的验证码是 " + issued.code() + "，10分钟内有效。", "registration:" + issued.email() + ":" + java.time.Instant.now().getEpochSecond() / 60);
+            sendEmail(issued.email(), "Easy1Auth 注册验证码", "您的验证码是 " + issued.code() + "，10分钟内有效。");
             if (registration.exposeCode()) {
                 code = issued.code();
             }
@@ -121,7 +122,7 @@ public class AuthController {
             if (account.isPresent()) {
                 var challenge = security.issueEmailChallenge("admin", account.get().id(), null, "login", account.get().email());
                 challengeToken = challenge.token();
-                delivery.enqueueEmail(null, account.get().email(), "Easy1Auth 登录验证码", "您的登录验证码是 " + challenge.code() + "，10分钟内有效。", "email-login:" + account.get().id() + ":" + java.time.Instant.now().getEpochSecond() / 60);
+                sendEmail(account.get().email(), "Easy1Auth 登录验证码", "您的登录验证码是 " + challenge.code() + "，10分钟内有效。");
                 if (registration.exposeCode()) {
                     code = challenge.code();
                 }
@@ -176,6 +177,11 @@ public class AuthController {
             current = memberships.isEmpty() ? null : memberships.getFirst().id();
         }
         return LoginResponse.success(tokens.issue(account), refresh, new LoginUser(account.id(), account.username(), account.email(), null, current), memberships);
+    }
+
+    /** 发布验证码邮件消息，由 Redis Stream 消费者异步发送。 */
+    private void sendEmail(String recipient, String subject, String body) {
+        mailSendProducer.sendMailMessage(new MailSendMessage(recipient,subject,body));
     }
 
     /**

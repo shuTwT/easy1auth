@@ -3,7 +3,8 @@ package com.easy1auth.audit.service;
 import com.easy1auth.audit.constant.ErrorCodeConstants;
 import com.easy1auth.audit.dto.AuditSubscriptionInput;
 import com.easy1auth.audit.dto.AuditSubscriptionView;
-import com.easy1auth.audit.model.*;
+import com.easy1auth.audit.model.WebhookSubscriptionEntity;
+import com.easy1auth.audit.model.WebhookSubscriptionEntityDraft;
 import com.easy1auth.audit.repository.DeliveryRepository;
 import com.easy1auth.common.foundation.error.DomainException;
 import com.easy1auth.common.foundation.id.UuidV7;
@@ -12,16 +13,16 @@ import com.easy1auth.common.foundation.util.TenantContextHolder;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
-import java.time.*;
+import java.time.Instant;
 import java.util.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 投递服务：Webhook 订阅管理与审计事件投递（outbox 模式）。
+ * Webhook 订阅服务。
  *
- * <p>负责 Webhook 订阅的增删改查、密钥生成与轮换，以及将审计事件/邮件写入 delivery_outbox 待投递队列。队列由外部调度器通过 claim / sent / failed
- * 推进状态机（pending → processing → sent / dead），processing 带租约防重复。
+ * <p>负责 Webhook 订阅的增删改查、密钥生成与轮换。具体 Webhook 消息由 Redis Stream
+ * 消费者处理，不在本模块维护投递队列。</p>
  */
 @Service
 public class DeliveryService {
@@ -108,98 +109,6 @@ public class DeliveryService {
     }
   }
 
-  /** 将审计事件写入所有匹配订阅的 Webhook 投递队列（含幂等键防止重复投递）。 */
-  @Transactional
-  public void enqueueEvent(UUID tenant, String event, Map<String, Object> payload, String key) {
-    for (var hook : repository.findActiveSubscriptions(tenant)) {
-      if (hook.events().contains(event) || hook.events().contains("*")) {
-        enqueue(
-            tenant,
-            "webhook",
-            hook.url(),
-            event,
-            payload,
-            hook.id(),
-            key + ":" + hook.id(),
-            hook.maxRetries());
-      }
-    }
-  }
-
-  /** 将邮件投递任务写入投递队列（默认最大重试 5 次）。 */
-  @Transactional
-  public void enqueueEmail(UUID tenant, String to, String subject, String body, String key) {
-    enqueue(tenant, "email", to, "email", Map.of("subject", subject, "body", body), null, key, 5);
-  }
-
-  /** 领取一批到期可投递的 outbox 记录并置为 processing（带 60 秒租约，限最多 50 条）。 */
-  @Transactional
-  public List<DeliveryOutboxEntity> claim(int limit) {
-    Instant now = Instant.now();
-    return repository.claim(limit, now);
-  }
-
-  /** 标记投递记录发送成功（记录发送时间并释放租约）。 */
-  @Transactional
-  public void sent(UUID id) {
-    repository.markSent(id, Instant.now());
-  }
-
-  /** 标记投递失败：按指数退避（上限 1 小时）重排待投递，超过最大次数则置为 dead。 */
-  @Transactional
-  public void failed(UUID id, String error) {
-    var row = repository.findOutboxForUpdate(id);
-    int n = row.attempts() + 1;
-    boolean dead = n >= row.maxAttempts();
-    long delay = Math.min(3600L, 5L * (1L << Math.min(10, n)));
-    repository.markFailed(
-        id,
-        dead ? "dead" : "pending",
-        n,
-        Instant.now().plusSeconds(delay + random.nextInt(5)),
-        trim(error, 1000));
-  }
-
-  /** 解密并返回投递记录对应 Webhook 订阅的密钥（投递签名校验用）。 */
-  @Transactional(readOnly = true)
-  public String webhookSecret(DeliveryOutboxEntity row) {
-    var hook = entity(row.tenantId(), row.subscriptionId());
-    return cipher.decrypt("webhook:" + hook.tenantId() + ":" + hook.id(), hook.encryptedSecret());
-  }
-
-  /** 写入一条投递记录（INSERT_IF_ABSENT，按幂等键去重）。 */
-  private void enqueue(
-      UUID tenant,
-      String channel,
-      String dest,
-      String event,
-      Map<String, Object> payload,
-      UUID subscription,
-      String key,
-      int retries) {
-    Instant now = Instant.now();
-    var e =
-        DeliveryOutboxEntityDraft.$.produce(
-            d ->
-                d.setId(UuidV7.randomUuid())
-                    .setTenantId(tenant)
-                    .setChannel(channel)
-                    .setDestination(dest)
-                    .setEventType(event)
-                    .setPayload(payload)
-                    .setSubscriptionId(subscription)
-                    .setIdempotencyKey(key)
-                    .setStatus("pending")
-                    .setAttempts(0)
-                    .setMaxAttempts(retries)
-                    .setAvailableAt(now)
-                    .setLeaseUntil(null)
-                    .setLastError(null)
-                    .setCreatedAt(now)
-                    .setSentAt(null));
-    repository.saveOutbox(e);
-  }
-
   /** 按租户与 ID 查询订阅实体，不存在时抛出领域异常。 */
   private WebhookSubscriptionEntity entity(UUID tenant, UUID id) {
     return repository.findSubscription(tenant, id).orElseThrow(this::missing);
@@ -269,11 +178,6 @@ public class DeliveryService {
       throw new DomainException(ErrorCodeConstants.WEBHOOK_STATUS_INVALID);
     }
     return v;
-  }
-
-  /** 将字符串截断到指定长度（null 原样返回）。 */
-  private static String trim(String v, int n) {
-    return v == null ? null : v.substring(0, Math.min(n, v.length()));
   }
 
   /** 组装订阅视图（secret 仅在创建/轮换后非空）。 */

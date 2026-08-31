@@ -1,10 +1,12 @@
 package com.easy1auth.connection.repository;
 
 import com.easy1auth.connection.dto.EnterpriseIdentityInput;
-import com.easy1auth.connection.enterpriseidentity.model.*;
+import com.easy1auth.connection.model.*;
 import com.easy1auth.common.foundation.web.PageData;
 import com.easy1auth.connection.model.EnterpriseIdentitySourceEntity;
+import com.easy1auth.connection.model.EnterpriseIdentitySourceEntityTable;
 import com.easy1auth.connection.model.EnterpriseIdentitySyncTaskEntity;
+import com.easy1auth.connection.model.EnterpriseIdentitySyncTaskEntityTable;
 import com.easy1auth.poolidentity.model.*;
 import java.time.Instant;
 import java.util.List;
