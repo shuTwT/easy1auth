@@ -1,7 +1,5 @@
 package com.easy1auth.tenant.dto;
 
-import com.easy1auth.tenant.TenantAuthorizationProvider;
-
 import java.util.Objects;
 import java.util.UUID;
 
@@ -9,7 +7,6 @@ import java.util.UUID;
  * 租户授权解析请求（只读 DTO）。
  *
  * <p>携带解析租户授权所需的全部输入：账号、租户、成员关系、角色与套餐，
- * 供 {@link TenantAuthorizationProvider} 解析出权限集合与套餐信息。</p>
  *
  * @param accountId       管理账号 ID
  * @param tenantId        租户 ID
