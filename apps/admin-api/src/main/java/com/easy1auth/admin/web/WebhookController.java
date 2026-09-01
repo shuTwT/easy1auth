@@ -1,7 +1,7 @@
 package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.annotation.TenantManagementPermission;
-import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
+import com.easy1auth.system.constant.ManagementPermissionCode;
 import com.easy1auth.audit.service.DeliveryService;
 import com.easy1auth.audit.dto.AuditSubscriptionInput;
 import com.easy1auth.common.foundation.web.ApiResponse;

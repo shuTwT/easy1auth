@@ -1,7 +1,7 @@
 package com.easy1auth.admin.security;
 
 import com.easy1auth.admin.config.AdminJwtProperties;
-import com.easy1auth.adminidentity.dto.AdminAccount;
+import com.easy1auth.system.dto.AdminAccount;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.*;
 import org.springframework.stereotype.Service;

@@ -5,7 +5,7 @@ import com.easy1auth.admin.mq.producer.MailSendProducer;
 import com.easy1auth.admin.web.dto.*;
 import com.easy1auth.admin.annotation.ManagementRouteClassification;
 import com.easy1auth.admin.constant.ManagementRouteKind;
-import com.easy1auth.adminidentity.service.AdminIdentityService;
+import com.easy1auth.system.service.AdminIdentityService;
 import com.easy1auth.admin.mq.message.MailSendMessage;
 import com.easy1auth.common.foundation.web.ApiResponse;
 import com.easy1auth.common.foundation.error.DomainException;

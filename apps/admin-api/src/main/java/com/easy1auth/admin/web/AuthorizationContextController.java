@@ -5,9 +5,9 @@ import com.easy1auth.common.foundation.util.WebFrameworkUtils;
 
 import com.easy1auth.admin.annotation.ManagementRouteClassification;
 import com.easy1auth.admin.constant.ManagementRouteKind;
-import com.easy1auth.adminaccess.ManagementPermissionCatalog;
-import com.easy1auth.adminaccess.constant.ManagementPermissionType;
-import com.easy1auth.adminaccess.dto.ManagementPermissionView;
+import com.easy1auth.system.ManagementPermissionCatalog;
+import com.easy1auth.system.constant.ManagementPermissionType;
+import com.easy1auth.system.dto.ManagementPermissionView;
 import com.easy1auth.common.foundation.web.ApiResponse;
 import com.easy1auth.tenant.util.TenantContext;
 import org.springframework.web.bind.annotation.GetMapping;

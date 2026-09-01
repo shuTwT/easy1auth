@@ -3,7 +3,7 @@ package com.easy1auth.admin.web;
 import com.easy1auth.admin.web.dto.UserAccessRoleIds;
 import com.easy1auth.admin.web.dto.UserAccessUserIds;
 import com.easy1auth.admin.annotation.TenantManagementPermission;
-import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
+import com.easy1auth.system.constant.ManagementPermissionCode;
 import com.easy1auth.common.foundation.web.ApiResponse;
 import com.easy1auth.poolidentity.dto.PermissionInput;
 import com.easy1auth.poolidentity.dto.RoleInput;

@@ -1,6 +1,6 @@
 package com.easy1auth.admin.web.dto;
 
-import com.easy1auth.adminaccess.dto.ManagementPermissionView;
+import com.easy1auth.system.dto.ManagementPermissionView;
 import com.easy1auth.tenant.dto.TenantPackageView;
 
 import java.util.List;

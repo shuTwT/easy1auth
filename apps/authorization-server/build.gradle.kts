@@ -4,7 +4,7 @@ dependencies {
     implementation(project(":common"))
     implementation(project(":modules:oauth2-core"))
     implementation(project(":modules:tenant"))
-    implementation(project(":modules:admin-access"))
+    implementation(project(":modules:system"))
     implementation(project(":modules:application"))
     implementation(project(":modules:pool-identity"))
     implementation(project(":modules:security-policy"))

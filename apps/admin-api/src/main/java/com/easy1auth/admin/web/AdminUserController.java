@@ -2,11 +2,11 @@ package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.constant.ErrorCodeConstants;
 import com.easy1auth.admin.web.dto.*;
-import com.easy1auth.adminaccess.service.AdminAccessService;
-import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
-import com.easy1auth.adminaccess.PlatformAuthorizationResolver;
+import com.easy1auth.system.service.AdminAccessService;
+import com.easy1auth.system.constant.ManagementPermissionCode;
+import com.easy1auth.system.PlatformAuthorizationResolver;
 import com.easy1auth.admin.annotation.PlatformManagementPermission;
-import com.easy1auth.adminidentity.service.AdminIdentityService;
+import com.easy1auth.system.service.AdminIdentityService;
 import com.easy1auth.common.foundation.error.DomainException;
 import com.easy1auth.common.foundation.web.ApiResponse;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;

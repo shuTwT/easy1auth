@@ -2,7 +2,7 @@ package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.web.dto.DirectoryUserIds;
 import com.easy1auth.admin.annotation.TenantManagementPermission;
-import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
+import com.easy1auth.system.constant.ManagementPermissionCode;
 import com.easy1auth.poolidentity.service.DirectoryCatalogService;
 import com.easy1auth.poolidentity.dto.GroupInput;
 import com.easy1auth.poolidentity.dto.PositionInput;

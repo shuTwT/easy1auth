@@ -3,7 +3,7 @@ package com.easy1auth.admin.web;
 import com.easy1auth.admin.annotation.ManagementRouteClassification;
 import com.easy1auth.admin.annotation.TenantManagementPermission;
 import com.easy1auth.admin.constant.ManagementRouteKind;
-import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
+import com.easy1auth.system.constant.ManagementPermissionCode;
 import com.easy1auth.connection.service.EnterpriseIdentityService;
 import com.easy1auth.connection.dto.EnterpriseIdentityInput;
 import com.easy1auth.connection.dto.FeishuEventResponseView;

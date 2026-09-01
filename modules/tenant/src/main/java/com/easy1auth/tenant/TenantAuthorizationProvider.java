@@ -6,7 +6,7 @@ import com.easy1auth.tenant.dto.TenantAuthorizationRequest;
 import java.util.UUID;
 
 /**
- * 租户授权解析端口（由 admin-access 模块实现）。
+ * 租户授权解析端口（由 system 模块实现）。
  *
  * <p>作为端口（Port）将租户模块与外部仓储解耦：租户模块只依赖本接口，
  * 具体的账号状态校验与权限解析由接入方实现。</p>

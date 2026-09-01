@@ -2,8 +2,8 @@ package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.constant.ErrorCodeConstants;
 import com.easy1auth.admin.web.dto.*;
-import com.easy1auth.adminaccess.constant.ManagementPermissionCode;
-import com.easy1auth.adminaccess.PlatformAuthorizationResolver;
+import com.easy1auth.system.constant.ManagementPermissionCode;
+import com.easy1auth.system.PlatformAuthorizationResolver;
 import com.easy1auth.admin.annotation.PlatformManagementPermission;
 import com.easy1auth.common.foundation.error.DomainException;
 import com.easy1auth.common.foundation.web.ApiResponse;
