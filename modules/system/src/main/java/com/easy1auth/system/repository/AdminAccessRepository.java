@@ -6,7 +6,7 @@ import com.easy1auth.system.model.AdminRoleEntityProps;
 import com.easy1auth.system.model.AdminRoleEntityTable;
 import com.easy1auth.system.model.AdminAccountEntity;
 import com.easy1auth.system.model.AdminAccountEntityTable;
-import com.easy1auth.common.foundation.web.PageData;
+import com.easy1auth.framework.common.pagination.PageData;
 import com.easy1auth.tenant.model.TenantMembershipEntity;
 import com.easy1auth.tenant.model.TenantMembershipEntityTable;
 import java.time.Instant;

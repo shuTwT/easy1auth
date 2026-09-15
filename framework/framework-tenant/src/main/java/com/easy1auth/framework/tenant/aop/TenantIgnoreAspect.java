@@ -1,0 +1,24 @@
+package com.easy1auth.framework.tenant.aop;
+
+import com.easy1auth.framework.tenant.annotation.TenantIgnore;
+import com.easy1auth.framework.tenant.context.TenantContextHolder;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.Around;
+import org.aspectj.lang.annotation.Aspect;
+import org.springframework.stereotype.Component;
+
+@Aspect
+@Component
+public class TenantIgnoreAspect {
+
+    @Around("@annotation(tenantIgnore)")
+    public Object around(ProceedingJoinPoint joinPoint, TenantIgnore tenantIgnore) throws Throwable {
+        boolean oldIgnore = TenantContextHolder.isIgnore();
+        try {
+            TenantContextHolder.setIgnore(true);
+            return joinPoint.proceed();
+        } finally {
+            TenantContextHolder.setIgnore(oldIgnore);
+        }
+    }
+}

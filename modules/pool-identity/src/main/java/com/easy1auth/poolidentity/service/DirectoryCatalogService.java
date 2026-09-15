@@ -4,11 +4,11 @@ import com.easy1auth.poolidentity.constant.ErrorCodeConstants;
 import com.easy1auth.poolidentity.dto.PoolUserView;
 import com.easy1auth.poolidentity.dto.*;
 import com.easy1auth.poolidentity.model.*;
-import com.easy1auth.common.foundation.util.TenantContextHolder;
+import com.easy1auth.framework.tenant.context.TenantContextHolder;
 
-import com.easy1auth.common.foundation.error.DomainException;
-import com.easy1auth.common.foundation.id.UuidV7;
-import com.easy1auth.common.foundation.web.PageData;
+import com.easy1auth.framework.common.error.DomainException;
+import com.easy1auth.framework.common.id.UuidV7;
+import com.easy1auth.framework.common.pagination.PageData;
 import org.babyfish.jimmer.sql.JSqlClient;
 import org.babyfish.jimmer.sql.ast.LikeMode;
 import org.babyfish.jimmer.sql.ast.mutation.SaveMode;

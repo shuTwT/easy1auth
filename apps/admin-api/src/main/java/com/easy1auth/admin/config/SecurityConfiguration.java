@@ -1,7 +1,7 @@
 package com.easy1auth.admin.config;
 
 import com.easy1auth.system.service.AdminIdentityService;
-import com.easy1auth.common.foundation.error.ErrorCodeConstants;
+import com.easy1auth.framework.web.error.ErrorCodeConstants;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import com.nimbusds.jose.proc.SecurityContext;
 

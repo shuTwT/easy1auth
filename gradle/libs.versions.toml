@@ -20,6 +20,7 @@ spring-jdbc = { module = "org.springframework.boot:spring-boot-starter-jdbc", ve
 spring-test = { module = "org.springframework.boot:spring-boot-starter-test", version.ref = "spring-boot" }
 spring-mail = { module = "org.springframework.boot:spring-boot-starter-mail", version.ref = "spring-boot" }
 spring-data-redis = { module = "org.springframework.boot:spring-boot-starter-data-redis", version.ref = "spring-boot" }
+jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations" }
 jimmer-spring = { module = "org.babyfish.jimmer:jimmer-spring-boot-starter", version.ref = "jimmer" }
 jimmer-apt = { module = "org.babyfish.jimmer:jimmer-apt", version.ref = "jimmer" }
 postgresql = { module = "org.postgresql:postgresql" }

@@ -1,14 +1,14 @@
 package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.web.dto.AuthorizationContextResponse;
-import com.easy1auth.common.foundation.util.WebFrameworkUtils;
+import com.easy1auth.framework.web.util.WebFrameworkUtils;
 
 import com.easy1auth.admin.annotation.ManagementRouteClassification;
 import com.easy1auth.admin.constant.ManagementRouteKind;
 import com.easy1auth.system.ManagementPermissionCatalog;
 import com.easy1auth.system.constant.ManagementPermissionType;
 import com.easy1auth.system.dto.ManagementPermissionView;
-import com.easy1auth.common.foundation.web.ApiResponse;
+import com.easy1auth.framework.web.response.ApiResponse;
 import com.easy1auth.tenant.util.TenantContext;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;

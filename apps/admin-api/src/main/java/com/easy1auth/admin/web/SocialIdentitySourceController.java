@@ -3,7 +3,7 @@ package com.easy1auth.admin.web;
 import com.easy1auth.admin.web.dto.SocialSourceStatsResponse;
 import com.easy1auth.admin.annotation.TenantManagementPermission;
 import com.easy1auth.system.constant.ManagementPermissionCode;
-import com.easy1auth.common.foundation.web.ApiResponse;
+import com.easy1auth.framework.web.response.ApiResponse;
 import com.easy1auth.connection.service.SocialIdentityService;
 import com.easy1auth.connection.dto.SocialIdentityInput;
 import com.easy1auth.connection.dto.SourceView;

@@ -1,7 +1,7 @@
 package com.easy1auth.admin.security;
 
-import com.easy1auth.common.foundation.error.ErrorCode;
-import com.easy1auth.common.foundation.web.ApiResponse;
+import com.easy1auth.framework.common.error.ErrorCode;
+import com.easy1auth.framework.web.response.ApiResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

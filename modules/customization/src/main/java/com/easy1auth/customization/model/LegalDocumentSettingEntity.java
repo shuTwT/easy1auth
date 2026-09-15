@@ -1,7 +1,7 @@
 package com.easy1auth.customization.model;
 
-import com.easy1auth.common.persistence.model.BaseEntity;
-import com.easy1auth.common.persistence.model.BaseTenantEntity;
+import com.easy1auth.framework.persistence.model.BaseEntity;
+import com.easy1auth.framework.tenant.persistence.model.BaseTenantEntity;
 import org.babyfish.jimmer.sql.Column;
 import org.babyfish.jimmer.sql.Entity;
 import org.babyfish.jimmer.sql.Table;

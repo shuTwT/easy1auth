@@ -1,6 +1,6 @@
 package com.easy1auth.connection.adapter;
 
-import com.easy1auth.common.foundation.error.DomainException;
+import com.easy1auth.framework.common.error.DomainException;
 import com.easy1auth.connection.constant.ErrorCodeConstants;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

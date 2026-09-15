@@ -5,8 +5,8 @@ import com.easy1auth.admin.annotation.TenantManagementPermission;
 import com.easy1auth.system.constant.ManagementPermissionCode;
 import com.easy1auth.audit.dto.AuditQuery;
 import com.easy1auth.audit.service.AuditService;
-import com.easy1auth.common.foundation.web.ApiResponse;
-import com.easy1auth.common.foundation.web.PageData;
+import com.easy1auth.framework.web.response.ApiResponse;
+import com.easy1auth.framework.common.pagination.PageData;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 

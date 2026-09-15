@@ -2,7 +2,7 @@ package com.easy1auth.connection.repository;
 
 import com.easy1auth.connection.dto.EnterpriseIdentityInput;
 import com.easy1auth.connection.model.*;
-import com.easy1auth.common.foundation.web.PageData;
+import com.easy1auth.framework.common.pagination.PageData;
 import com.easy1auth.connection.model.EnterpriseIdentitySourceEntity;
 import com.easy1auth.connection.model.EnterpriseIdentitySourceEntityTable;
 import com.easy1auth.connection.model.EnterpriseIdentitySyncTaskEntity;

@@ -4,7 +4,7 @@ import com.easy1auth.system.constant.ErrorCodeConstants;
 import com.easy1auth.system.constant.ManagementPermissionCode;
 import com.easy1auth.system.constant.ManagementPermissionScope;
 import com.easy1auth.system.model.AdminAccountEntityTable;
-import com.easy1auth.common.foundation.error.DomainException;
+import com.easy1auth.framework.common.error.DomainException;
 import com.easy1auth.tenant.dto.TenantAuthorization;
 import com.easy1auth.tenant.TenantAuthorizationProvider;
 import com.easy1auth.tenant.dto.TenantAuthorizationRequest;

@@ -7,7 +7,7 @@ import com.easy1auth.system.constant.ManagementPermissionCode;
 import com.easy1auth.connection.service.EnterpriseIdentityService;
 import com.easy1auth.connection.dto.EnterpriseIdentityInput;
 import com.easy1auth.connection.dto.FeishuEventResponseView;
-import com.easy1auth.common.foundation.web.ApiResponse;
+import com.easy1auth.framework.web.response.ApiResponse;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;

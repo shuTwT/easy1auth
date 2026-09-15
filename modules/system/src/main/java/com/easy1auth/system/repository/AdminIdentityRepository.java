@@ -4,7 +4,7 @@ import com.easy1auth.system.*;
 
 import com.easy1auth.system.dto.AdminAccount;
 import com.easy1auth.system.model.*;
-import com.easy1auth.common.foundation.id.UuidV7;
+import com.easy1auth.framework.common.id.UuidV7;
 import org.babyfish.jimmer.spring.repository.JRepository;
 import org.babyfish.jimmer.sql.JSqlClient;
 import org.babyfish.jimmer.sql.ast.Predicate;

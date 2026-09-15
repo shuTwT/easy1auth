@@ -3,7 +3,7 @@ package com.easy1auth.audit.repository;
 import com.easy1auth.audit.dto.AuditQuery;
 import com.easy1auth.audit.model.AuditEventEntity;
 import com.easy1auth.audit.model.AuditEventEntityTable;
-import com.easy1auth.common.foundation.web.PageData;
+import com.easy1auth.framework.common.pagination.PageData;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;

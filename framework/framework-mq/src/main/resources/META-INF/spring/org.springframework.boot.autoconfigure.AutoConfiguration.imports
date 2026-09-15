@@ -1,0 +1,2 @@
+com.easy1auth.framework.mq.config.RedisMQProducerAutoConfiguration
+com.easy1auth.framework.mq.config.RedisMQConsumerAutoConfiguration

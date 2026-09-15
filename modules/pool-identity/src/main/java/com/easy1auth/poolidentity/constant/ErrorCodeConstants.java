@@ -1,6 +1,6 @@
 package com.easy1auth.poolidentity.constant;
 
-import com.easy1auth.common.foundation.error.ErrorCode;
+import com.easy1auth.framework.common.error.ErrorCode;
 
 /**
  * 用户访问控制（useraccess）模块的错误码常量。

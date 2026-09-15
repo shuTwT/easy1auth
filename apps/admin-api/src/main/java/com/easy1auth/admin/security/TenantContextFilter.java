@@ -1,8 +1,8 @@
 package com.easy1auth.admin.security;
 
-import com.easy1auth.common.foundation.util.WebFrameworkUtils;
+import com.easy1auth.framework.web.util.WebFrameworkUtils;
 import com.easy1auth.tenant.service.TenantService;
-import com.easy1auth.common.foundation.util.TenantContextHolder;
+import com.easy1auth.framework.tenant.context.TenantContextHolder;
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
 import org.jspecify.annotations.NonNull;
