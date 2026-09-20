@@ -25,6 +25,7 @@ const assignRoleLoading = ref(false)
 const importDialogVisible = ref(false)
 const importLoading = ref(false)
 const importResult = ref<any>(null)
+const userStatusOptions = [{ value: 'active', label: '正常' }, { value: 'disabled', label: '禁用' }, { value: 'locked', label: '锁定' }]
 
 const [modal, contextHolder] = Modal.useModal()
 
@@ -360,12 +361,7 @@ const toggleRole = (roleId: string) => {
           </div>
           <div class="grid gap-2">
             <label class="text-sm font-medium">状态</label>
-            <Select v-model:value="queryForm.status" class="w-32" allow-clear>
-                <SelectOption value="active">正常</SelectOption>
-                <SelectOption value="disabled">禁用</SelectOption>
-                <SelectOption value="locked">锁定</SelectOption>
-
-            </Select>
+            <Select v-model:value="queryForm.status" class="w-32" allow-clear :options="userStatusOptions" />
           </div>
           <div class="flex gap-2">
             <Button @click="handleSearch">

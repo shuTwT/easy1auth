@@ -4,6 +4,6 @@ import java.time.*;
 
 /** 权限详情视图。 */
 public record PermissionView(UUID id, UUID tenantId, String code, String name, String description, String type,
-                                 String resource, String action, UUID parentId, Instant createdAt, Instant updatedAt,
-                                 ParentSummary parent) {
+                             String resource, String action, UUID parentId, UUID spaceId, java.util.List<String> operations,
+                             Instant createdAt, Instant updatedAt, ParentSummary parent) {
     }

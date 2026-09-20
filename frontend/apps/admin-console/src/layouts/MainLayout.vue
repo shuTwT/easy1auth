@@ -84,6 +84,7 @@ const menuIcons: Record<string, Component> = {
   application: Monitor,
   'social-identity-source': Link2,
   'enterprise-identity-source': Building2,
+  'sync-identity-source': Building2,
   'identity-source-management': KeyRound,
   tenant: Building2,
   'tenant-package': Package,

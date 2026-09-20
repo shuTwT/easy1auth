@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { AppWindow, FolderTree, LockKeyhole, RefreshCw, Search, ShieldCheck } from '@lucide/vue'
 import { authorizationApi } from '@/api/authorization'
 import type { ManagementMenu } from '@/types/authorization'
-import { Empty, Spin, Tree as AntTree, message } from 'antdv-next'
+import { Empty, Spin, Table as ATable, message } from 'antdv-next'
 interface MenuTreeNode {
   id: string
   label: string
@@ -75,6 +75,13 @@ const filteredTree = computed(() => {
 const directoryCount = computed(() => menus.value.filter((menu) => menu.type.toUpperCase() === 'DIRECTORY').length)
 const menuCount = computed(() => menus.value.filter((menu) => menu.type.toUpperCase() === 'MENU').length)
 const assignedActionCount = computed(() => permissions.value.filter((permission) => permission.type.toUpperCase() === 'ACTION' && permission.parentCode).length)
+const menuColumns = [
+  { title: '菜单 / 权限', dataIndex: 'label', key: 'label', width: 360 },
+  { title: '类型', dataIndex: 'type', key: 'type', width: 100 },
+  { title: '作用域', dataIndex: 'scope', key: 'scope', width: 100 },
+  { title: '编码', dataIndex: 'code', key: 'code', width: 260 },
+  { title: '资源', dataIndex: 'resource', key: 'resource', width: 180 },
+]
 
 function scopeLabel(scope: string) {
   return scope.toUpperCase() === 'PLATFORM' ? '平台' : '租户'
@@ -125,19 +132,39 @@ onMounted(loadCatalog)
       <div>
         <Spin v-if="loading" class="flex min-h-48 items-center justify-center" />
         <Empty v-else-if="filteredTree.length === 0" class="flex min-h-48 flex-col items-center justify-center" description="暂无匹配菜单" />
-        <AntTree v-else :tree-data="filteredTree" :field-names="{ key: 'id', title: 'label', children: 'children' }" :default-expand-all="true" :selectable="false" class="rounded-md border p-3">
-          <template #titleRender="data">
-            <div class="flex min-w-0 items-center gap-2 py-1">
-              <FolderTree v-if="data.type === 'directory'" class="shrink-0 text-primary" />
-              <AppWindow v-else-if="data.type === 'menu'" class="shrink-0 text-primary" />
-              <LockKeyhole v-else class="shrink-0 text-muted-foreground" />
-              <span class="truncate text-sm font-medium">{{ data.label }}</span>
-              <Tag :color="data.type === 'menu' ? 'blue' : data.type === 'directory' ? 'purple' : 'green'">{{ data.type === 'directory' ? '目录' : data.type === 'menu' ? '菜单' : '按钮' }}</Tag>
-              <Tag v-if="data.type !== 'action'" >{{ scopeLabel(data.scope) }}</Tag>
-              <code class="ml-auto hidden truncate text-xs text-muted-foreground md:block">{{ data.code }}</code>
-            </div>
+        <ATable
+          v-else
+          :columns="menuColumns"
+          :data-source="filteredTree"
+          :expandable="{ defaultExpandAllRows: true, indentSize: 20 }"
+          :pagination="false"
+          row-key="id"
+          :scroll="{ x: 1000 }"
+        >
+          <template #bodyCell="{ column, record: item }">
+            <template v-if="column.key === 'label'">
+              <div class="flex min-w-0 items-center gap-2">
+                <FolderTree v-if="item.type === 'directory'" class="size-4 shrink-0 text-primary" />
+                <AppWindow v-else-if="item.type === 'menu'" class="size-4 shrink-0 text-primary" />
+                <LockKeyhole v-else class="size-4 shrink-0 text-muted-foreground" />
+                <span class="truncate font-medium">{{ item.label }}</span>
+              </div>
+            </template>
+            <template v-else-if="column.key === 'type'">
+              <Tag :color="item.type === 'menu' ? 'blue' : item.type === 'directory' ? 'purple' : 'green'">{{ item.type === 'directory' ? '目录' : item.type === 'menu' ? '菜单' : '按钮' }}</Tag>
+            </template>
+            <template v-else-if="column.key === 'scope'">
+              <Tag v-if="item.type !== 'action'">{{ scopeLabel(item.scope) }}</Tag>
+              <span v-else class="text-muted-foreground">-</span>
+            </template>
+            <template v-else-if="column.key === 'code'">
+              <code class="text-xs text-muted-foreground">{{ item.code }}</code>
+            </template>
+            <template v-else-if="column.key === 'resource'">
+              <span class="text-sm text-muted-foreground">{{ item.resource || '-' }}</span>
+            </template>
           </template>
-        </AntTree>
+        </ATable>
       </div>
     </Card>
   </div>

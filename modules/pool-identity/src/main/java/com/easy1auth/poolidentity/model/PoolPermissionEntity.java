@@ -7,6 +7,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
 import java.util.UUID;
+import java.util.List;
 
 /**
  * 权限实体（对应 pool_permission 表）。
@@ -33,6 +34,13 @@ public interface PoolPermissionEntity extends BaseEntity, BaseTenantEntity {
     /** 父权限 ID（可为 null，表示顶级权限） */
     @Column(name = "parent_id")
     @Nullable UUID parentId();
+
+    @Column(name = "space_id")
+    @Nullable UUID spaceId();
+
+    /** 资源可执行操作编码列表，例如 read/create/update/delete。 */
+    @Serialized
+    List<String> operations();
 
     /** 权限对应的资源标识（如 user / group / role） */
     String resource();

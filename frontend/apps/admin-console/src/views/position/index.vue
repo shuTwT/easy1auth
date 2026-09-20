@@ -11,6 +11,13 @@ const dialogVisible = ref(false)
 const dialogTitle = ref('新增岗位')
 const currentPosition = ref<Partial<Position>>({})
 const stats = ref<PositionStats | null>(null)
+const levelOptions = [
+  { value: 1, label: '员工 (1-2级)' },
+  { value: 3, label: '主管 (3-4级)' },
+  { value: 5, label: '经理 (5-6级)' },
+  { value: 7, label: '总监 (7-8级)' },
+  { value: 9, label: '高管 (9-10级)' },
+]
 
 const [modal, contextHolder] = Modal.useModal()
 
@@ -248,14 +255,7 @@ onMounted(() => {
             <Input v-model:value="queryForm.code" placeholder="请输入岗位编码" class="w-48" />
           </div>
           <div class="grid gap-2">
-            <Select v-model:value="queryForm.level" class="w-40" allow-clear placeholder="请选择级别">
-                <SelectOption :value="1">员工 (1-2级)</SelectOption>
-                <SelectOption :value="3">主管 (3-4级)</SelectOption>
-                <SelectOption :value="5">经理 (5-6级)</SelectOption>
-                <SelectOption :value="7">总监 (7-8级)</SelectOption>
-                <SelectOption :value="9">高管 (9-10级)</SelectOption>
-
-            </Select>
+            <Select v-model:value="queryForm.level" class="w-40" allow-clear placeholder="请选择级别" :options="levelOptions" />
           </div>
           <Button @click="handleSearch">
             <Search class="size-4 mr-2" />

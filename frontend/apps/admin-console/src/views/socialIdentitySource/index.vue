@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { Form, FormItem, Modal, Pagination as AntPagination, Table, message } from 'antdv-next'
 import { Link, CheckCircle, XCircle, Grid3X3, Plus, Search, RefreshCw } from '@lucide/vue'
 import { socialIdentitySourceApi } from '@/api/socialIdentitySource'
@@ -8,9 +9,12 @@ import type {
   SocialIdentitySourceStats,
   SocialSourceType,
 } from '@/types/socialIdentitySource'
-import { SOURCE_CONFIGS as SOURCE_CONFIGS_CONST, SOCIAL_SOURCE_TYPES } from '@/types/socialIdentitySource'
+import { SOURCE_CONFIGS as SOURCE_CONFIGS_CONST, SOCIAL_SOURCE_TYPES, ENTERPRISE_SOURCE_TYPES } from '@/types/socialIdentitySource'
 
 const SOURCE_CONFIGS = SOURCE_CONFIGS_CONST
+const route = useRoute()
+const isEnterpriseSource = computed(() => route.name === 'EnterpriseIdentitySource')
+const visibleSourceTypes = computed(() => isEnterpriseSource.value ? ENTERPRISE_SOURCE_TYPES : SOCIAL_SOURCE_TYPES)
 
 const loading = ref(false)
 const sources = ref<SocialIdentitySource[]>([])
@@ -62,6 +66,8 @@ const sourceTypeOptions = computed(() =>
     label: SOURCE_CONFIGS[value].name,
   })),
 )
+const filterTypeOptions = computed(() => visibleSourceTypes.value.map((value) => ({ value, label: SOURCE_CONFIGS[value].name })))
+const filterStatusOptions = [{ value: 'active', label: '已启用' }, { value: 'disabled', label: '已禁用' }]
 
 const dialogTitle = computed(() => (isEdit.value ? '编辑身份源' : '添加身份源'))
 
@@ -69,8 +75,19 @@ const currentTypeConfig = computed(() => SOURCE_CONFIGS[sourceForm.type])
 
 const loadStats = async () => {
   try {
-    const data = await socialIdentitySourceApi.getStats()
-    stats.value = data
+    if (isEnterpriseSource.value) {
+      const data = await socialIdentitySourceApi.getList({ type: 'feishu_web', page: 1, pageSize: 100 })
+      const items = data.items || []
+      const activeSources = items.filter((item: SocialIdentitySource) => item.status === 'active').length
+      stats.value = {
+        totalSources: data.total ?? items.length,
+        activeSources,
+        inactiveSources: (data.total ?? items.length) - activeSources,
+        byType: { feishu_web: data.total ?? items.length },
+      }
+    } else {
+      stats.value = await socialIdentitySourceApi.getStats()
+    }
   } catch (error) {
     console.error('加载统计信息失败:', error)
     message.error('加载身份源统计信息失败')
@@ -94,7 +111,7 @@ const loadSources = async () => {
   loading.value = true
   try {
     const data = await socialIdentitySourceApi.getList({
-      type: filterType.value || undefined,
+      type: filterType.value || (isEnterpriseSource.value ? 'feishu_web' : undefined),
       status: filterStatus.value || undefined,
       search: searchQuery.value || undefined,
       page: page.value,
@@ -117,7 +134,7 @@ const handleCreate = () => {
   isEdit.value = false
   Object.assign(sourceForm, {
     name: '',
-    type: 'github',
+    type: isEnterpriseSource.value ? 'feishu_web' : 'github',
     mode: null,
     clientId: '',
     clientSecret: '',
@@ -225,8 +242,8 @@ onMounted(() => {
   <div class="p-6 min-h-[calc(100vh-64px)]">
     <div class="flex justify-between items-start mb-6">
       <div class="flex-1">
-        <h1 class="text-2xl font-bold text-foreground mb-2">社会化身份源</h1>
-        <p class="text-sm text-muted-foreground">管理社会化登录提供商配置</p>
+        <h1 class="text-2xl font-bold text-foreground mb-2">{{ isEnterpriseSource ? '企业身份源' : '社会化身份源' }}</h1>
+        <p class="text-sm text-muted-foreground">{{ isEnterpriseSource ? '配置企业级登录授权，目前支持飞书网页授权。' : '管理微信、GitHub 等社会化登录提供商配置。' }}</p>
       </div>
     </div>
 
@@ -294,15 +311,8 @@ onMounted(() => {
                 <Search class="size-4 text-muted-foreground" />
               </template>
             </Input>
-            <Select v-model:value="filterType" class="w-36" allow-clear @update:value="loadSources">
-              <SelectOption v-for="type in SOCIAL_SOURCE_TYPES" :key="type" :value="type">
-                {{ SOURCE_CONFIGS[type].name }}
-              </SelectOption>
-            </Select>
-            <Select v-model:value="filterStatus" class="w-28" allow-clear @update:value="loadSources">
-              <SelectOption value="active">已启用</SelectOption>
-              <SelectOption value="disabled">已禁用</SelectOption>
-            </Select>
+            <Select v-model:value="filterType" class="w-36" allow-clear :options="filterTypeOptions" @update:value="loadSources" />
+            <Select v-model:value="filterStatus" class="w-28" allow-clear :options="filterStatusOptions" @update:value="loadSources" />
             <Button @click="handleSearch">
               <Search class="w-4 h-4 mr-2" />
               搜索

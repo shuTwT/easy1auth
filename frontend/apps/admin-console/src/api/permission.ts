@@ -7,6 +7,8 @@ import type {
   UpdatePermissionDto,
   PermissionQueryDto,
   PermissionListResponse,
+  PermissionSpace,
+  PermissionSpaceInput,
 } from '@/types/permission'
 
 export const permissionApi = {
@@ -36,5 +38,21 @@ export const permissionApi = {
 
   delete(id: string): Promise<void> {
     return request.delete(`/permissions/${id}`)
+  },
+
+  getSpaces(search?: string): Promise<PermissionSpace[]> {
+    return request.get('/permission-spaces', { params: { search: search || undefined } })
+  },
+
+  createSpace(data: PermissionSpaceInput): Promise<PermissionSpace> {
+    return request.post('/permission-spaces', data)
+  },
+
+  updateSpace(id: string, data: PermissionSpaceInput): Promise<PermissionSpace> {
+    return request.put(`/permission-spaces/${id}`, data)
+  },
+
+  deleteSpace(id: string): Promise<void> {
+    return request.delete(`/permission-spaces/${id}`)
   },
 }

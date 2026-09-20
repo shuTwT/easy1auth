@@ -10,14 +10,10 @@ import com.easy1auth.framework.common.id.UuidV7;
 import com.easy1auth.framework.common.pagination.PageData;
 import com.easy1auth.poolidentity.constant.ErrorCodeConstants;
 import com.easy1auth.poolidentity.repository.UserAccessCatalogRepository;
-import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.sql.Types;
 import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.util.*;
 
 /**
@@ -26,7 +22,6 @@ import java.util.*;
  * <p>角色（{@link PoolRoleEntity}）按租户隔离，支持数据范围（dataScope）与
  * 权限集合配置，内置角色（type=system）不可修改或删除；权限（
  * {@link PoolPermissionEntity}）区分 menu / operation / data 三类，可组成树形结构。
- * 租户首次访问权限功能时，会按 {@code PRESETS} 自动初始化预置权限。
  * 本服务仅服务于 pool_user 的访问控制，与管理端（admin_user）角色体系相互独立。</p>
  */
 @Service
@@ -41,21 +36,8 @@ public class UserAccessCatalogService {
     private static final PoolUserEntityTable USER = PoolUserEntityTable.$;
     /** jimmer SQL 客户端 */
     private final UserAccessCatalogRepository repository;
-    /** JDBC 客户端（用于预置权限的批量初始化写入） */
-    private final JdbcClient db;
-    /** 每个租户首次使用权限功能时自动初始化的预置权限清单 */
-    private static final List<PermissionSeed> PRESETS = List.of(
-            new PermissionSeed("user:read", "查看用户", "operation", "user", "read"), new PermissionSeed("user:create", "创建用户", "operation", "user", "create"), new PermissionSeed("user:update", "编辑用户", "operation", "user", "update"), new PermissionSeed("user:delete", "删除用户", "operation", "user", "delete"),
-            new PermissionSeed("group:read", "查看用户组", "operation", "group", "read"), new PermissionSeed("group:create", "创建用户组", "operation", "group", "create"), new PermissionSeed("group:update", "编辑用户组", "operation", "group", "update"), new PermissionSeed("group:delete", "删除用户组", "operation", "group", "delete"),
-            new PermissionSeed("position:read", "查看岗位", "operation", "position", "read"), new PermissionSeed("position:create", "创建岗位", "operation", "position", "create"), new PermissionSeed("position:update", "编辑岗位", "operation", "position", "update"), new PermissionSeed("position:delete", "删除岗位", "operation", "position", "delete"),
-            new PermissionSeed("role:read", "查看角色", "operation", "role", "read"), new PermissionSeed("role:create", "创建角色", "operation", "role", "create"), new PermissionSeed("role:update", "编辑角色", "operation", "role", "update"), new PermissionSeed("role:delete", "删除角色", "operation", "role", "delete"), new PermissionSeed("role:assign", "分配角色", "operation", "role", "assign"),
-            new PermissionSeed("permission:read", "查看权限", "operation", "permission", "read"), new PermissionSeed("permission:create", "创建权限", "operation", "permission", "create"), new PermissionSeed("permission:update", "编辑权限", "operation", "permission", "update"), new PermissionSeed("permission:delete", "删除权限", "operation", "permission", "delete"),
-            new PermissionSeed("data:all", "全部数据", "data", "data", "all"), new PermissionSeed("data:department", "本部门数据", "data", "data", "department"), new PermissionSeed("data:department-sub", "本部门及下级数据", "data", "data", "department_and_sub"), new PermissionSeed("data:self", "仅本人数据", "data", "data", "self"),
-            new PermissionSeed("menu:user", "用户管理", "menu", "menu", "user"), new PermissionSeed("menu:group", "用户组管理", "menu", "menu", "group"), new PermissionSeed("menu:position", "岗位管理", "menu", "menu", "position"), new PermissionSeed("menu:role", "角色管理", "menu", "menu", "role"), new PermissionSeed("menu:permission", "权限管理", "menu", "menu", "permission"));
-
-    public UserAccessCatalogService(UserAccessCatalogRepository repository, JdbcClient db) {
+    public UserAccessCatalogService(UserAccessCatalogRepository repository) {
         this.repository = repository;
-        this.db = db;
     }
 
     /** 分页查询租户下的角色，可按名称/编码模糊搜索、按类型过滤，按创建时间倒序。 */
@@ -208,10 +190,9 @@ public class UserAccessCatalogService {
         return "self";
     }
 
-    /** 分页查询租户下的权限（首次访问时自动初始化预置权限），支持名称/编码/资源搜索及类型/资源过滤。 */
+    /** 分页查询租户下的权限，支持名称/编码/资源搜索及类型/资源过滤。 */
     @Transactional
     public PageData<PermissionView> permissions(UUID tenant, int page, int pageSize, String search, String type, String resource) {
-        ensurePresetPermissions(tenant);
         int p = Math.max(1, page), size = Math.min(200, Math.max(1, pageSize));
         var rows = repository.findPermissions(tenant, search, type, resource);
         return PageData.of(rows.stream().skip((long) (p - 1) * size).limit(size).map(this::permissionView).toList(), p, size, rows.size());
@@ -230,7 +211,7 @@ public class UserAccessCatalogService {
         validatePermissionParent(tenant, null, in.parentId());
         Instant now = Instant.now();
         var e = PoolPermissionEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTenantId(tenant).setCode(in.code()).setName(in.name())
-                .setDescription(in.description()).setType(in.type() == null ? "operation" : in.type()).setParentId(in.parentId()).setResource(in.resource()).setAction(in.action()).setCreatedAt(now).setUpdatedAt(now));
+                .setDescription(in.description()).setType("data").setParentId(in.parentId()).setSpaceId(in.spaceId()).setOperations(in.operations() == null ? List.of() : in.operations()).setResource(in.resource()).setAction(in.action()).setCreatedAt(now).setUpdatedAt(now));
         repository.savePermission(e);
         return permissionView(e);
     }
@@ -239,10 +220,10 @@ public class UserAccessCatalogService {
     @Transactional
     public PermissionView updatePermission(UUID tenant, UUID id, PermissionInput in) {
         var old = permissionEntity(tenant, id);
-        String name = in.name() == null ? old.name() : in.name(), type = in.type() == null ? old.type() : in.type(), resource = in.resource() == null ? old.resource() : in.resource(), action = in.action() == null ? old.action() : in.action();
+        String name = in.name() == null ? old.name() : in.name(), type = "data", resource = in.resource() == null ? old.resource() : in.resource(), action = in.action() == null ? old.action() : in.action();
         validatePermission(name, old.code(), type, resource, action);
         validatePermissionParent(tenant, id, in.parentId());
-        repository.updatePermission(tenant, id, name, type, resource, action, in.description(), in.parentId());
+        repository.updatePermission(tenant, id, name, type, resource, action, in.description(), in.parentId(), in.spaceId(), in.operations());
         return permission(tenant, id);
     }
 
@@ -256,10 +237,9 @@ public class UserAccessCatalogService {
         repository.deletePermission(tenant, id);
     }
 
-    /** 构建租户下的权限树（按父权限 parentId 组织层级，首次访问自动初始化预置权限）。 */
+    /** 构建租户下的权限树（按父权限 parentId 组织层级）。 */
     @Transactional
     public List<PermissionTree> permissionTree(UUID tenant) {
-        ensurePresetPermissions(tenant);
         var rows = repository.findAllPermissions(tenant);
         Map<UUID, MutablePermissionTree> nodes = new LinkedHashMap<>();
         rows.forEach(x -> nodes.put(x.id(), new MutablePermissionTree(permissionView(x))));
@@ -278,44 +258,47 @@ public class UserAccessCatalogService {
     /** 统计租户下的权限总数及 menu / operation / data 三类数量。 */
     @Transactional
     public PermissionStats permissionStats(UUID tenant) {
-        ensurePresetPermissions(tenant);
         var rows = repository.findPermissionTypes(tenant);
         return new PermissionStats(rows.size(), rows.stream().filter("menu"::equals).count(), rows.stream().filter("operation"::equals).count(), rows.stream().filter("data"::equals).count());
+    }
+
+    @Transactional(readOnly = true)
+    public List<PermissionSpaceView> permissionSpaces(UUID tenant, String search) {
+        return repository.findPermissionSpaces(tenant, search).stream().map(this::permissionSpaceView).toList();
+    }
+
+    @Transactional
+    public PermissionSpaceView createPermissionSpace(UUID tenant, PermissionSpaceInput in) {
+        if (in.name() == null || in.name().isBlank() || in.code() == null || in.code().isBlank()) {
+            throw new DomainException(ErrorCodeConstants.PERMISSION_INVALID);
+        }
+        Instant now = Instant.now();
+        var entity = PoolPermissionSpaceEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTenantId(tenant)
+                .setName(in.name()).setCode(in.code()).setDescription(in.description()).setCreatedAt(now).setUpdatedAt(now));
+        repository.savePermissionSpace(entity);
+        return permissionSpaceView(entity);
+    }
+
+    @Transactional
+    public PermissionSpaceView updatePermissionSpace(UUID tenant, UUID id, PermissionSpaceInput in) {
+        var old = repository.findPermissionSpace(tenant, id).orElseThrow(() -> new DomainException(ErrorCodeConstants.USER_PERMISSION_NOT_FOUND));
+        repository.updatePermissionSpace(tenant, id, in.name() == null ? old.name() : in.name(), in.description());
+        return permissionSpaceView(repository.findPermissionSpace(tenant, id).orElseThrow());
+    }
+
+    @Transactional
+    public void deletePermissionSpace(UUID tenant, UUID id) {
+        repository.findPermissionSpace(tenant, id).orElseThrow(() -> new DomainException(ErrorCodeConstants.USER_PERMISSION_NOT_FOUND));
+        repository.deletePermissionSpace(tenant, id);
+    }
+
+    private PermissionSpaceView permissionSpaceView(PoolPermissionSpaceEntity space) {
+        return new PermissionSpaceView(space.id(), space.tenantId(), space.name(), space.code(), space.description(), space.createdAt(), space.updatedAt());
     }
 
     private void insertAssignment(UUID tenant, UUID user, UUID role) {
         var id = UserRoleAssignmentIdDraft.$.produce(d -> d.setTenantId(tenant).setUserId(user).setRoleId(role));
         repository.saveAssignment(UserRoleAssignmentEntityDraft.$.produce(d -> d.setId(id)));
-    }
-
-    /** 确保租户的预置权限已初始化：缺失的预置项通过原生 SQL 批量插入（幂等）。 */
-    private void ensurePresetPermissions(UUID tenant) {
-        var presetCodes = PRESETS.stream().map(PermissionSeed::code).toList();
-        var existingCodes = new HashSet<>(repository.findPermissionCodes(tenant, presetCodes));
-        if (existingCodes.size() == PRESETS.size()) {
-            return;
-        }
-
-        // PostgreSQL's timestamptz parameter needs an explicit JDBC type. Passing
-        // an Instant without one makes the driver unable to infer the SQL type.
-        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-        PRESETS.stream().filter(p -> !existingCodes.contains(p.code())).forEach(p -> db.sql("""
-                        insert into pool_permission
-                            (id, tenant_id, code, name, type, resource, action, created_at, updated_at)
-                        values
-                            (:id, :tenantId, :code, :name, :type, :resource, :action, :createdAt, :updatedAt)
-                        on conflict (tenant_id, code) do nothing
-                        """)
-                .param("id", UuidV7.randomUuid())
-                .param("tenantId", tenant)
-                .param("code", p.code())
-                .param("name", p.name())
-                .param("type", p.type())
-                .param("resource", p.resource())
-                .param("action", p.action())
-                .param("createdAt", now, Types.TIMESTAMP_WITH_TIMEZONE)
-                .param("updatedAt", now, Types.TIMESTAMP_WITH_TIMEZONE)
-                .update());
     }
 
     private PoolRoleEntity roleEntity(UUID tenant, UUID id) {
@@ -339,7 +322,7 @@ public class UserAccessCatalogService {
     }
 
     private PermissionView permissionView(PoolPermissionEntity p) {
-        return new PermissionView(p.id(), p.tenantId(), p.code(), p.name(), p.description(), p.type(), p.resource(), p.action(), p.parentId(), p.createdAt(), p.updatedAt(), permissionParent(p.tenantId(), p.parentId()));
+        return new PermissionView(p.id(), p.tenantId(), p.code(), p.name(), p.description(), p.type(), p.resource(), p.action(), p.parentId(), p.spaceId(), p.operations(), p.createdAt(), p.updatedAt(), permissionParent(p.tenantId(), p.parentId()));
     }
 
     private ParentSummary roleParent(UUID tenant, UUID id) {
@@ -505,7 +488,7 @@ public class UserAccessCatalogService {
         }
 
         PermissionTree freeze() {
-            return new PermissionTree(permission.id(), permission.code(), permission.name(), permission.description(), permission.type(), permission.resource(), permission.action(), children.stream().map(MutablePermissionTree::freeze).toList());
+            return new PermissionTree(permission.id(), permission.code(), permission.name(), permission.description(), permission.type(), permission.resource(), permission.action(), permission.spaceId(), permission.operations(), permission.parent(), children.stream().map(MutablePermissionTree::freeze).toList());
         }
     }
 

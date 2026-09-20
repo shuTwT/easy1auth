@@ -84,8 +84,14 @@ public class SocialIdentityService {
   /** 分页查询租户下的身份源，支持按名称模糊搜索与状态过滤。 */
   @Transactional(readOnly = true)
   public PageData<SourceView> list(UUID tenant, int page, int size, String search, String status) {
+    return list(tenant, page, size, search, status, null, true);
+  }
+
+  /** 分页查询社会化或企业登录身份源；企业查询仅允许显式请求 feishu_web。 */
+  @Transactional(readOnly = true)
+  public PageData<SourceView> list(UUID tenant, int page, int size, String search, String status, String type, boolean excludeFeishuWeb) {
     int p = Math.max(1, page), s = Math.min(100, Math.max(1, size));
-    var result = repository.page(tenant, p, s, search, status);
+    var result = repository.page(tenant, p, s, search, status, type, excludeFeishuWeb);
     return PageData.of(
         result.items().stream().map(e -> view(e, null)).toList(), p, s, result.total());
   }
@@ -267,6 +273,12 @@ public class SocialIdentityService {
   @Transactional(readOnly = true)
   public PageData<SourceView> list(int page, int size, String search, String status) {
     return list(TenantContextHolder.requireTenantId(), page, size, search, status);
+  }
+
+  /** 按登录身份源类别分页查询当前租户的数据。 */
+  @Transactional(readOnly = true)
+  public PageData<SourceView> list(int page, int size, String search, String status, String type, boolean excludeFeishuWeb) {
+    return list(TenantContextHolder.requireTenantId(), page, size, search, status, type, excludeFeishuWeb);
   }
 
   /** 从租户上下文查询单个身份源。 */

@@ -2,6 +2,8 @@ package com.easy1auth.poolidentity.repository;
 
 import com.easy1auth.poolidentity.model.PoolPermissionEntity;
 import com.easy1auth.poolidentity.model.PoolPermissionEntityTable;
+import com.easy1auth.poolidentity.model.PoolPermissionSpaceEntity;
+import com.easy1auth.poolidentity.model.PoolPermissionSpaceEntityTable;
 import com.easy1auth.poolidentity.model.PoolRoleEntity;
 import com.easy1auth.poolidentity.model.PoolRoleEntityTable;
 import com.easy1auth.poolidentity.model.PoolUserEntity;
@@ -29,6 +31,7 @@ import java.util.UUID;
 public interface UserAccessCatalogRepository extends JRepository<PoolRoleEntity, UUID> {
     PoolRoleEntityTable ROLE = PoolRoleEntityTable.$;
     PoolPermissionEntityTable PERMISSION = PoolPermissionEntityTable.$;
+    PoolPermissionSpaceEntityTable SPACE = PoolPermissionSpaceEntityTable.$;
     UserRoleAssignmentEntityTable ASSIGNMENT = UserRoleAssignmentEntityTable.$;
     PoolUserEntityTable USER = PoolUserEntityTable.$;
 
@@ -111,6 +114,30 @@ public interface UserAccessCatalogRepository extends JRepository<PoolRoleEntity,
                 .orderBy(PERMISSION.resource(), PERMISSION.code()).select(PERMISSION).execute();
     }
 
+    default List<PoolPermissionSpaceEntity> findPermissionSpaces(UUID tenant, String search) {
+        return sql().createQuery(SPACE).where(SPACE.tenantId().eq(tenant))
+                .whereIf(search != null && !search.isBlank(), () ->
+                        Predicate.or(SPACE.name().ilike(search, LikeMode.ANYWHERE), SPACE.code().ilike(search, LikeMode.ANYWHERE)))
+                .orderBy(SPACE.name()).select(SPACE).execute();
+    }
+
+    default Optional<PoolPermissionSpaceEntity> findPermissionSpace(UUID tenant, UUID id) {
+        return sql().createQuery(SPACE).where(SPACE.tenantId().eq(tenant), SPACE.id().eq(id)).select(SPACE).fetchOptional();
+    }
+
+    default void savePermissionSpace(PoolPermissionSpaceEntity space) {
+        sql().saveCommand(space).setMode(SaveMode.INSERT_ONLY).execute();
+    }
+
+    default void updatePermissionSpace(UUID tenant, UUID id, String name, String description) {
+        sql().createUpdate(SPACE).set(SPACE.name(), name).set(SPACE.description(), description)
+                .set(SPACE.updatedAt(), Instant.now()).where(SPACE.tenantId().eq(tenant), SPACE.id().eq(id)).execute();
+    }
+
+    default void deletePermissionSpace(UUID tenant, UUID id) {
+        sql().createDelete(SPACE).where(SPACE.tenantId().eq(tenant), SPACE.id().eq(id)).execute();
+    }
+
     default List<PoolPermissionEntity> findAllPermissions(UUID tenant) {
         return sql().createQuery(PERMISSION).where(PERMISSION.tenantId().eq(tenant)).orderBy(PERMISSION.type(), PERMISSION.resource(), PERMISSION.code()).select(PERMISSION).execute();
     }
@@ -131,10 +158,12 @@ public interface UserAccessCatalogRepository extends JRepository<PoolRoleEntity,
         sql().saveCommand(permission).setMode(SaveMode.INSERT_ONLY).execute();
     }
 
-    default void updatePermission(UUID tenant, UUID id, String name, String type, String resource, String action, String description, UUID parentId) {
+    default void updatePermission(UUID tenant, UUID id, String name, String type, String resource, String action, String description, UUID parentId, UUID spaceId, java.util.List<String> operations) {
         var update = sql().createUpdate(PERMISSION).set(PERMISSION.name(), name).set(PERMISSION.type(), type).set(PERMISSION.resource(), resource).set(PERMISSION.action(), action).set(PERMISSION.updatedAt(), Instant.now()).where(PERMISSION.id().eq(id), PERMISSION.tenantId().eq(tenant));
         if (description != null) update.set(PERMISSION.description(), description);
         if (parentId != null) update.set(PERMISSION.parentId(), parentId);
+        if (spaceId != null) update.set(PERMISSION.spaceId(), spaceId);
+        if (operations != null) update.set(PERMISSION.operations(), operations);
         update.execute();
     }
 
@@ -142,7 +171,4 @@ public interface UserAccessCatalogRepository extends JRepository<PoolRoleEntity,
         sql().createDelete(PERMISSION).where(PERMISSION.id().eq(id), PERMISSION.tenantId().eq(tenant)).execute();
     }
 
-    default List<String> findPermissionCodes(UUID tenant, Collection<String> codes) {
-        return codes.isEmpty() ? List.of() : sql().createQuery(PERMISSION).where(PERMISSION.tenantId().eq(tenant), PERMISSION.code().in(codes)).select(PERMISSION.code()).execute();
-    }
 }

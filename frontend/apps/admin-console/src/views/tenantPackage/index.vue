@@ -13,7 +13,6 @@ import {
   ShieldCheck,
   Trash2,
   Users,
-  X,
 } from '@lucide/vue'
 import { tenantPackageApi } from '@/api/tenantPackage'
 import type {
@@ -113,18 +112,6 @@ const permissionTree = computed<PermissionTreeNode[]>(() => {
   if (rootMenus.length > 0) groups.push({ id: 'group:menus', label: '菜单权限', type: 'group', children: rootMenus, ancestorCodes: [] })
   if (otherActions.length > 0) groups.push({ id: 'group:actions', label: '其他操作权限', type: 'group', children: otherActions, ancestorCodes: [] })
   return groups
-})
-
-const filteredPermissionTree = computed(() => {
-  const keyword = search.value.trim().toLowerCase()
-  if (!keyword) return permissionTree.value
-  const filter = (node: PermissionTreeNode): PermissionTreeNode | null => {
-    const children = node.children.map(filter).filter((item): item is PermissionTreeNode => item !== null)
-    const source = node.code ? tenantPermissions.value.find((permission) => permission.code === node.code) : undefined
-    const matched = [node.label, node.code || '', source?.resource || ''].some((value) => value.toLowerCase().includes(keyword))
-    return matched || children.length > 0 ? { ...node, children } : null
-  }
-  return permissionTree.value.map(filter).filter((item): item is PermissionTreeNode => item !== null)
 })
 
 const activeCount = computed(() => packages.value.filter((item) => item.status === 'active').length)
@@ -231,7 +218,6 @@ function openPermissionDialog(item: TenantPackage) {
   permissionTarget.value = item
   permissionReturnsToPackageForm.value = false
   selectedPermissions.value = [...item.permissionCodes]
-  search.value = ''
   permissionDialogVisible.value = true
 }
 
@@ -446,7 +432,7 @@ onMounted(loadData)
               </FormItem>
             </div>
             <FormItem label="套餐权限">
-              <Button html-type="button" class="w-full justify-between" @click="permissionReturnsToPackageForm = true; permissionTarget = null; selectedPermissions = [...packageForm.permissionCodes]; search = ''; packageDialogVisible = false; permissionDialogVisible = true">
+              <Button html-type="button" class="w-full justify-between" @click="permissionReturnsToPackageForm = true; permissionTarget = null; selectedPermissions = [...packageForm.permissionCodes]; packageDialogVisible = false; permissionDialogVisible = true">
                 <span>{{ packageForm.permissionCodes.length }} 项权限已选择</span><ShieldCheck class="size-4" />
               </Button>
             </FormItem>
@@ -459,18 +445,17 @@ onMounted(loadData)
       </div>
     </Modal>
 
-    <Modal v-model:open="permissionDialogVisible" :footer="null">
+    <Modal v-model:open="permissionDialogVisible">
       <div class="max-w-3xl">
         <div>
           <h3>配置套餐权限{{ permissionTarget ? ` · ${permissionTarget.name}` : '' }}</h3>
         <p>按菜单层级选择权限；选择操作时会自动保留其父菜单，取消菜单会同时取消子菜单和关联操作。</p>
         </div>
-        <div class="flex items-center gap-2"><Search class="text-muted-foreground" /><Input v-model:value="search" placeholder="搜索权限名称、编码或资源" /><Button type="text" size="small" shape="circle" aria-label="清空搜索" @click="search = ''"><X /></Button></div>
-        <div class="h-[min(60vh,520px)] rounded-md border p-4">
-          <Empty v-if="filteredPermissionTree.length === 0" class="py-12" description="暂无匹配权限" />
+        <div class="h-[min(60vh,520px)] overflow-y-auto rounded-md border p-4">
+          <Empty v-if="permissionTree.length === 0" class="py-12" description="暂无可用权限" />
           <Tree
             v-else
-            :tree-data="filteredPermissionTree"
+            :tree-data="permissionTree"
             :field-names="{ key: 'id', title: 'label', children: 'children' }"
             :default-expand-all="true"
             :selectable="false"
@@ -485,12 +470,16 @@ onMounted(loadData)
             </template>
           </Tree>
         </div>
-        <div>
-          <span class="mr-auto text-sm text-muted-foreground">已选择 {{ selectedPermissions.length }} 项</span>
-          <Button  @click="closePermissionDialog">取消</Button>
-          <Button :disabled="permissionSubmitting" @click="submitPermissions">{{ permissionSubmitting ? '保存中...' : '保存权限' }}</Button>
-        </div>
       </div>
+      <template #footer>
+        <div class="flex items-center">
+          <span class="mr-auto text-sm text-muted-foreground">已选择 {{ selectedPermissions.length }} 项</span>
+          <div class="flex gap-2">
+            <Button @click="closePermissionDialog">取消</Button>
+            <Button type="primary" :disabled="permissionSubmitting" @click="submitPermissions">{{ permissionSubmitting ? '保存中...' : '保存权限' }}</Button>
+          </div>
+        </div>
+      </template>
     </Modal>
 
     <Modal v-model:open="deleteDialogVisible" :footer="null">

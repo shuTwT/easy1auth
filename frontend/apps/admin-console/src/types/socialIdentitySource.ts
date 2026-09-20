@@ -1,5 +1,6 @@
-export const SOCIAL_SOURCE_TYPES = ['wechat_qr', 'wechat_mp', 'github', 'gitee', 'feishu_web'] as const
-export type SocialSourceType = (typeof SOCIAL_SOURCE_TYPES)[number]
+export const SOCIAL_SOURCE_TYPES = ['wechat_qr', 'wechat_mp', 'github', 'gitee'] as const
+export const ENTERPRISE_SOURCE_TYPES = ['feishu_web'] as const
+export type SocialSourceType = (typeof SOCIAL_SOURCE_TYPES)[number] | (typeof ENTERPRISE_SOURCE_TYPES)[number]
 
 export interface SocialIdentitySource {
   id: string; tenantId: string; name: string; type: SocialSourceType; mode: string | null
@@ -26,4 +27,4 @@ export const SOURCE_CONFIGS = {
 } as const
 
 export const isSocialSourceType = (value: unknown): value is SocialSourceType =>
-  SOCIAL_SOURCE_TYPES.includes(value as SocialSourceType)
+  [...SOCIAL_SOURCE_TYPES, ...ENTERPRISE_SOURCE_TYPES].includes(value as SocialSourceType)

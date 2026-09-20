@@ -6,6 +6,7 @@ import com.easy1auth.admin.annotation.TenantManagementPermission;
 import com.easy1auth.system.constant.ManagementPermissionCode;
 import com.easy1auth.framework.web.response.ApiResponse;
 import com.easy1auth.poolidentity.dto.PermissionInput;
+import com.easy1auth.poolidentity.dto.PermissionSpaceInput;
 import com.easy1auth.poolidentity.dto.RoleInput;
 import com.easy1auth.poolidentity.service.UserAccessCatalogService;
 import com.easy1auth.framework.tenant.context.TenantContextHolder;
@@ -134,6 +135,31 @@ public class UserAccessCatalogController {
     ApiResponse<?> permissions(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "50") int pageSize, @RequestParam(required = false) String search, @RequestParam(required = false) String type, @RequestParam(required = false) String resource) {
         var p = service.permissions(page, pageSize, search, type, resource);
         return ApiResponse.ok(p);
+    }
+
+    @GetMapping("/api/permission-spaces")
+    @TenantManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_LIST)
+    ApiResponse<?> permissionSpaces(@RequestParam(required = false) String search) {
+        return ApiResponse.ok(service.permissionSpaces(TenantContextHolder.requireTenantId(), search));
+    }
+
+    @PostMapping("/api/permission-spaces")
+    @TenantManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_CREATE)
+    ApiResponse<?> createPermissionSpace(@RequestBody PermissionSpaceInput in) {
+        return ApiResponse.ok(service.createPermissionSpace(TenantContextHolder.requireTenantId(), in), "权限空间创建成功");
+    }
+
+    @PutMapping("/api/permission-spaces/{id}")
+    @TenantManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_UPDATE)
+    ApiResponse<?> updatePermissionSpace(@PathVariable UUID id, @RequestBody PermissionSpaceInput in) {
+        return ApiResponse.ok(service.updatePermissionSpace(TenantContextHolder.requireTenantId(), id, in), "权限空间更新成功");
+    }
+
+    @DeleteMapping("/api/permission-spaces/{id}")
+    @TenantManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_DELETE)
+    ApiResponse<Void> deletePermissionSpace(@PathVariable UUID id) {
+        service.deletePermissionSpace(TenantContextHolder.requireTenantId(), id);
+        return ApiResponse.ok(null, "权限空间删除成功");
     }
 
     /** 查询数据权限的统计信息。 */

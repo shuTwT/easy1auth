@@ -109,10 +109,17 @@ public interface SocialIdentityRepository extends JRepository<SocialIdentitySour
 
   default PageData<SocialIdentitySourceEntity> page(
       UUID tenant, int page, int size, String search, String status) {
+    return page(tenant, page, size, search, status, null, true);
+  }
+
+  default PageData<SocialIdentitySourceEntity> page(
+      UUID tenant, int page, int size, String search, String status, String type, boolean excludeFeishuWeb) {
     var query =
         sql()
             .createQuery(SOURCE)
             .where(SOURCE.tenantId().eq(tenant))
+            .whereIf(type != null && !type.isBlank(), () -> SOURCE.type().eq(type))
+            .whereIf(excludeFeishuWeb, () -> SOURCE.type().ne("feishu_web"))
             .whereIf(
                 search != null && !search.isBlank(),
                 () -> SOURCE.name().ilike(search, LikeMode.ANYWHERE))

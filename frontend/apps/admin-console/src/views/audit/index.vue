@@ -26,6 +26,11 @@ const queryForm = reactive<AuditLogQueryDto>({
 })
 
 const dateRange = ref<[string, string] | null>(null)
+const auditTypeOptions = [
+  { value: 'auth', label: '认证' }, { value: 'user', label: '用户' }, { value: 'application', label: '应用' },
+  { value: 'tenant', label: '租户' }, { value: 'role', label: '角色' }, { value: 'group', label: '用户组' }, { value: 'system', label: '系统' },
+]
+const auditStatusOptions = [{ value: 'success', label: '成功' }, { value: 'failed', label: '失败' }]
 
 const loadLogs = async () => {
   loading.value = true
@@ -279,18 +284,7 @@ onMounted(() => {
           </div>
           <div class="grid gap-2">
             <label>日志类型</label>
-            <Select v-model:value="queryForm.type" class="w-[150px]" allow-clear>
-                <SelectOptGroup>
-                  <SelectOption value="auth">认证</SelectOption>
-                  <SelectOption value="user">用户</SelectOption>
-                  <SelectOption value="application">应用</SelectOption>
-                  <SelectOption value="tenant">租户</SelectOption>
-                  <SelectOption value="role">角色</SelectOption>
-                  <SelectOption value="group">用户组</SelectOption>
-                  <SelectOption value="system">系统</SelectOption>
-                </SelectOptGroup>
-
-            </Select>
+            <Select v-model:value="queryForm.type" class="w-[150px]" allow-clear :options="auditTypeOptions" />
           </div>
           <div class="grid gap-2">
             <label>操作</label>
@@ -298,13 +292,7 @@ onMounted(() => {
           </div>
           <div class="grid gap-2">
             <label>状态</label>
-            <Select v-model:value="queryForm.status" class="w-[120px]" allow-clear>
-                <SelectOptGroup>
-                  <SelectOption value="success">成功</SelectOption>
-                  <SelectOption value="failed">失败</SelectOption>
-                </SelectOptGroup>
-
-            </Select>
+            <Select v-model:value="queryForm.status" class="w-[120px]" allow-clear :options="auditStatusOptions" />
           </div>
           <div class="grid gap-2">
             <label>IP地址</label>

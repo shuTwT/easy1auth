@@ -72,6 +72,11 @@ const adminQuery = reactive<Required<Pick<AdminUserQueryDto, 'page' | 'pageSize'
 
 // roles available for the search filter + assignment dialog
 const adminRolesForFilter = ref<AdminRole[]>([])
+const adminStatusOptions = [
+  { value: 'active', label: '正常' },
+  { value: 'disabled', label: '禁用' },
+]
+const adminRoleOptions = computed(() => adminRolesForFilter.value.map((role) => ({ value: role.id, label: role.name })))
 
 // edit admin dialog
 const editDialogVisible = ref(false)
@@ -723,20 +728,11 @@ onMounted(() => {
               </div>
               <div class="grid gap-2">
                 <label>状态</label>
-                <Select v-model:value="adminQuery.status" class="w-32" allow-clear>
-                    <SelectOption value="active">正常</SelectOption>
-                    <SelectOption value="disabled">禁用</SelectOption>
-
-                </Select>
+                <Select v-model:value="adminQuery.status" class="w-32" allow-clear :options="adminStatusOptions" />
               </div>
               <div class="grid gap-2">
                 <label>管理员角色</label>
-                <Select v-model:value="adminQuery.roleId" class="w-44" allow-clear>
-                    <SelectOption v-for="role in adminRolesForFilter" :key="role.id" :value="role.id">
-                      {{ role.name }}
-                    </SelectOption>
-
-                </Select>
+                <Select v-model:value="adminQuery.roleId" class="w-44" allow-clear :options="adminRoleOptions" />
               </div>
               <div class="flex gap-2">
                 <Button @click="handleAdminSearch">

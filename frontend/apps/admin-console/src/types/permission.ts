@@ -8,9 +8,21 @@ export interface Permission {
   resource: string
   action: string
   parentId: string | null
+  spaceId: string | null
+  operations: string[]
   createdAt: string
   updatedAt: string
   parent?: { id: string; name: string; code: string } | null
+}
+
+export interface PermissionSpace {
+  id: string
+  tenantId: string
+  name: string
+  code: string
+  description: string | null
+  createdAt: string
+  updatedAt: string
 }
 
 export interface PermissionTree {
@@ -22,6 +34,9 @@ export interface PermissionTree {
   resource: string
   action: string
   children: PermissionTree[]
+  spaceId?: string | null
+  operations?: string[]
+  parent?: { id: string; name: string; code: string } | null
 }
 
 export interface PermissionStats {
@@ -39,6 +54,8 @@ export interface CreatePermissionDto {
   parentId?: string
   resource: string
   action: string
+  spaceId?: string
+  operations?: string[]
 }
 
 export interface UpdatePermissionDto {
@@ -48,6 +65,14 @@ export interface UpdatePermissionDto {
   parentId?: string
   resource?: string
   action?: string
+  spaceId?: string
+  operations?: string[]
+}
+
+export interface PermissionSpaceInput {
+  name: string
+  code: string
+  description?: string
 }
 
 export interface PermissionQueryDto {

@@ -30,11 +30,12 @@ public class SocialIdentitySourceController {
         this.service = service;
     }
 
-    /** 分页查询社会化身份源列表，支持按名称搜索与状态过滤。 */
+    /** 分页查询社会化身份源列表；飞书网页授权归属于企业身份源，不在此列表展示。 */
     @TenantManagementPermission(value = ManagementPermissionCode.SOCIAL_IDENTITY_SOURCE_LIST)
     @GetMapping
-    ApiResponse<?> list(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, @RequestParam(required = false) String search, @RequestParam(required = false) String status) {
-        var p = service.list(page, pageSize, search, status);
+    ApiResponse<?> list(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, @RequestParam(required = false) String search, @RequestParam(required = false) String status, @RequestParam(required = false) String type) {
+        boolean enterpriseSource = "feishu_web".equals(type);
+        var p = service.list(page, pageSize, search, status, enterpriseSource ? type : null, !enterpriseSource);
         return ApiResponse.ok(p);
     }
 

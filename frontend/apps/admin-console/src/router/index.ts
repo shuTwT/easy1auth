@@ -85,8 +85,14 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'enterprise-identity-source',
         name: 'EnterpriseIdentitySource',
-        component: () => import('@/views/enterpriseIdentitySource/index.vue'),
+        component: () => import('@/views/socialIdentitySource/index.vue'),
         meta: { title: '企业身份源', requiresAuth: true }
+      },
+      {
+        path: 'sync-identity-source',
+        name: 'SyncIdentitySource',
+        component: () => import('@/views/enterpriseIdentitySource/index.vue'),
+        meta: { title: '同步身份源', requiresAuth: true }
       },
       {
         path: 'brand-login-style',

@@ -23,6 +23,7 @@ public enum ManagementPermissionCode {
     DIRECTORY_IDENTITY_SOURCE_MANAGEMENT("directory:identity-source-management", ManagementPermissionScope.TENANT, ManagementPermissionType.DIRECTORY),
     MENU_SOCIAL_IDENTITY_SOURCE("menu:social-identity-source", ManagementPermissionScope.TENANT, ManagementPermissionType.MENU),
     MENU_ENTERPRISE_IDENTITY_SOURCE("menu:enterprise-identity-source", ManagementPermissionScope.TENANT, ManagementPermissionType.MENU),
+    MENU_SYNC_IDENTITY_SOURCE("menu:sync-identity-source", ManagementPermissionScope.TENANT, ManagementPermissionType.MENU),
     DIRECTORY_PLATFORM_MANAGEMENT("directory:platform-management", ManagementPermissionScope.PLATFORM, ManagementPermissionType.DIRECTORY),
     MENU_TENANT("menu:tenant", ManagementPermissionScope.PLATFORM, ManagementPermissionType.MENU),
     MENU_TENANT_PACKAGE("menu:tenant-package", ManagementPermissionScope.PLATFORM, ManagementPermissionType.MENU),

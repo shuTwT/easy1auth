@@ -46,6 +46,12 @@ const groupForm = reactive<CreateGroupDto & UpdateGroupDto>({
 const groupFormRules = {
   name: [{ required: true, message: '请输入用户组名称' }],
 }
+const groupTypeOptions = [
+  { value: 'team', label: '团队' },
+  { value: 'department', label: '部门' },
+  { value: 'project', label: '项目' },
+  { value: 'organization', label: '组织' },
+]
 
 const memberForm = reactive({
   selectedUsers: [] as string[],
@@ -74,6 +80,8 @@ const parentOptions = computed(() => {
   addOptions(treeData.value)
   return options
 })
+const memberUserOptions = computed(() => memberForm.availableUsers.filter((user) => !memberForm.currentMembers.some((member) => member.id === user.id)).map((user) => ({ value: user.id, label: `${user.name} (${user.username})` })))
+const adminUserOptions = computed(() => memberForm.availableUsers.filter((user) => !memberForm.currentAdmins.some((admin) => admin.id === user.id)).map((user) => ({ value: user.id, label: `${user.name} (${user.username})` })))
 
 const loadGroups = async () => {
   loading.value = true
@@ -392,13 +400,7 @@ onMounted(() => {
             </div>
             <div class="grid gap-1.5">
               <label class="text-sm font-medium">类型</label>
-              <Select v-model:value="queryForm.type" class="w-40" allow-clear>
-                  <SelectOption value="team">团队</SelectOption>
-                  <SelectOption value="department">部门</SelectOption>
-                  <SelectOption value="project">项目</SelectOption>
-                  <SelectOption value="organization">组织</SelectOption>
-
-              </Select>
+              <Select v-model:value="queryForm.type" class="w-40" allow-clear :options="groupTypeOptions" />
             </div>
             <div class="flex gap-2">
               <Button @click="handleSearch">
@@ -513,24 +515,10 @@ onMounted(() => {
               <InputTextArea v-model:value="groupForm.description" :rows="3" placeholder="请输入描述" />
             </FormItem>
             <FormItem label="类型" name="type">
-              <Select v-model:value="groupForm.type">
-                <SelectOption value="team">团队</SelectOption>
-                <SelectOption value="department">部门</SelectOption>
-                <SelectOption value="project">项目</SelectOption>
-                <SelectOption value="organization">组织</SelectOption>
-              </Select>
+              <Select v-model:value="groupForm.type" :options="groupTypeOptions" />
             </FormItem>
             <FormItem label="父级用户组" name="parentId">
-              <Select v-model:value="groupForm.parentId">
-                <SelectOption
-                  v-for="option in parentOptions"
-                  :key="option.value"
-                  :value="option.value"
-                  :disabled="option.disabled"
-                >
-                  {{ option.label }}
-                </SelectOption>
-              </Select>
+              <Select v-model:value="groupForm.parentId" :options="parentOptions" />
             </FormItem>
           </div>
           <div class="flex justify-end gap-2">
@@ -563,18 +551,7 @@ onMounted(() => {
                 <span class="font-medium">添加成员</span>
               </div>
               <div class="pt-4">
-                <Select v-model:value="memberForm.selectedUsers" multiple>
-                    <SelectOption
-                      v-for="user in memberForm.availableUsers.filter(
-                        u => !memberForm.currentMembers.find(m => m.id === u.id)
-                      )"
-                      :key="user.id"
-                      :value="user.id"
-                    >
-                      {{ user.name }} ({{ user.username }})
-                    </SelectOption>
-
-                </Select>
+                <Select v-model:value="memberForm.selectedUsers" multiple :options="memberUserOptions" />
                 <Button class="w-full" @click="handleAddMembers">
                   添加选中成员
                 </Button>
@@ -607,18 +584,7 @@ onMounted(() => {
                 <span class="font-medium">添加管理员</span>
               </div>
               <div class="pt-4">
-                <Select v-model:value="memberForm.selectedUsers" multiple>
-                    <SelectOption
-                      v-for="user in memberForm.availableUsers.filter(
-                        u => !memberForm.currentAdmins.find(a => a.id === u.id)
-                      )"
-                      :key="user.id"
-                      :value="user.id"
-                    >
-                      {{ user.name }} ({{ user.username }})
-                    </SelectOption>
-
-                </Select>
+                <Select v-model:value="memberForm.selectedUsers" multiple :options="adminUserOptions" />
                 <Button class="w-full" @click="handleAddAdmins">
                   添加选中管理员
                 </Button>

@@ -33,6 +33,7 @@ const stats = ref<RoleStats>({
 })
 const searchQuery = ref('')
 const filterType = ref('')
+const roleTypeOptions = [{ value: 'system', label: '内置角色' }, { value: 'custom', label: '自定义角色' }]
 const viewMode = ref<'list' | 'tree'>('list')
 
 const dialogVisible = ref(false)
@@ -422,11 +423,7 @@ onMounted(() => {
                 @keyup.enter="loadRoles"
               />
             </div>
-            <Select v-model:value="filterType" class="w-36" allow-clear @update:value="loadRoles">
-                <SelectOption value="system">内置角色</SelectOption>
-                <SelectOption value="custom">自定义角色</SelectOption>
-
-            </Select>
+            <Select v-model:value="filterType" class="w-36" allow-clear :options="roleTypeOptions" @update:value="loadRoles" />
             <Button @click="handleSearch">
               <Search class="size-4 mr-2" />
               搜索
