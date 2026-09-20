@@ -77,8 +77,27 @@ public class SecurityConfiguration {
     @Bean
     SecurityFilterChain security(HttpSecurity http, TenantContextFilter tenantContextFilter, TenantSecurityFilter tenantSecurityFilter,
                                  AuditMutationFilter auditMutationFilter, ApiErrorWriter errors) throws Exception {
-        return http.csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(auth -> auth.requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info", "/livez", "/readyz", "/api/auth/login", "/api/auth/mfa/verify", "/api/auth/register", "/api/auth/send-code", "/api/auth/refresh", "/api/login-style/public", "/api/enterprise-identity-sources/*/feishu/events").permitAll().anyRequest().authenticated())
+        return http
+                .csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(
+                                "/actuator/health",
+                                "/actuator/health/**",
+                                "/actuator/info",
+                                "/livez",
+                                "/readyz",
+                                "/api/auth/login",
+                                "/api/auth/mfa/verify",
+                                "/api/auth/register",
+                                "/api/auth/send-code",
+                                "/api/auth/refresh",
+                                "/api/login-style/public",
+                                "/api/enterprise-identity-sources/*/feishu/events",
+                                "/api/system/initialization",
+                                "/api/system/initialization/status")
+                        .permitAll()
+                        .anyRequest()
+                        .authenticated())
                 .exceptionHandling(exceptions -> exceptions.accessDeniedHandler((request, response, exception) -> errors.writeTransport(response, 403, ErrorCodeConstants.ACCESS_DENIED)))
                 .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> {
                 }).authenticationEntryPoint((request, response, exception) -> errors.writeTransport(response, 401, ErrorCodeConstants.AUTHENTICATION_REQUIRED)))

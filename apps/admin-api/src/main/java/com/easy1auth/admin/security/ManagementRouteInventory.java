@@ -38,7 +38,11 @@ public final class ManagementRouteInventory implements SmartInitializingSingleto
     /** 管理控制器所在包，仅扫描该包下的路由 */
     private static final String CONTROLLER_PACKAGE = "com.easy1auth.admin.web";
     /** 显式声明的公开路由白名单（方法 + 路径） */
-    private static final Set<String> PUBLIC_ROUTES = Set.of("GET /api/login-style/public", "POST /api/enterprise-identity-sources/{id}/feishu/events");
+    private static final Set<String> PUBLIC_ROUTES = Set.of(
+            "GET /api/login-style/public",
+            "POST /api/enterprise-identity-sources/{id}/feishu/events",
+            "GET /api/system/initialization/status",
+            "POST /api/system/initialization");
 
     /** Spring MVC 的请求映射注册表，用于发现全部处理器方法 */
     private final RequestMappingHandlerMapping mappings;

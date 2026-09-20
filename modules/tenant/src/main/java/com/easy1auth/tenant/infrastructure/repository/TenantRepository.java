@@ -107,6 +107,23 @@ public class TenantRepository {
         return tenant;
     }
 
+    /** 创建系统租户（不绑定普通租户套餐）。 */
+    public TenantEntity createSystemTenant(String name) {
+        Instant now = Instant.now();
+        TenantEntity tenant = TenantEntityDraft.$.produce(draft -> draft
+                .setId(UuidV7.randomUuid())
+                .setName(name)
+                .setStatus("active")
+                .setSystem(true)
+                .setPackageInfo(null)
+                .setCreatedAt(now)
+                .setUpdatedAt(now));
+        sql.saveCommand(tenant)
+                .setMode(SaveMode.INSERT_ONLY)
+                .execute();
+        return tenant;
+    }
+
     /** 更新普通租户的名称与绑定套餐。 */
     public void updateOrdinaryTenant(UUID tenantId, String name, long packageId) {
         var tenant = TenantEntityDraft.$.produce(draft -> draft.setId(tenantId).setName(name).setPackageInfo(TenantPackageEntityDraft.$.produce(tenantPackage -> tenantPackage.setId(packageId))).setUpdatedAt(Instant.now()));

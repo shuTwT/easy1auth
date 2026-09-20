@@ -5,8 +5,12 @@ import com.easy1auth.admin.annotation.TenantManagementPermission;
 import com.easy1auth.system.constant.ManagementPermissionCode;
 import com.easy1auth.system.service.AdminAccessService;
 import com.easy1auth.framework.web.response.ApiResponse;
-import com.easy1auth.tenant.util.TenantContext;
-import com.easy1auth.framework.web.util.WebFrameworkUtils;
+import com.easy1auth.framework.common.error.DomainException;
+import com.easy1auth.framework.tenant.context.TenantContextHolder;
+import com.easy1auth.tenant.dto.TenantAccess;
+import com.easy1auth.tenant.service.TenantService;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -24,9 +28,12 @@ import java.util.*;
 public class AdminRoleController {
     /** 管理访问服务（管理员角色与成员） */
     private final AdminAccessService access;
+    /** 租户服务（解析当前账号在租户内可授予的权限） */
+    private final TenantService tenants;
 
-    AdminRoleController(AdminAccessService access) {
+    AdminRoleController(AdminAccessService access, TenantService tenants) {
         this.access = access;
+        this.tenants = tenants;
     }
 
     /** 查询管理员角色的统计信息。 */
@@ -61,15 +68,29 @@ public class AdminRoleController {
     /** 创建管理员角色并绑定权限集合。 */
     @TenantManagementPermission(value = ManagementPermissionCode.ADMIN_ROLE_CREATE)
     @PostMapping
-    public ApiResponse<?> create(@RequestAttribute(WebFrameworkUtils.TENANT_CONTEXT_ATTRIBUTE) TenantContext context, @RequestBody RoleInput in) {
-        return ApiResponse.ok(access.create(context, in.name(), in.description(), in.permissions()), "管理员角色创建成功");
+    public ApiResponse<?> create(@AuthenticationPrincipal Jwt principal, @RequestBody RoleInput in) {
+        TenantAccess tenantAccess = currentAccess(principal);
+        return ApiResponse.ok(access.create(
+                tenantAccess.tenantId(),
+                tenantAccess.permissions(),
+                in.name(),
+                in.description(),
+                in.permissions()), "管理员角色创建成功");
     }
 
     /** 更新指定管理员角色的名称、描述与权限集合。 */
     @TenantManagementPermission(value = ManagementPermissionCode.ADMIN_ROLE_UPDATE)
     @PutMapping("/{id}")
-    public ApiResponse<?> update(@RequestAttribute(WebFrameworkUtils.TENANT_CONTEXT_ATTRIBUTE) TenantContext context, @PathVariable UUID id, @RequestBody RoleInput in) {
-        return ApiResponse.ok(access.update(context, id, in.name(), in.description(), in.permissions()), "管理员角色更新成功");
+    public ApiResponse<?> update(@AuthenticationPrincipal Jwt principal, @PathVariable UUID id,
+                                 @RequestBody RoleInput in) {
+        TenantAccess tenantAccess = currentAccess(principal);
+        return ApiResponse.ok(access.update(
+                tenantAccess.tenantId(),
+                tenantAccess.permissions(),
+                id,
+                in.name(),
+                in.description(),
+                in.permissions()), "管理员角色更新成功");
     }
 
     /** 删除指定管理员角色。 */
@@ -78,6 +99,16 @@ public class AdminRoleController {
     public ApiResponse<Void> delete(@PathVariable UUID id) {
         access.delete(id);
         return ApiResponse.ok(null, "管理员角色删除成功");
+    }
+
+    /** 解析当前登录账号在 Holder 指定租户下的有效访问。 */
+    private TenantAccess currentAccess(Jwt principal) {
+        UUID accountId = UUID.fromString(principal.getSubject());
+        UUID tenantId = TenantContextHolder.getTenantId();
+        if (tenantId == null) {
+            throw new DomainException(com.easy1auth.tenant.constant.ErrorCodeConstants.TENANT_CONTEXT_REQUIRED);
+        }
+        return tenants.authorize(accountId, tenantId);
     }
 
     /**

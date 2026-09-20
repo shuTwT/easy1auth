@@ -128,6 +128,10 @@ public class MigrationApplication {
                             "values (:id, :accountId, :tenantId, 'super_admin', 'active', :now, :now)")
                     .param("id", UuidV7.randomUuid()).param("accountId", accountId).param("tenantId", tenantId)
                     .param("now", now, Types.TIMESTAMP_WITH_TIMEZONE).update();
+            db.sql("update sys_config set config_value = 'true', updated_at = :now " +
+                            "where config_key = 'system.initialized'")
+                    .param("now", now, Types.TIMESTAMP_WITH_TIMEZONE)
+                    .update();
         });
         LOG.info("Initial administrator created; accountId={}", accountId);
     }

@@ -13,7 +13,6 @@ import com.easy1auth.framework.common.error.DomainException;
 import com.easy1auth.framework.common.id.UuidV7;
 import com.easy1auth.framework.common.pagination.PageData;
 import com.easy1auth.tenant.model.*;
-import com.easy1auth.tenant.util.TenantContext;
 import java.time.Instant;
 import java.util.*;
 import org.springframework.stereotype.Service;
@@ -61,30 +60,32 @@ public class AdminAccessService {
   /** 在租户下创建自定义管理角色并绑定权限（系统角色标记为 false）。 */
   @Transactional
   public AdminRoleView create(
-      TenantContext c, String name, String description, List<String> permissions) {
+      UUID tenantId, Set<String> grantablePermissions, String name, String description,
+      List<String> permissions) {
     var codes = validate(name, permissions);
-    requireGrantable(c, codes);
+    requireGrantable(grantablePermissions, codes);
     UUID id = UuidV7.randomUuid();
     Instant now = Instant.now();
     repository.saveRole(
         AdminRoleEntityDraft.$.produce(
             d ->
                 d.setId(id)
-                    .setTenantId(c.tenantId())
+                    .setTenantId(tenantId)
                     .setName(name.strip())
                     .setDescription(description)
                     .setSystemRole(false)
                     .setCreatedAt(now)
                     .setUpdatedAt(now)));
     replacePermissions(id, codes);
-    return find(c.tenantId(), id);
+    return find(tenantId, id);
   }
 
   /** 更新管理角色名称、描述与权限（系统角色不可修改）。 */
   @Transactional
   public AdminRoleView update(
-      TenantContext c, UUID id, String name, String description, List<String> permissions) {
-    var old = findEntityFetched(c.tenantId(), id);
+      UUID tenantId, Set<String> grantablePermissions, UUID id, String name, String description,
+      List<String> permissions) {
+    var old = findEntityFetched(tenantId, id);
     if (old.systemRole()) {
       throw immutable();
     }
@@ -96,10 +97,10 @@ public class AdminAccessService {
                 old.permissions().stream().map(ManagementPermissionEntity::code).toList(),
                 ManagementPermissionScope.TENANT)
             : catalog.validate(permissions, ManagementPermissionScope.TENANT);
-    requireGrantable(c, codes);
-    repository.updateRole(c.tenantId(), id, n.strip(), description);
+    requireGrantable(grantablePermissions, codes);
+    repository.updateRole(tenantId, id, n.strip(), description);
     replacePermissions(id, codes);
-    return find(c.tenantId(), id);
+    return find(tenantId, id);
   }
 
   /** 删除自定义管理角色（系统角色不可删除）。 */
@@ -408,10 +409,11 @@ public class AdminAccessService {
   }
 
   /** 校验权限均为当前上下文可授予的权限，否则抛出越权异常。 */
-  private void requireGrantable(TenantContext c, List<ManagementPermissionCode> permissions) {
+  private void requireGrantable(
+      Set<String> grantablePermissions, List<ManagementPermissionCode> permissions) {
     if (permissions.stream()
         .map(ManagementPermissionCode::value)
-        .anyMatch(code -> !c.permissions().contains(code))) {
+        .anyMatch(code -> !grantablePermissions.contains(code))) {
       throw new DomainException(ErrorCodeConstants.PERMISSION_ESCALATION);
     }
   }

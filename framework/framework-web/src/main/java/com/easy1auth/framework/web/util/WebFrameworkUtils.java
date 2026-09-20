@@ -22,9 +22,6 @@ public final class WebFrameworkUtils {
     public static final String TENANT_ID_HEADER = "tenant-id";
     /** 用户代理请求头名 */
     public static final String USER_AGENT_HEADER = "User-Agent";
-    /** 请求属性中存放租户上下文的键名 */
-    public static final String TENANT_CONTEXT_ATTRIBUTE = "com.easy1auth.tenant.util.WebFramework.tenantContext";
-
     private WebFrameworkUtils() {
     }
 

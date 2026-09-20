@@ -29,6 +29,7 @@ public interface ErrorCodeConstants {
     ErrorCode STATUS_INVALID = new ErrorCode(12016, "账号状态无效");
     ErrorCode USERNAME_INVALID = new ErrorCode(12017, "用户名不能为空且不能超过100字符");
     ErrorCode VERIFICATION_CODE_INVALID = new ErrorCode(12018, "验证码无效或已过期");
+    ErrorCode SYSTEM_ALREADY_INITIALIZED = new ErrorCode(12019, "系统已完成初始化，请直接登录");
 
     ErrorCode ADMINISTRATOR_TRANSFER_REQUIRED = new ErrorCode(13000, "账号仍是租户唯一管理员，请先完成租户管理员转移");
     ErrorCode ADMIN_ACCOUNT_NOT_FOUND = new ErrorCode(13001, "管理员账号不存在");

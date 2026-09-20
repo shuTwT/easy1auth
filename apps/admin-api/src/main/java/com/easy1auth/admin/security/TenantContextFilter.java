@@ -1,7 +1,6 @@
 package com.easy1auth.admin.security;
 
 import com.easy1auth.framework.web.util.WebFrameworkUtils;
-import com.easy1auth.tenant.service.TenantService;
 import com.easy1auth.framework.tenant.context.TenantContextHolder;
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
@@ -16,28 +15,17 @@ import java.util.UUID;
  * 租户上下文解析过滤器。
  *
  * <p>对需要租户上下文的认证请求，从 {@code tenant-id} 请求头解析租户并调用
- * {@link TenantService#resolve} 校验账号在该租户的有效成员关系与角色，构建
- * 之前的租户上下文，避免污染其他请求。</p>
+ * {@link TenantContextHolder}，供领域服务读取当前租户 ID。请求结束后恢复之前的
+ * 线程上下文，避免 Servlet 工作线程复用造成租户泄漏。</p>
  */
 @Component
 public final class TenantContextFilter extends OncePerRequestFilter {
     /**
-     * 租户服务，负责解析租户上下文与权限
-     */
-    private final TenantService tenants;
-    /**
      * 管理路由清单，用于判断当前请求是否需要租户上下文
      */
     private final ManagementRouteInventory routes;
-    /**
-     * 业务错误写入器，用于以统一 JSON 格式返回租户上下文错误
-     */
-    private final ApiErrorWriter errors;
-
-    public TenantContextFilter(TenantService tenants, ManagementRouteInventory routes, ApiErrorWriter errors) {
-        this.tenants = tenants;
+    public TenantContextFilter(ManagementRouteInventory routes) {
         this.routes = routes;
-        this.errors = errors;
     }
 
     /**
@@ -53,14 +41,13 @@ public final class TenantContextFilter extends OncePerRequestFilter {
      */
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain chain) throws ServletException, IOException {
+        UUID previousTenantId = TenantContextHolder.getTenantId();
         UUID tenantId = WebFrameworkUtils.getTenantId(request);
-        if(tenantId!= null){
-            TenantContextHolder.setTenantId(tenantId);
-        }
+        TenantContextHolder.setTenantId(tenantId);
         try {
             chain.doFilter(request, response);
         } finally {
-            TenantContextHolder.setTenantId(tenantId);
+            TenantContextHolder.setTenantId(previousTenantId);
         }
     }
 }

@@ -23,7 +23,11 @@ const refreshClient = axios.create({
 let refreshPromise: Promise<string> | null = null
 let redirectingToLogin = false
 
-const isAnonymousAuthRequest = (url?: string) => /^\/auth\/(login|mfa\/verify|register|send-code|refresh)$/.test(url || '')
+const isAnonymousRequest = (url?: string) => {
+  const path = url || ''
+  return /^\/auth\/(login|mfa\/verify|register|send-code|refresh)$/.test(path)
+    || /^\/system\/initialization(?:\/status)?$/.test(path)
+}
 
 async function refreshAccessToken(): Promise<string> {
   if (refreshPromise) return refreshPromise
@@ -52,7 +56,7 @@ request.interceptors.request.use(
     const accessToken = localStorage.getItem('accessToken')
     // Login is anonymous. Sending an expired token here lets Spring Security
     // reject the request before the login controller can return its business error.
-    if (accessToken && !isAnonymousAuthRequest(config.url)) {
+    if (accessToken && !isAnonymousRequest(config.url)) {
       config.headers.Authorization = `Bearer ${accessToken}`
     }
 
@@ -83,7 +87,7 @@ request.interceptors.response.use(
     const { response } = error
     const originalRequest = error.config as RetryableRequestConfig | undefined
     if (response) {
-      if (response.status === 401 && originalRequest && !originalRequest._retry && !isAnonymousAuthRequest(originalRequest.url)) {
+      if (response.status === 401 && originalRequest && !originalRequest._retry && !isAnonymousRequest(originalRequest.url)) {
         originalRequest._retry = true
         try {
           const accessToken = await refreshAccessToken()

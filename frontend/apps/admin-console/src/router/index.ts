@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import MainLayout from '@/layouts/MainLayout.vue'
+import { message } from 'antdv-next'
+import { systemInitializationApi } from '@/api/systemInitialization'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -137,6 +139,12 @@ const routes: RouteRecordRaw[] = [
     redirect: '/application'
   },
   {
+    path: '/initialize',
+    name: 'Initialize',
+    component: () => import('@/views/initialize/index.vue'),
+    meta: { title: '系统初始化', requiresAuth: false }
+  },
+  {
     path: '/login',
     name: 'Login',
     component: () => import('@/views/login/index.vue'),
@@ -149,19 +157,32 @@ const router = createRouter({
   routes
 })
 
-router.beforeEach((to, _from, next) => {
+router.beforeEach(async (to) => {
   const accessToken = localStorage.getItem('accessToken')
-  
+
   const title = to.meta.title as string | undefined
   document.title = title ? `${title} | Easy1Auth` : 'Easy1Auth'
-  
-  if (to.meta.requiresAuth && !accessToken) {
-    next('/login')
-  } else if (to.path === '/login') {
-    next()
-  } else {
-    next()
+
+  try {
+    const initialized = await systemInitializationApi.getStatus()
+    if (!initialized && to.name !== 'Initialize') {
+      return { name: 'Initialize' }
+    }
+    if (initialized && to.name === 'Initialize') {
+      return accessToken ? { name: 'Dashboard' } : { name: 'Login' }
+    }
+  } catch {
+    message.error('无法读取系统初始化状态，请检查服务是否正常')
+    if (to.name !== 'Initialize') {
+      return { name: 'Initialize' }
+    }
   }
+
+  if (to.meta.requiresAuth && !accessToken) {
+    return { name: 'Login' }
+  }
+
+  return true
 })
 
 export default router

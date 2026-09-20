@@ -96,9 +96,9 @@ const menuIcons: Record<string, Component> = {
   audit: ScrollText,
 }
 
-const menuGroups = computed(() => {
+const menuTree = computed(() => {
   const nodes = new Map<string, SidebarMenuItem>()
-  const roots: Array<{ scope: string; item: SidebarMenuItem }> = []
+  const roots: SidebarMenuItem[] = []
   authorizedMenus.value
     .filter(menu => menu.active && ['DIRECTORY', 'MENU'].includes(menu.type.toUpperCase()))
     .sort((left, right) => left.sortOrder - right.sortOrder || left.code.localeCompare(right.code))
@@ -115,19 +115,14 @@ const menuGroups = computed(() => {
     const item = nodes.get(menu.code)!
     const parent = menu.parentCode ? nodes.get(menu.parentCode) : undefined
     if (parent) parent.children.push(item)
-    else roots.push({ scope: menu.scope, item })
+    else roots.push(item)
   })
   const sortItems = (items: SidebarMenuItem[]) => {
     items.sort((left, right) => left.sortOrder - right.sortOrder || left.title.localeCompare(right.title))
     items.forEach(item => sortItems(item.children))
     return items
   }
-  const groups = new Map<string, SidebarMenuItem[]>()
-  roots.forEach(({ scope, item }) => {
-    const label = scope.toUpperCase() === 'PLATFORM' ? '平台管理' : '租户管理'
-    groups.set(label, [...(groups.get(label) || []), item])
-  })
-  return [...groups.entries()].map(([label, items]) => ({ label, items: sortItems(items) }))
+  return sortItems(roots)
 })
 
 const menuItems = computed<any[]>(() => {
@@ -138,7 +133,7 @@ const menuItems = computed<any[]>(() => {
     title: item.title,
     children: item.children.length ? item.children.map(toItem) : undefined,
   })
-  return menuGroups.value.map(group => ({ type: 'group', label: group.label, children: group.items.map(toItem) }))
+  return menuTree.value.map(toItem)
 })
 
 const selectedKeys = computed(() => [route.path])

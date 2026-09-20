@@ -5,13 +5,13 @@ import com.easy1auth.tenant.spi.ActiveAdminAccountLocker;
 import com.easy1auth.tenant.*;
 import com.easy1auth.tenant.constant.ErrorCodeConstants;
 import com.easy1auth.tenant.dto.TenantControlView;
+import com.easy1auth.tenant.dto.TenantAccess;
 import com.easy1auth.tenant.dto.TenantPackageView;
 import com.easy1auth.tenant.dto.TenantSummary;
 import com.easy1auth.tenant.model.TenantEntity;
 import com.easy1auth.tenant.infrastructure.repository.TenantRepository;
 import com.easy1auth.tenant.dto.TenantState;
 import com.easy1auth.tenant.dto.TenantAuthorizationRequest;
-import com.easy1auth.tenant.util.TenantContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -79,14 +79,16 @@ public class TenantService {
      * @return 租户上下文，供后续请求的权限判断使用
      */
     @Transactional(readOnly = true)
-    public TenantContext resolve(UUID accountId, UUID tenantId, String traceId) {
+    public TenantAccess authorize(UUID accountId, UUID tenantId) {
         var membership = repository.activeMembership(accountId, tenantId).filter(it -> authorization.isActiveAccount(accountId)).orElseThrow(() -> new DomainException(ErrorCodeConstants.TENANT_ACCESS_DENIED));
         validateMembershipRole(membership.system(), membership.role());
         var effective = authorization.resolve(new TenantAuthorizationRequest(
                 accountId, tenantId, membership.id(), membership.role(), membership.system(), membership.packageId()));
-        return new TenantContext(
-                accountId, tenantId, membership.id(), membership.role(), effective.permissions(),
-                effective.tenantPackage(), traceId);
+        return new TenantAccess(
+                tenantId,
+                membership.role(),
+                effective.permissions(),
+                effective.tenantPackage());
     }
 
     /** 创建普通租户并绑定指定套餐，同时将指定管理账号设为租户管理员。 */
@@ -103,6 +105,22 @@ public class TenantService {
         var tenantPackage = packages.lockActiveDefaultAssignable();
         administratorAccounts.lockActive(administratorAccountId);
         return createOrdinary(name, tenantPackage, administratorAccountId);
+    }
+
+    /** 创建唯一的系统租户，并将首个系统管理员设为 super_admin。 */
+    @Transactional
+    public TenantSummary createSystem(UUID administratorAccountId) {
+        administratorAccounts.lockActive(administratorAccountId);
+        TenantEntity tenant = repository.createSystemTenant("系统租户");
+        String role = administratorRole(true);
+        repository.createActiveAdministratorMembership(tenant.id(), administratorAccountId, role);
+        return new TenantSummary(
+                tenant.id(),
+                tenant.name(),
+                tenant.status(),
+                true,
+                packages.systemPackage(),
+                role);
     }
 
     /** 更新普通租户名称或绑定的套餐（仅更新传入的非空字段）。 */
