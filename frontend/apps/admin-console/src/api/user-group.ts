@@ -9,9 +9,9 @@ import type {
   GroupStats,
   AddMembersDto,
   RemoveMembersDto
-} from '@/types/group'
+} from '@/types/user-group'
 
-export const groupApi = {
+export const userGroupApi = {
   getList(query: GroupQueryDto): Promise<GroupListResponse> {
     return request.get('/groups', { params: query })
   },

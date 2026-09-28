@@ -1,25 +1,23 @@
 <script setup lang="ts">
-import { ref, onMounted, reactive, computed } from 'vue'
+import { ref, onMounted, reactive } from 'vue'
 import { Modal, message } from 'antdv-next'
+import { useRouter } from 'vue-router'
 import { Plus, Search } from '@lucide/vue'
-import { groupApi } from '@/api/group'
-import { userApi } from '@/api/user'
+import { userGroupApi } from '@/api/user-group'
 import type {
   UserGroup,
   CreateGroupDto,
   UpdateGroupDto,
   GroupQueryDto,
-  GroupStats,
-  User
-} from '@/types/group'
+  GroupStats
+} from '@/types/user-group'
 const loading = ref(false)
 const groups = ref<UserGroup[]>([])
 const total = ref(0)
 const dialogVisible = ref(false)
 const dialogTitle = ref('新增用户组')
 const currentGroup = ref<Partial<UserGroup>>({})
-const memberDialogVisible = ref(false)
-const currentGroupId = ref('')
+const router = useRouter()
 const stats = ref<GroupStats | null>(null)
 
 const [modal, contextHolder] = Modal.useModal()
@@ -47,18 +45,10 @@ const groupTypeOptions = [
   { value: 'organization', label: '组织' },
 ]
 
-const memberForm = reactive({
-  selectedUsers: [] as string[],
-  availableUsers: [] as User[],
-  currentMembers: [] as User[]
-})
-
-const memberUserOptions = computed(() => memberForm.availableUsers.filter((user) => !memberForm.currentMembers.some((member) => member.id === user.id)).map((user) => ({ value: user.id, label: `${user.name} (${user.username})` })))
-
 const loadGroups = async () => {
   loading.value = true
   try {
-    const res = await groupApi.getList(queryForm)
+    const res = await userGroupApi.getList(queryForm)
     groups.value = res.items
     total.value = res.total
   } catch (error) {
@@ -71,7 +61,7 @@ const loadGroups = async () => {
 
 const loadStats = async () => {
   try {
-    const res = await groupApi.getStats()
+    const res = await userGroupApi.getStats()
     stats.value = res
   } catch (error) {
     console.error('加载统计数据失败:', error)
@@ -126,7 +116,7 @@ const handleDelete = async (row: UserGroup) => {
   }
 
   try {
-    await groupApi.delete(row.id)
+    await userGroupApi.delete(row.id)
     message.success('删除成功')
     loadGroups()
     loadStats()
@@ -139,10 +129,10 @@ const handleDelete = async (row: UserGroup) => {
 const handleSubmit = async () => {
   try {
     if (currentGroup.value.id) {
-      await groupApi.update(currentGroup.value.id, groupForm)
+      await userGroupApi.update(currentGroup.value.id, groupForm)
       message.success('更新成功')
     } else {
-      await groupApi.create(groupForm as CreateGroupDto)
+      await userGroupApi.create(groupForm as CreateGroupDto)
       message.success('创建成功')
     }
     dialogVisible.value = false
@@ -154,50 +144,8 @@ const handleSubmit = async () => {
   }
 }
 
-const handleManageMembers = async (row: UserGroup) => {
-  currentGroupId.value = row.id
-  memberDialogVisible.value = true
-
-  try {
-    const [membersRes, usersRes] = await Promise.all([
-      groupApi.getMembers(row.id),
-      userApi.getList({ pageSize: 1000 })
-    ])
-
-    memberForm.currentMembers = membersRes.members
-    memberForm.availableUsers = usersRes.items
-    memberForm.selectedUsers = []
-  } catch (error) {
-    console.error('加载成员数据失败:', error)
-    message.error('加载成员数据失败')
-  }
-}
-
-const handleAddMembers = async () => {
-  if (memberForm.selectedUsers.length === 0) {
-    message.warning('请选择要添加的成员')
-    return
-  }
-
-  try {
-    await groupApi.addMembers(currentGroupId.value, { userIds: memberForm.selectedUsers })
-    message.success('添加成员成功')
-    handleManageMembers({ id: currentGroupId.value } as UserGroup)
-  } catch (error: any) {
-    console.error('添加成员失败:', error)
-    message.error(error.response?.data?.msg || '添加成员失败')
-  }
-}
-
-const handleRemoveMember = async (userId: string) => {
-  try {
-    await groupApi.removeMembers(currentGroupId.value, { userIds: [userId] })
-    message.success('移除成员成功')
-    handleManageMembers({ id: currentGroupId.value } as UserGroup)
-  } catch (error: any) {
-    console.error('移除成员失败:', error)
-    message.error(error.response?.data?.msg || '移除成员失败')
-  }
+const openDetail = (id: string) => {
+  router.push({ name: 'UserGroupDetail', params: { id } })
 }
 
 const handlePageChange = (p: number, ps?: number) => {
@@ -306,7 +254,7 @@ onMounted(() => {
             { title: '操作', key: 'actions', width: 220 }
           ]" :data-source="groups" :loading="loading" row-key="id" :pagination="false" :scroll="{ x: 910 }">
             <template #bodyCell="{ column, record: row }">
-              <template v-if="column.key === 'name'"><span class="font-medium">{{ row.name }}</span></template>
+              <template v-if="column.key === 'name'"><a-button type="link" class="h-auto p-0! font-medium" @click="openDetail(row.id)">{{ row.name }}</a-button></template>
               <template v-else-if="column.key === 'description'"><span class="text-muted-foreground">{{ row.description || '-' }}</span></template>
               <template v-else-if="column.key === 'type'">
                   <a-tag :color="getTypeVariant(row.type)" class="text-xs">
@@ -320,8 +268,8 @@ onMounted(() => {
                     <a-button type="link" size="small" class="h-auto p-0" @click="handleEdit(row)">
                       编辑
                     </a-button>
-                    <a-button type="link" size="small" class="h-auto p-0" @click="handleManageMembers(row)">
-                      成员
+                    <a-button type="link" size="small" class="h-auto p-0" @click="openDetail(row.id)">
+                      详情
                     </a-button>
                     <a-button type="link" size="small" class="h-auto p-0 text-destructive" @click="handleDelete(row)">
                       删除
@@ -370,39 +318,6 @@ onMounted(() => {
             <a-button type="primary" html-type="submit">确定</a-button>
           </div>
         </a-form>
-      </div>
-    </a-modal>
-
-    <a-modal v-model:open="memberDialogVisible" :footer="null">
-      <div class="max-w-3xl">
-        <div>
-          <h3>成员管理</h3>
-        </div>
-        <div class="min-h-[400px]">
-          <div class="grid grid-cols-2 gap-5">
-            <a-card>
-              <div class="border-b py-3">
-                <span class="font-medium">当前成员 ({{ memberForm.currentMembers.length }})</span>
-              </div>
-              <div class="pt-4">
-                <div class="max-h-[350px] overflow-y-auto">
-                  <a-table :columns="[{ title: '姓名', dataIndex: 'name' }, { title: '用户名', dataIndex: 'username' }, { title: '邮箱', dataIndex: 'email' }, { title: '操作', key: 'actions', width: 80 }]" :data-source="memberForm.currentMembers" :pagination="false" row-key="id" size="small"><template #bodyCell="{ column, record: member }"><a-button v-if="column.key === 'actions'" type="link" size="small" class="p-0 h-auto text-destructive" @click="handleRemoveMember(member.id)">移除</a-button></template></a-table>
-                </div>
-              </div>
-            </a-card>
-            <a-card>
-              <div class="border-b py-3">
-                <span class="font-medium">添加成员</span>
-              </div>
-              <div class="pt-4">
-                <a-select v-model:value="memberForm.selectedUsers" multiple :options="memberUserOptions" />
-                <a-button class="w-full" @click="handleAddMembers">
-                  添加选中成员
-                </a-button>
-              </div>
-            </a-card>
-          </div>
-        </div>
       </div>
     </a-modal>
 

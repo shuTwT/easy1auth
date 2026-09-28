@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { AppWindow, FolderTree, LockKeyhole, RefreshCw, Search, ShieldCheck } from '@lucide/vue'
+import { AppWindow, FolderTree, LockKeyhole, RefreshCw, ShieldCheck } from '@lucide/vue'
 import { authorizationApi } from '@/api/authorization'
 import type { ManagementMenu } from '@/types/authorization'
 import { message } from 'antdv-next'
@@ -72,9 +72,6 @@ const filteredTree = computed(() => {
   return menuTree.value.map(filter).filter((item): item is MenuTreeNode => item !== null)
 })
 
-const directoryCount = computed(() => menus.value.filter((menu) => menu.type.toUpperCase() === 'DIRECTORY').length)
-const menuCount = computed(() => menus.value.filter((menu) => menu.type.toUpperCase() === 'MENU').length)
-const assignedActionCount = computed(() => permissions.value.filter((permission) => permission.type.toUpperCase() === 'ACTION' && permission.parentCode).length)
 const menuColumns = [
   { title: '菜单 / 权限', dataIndex: 'label', key: 'label', width: 360 },
   { title: '类型', dataIndex: 'type', key: 'type', width: 100 },
@@ -117,17 +114,12 @@ onMounted(loadCatalog)
       </div>
     </div>
 
-    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <a-card><div class="pb-3"><p>目录</p><h3 class="text-2xl">{{ directoryCount }}</h3></div><div class="flex items-center gap-2 text-xs text-muted-foreground"><FolderTree /> 仅承载层级，不对应路由</div></a-card>
-      <a-card><div class="pb-3"><p>菜单</p><h3 class="text-2xl">{{ menuCount }}</h3></div><div class="flex items-center gap-2 text-xs text-muted-foreground"><AppWindow /> 对应一个管理端路由</div></a-card>
-      <a-card><div class="pb-3"><p>权限目录</p><h3 class="text-2xl">{{ menus.length }}</h3></div><div class="flex items-center gap-2 text-xs text-muted-foreground"><ShieldCheck /> 平台和租户菜单节点</div></a-card>
-      <a-card><div class="pb-3"><p>关联操作</p><h3 class="text-2xl">{{ assignedActionCount }}</h3></div><div class="flex items-center gap-2 text-xs text-muted-foreground"><LockKeyhole /> 菜单下的操作权限</div></a-card>
-    </div>
-
     <a-card>
-      <div class="gap-4 md:flex-row md:items-center md:justify-between">
-        <div><h3>菜单权限树</h3><p>平台菜单仅在系统租户中出现；租户菜单按套餐的菜单权限动态显示。</p></div>
-        <div class="relative w-full md:w-80"><Search class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" /><a-input v-model:value="search" class="pl-9" placeholder="搜索菜单名称、编码或资源" /></div>
+      <div class="gap-4 mb-3! flex">
+        <div class="flex">
+          <a-input v-model:value="search" class="w-64!" placeholder="搜索菜单名称、编码或资源" />
+        </div>
+        <a-button type="primary">搜索</a-button>
       </div>
       <div>
         <a-spin v-if="loading" class="flex min-h-48 items-center justify-center" />

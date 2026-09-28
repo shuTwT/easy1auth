@@ -2,14 +2,15 @@
 import { computed } from 'vue'
 
 import type { LoginStyleConfig, LoginStyleLegalDocuments } from '@easy1auth/types'
-import type { SocialIdentitySource } from '@/types/socialIdentitySource'
+import { ENTERPRISE_SOURCE_TYPES } from '@/types/loginIdentitySource'
+import type { LoginIdentitySource } from '@/types/loginIdentitySource'
 
 const props = defineProps<{
   config: LoginStyleConfig
   legalDocuments: LoginStyleLegalDocuments
   socialProviderIds: string[]
-  socialSources: SocialIdentitySource[]
-  socialSourcesLoading: boolean
+  loginSources: LoginIdentitySource[]
+  loginSourcesLoading: boolean
   tab: 'global' | 'standard' | 'qr'
 }>()
 const emit = defineEmits<{
@@ -21,9 +22,9 @@ const selectedSocialProviderIds = computed({
   get: () => props.socialProviderIds,
   set: value => emit('update:socialProviderIds', value.map(String)),
 })
-const socialSourceOptions = computed(() => props.socialSources.map(source => ({
+const loginSourceOptions = computed(() => props.loginSources.map(source => ({
   value: source.id,
-  label: `${source.name} (${source.type})`,
+  label: `${source.name}（${ENTERPRISE_SOURCE_TYPES.some(type => type === source.type) ? '企业' : '社会化'}）`,
 })))
 
 function changed() { emit('change') }
@@ -60,10 +61,10 @@ function toggleMethod(method: 'password' | 'email' | 'social') {
       <div class="section-heading"><div><strong>常规登录</strong><span>配置真实授权页可用的入口</span></div></div>
       <label>页面标题<input v-model="config.global.title" class="text-input" maxlength="200" @input="changed"></label>
       <label>页面副标题<input v-model="config.global.subtitle" class="text-input" maxlength="500" @input="changed"></label>
-      <div class="option-list"><span class="field-label">登录方式</span><label><input type="checkbox" :checked="config.standard.methods.includes('password')" @change="toggleMethod('password')">密码登录</label><label><input type="checkbox" :checked="config.standard.methods.includes('email')" @change="toggleMethod('email')">邮箱验证码</label><label><input type="checkbox" :checked="config.standard.methods.includes('social')" @change="toggleMethod('social')">社会化登录</label></div>
+      <div class="option-list"><span class="field-label">登录方式</span><label><input type="checkbox" :checked="config.standard.methods.includes('password')" @change="toggleMethod('password')">密码登录</label><label><input type="checkbox" :checked="config.standard.methods.includes('email')" @change="toggleMethod('email')">邮箱验证码</label><label><input type="checkbox" :checked="config.standard.methods.includes('social')" @change="toggleMethod('social')">第三方登录（企业 / 社会化）</label></div>
       <label v-if="config.standard.methods.includes('social')">身份源
-        <a-select v-model:value="selectedSocialProviderIds" class="social-source-select" mode="multiple" :options="socialSourceOptions" :loading="socialSourcesLoading" :disabled="socialSourcesLoading" :show-search="true" :allow-clear="true" option-filter-prop="label" placeholder="选择已启用的社会化身份源" aria-label="选择社会化身份源" @change="changed" />
-        <span v-if="!socialSourcesLoading && !socialSources.length" class="field-help">没有可选择的已启用身份源，请先在“社会化身份源”中创建并启用。</span>
+        <a-select v-model:value="selectedSocialProviderIds" class="login-source-select" mode="multiple" :options="loginSourceOptions" :loading="loginSourcesLoading" :disabled="loginSourcesLoading" :show-search="true" :allow-clear="true" option-filter-prop="label" placeholder="选择已启用的登录身份源" aria-label="选择登录身份源" @change="changed" />
+        <span v-if="!loginSourcesLoading && !loginSources.length" class="field-help">没有可选择的已启用身份源，请先在“企业身份源”或“社会化身份源”中创建并启用。</span>
       </label>
       <label class="switch-row"><input v-model="config.standard.registrationEnabled" type="checkbox" @change="changed"><span>显示注册入口</span></label>
       <label class="switch-row"><input v-model="config.standard.termsRequired" type="checkbox" @change="changed"><span>登录前必须同意法律条款</span></label>
@@ -108,7 +109,7 @@ input[type='color'] { width: 2.4rem; height: 2.15rem; padding: .15rem; border: 1
 .option-list { display: grid; gap: .55rem; }
 .option-list .field-label { margin-bottom: .1rem; }
 .range-value { color: #8295a8; font-size: .72rem; font-weight: 600; }
-.social-source-select { width: 100%; }
+.login-source-select { width: 100%; }
 .field-help { color: #8295a8; font-size: .72rem; font-weight: 500; line-height: 1.45; }
 .info-note, .warning-note { padding: .7rem .75rem; border-radius: .55rem; font-size: .72rem; line-height: 1.55; }
 .info-note { color: #075985; background: #e0f2fe; }

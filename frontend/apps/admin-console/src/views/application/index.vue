@@ -308,11 +308,11 @@ onMounted(() => {
           </div>
           <div class="grid gap-2">
             <label class="text-sm font-medium">应用类型</label>
-            <a-select v-model:value="queryForm.type" class="w-36" allow-clear :options="applicationTypeOptions" />
+            <a-select v-model:value="queryForm.type" placeholder="选择应用类型" class="w-36" allow-clear :options="applicationTypeOptions" />
           </div>
           <div class="grid gap-2">
             <label class="text-sm font-medium">状态</label>
-            <a-select v-model:value="queryForm.status" class="w-28" allow-clear :options="applicationStatusOptions" />
+            <a-select v-model:value="queryForm.status" placeholder="选择状态" class="w-28" allow-clear :options="applicationStatusOptions" />
           </div>
           <div class="flex gap-2">
             <a-button @click="handleSearch">

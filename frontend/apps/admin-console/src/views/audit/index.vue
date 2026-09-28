@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue'
 import { Modal, message } from 'antdv-next'
-import { FileText, CheckCircle, XCircle, Clock, Search, RefreshCw, Download, Trash2 } from '@lucide/vue'
+import { Search, RefreshCw, Download, Trash2 } from '@lucide/vue'
 import { auditApi } from '@/api/audit'
 import type { AuditLog, AuditLogQueryDto, AuditLogStats } from '@/types/audit'
 const loading = ref(false)
@@ -202,61 +202,6 @@ onMounted(() => {
         <p class="text-sm text-muted-foreground">查看系统操作记录和安全审计信息</p>
       </div>
     </div>
-    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-5">
-      <a-card>
-        <div class="pt-6">
-          <div class="flex items-center">
-            <div class="size-11 rounded-lg flex items-center justify-center mr-4 bg-primary">
-              <FileText class="size-5 text-white" />
-            </div>
-            <div>
-              <div class="text-2xl font-bold text-foreground">{{ stats?.totalLogs || 0 }}</div>
-              <div class="text-sm text-muted-foreground">总日志数</div>
-            </div>
-          </div>
-        </div>
-      </a-card>
-      <a-card>
-        <div class="pt-6">
-          <div class="flex items-center">
-            <div class="size-11 rounded-lg flex items-center justify-center mr-4 bg-emerald-500">
-              <CheckCircle class="size-5 text-white" />
-            </div>
-            <div>
-              <div class="text-2xl font-bold text-foreground">{{ stats?.successLogs || 0 }}</div>
-              <div class="text-sm text-muted-foreground">成功日志</div>
-            </div>
-          </div>
-        </div>
-      </a-card>
-      <a-card>
-        <div class="pt-6">
-          <div class="flex items-center">
-            <div class="size-11 rounded-lg flex items-center justify-center mr-4 bg-destructive">
-              <XCircle class="size-5 text-white" />
-            </div>
-            <div>
-              <div class="text-2xl font-bold text-foreground">{{ stats?.failedLogs || 0 }}</div>
-              <div class="text-sm text-muted-foreground">失败日志</div>
-            </div>
-          </div>
-        </div>
-      </a-card>
-      <a-card>
-        <div class="pt-6">
-          <div class="flex items-center">
-            <div class="size-11 rounded-lg flex items-center justify-center mr-4 bg-amber-500">
-              <Clock class="size-5 text-white" />
-            </div>
-            <div>
-              <div class="text-2xl font-bold text-foreground">{{ stats?.todayLogs || 0 }}</div>
-              <div class="text-sm text-muted-foreground">今日日志</div>
-            </div>
-          </div>
-        </div>
-      </a-card>
-    </div>
-
     <a-card>
       <div class="flex flex-row items-center justify-between">
         <div></div>
@@ -283,7 +228,7 @@ onMounted(() => {
           </div>
           <div class="grid gap-2">
             <label>日志类型</label>
-            <a-select v-model:value="queryForm.type" class="w-[150px]" allow-clear :options="auditTypeOptions" />
+            <a-select v-model:value="queryForm.type" placeholder="请选择类型" class="w-[150px]" allow-clear :options="auditTypeOptions" />
           </div>
           <div class="grid gap-2">
             <label>操作</label>
@@ -291,11 +236,7 @@ onMounted(() => {
           </div>
           <div class="grid gap-2">
             <label>状态</label>
-            <a-select v-model:value="queryForm.status" class="w-[120px]" allow-clear :options="auditStatusOptions" />
-          </div>
-          <div class="grid gap-2">
-            <label>IP地址</label>
-            <a-input v-model:value="queryForm.ip" placeholder="请输入IP地址" class="w-[150px]" />
+            <a-select v-model:value="queryForm.status" placeholder="请选择状态" class="w-[120px]" allow-clear :options="auditStatusOptions" />
           </div>
           <div class="grid gap-2">
             <label>时间范围</label>
@@ -306,11 +247,11 @@ onMounted(() => {
             </div>
           </div>
           <div class="flex gap-2">
-            <a-button size="small" @click="handleSearch">
+            <a-button @click="handleSearch">
               <Search class="size-4 mr-2" />
               搜索
             </a-button>
-            <a-button size="small"  @click="handleReset">
+            <a-button @click="handleReset">
               <RefreshCw class="size-4 mr-2" />
               重置
             </a-button>

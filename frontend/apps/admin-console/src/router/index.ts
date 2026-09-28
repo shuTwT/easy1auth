@@ -60,9 +60,19 @@ const routes: RouteRecordRaw[] = [
       },
       {
         path: 'group',
-        name: 'Group',
-        component: () => import('@/views/group/index.vue'),
+        redirect: '/user-group'
+      },
+      {
+        path: 'user-group',
+        name: 'UserGroup',
+        component: () => import('@/views/user-group/index.vue'),
         meta: { title: '用户组', requiresAuth: true }
+      },
+      {
+        path: 'user-group/:id',
+        name: 'UserGroupDetail',
+        component: () => import('@/views/user-group/detail.vue'),
+        meta: { title: '用户组详情', requiresAuth: true, activeMenu: '/user-group' }
       },
       {
         path: 'position',
@@ -85,13 +95,13 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'enterprise-identity-source',
         name: 'EnterpriseIdentitySource',
-        component: () => import('@/views/socialIdentitySource/index.vue'),
+        component: () => import('@/views/enterpriseIdentitySource/index.vue'),
         meta: { title: '企业身份源', requiresAuth: true }
       },
       {
         path: 'sync-identity-source',
         name: 'SyncIdentitySource',
-        component: () => import('@/views/enterpriseIdentitySource/index.vue'),
+        component: () => import('@/views/syncIdentitySource/index.vue'),
         meta: { title: '同步身份源', requiresAuth: true }
       },
       {
@@ -103,14 +113,14 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'message-service',
         name: 'MessageService',
-        component: () => import('@/views/personalization/index.vue'),
-        meta: { title: '消息服务', brandSection: 'templates', requiresAuth: true }
+        component: () => import('@/views/messageService/index.vue'),
+        meta: { title: '消息服务', requiresAuth: true }
       },
       {
         path: 'custom-domain',
         name: 'CustomDomain',
-        component: () => import('@/views/personalization/index.vue'),
-        meta: { title: '自定义域名', brandSection: 'domains', requiresAuth: true }
+        component: () => import('@/views/customDomain/index.vue'),
+        meta: { title: '自定义域名', requiresAuth: true }
       },
       {
         path: 'security',

@@ -30,8 +30,8 @@ public interface ErrorCodeConstants {
     ErrorCode DIRECTORY_ITEM_NOT_FOUND = new ErrorCode(14002, "目录项不存在");
     ErrorCode DIRECTORY_POSITION_NOT_FOUND = new ErrorCode(14003, "岗位不存在");
     ErrorCode DIRECTORY_USER_NOT_FOUND = new ErrorCode(14004, "用户不存在");
-    ErrorCode ENTERPRISE_IDENTITY_MANAGED_DEPARTMENT = new ErrorCode(14005, "该部门由企业身份源管理，请在身份源中修改");
-    ErrorCode ENTERPRISE_IDENTITY_MANAGED_USER = new ErrorCode(14006, "该用户由企业身份源管理，请在身份源中修改");
+    ErrorCode ENTERPRISE_IDENTITY_MANAGED_DEPARTMENT = new ErrorCode(14005, "该用户组由同步身份源管理，请在来源系统中修改");
+    ErrorCode ENTERPRISE_IDENTITY_MANAGED_USER = new ErrorCode(14006, "该用户由同步身份源管理，请在来源系统中修改");
     ErrorCode GROUP_INVALID = new ErrorCode(14009, "用户组名称或类型无效");
     ErrorCode PASSWORD_WEAK = new ErrorCode(14011, "密码至少8位");
     ErrorCode POOL_USER_INVALID = new ErrorCode(14012, "用户名、姓名以及邮箱或手机号为必填项");

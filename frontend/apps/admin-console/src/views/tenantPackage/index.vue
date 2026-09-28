@@ -345,6 +345,7 @@ onMounted(loadData)
       show-icon
       title="权限作用域提示"
       description="这里只能配置租户作用域权限；平台级权限不会出现在权限目录中。"
+      class="mb-3!"
     />
 
     <a-card>

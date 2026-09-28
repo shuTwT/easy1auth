@@ -87,13 +87,32 @@ public class SocialIdentityService {
     return list(tenant, page, size, search, status, null, true);
   }
 
-  /** 分页查询社会化或企业登录身份源；企业查询仅允许显式请求 feishu_web。 */
+  /** 分页查询登录身份源，按厂商类型区分社会化登录与企业登录。 */
   @Transactional(readOnly = true)
   public PageData<SourceView> list(UUID tenant, int page, int size, String search, String status, String type, boolean excludeFeishuWeb) {
     int p = Math.max(1, page), s = Math.min(100, Math.max(1, size));
     var result = repository.page(tenant, p, s, search, status, type, excludeFeishuWeb);
     return PageData.of(
         result.items().stream().map(e -> view(e, null)).toList(), p, s, result.total());
+  }
+
+  /** 统计当前租户下指定类型的登录身份源；默认排除企业登录身份源。 */
+  @Transactional(readOnly = true)
+  public IdentitySourceStats stats(UUID tenant, String type) {
+    boolean excludeEnterprise = !"feishu_web".equals(type);
+    var rows = repository.sourceStatistics(tenant, type, excludeEnterprise);
+    long total = 0;
+    long active = 0;
+    Map<String, Long> byType = new LinkedHashMap<>();
+    for (var row : rows) {
+      long count = row.get_3();
+      total += count;
+      if ("active".equals(row.get_2())) {
+        active += count;
+      }
+      byType.merge(row.get_1(), count, Long::sum);
+    }
+    return new IdentitySourceStats(total, active, total - active, Map.copyOf(byType));
   }
 
   /** 查询单个身份源详情（不返回明文 client_secret）。 */

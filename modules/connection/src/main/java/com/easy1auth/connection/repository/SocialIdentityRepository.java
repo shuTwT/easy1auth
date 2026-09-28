@@ -18,6 +18,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.babyfish.jimmer.spring.repository.JRepository;
 import org.babyfish.jimmer.sql.ast.LikeMode;
+import org.babyfish.jimmer.sql.ast.tuple.Tuple3;
 import org.babyfish.jimmer.sql.ast.mutation.SaveMode;
 
 /** 社会化身份源及登录事务数据仓储。 */
@@ -131,6 +132,19 @@ public interface SocialIdentityRepository extends JRepository<SocialIdentitySour
         page,
         size,
         query.fetchUnlimitedCount());
+  }
+
+  /** 按登录身份源的类型与状态聚合统计，不受列表分页限制。 */
+  default List<Tuple3<String, String, Long>> sourceStatistics(
+      UUID tenant, String type, boolean excludeFeishuWeb) {
+    return sql()
+        .createQuery(SOURCE)
+        .where(SOURCE.tenantId().eq(tenant))
+        .whereIf(type != null && !type.isBlank(), () -> SOURCE.type().eq(type))
+        .whereIf(excludeFeishuWeb, () -> SOURCE.type().ne("feishu_web"))
+        .groupBy(SOURCE.type(), SOURCE.status())
+        .select(SOURCE.type(), SOURCE.status(), SOURCE.id().count())
+        .execute();
   }
 
   default Optional<SocialIdentitySourceEntity> findSource(UUID tenant, UUID id) {

@@ -188,8 +188,7 @@ onMounted(loadData)
     </div>
 
     <a-card>
-      <div class="gap-4 md:flex-row md:items-end md:justify-between">
-        <div><h3>租户列表</h3><p>共 {{ total }} 个租户</p></div>
+      <div class="gap-4 flex mb-3!">
         <div class="flex flex-col gap-2 sm:flex-row">
           <div class="relative"><Search class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" /><a-input v-model:value="queryForm.name" class="w-full pl-9 sm:w-56" placeholder="搜索租户名称" /></div>
           <a-select v-model:value="queryForm.status" class="w-full sm:w-32" allow-clear :options="[{ value: 'active', label: '正常' }, { value: 'suspended', label: '停用' }, { value: 'deleted', label: '已删除' }]" />

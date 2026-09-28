@@ -4,7 +4,7 @@ import com.easy1auth.framework.common.error.DomainException;
 import com.easy1auth.framework.common.error.ErrorCode;
 
 /**
- * 社会化身份域错误码常量（18000-18012）。
+ * 社会化身份域错误码常量（18000-18013）。
  *
  * <p>覆盖身份源管理、社交登录授权/回调、用户信息拉取与身份绑定等环节的
  * 业务错误，供 {@link DomainException} 使用。</p>
@@ -23,9 +23,10 @@ public interface ErrorCodeConstants {
     ErrorCode SOCIAL_TYPE_NOT_SUPPORTED = new ErrorCode(18010, "不支持的社会化身份源类型");
     ErrorCode SOCIAL_API_ERROR = new ErrorCode(18011, "社交平台返回错误");
     ErrorCode SOCIAL_BINDING_CONFLICT = new ErrorCode(18012, "该外部身份已绑定其他用户");
+    ErrorCode LOGIN_SOURCE_CATEGORY_MISMATCH = new ErrorCode(18013, "身份源与当前分类不一致");
     ErrorCode ENTERPRISE_IDENTITY_SOURCE_DISABLED = new ErrorCode(19000, "身份源已停用");
     ErrorCode ENTERPRISE_IDENTITY_SOURCE_INVALID = new ErrorCode(19001, "飞书身份源配置不完整");
-    ErrorCode ENTERPRISE_IDENTITY_SOURCE_NOT_FOUND = new ErrorCode(19002, "企业身份源不存在");
+    ErrorCode ENTERPRISE_IDENTITY_SOURCE_NOT_FOUND = new ErrorCode(19002, "同步身份源不存在");
     ErrorCode ENTERPRISE_IDENTITY_SOURCE_STATUS_INVALID = new ErrorCode(19003, "身份源状态无效");
     ErrorCode FEISHU_API_FAILED = new ErrorCode(19004, "飞书通讯录请求失败");
     ErrorCode FEISHU_EVENT_DECRYPT_FAILED = new ErrorCode(19005, "飞书事件解密失败");

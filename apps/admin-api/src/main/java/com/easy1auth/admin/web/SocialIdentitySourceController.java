@@ -6,11 +6,12 @@ import com.easy1auth.system.constant.ManagementPermissionCode;
 import com.easy1auth.framework.web.response.ApiResponse;
 import com.easy1auth.connection.service.SocialIdentityService;
 import com.easy1auth.connection.dto.SocialIdentityInput;
-import com.easy1auth.connection.dto.SourceView;
+import com.easy1auth.connection.constant.ErrorCodeConstants;
+import com.easy1auth.framework.common.error.DomainException;
+import com.easy1auth.framework.tenant.context.TenantContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * 社会化身份源管理接口。
@@ -33,58 +34,80 @@ public class SocialIdentitySourceController {
     /** 分页查询社会化身份源列表；飞书网页授权归属于企业身份源，不在此列表展示。 */
     @TenantManagementPermission(value = ManagementPermissionCode.SOCIAL_IDENTITY_SOURCE_LIST)
     @GetMapping
-    ApiResponse<?> list(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, @RequestParam(required = false) String search, @RequestParam(required = false) String status, @RequestParam(required = false) String type) {
+    ApiResponse<?> list(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, @RequestParam(required = false) String search, @RequestParam(required = false) String status, @RequestParam(required = false) String type, @RequestParam(required = false) String category) {
+        validateCategory(type, category);
         boolean enterpriseSource = "feishu_web".equals(type);
-        var p = service.list(page, pageSize, search, status, enterpriseSource ? type : null, !enterpriseSource);
+        var p = service.list(page, pageSize, search, status, type, !enterpriseSource);
         return ApiResponse.ok(p);
     }
 
-    /** 查询社会化身份源的统计信息（总数、启停数量与按类型分布）。 */
+    /** 查询登录身份源的统计信息；显式指定 feishu_web 时仅统计企业登录身份源。 */
     @TenantManagementPermission(value = ManagementPermissionCode.SOCIAL_IDENTITY_SOURCE_STATS)
     @GetMapping("/stats")
-    ApiResponse<?> stats() {
-        var p = service.list(1, 100, null, null);
-        long active = p.items().stream().filter(x -> "active".equals(x.status())).count();
-        Map<String, Long> byType = p.items().stream()
-                .collect(Collectors.groupingBy(SourceView::type, Collectors.counting()));
-        return ApiResponse.ok(new SocialSourceStatsResponse(p.total(), active, p.total() - active, byType));
+    ApiResponse<?> stats(@RequestParam(required = false) String type, @RequestParam(required = false) String category) {
+        validateCategory(type, category);
+        var stats = service.stats(TenantContextHolder.requireTenantId(), type);
+        return ApiResponse.ok(new SocialSourceStatsResponse(
+                stats.totalSources(),
+                stats.activeSources(),
+                stats.inactiveSources(),
+                stats.byType()
+        ));
     }
 
     /** 查询指定社会化身份源的详情。 */
     @TenantManagementPermission(value = ManagementPermissionCode.SOCIAL_IDENTITY_SOURCE_READ)
     @GetMapping("/{id}")
-    ApiResponse<?> get(@PathVariable UUID id) {
-        return ApiResponse.ok(service.get(id));
+    ApiResponse<?> get(@PathVariable UUID id, @RequestParam(required = false) String category) {
+        var source = service.get(id);
+        validateCategory(source.type(), category);
+        return ApiResponse.ok(source);
     }
 
     /** 创建社会化身份源；返回的 Client Secret 仅显示一次，请及时保存。 */
     @TenantManagementPermission(value = ManagementPermissionCode.SOCIAL_IDENTITY_SOURCE_CREATE)
     @PostMapping
-    ApiResponse<?> create(@RequestBody SocialIdentityInput in) {
+    ApiResponse<?> create(@RequestBody SocialIdentityInput in, @RequestParam(required = false) String category) {
+        validateCategory(in.type(), category);
         return ApiResponse.ok(service.create(in), "社会化身份源创建成功；Client Secret 仅显示一次");
     }
 
     /** 更新指定社会化身份源的配置。 */
     @TenantManagementPermission(value = ManagementPermissionCode.SOCIAL_IDENTITY_SOURCE_UPDATE)
     @PutMapping("/{id}")
-    ApiResponse<?> update(@PathVariable UUID id, @RequestBody SocialIdentityInput in) {
+    ApiResponse<?> update(@PathVariable UUID id, @RequestBody SocialIdentityInput in, @RequestParam(required = false) String category) {
+        if (category != null) {
+            validateCategory(service.get(id).type(), category);
+            if (in.type() != null) {
+                validateCategory(in.type(), category);
+            }
+        }
         return ApiResponse.ok(service.update(id, in), "社会化身份源更新成功");
     }
 
     /** 删除指定社会化身份源。 */
     @TenantManagementPermission(value = ManagementPermissionCode.SOCIAL_IDENTITY_SOURCE_DELETE)
     @DeleteMapping("/{id}")
-    ApiResponse<Void> delete(@PathVariable UUID id) {
+    ApiResponse<Void> delete(@PathVariable UUID id, @RequestParam(required = false) String category) {
+        if (category != null) {
+            validateCategory(service.get(id).type(), category);
+        }
         service.delete(id);
         return ApiResponse.ok(null, "社会化身份源删除成功");
     }
 
-    /**
-     * 社会化身份源统计响应。
-     *
-     * @param totalSources    身份源总数
-     * @param activeSources   启用的身份源数
-     * @param inactiveSources 未启用的身份源数
-     * @param byType          按类型分组的数量映射
-     */
+    /** 显式分类的请求只能访问该分类，历史调用未传分类时沿用原协议。 */
+    private static void validateCategory(String type, String category) {
+        if (category == null) {
+            return;
+        }
+        boolean enterprise = "feishu_web".equals(type);
+        boolean valid = "enterprise".equals(category)
+                ? enterprise
+                : "social".equals(category) && !enterprise;
+        if (!valid) {
+            throw new DomainException(ErrorCodeConstants.LOGIN_SOURCE_CATEGORY_MISMATCH);
+        }
+    }
+
 }

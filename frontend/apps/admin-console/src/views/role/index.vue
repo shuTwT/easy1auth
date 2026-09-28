@@ -555,13 +555,10 @@ onMounted(() => {
       </div>
     </a-card>
 
-    <a-modal v-model:open="dialogVisible" :footer="null">
-      <div class="max-w-xl">
-        <div>
-          <h3>{{ dialogTitle }}</h3>
-        </div>
+    <a-modal v-model:open="dialogVisible" :title="dialogTitle" :width="800" :footer="null">
+      <div>
         <a-form :model="roleForm" :rules="roleFormRules" layout="vertical" class="py-4" @finish="handleSubmit">
-          <div class="grid gap-4">
+          <div class="grid grid-cols-1 gap-x-6 md:grid-cols-2">
             <a-form-item label="角色名称" name="name">
               <a-input v-model:value="roleForm.name" placeholder="请输入角色名称" />
             </a-form-item>
@@ -597,7 +594,7 @@ onMounted(() => {
                 placeholder="请选择父级角色"
               />
             </a-form-item>
-            <a-form-item label="权限配置">
+            <a-form-item label="权限配置" class="md:col-span-2">
               <div class="max-h-[360px] overflow-y-auto border rounded-lg p-2">
                 <a-tree
                   :tree-data="permissionTree"
@@ -619,7 +616,7 @@ onMounted(() => {
                 </a-tree>
               </div>
             </a-form-item>
-            <a-form-item label="描述" name="description">
+            <a-form-item label="描述" name="description" class="md:col-span-2">
               <a-textarea v-model:value="roleForm.description" :rows="3" placeholder="请输入描述" />
             </a-form-item>
           </div>

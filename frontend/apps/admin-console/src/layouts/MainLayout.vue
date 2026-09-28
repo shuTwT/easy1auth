@@ -60,7 +60,7 @@ const menuIcons: Record<string, Component> = {
   dashboard: LayoutDashboard,
   'user-management': Users,
   user: Users,
-  group: Users,
+  'user-group': Users,
   position: BriefcaseBusiness,
   role: ShieldCheck,
   permission: LockKeyhole,
@@ -81,6 +81,10 @@ const menuIcons: Record<string, Component> = {
   audit: ScrollText,
 }
 
+const menuResourceRoutes: Record<string, string> = {
+  group: 'user-group',
+}
+
 const menuTree = computed(() => {
   const nodes = new Map<string, SidebarMenuItem>()
   const roots: SidebarMenuItem[] = []
@@ -90,9 +94,9 @@ const menuTree = computed(() => {
     .forEach(menu => nodes.set(menu.code, {
       code: menu.code,
       title: menu.name,
-      index: menu.type.toUpperCase() === 'DIRECTORY' ? '' : `/${menu.resource}`,
+      index: menu.type.toUpperCase() === 'DIRECTORY' ? '' : `/${menuResourceRoutes[menu.resource] || menu.resource}`,
       type: menu.type.toUpperCase() === 'DIRECTORY' ? 'directory' : 'menu',
-      icon: menuIcons[menu.resource] || MenuIcon,
+      icon: menuIcons[menuResourceRoutes[menu.resource] || menu.resource] || MenuIcon,
       sortOrder: menu.sortOrder,
       children: [],
     }))
@@ -121,7 +125,7 @@ const menuItems = computed<any[]>(() => {
   return menuTree.value.map(toItem)
 })
 
-const selectedKeys = computed(() => [route.path])
+const selectedKeys = computed(() => [typeof route.meta.activeMenu === 'string' ? route.meta.activeMenu : route.path])
 const tenantItems = computed(() => [
   ...userStore.tenants.map(tenant => ({
     key: tenant.id,
