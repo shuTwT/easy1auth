@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { message } from 'antdv-next'
-import { Button, Dropdown, Form, FormItem, Input, Modal, Select } from 'antdv-next'
+
 import { useUserStore } from '@/stores/user'
 import { tenantApi } from '@/api/tenant'
 import type { TenantInfo } from '@/types/auth'
@@ -85,21 +85,21 @@ async function loadPackages() {
 
 <template>
   <div class="tenant-switcher">
-    <Dropdown :menu="tenantMenu" :trigger="['click']">
+    <a-dropdown :menu="tenantMenu" :trigger="['click']">
         <button class="tenant-selector">
           <Building2 class="size-4" />
           <span class="tenant-name">{{ currentTenant?.name || '选择租户' }}</span>
           <ChevronDown class="size-3 text-muted-foreground" />
         </button>
-    </Dropdown>
+    </a-dropdown>
 
-    <Modal v-model:open="showCreateDialog" title="创建新租户" :footer="null">
-      <Form layout="vertical" @finish="handleCreateTenant">
-        <FormItem label="租户名称"><Input v-model:value="newTenantName" placeholder="请输入租户名称" /></FormItem>
-        <FormItem label="租户套餐"><Select v-model:value="newTenantPackageId" class="w-full" :options="packages.map(item => ({ value: item.id, label: `${item.name} · ${item.maxUsers.toLocaleString()} 用户 / ${item.maxApps.toLocaleString()} 应用` }))" /></FormItem>
-        <div class="flex justify-end"><Button html-type="submit" :loading="loading">创建</Button></div>
-      </Form>
-    </Modal>
+    <a-modal v-model:open="showCreateDialog" title="创建新租户" :footer="null">
+      <a-form layout="vertical" @finish="handleCreateTenant">
+        <a-form-item label="租户名称"><a-input v-model:value="newTenantName" placeholder="请输入租户名称" /></a-form-item>
+        <a-form-item label="租户套餐"><a-select v-model:value="newTenantPackageId" class="w-full" :options="packages.map(item => ({ value: item.id, label: `${item.name} · ${item.maxUsers.toLocaleString()} 用户 / ${item.maxApps.toLocaleString()} 应用` }))" /></a-form-item>
+        <div class="flex justify-end"><a-button html-type="submit" :loading="loading">创建</a-button></div>
+      </a-form>
+    </a-modal>
   </div>
 </template>
 

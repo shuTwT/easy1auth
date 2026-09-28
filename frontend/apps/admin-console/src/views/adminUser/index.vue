@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import axios from 'axios'
-import { Form, FormItem, message, Pagination as AntPagination, Table as ATable } from 'antdv-next'
+import { message } from 'antdv-next'
 import {
   Search,
   RefreshCw,
@@ -678,15 +678,15 @@ onMounted(() => {
 
     <div>
       <div class="mb-4">
-        <Button :type="activeTab === 'admins' ? 'primary' : 'default'" @click="activeTab = 'admins'">管理员</Button>
-        <Button :type="activeTab === 'roles' ? 'primary' : 'default'" @click="activeTab = 'roles'">管理员角色</Button>
+        <a-button :type="activeTab === 'admins' ? 'primary' : 'default'" @click="activeTab = 'admins'">管理员</a-button>
+        <a-button :type="activeTab === 'roles' ? 'primary' : 'default'" @click="activeTab = 'roles'">管理员角色</a-button>
       </div>
 
       <!-- ===================== 管理员 Tab ===================== -->
       <div v-show="activeTab === 'admins'">
         <!-- stats -->
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
-          <Card v-for="(stat, index) in adminStatsCards" :key="index" class="transition-all hover:shadow-md">
+          <a-card v-for="(stat, index) in adminStatsCards" :key="index" class="transition-all hover:shadow-md">
             <div class="pt-4">
               <div class="flex items-center gap-3">
                 <div
@@ -707,51 +707,51 @@ onMounted(() => {
                 </div>
               </div>
             </div>
-          </Card>
+          </a-card>
         </div>
 
         <!-- search -->
-        <Card class="mb-4">
+        <a-card class="mb-4!">
           <div class="pt-6">
             <div class="flex flex-wrap gap-4 items-end">
               <div class="grid gap-2">
                 <label>用户名</label>
-                <Input v-model:value="adminQuery.username" placeholder="请输入用户名" class="w-40" />
+                <a-input v-model:value="adminQuery.username" placeholder="请输入用户名" class="w-40" />
               </div>
               <div class="grid gap-2">
                 <label>邮箱</label>
-                <Input v-model:value="adminQuery.email" placeholder="请输入邮箱" class="w-40" />
+                <a-input v-model:value="adminQuery.email" placeholder="请输入邮箱" class="w-40" />
               </div>
               <div class="grid gap-2">
                 <label>手机号</label>
-                <Input v-model:value="adminQuery.phone" placeholder="请输入手机号" class="w-40" />
+                <a-input v-model:value="adminQuery.phone" placeholder="请输入手机号" class="w-40" />
               </div>
               <div class="grid gap-2">
                 <label>状态</label>
-                <Select v-model:value="adminQuery.status" class="w-32" allow-clear :options="adminStatusOptions" />
+                <a-select v-model:value="adminQuery.status" class="w-32" allow-clear :options="adminStatusOptions" />
               </div>
               <div class="grid gap-2">
                 <label>管理员角色</label>
-                <Select v-model:value="adminQuery.roleId" class="w-44" allow-clear :options="adminRoleOptions" />
+                <a-select v-model:value="adminQuery.roleId" class="w-44" allow-clear :options="adminRoleOptions" />
               </div>
               <div class="flex gap-2">
-                <Button @click="handleAdminSearch">
+                <a-button @click="handleAdminSearch">
                   <Search class="size-4 mr-1" />
                   搜索
-                </Button>
-                <Button  @click="handleAdminReset">
+                </a-button>
+                <a-button  @click="handleAdminReset">
                   <RefreshCw class="size-4 mr-1" />
                   重置
-                </Button>
+                </a-button>
               </div>
             </div>
           </div>
-        </Card>
+        </a-card>
 
         <!-- table -->
-        <Card>
+        <a-card>
           <div class="pt-6">
-            <ATable
+            <a-table
               :columns="adminColumns"
               :data-source="admins"
               :loading="adminLoading"
@@ -762,11 +762,11 @@ onMounted(() => {
               <template #bodyCell="{ column, record: row }">
                 <template v-if="column.key === 'username'">
                     <div class="flex items-center gap-2">
-                      <Avatar class="size-8 bg-gradient-to-br from-primary to-primary/60">
+                      <a-avatar class="size-8 bg-gradient-to-br from-primary to-primary/60">
                         <span class="bg-transparent text-white text-xs font-semibold">
                           {{ row.username.charAt(0).toUpperCase() }}
                         </span>
-                      </Avatar>
+                      </a-avatar>
                       <div class="flex flex-col">
                         <span class="font-medium">{{ row.username }}</span>
                         <span v-if="isSelf(row)" class="text-xs text-primary">（我）</span>
@@ -776,26 +776,26 @@ onMounted(() => {
                 <template v-else-if="column.key === 'email'">{{ row.email }}</template>
                 <template v-else-if="column.key === 'phone'">{{ row.phone || '-' }}</template>
                 <template v-else-if="column.key === 'tenantRole'">
-                    <Tag v-if="currentTenantRole(row)" :color="tenantRoleVariant(currentTenantRole(row))" class="text-xs">
+                    <a-tag v-if="currentTenantRole(row)" :color="tenantRoleVariant(currentTenantRole(row))" class="text-xs">
                       {{ tenantRoleText(currentTenantRole(row)) }}
-                    </Tag>
+                    </a-tag>
                     <span v-else class="text-muted-foreground">-</span>
                 </template>
                 <template v-else-if="column.key === 'status'">
-                    <Tag :color="adminStatusVariant(row.status)" class="text-xs">
+                    <a-tag :color="adminStatusVariant(row.status)" class="text-xs">
                       {{ adminStatusText(row.status) }}
-                    </Tag>
+                    </a-tag>
                 </template>
                 <template v-else-if="column.key === 'mfa'">
-                    <Tag :color="row.mfaEnabled ? 'green' : 'default'" class="text-xs">
+                    <a-tag :color="row.mfaEnabled ? 'green' : 'default'" class="text-xs">
                       {{ row.mfaEnabled ? '已启用' : '未启用' }}
-                    </Tag>
+                    </a-tag>
                 </template>
                 <span v-else-if="column.key === 'lastLoginAt'" class="text-muted-foreground">{{ formatDate(row.lastLoginAt) }}</span>
                 <span v-else-if="column.key === 'createdAt'" class="text-muted-foreground">{{ formatDate(row.createdAt) }}</span>
                 <template v-else-if="column.key === 'actions'">
                     <div class="flex gap-1 flex-wrap">
-                      <Button
+                      <a-button
                         type="link"
                         size="small"
                         class="h-auto p-0"
@@ -803,8 +803,8 @@ onMounted(() => {
                         @click="openEditDialog(row)"
                       >
                         编辑
-                      </Button>
-                      <Button
+                      </a-button>
+                      <a-button
                         type="link"
                         size="small"
                         class="h-auto p-0"
@@ -812,8 +812,8 @@ onMounted(() => {
                         @click="handleStatusToggle(row)"
                       >
                         {{ row.status === 'active' ? '禁用' : '启用' }}
-                      </Button>
-                      <Button
+                      </a-button>
+                      <a-button
                         type="link"
                         size="small"
                         class="h-auto p-0"
@@ -821,8 +821,8 @@ onMounted(() => {
                         @click="openAssignRolesDialog(row)"
                       >
                         分配角色
-                      </Button>
-                      <Button
+                      </a-button>
+                      <a-button
                         type="link"
                         size="small"
                         class="h-auto p-0"
@@ -830,8 +830,8 @@ onMounted(() => {
                         @click="openResetPwdDialog(row)"
                       >
                         重置密码
-                      </Button>
-                      <Button
+                      </a-button>
+                      <a-button
                         type="link"
                         size="small"
                         class="h-auto p-0"
@@ -839,8 +839,8 @@ onMounted(() => {
                         @click="openResetMfaDialog(row)"
                       >
                         重置 MFA
-                      </Button>
-                      <Button
+                      </a-button>
+                      <a-button
                         type="link"
                         size="small"
                         class="h-auto p-0 text-destructive disabled:text-muted-foreground"
@@ -848,15 +848,15 @@ onMounted(() => {
                         @click="openRemoveDialog(row)"
                       >
                         移出租户
-                      </Button>
+                      </a-button>
                     </div>
                 </template>
               </template>
-            </ATable>
+            </a-table>
 
             <div class="flex items-center justify-between mt-4 pt-4 border-t">
               <span class="text-sm text-muted-foreground">共 {{ adminTotal }} 条</span>
-              <AntPagination
+              <a-pagination
                 :current="adminQuery.page"
                 :page-size="adminQuery.pageSize"
                 :total="adminTotal"
@@ -868,14 +868,14 @@ onMounted(() => {
               />
             </div>
           </div>
-        </Card>
+        </a-card>
       </div>
 
       <!-- ===================== 管理员角色 Tab ===================== -->
       <div v-show="activeTab === 'roles'">
         <!-- stats -->
         <div class="grid grid-cols-3 gap-4 mb-6">
-          <Card v-for="(stat, index) in roleStatsCards" :key="index" class="transition-all hover:shadow-md">
+          <a-card v-for="(stat, index) in roleStatsCards" :key="index" class="transition-all hover:shadow-md">
             <div class="pt-4">
               <div class="flex items-center gap-3">
                 <div
@@ -894,11 +894,11 @@ onMounted(() => {
                 </div>
               </div>
             </div>
-          </Card>
+          </a-card>
         </div>
 
         <!-- permission catalog display -->
-        <Card class="mb-4">
+        <a-card class="mb-4!">
           <div class="pt-6">
             <div class="flex items-center gap-2 mb-4">
               <Shield class="size-4 text-primary" />
@@ -913,49 +913,49 @@ onMounted(() => {
               >
                 <div class="text-sm font-medium mb-2">{{ category.name }}</div>
                 <div class="flex flex-wrap gap-1.5">
-                  <Tag
+                  <a-tag
                     v-for="item in category.items"
                     :key="item.code"
 
                     class="text-xs"
                   >
                     {{ item.name }}
-                  </Tag>
+                  </a-tag>
                 </div>
               </div>
             </div>
           </div>
-        </Card>
+        </a-card>
 
         <!-- role list -->
-        <Card>
+        <a-card>
           <div class="pt-6">
             <div class="flex justify-between items-center mb-4">
               <div class="flex items-center gap-2">
                 <div class="relative">
                   <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                  <Input v-model:value="roleSearch"
+                  <a-input v-model:value="roleSearch"
                     placeholder="搜索角色名称"
                     class="w-64 pl-8"
                     @keyup.enter="handleRoleSearch"
                   />
                 </div>
-                <Button @click="handleRoleSearch">
+                <a-button @click="handleRoleSearch">
                   <Search class="size-4 mr-1" />
                   搜索
-                </Button>
-                <Button  @click="handleRoleReset">
+                </a-button>
+                <a-button  @click="handleRoleReset">
                   <RefreshCw class="size-4 mr-1" />
                   重置
-                </Button>
+                </a-button>
               </div>
-              <Button @click="openCreateRoleDialog">
+              <a-button @click="openCreateRoleDialog">
                 <Plus class="size-4 mr-1" />
                 创建自定义角色
-              </Button>
+              </a-button>
             </div>
 
-            <ATable
+            <a-table
               :columns="roleColumns"
               :data-source="roles"
               :loading="roleLoading"
@@ -966,26 +966,26 @@ onMounted(() => {
               <template #bodyCell="{ column, record: row }">
                 <template v-if="column.key === 'name'">
                     <div class="flex items-center gap-2">
-                      <Tag :color="roleTypeVariant(row.isSystem)" class="text-xs">
+                      <a-tag :color="roleTypeVariant(row.isSystem)" class="text-xs">
                         {{ row.isSystem ? '系统' : '自定义' }}
-                      </Tag>
+                      </a-tag>
                       <span class="font-medium">{{ row.name }}</span>
                     </div>
                 </template>
                 <span v-else-if="column.key === 'description'" class="text-muted-foreground">{{ row.description || '-' }}</span>
                 <template v-else-if="column.key === 'permissions'">
-                    <Tag  class="text-xs">{{ permissionsSummary(row.permissions) }}</Tag>
+                    <a-tag  class="text-xs">{{ permissionsSummary(row.permissions) }}</a-tag>
                 </template>
                 <template v-else-if="column.key === 'adminCount'">{{ row.adminCount || 0 }}</template>
                 <template v-else-if="column.key === 'type'">
-                    <Tag :color="row.isSystem ? 'purple' : 'blue'" class="text-xs">
+                    <a-tag :color="row.isSystem ? 'purple' : 'blue'" class="text-xs">
                       {{ row.isSystem ? '系统' : '自定义' }}
-                    </Tag>
+                    </a-tag>
                 </template>
                 <span v-else-if="column.key === 'createdAt'" class="text-muted-foreground">{{ formatDate(row.createdAt) }}</span>
                 <template v-else-if="column.key === 'actions'">
                     <div class="flex gap-2">
-                      <Button
+                      <a-button
                         type="link"
                         size="small"
                         class="h-auto p-0"
@@ -993,8 +993,8 @@ onMounted(() => {
                         @click="openEditRoleDialog(row)"
                       >
                         编辑
-                      </Button>
-                      <Button
+                      </a-button>
+                      <a-button
                         type="link"
                         size="small"
                         class="h-auto p-0 text-destructive"
@@ -1002,15 +1002,15 @@ onMounted(() => {
                         @click="openDeleteRoleDialog(row)"
                       >
                         删除
-                      </Button>
+                      </a-button>
                     </div>
                 </template>
               </template>
-            </ATable>
+            </a-table>
 
             <div class="flex items-center justify-between mt-4 pt-4 border-t">
               <span class="text-sm text-muted-foreground">共 {{ roleTotal }} 条</span>
-              <AntPagination
+              <a-pagination
                 :current="rolePage"
                 :page-size="rolePageSize"
                 :total="roleTotal"
@@ -1020,65 +1020,65 @@ onMounted(() => {
               />
             </div>
           </div>
-        </Card>
+        </a-card>
       </div>
     </div>
 
     <!-- ===================== Edit admin dialog ===================== -->
-    <Modal v-model:open="editDialogVisible" :footer="null">
+    <a-modal v-model:open="editDialogVisible" :footer="null">
       <div class="max-w-lg">
         <div>
           <h3>编辑管理员</h3>
         </div>
-        <Form :model="editForm" layout="vertical" class="py-4" @finish="handleEditSubmit">
+        <a-form :model="editForm" layout="vertical" class="py-4" @finish="handleEditSubmit">
           <div class="grid gap-4">
-            <FormItem label="用户名" name="username">
-              <Input v-model:value="editForm.username" placeholder="请输入用户名" />
-            </FormItem>
-            <FormItem label="邮箱" name="email">
-              <Input v-model:value="editForm.email" placeholder="请输入邮箱" />
-            </FormItem>
-            <FormItem label="手机号" name="phone">
-              <Input v-model:value="editForm.phone" placeholder="请输入手机号" />
-            </FormItem>
+            <a-form-item label="用户名" name="username">
+              <a-input v-model:value="editForm.username" placeholder="请输入用户名" />
+            </a-form-item>
+            <a-form-item label="邮箱" name="email">
+              <a-input v-model:value="editForm.email" placeholder="请输入邮箱" />
+            </a-form-item>
+            <a-form-item label="手机号" name="phone">
+              <a-input v-model:value="editForm.phone" placeholder="请输入手机号" />
+            </a-form-item>
           </div>
           <div class="flex justify-end gap-2 pt-2">
-            <Button html-type="button" @click="editDialogVisible = false">取消</Button>
-            <Button type="primary" html-type="submit" :loading="editSubmitting" :disabled="editSubmitting">
+            <a-button html-type="button" @click="editDialogVisible = false">取消</a-button>
+            <a-button type="primary" html-type="submit" :loading="editSubmitting" :disabled="editSubmitting">
               {{ editSubmitting ? '提交中...' : '确定' }}
-            </Button>
+            </a-button>
           </div>
-        </Form>
+        </a-form>
       </div>
-    </Modal>
+    </a-modal>
 
     <!-- ===================== Reset password dialog ===================== -->
-    <Modal v-model:open="resetPwdDialogVisible" :footer="null">
+    <a-modal v-model:open="resetPwdDialogVisible" :footer="null">
       <div class="max-w-md">
         <div>
           <h3>重置管理员密码</h3>
         </div>
-        <Form :model="resetPwdForm" :rules="resetPwdFormRules" layout="vertical" class="py-4" @finish="handleResetPwdSubmit">
+        <a-form :model="resetPwdForm" :rules="resetPwdFormRules" layout="vertical" class="py-4" @finish="handleResetPwdSubmit">
           <div class="grid gap-4">
-            <FormItem label="新密码" name="newPassword">
-              <Input v-model:value="resetPwdForm.newPassword" type="password" placeholder="请输入新密码" />
-            </FormItem>
-            <FormItem label="确认密码" name="confirmPassword">
-              <Input v-model:value="resetPwdForm.confirmPassword" type="password" placeholder="请确认新密码" />
-            </FormItem>
+            <a-form-item label="新密码" name="newPassword">
+              <a-input v-model:value="resetPwdForm.newPassword" type="password" placeholder="请输入新密码" />
+            </a-form-item>
+            <a-form-item label="确认密码" name="confirmPassword">
+              <a-input v-model:value="resetPwdForm.confirmPassword" type="password" placeholder="请确认新密码" />
+            </a-form-item>
           </div>
           <div class="flex justify-end gap-2 pt-2">
-            <Button html-type="button" @click="resetPwdDialogVisible = false">取消</Button>
-            <Button type="primary" html-type="submit" :loading="resetPwdSubmitting" :disabled="resetPwdSubmitting">
+            <a-button html-type="button" @click="resetPwdDialogVisible = false">取消</a-button>
+            <a-button type="primary" html-type="submit" :loading="resetPwdSubmitting" :disabled="resetPwdSubmitting">
               {{ resetPwdSubmitting ? '提交中...' : '确定' }}
-            </Button>
+            </a-button>
           </div>
-        </Form>
+        </a-form>
       </div>
-    </Modal>
+    </a-modal>
 
     <!-- ===================== Reset MFA confirmation ===================== -->
-    <Modal v-model:open="resetMfaDialogVisible" :footer="null">
+    <a-modal v-model:open="resetMfaDialogVisible" :footer="null">
       <div>
         <div>
           <h3>重置管理员 MFA</h3>
@@ -1087,16 +1087,16 @@ onMounted(() => {
           </p>
         </div>
         <div>
-          <Button :disabled="resetMfaSubmitting">取消</Button>
-          <Button type="primary" :loading="resetMfaSubmitting" :disabled="resetMfaSubmitting" @click="handleResetMfaConfirm">
+          <a-button :disabled="resetMfaSubmitting">取消</a-button>
+          <a-button type="primary" :loading="resetMfaSubmitting" :disabled="resetMfaSubmitting" @click="handleResetMfaConfirm">
             {{ resetMfaSubmitting ? '处理中...' : '确认重置' }}
-          </Button>
+          </a-button>
         </div>
       </div>
-    </Modal>
+    </a-modal>
 
     <!-- ===================== Assign roles dialog ===================== -->
-    <Modal v-model:open="assignRolesDialogVisible" :footer="null">
+    <a-modal v-model:open="assignRolesDialogVisible" :footer="null">
       <div class="max-w-lg">
         <div>
           <h3>分配管理员角色</h3>
@@ -1105,18 +1105,18 @@ onMounted(() => {
           <div class="grid gap-2 mb-4">
             <label>当前角色</label>
             <div v-if="assignRolesMembership && assignRolesMembership.roles.length > 0" class="flex flex-wrap gap-2">
-              <Tag
+              <a-tag
                 v-for="role in assignRolesMembership.roles"
                 :key="role.id"
                 color="blue"
                 class="text-xs"
               >
                 {{ role.name }}
-              </Tag>
+              </a-tag>
             </div>
             <div v-else class="text-muted-foreground text-sm">暂未分配角色</div>
           </div>
-          <Divider class="my-2" />
+          <a-divider class="my-2" />
           <div class="grid gap-2">
             <label>选择角色</label>
             <div class="border rounded-lg p-3 max-h-72 overflow-y-auto">
@@ -1128,13 +1128,13 @@ onMounted(() => {
                 :key="role.id"
                 class="flex items-center gap-2 py-1.5"
               >
-                <Checkbox
+                <a-checkbox
                   :checked="assignRolesSelected.includes(role.id)"
                   @update:checked="toggleRoleSelection(role.id)"
                 />
-                <Tag :color="roleTypeVariant(role.isSystem)" class="text-xs">
+                <a-tag :color="roleTypeVariant(role.isSystem)" class="text-xs">
                   {{ role.isSystem ? '系统' : '自定义' }}
-                </Tag>
+                </a-tag>
                 <span class="font-medium text-sm">{{ role.name }}</span>
                 <span class="text-xs text-muted-foreground">{{ permissionsSummary(role.permissions) }}</span>
               </div>
@@ -1142,16 +1142,16 @@ onMounted(() => {
           </div>
         </div>
         <div>
-          <Button  @click="assignRolesDialogVisible = false">取消</Button>
-          <Button type="primary" :loading="assignRolesSubmitting" :disabled="assignRolesSubmitting" @click="handleAssignRolesSubmit">
+          <a-button  @click="assignRolesDialogVisible = false">取消</a-button>
+          <a-button type="primary" :loading="assignRolesSubmitting" :disabled="assignRolesSubmitting" @click="handleAssignRolesSubmit">
             {{ assignRolesSubmitting ? '提交中...' : '确定' }}
-          </Button>
+          </a-button>
         </div>
       </div>
-    </Modal>
+    </a-modal>
 
     <!-- ===================== Remove from tenant confirmation ===================== -->
-    <Modal v-model:open="removeDialogVisible" :footer="null">
+    <a-modal v-model:open="removeDialogVisible" :footer="null">
       <div>
         <div>
           <h3>移出租户</h3>
@@ -1160,8 +1160,8 @@ onMounted(() => {
           </p>
         </div>
         <div>
-          <Button :disabled="removeSubmitting">取消</Button>
-          <Button
+          <a-button :disabled="removeSubmitting">取消</a-button>
+          <a-button
             type="primary"
             danger
             :loading="removeSubmitting"
@@ -1169,26 +1169,26 @@ onMounted(() => {
             @click="handleRemoveConfirm"
           >
             {{ removeSubmitting ? '处理中...' : '确认移除' }}
-          </Button>
+          </a-button>
         </div>
       </div>
-    </Modal>
+    </a-modal>
 
     <!-- ===================== Create / edit role dialog ===================== -->
-    <Modal v-model:open="roleDialogVisible" :footer="null">
+    <a-modal v-model:open="roleDialogVisible" :footer="null">
       <div class="max-w-xl">
         <div>
           <h3>{{ roleDialogTitle }}</h3>
         </div>
-        <Form :model="roleForm" :rules="roleFormRules" layout="vertical" class="py-4" @finish="handleRoleSubmit">
+        <a-form :model="roleForm" :rules="roleFormRules" layout="vertical" class="py-4" @finish="handleRoleSubmit">
           <div class="grid gap-4">
-            <FormItem label="角色名称" name="name">
-              <Input v-model:value="roleForm.name" placeholder="请输入角色名称" />
-            </FormItem>
-            <FormItem label="描述" name="description">
-              <InputTextArea v-model:value="roleForm.description" :rows="2" placeholder="请输入角色描述" />
-            </FormItem>
-            <FormItem label="权限配置">
+            <a-form-item label="角色名称" name="name">
+              <a-input v-model:value="roleForm.name" placeholder="请输入角色名称" />
+            </a-form-item>
+            <a-form-item label="描述" name="description">
+              <a-textarea v-model:value="roleForm.description" :rows="2" placeholder="请输入角色描述" />
+            </a-form-item>
+            <a-form-item label="权限配置">
               <div class="border rounded-lg p-3 max-h-80 overflow-y-auto">
                 <div
                   v-for="category in permissionCategories"
@@ -1202,7 +1202,7 @@ onMounted(() => {
                       :key="item.code"
                       class="flex items-center gap-2 cursor-pointer"
                     >
-                      <Checkbox
+                      <a-checkbox
                         :checked="roleForm.permissions.includes(item.code)"
                         @update:checked="toggleRolePermission(item.code)"
                       />
@@ -1212,20 +1212,20 @@ onMounted(() => {
                   </div>
                 </div>
               </div>
-            </FormItem>
+            </a-form-item>
           </div>
           <div class="flex justify-end gap-2 pt-2">
-            <Button html-type="button" @click="roleDialogVisible = false">取消</Button>
-            <Button type="primary" html-type="submit" :loading="roleDialogSubmitting" :disabled="roleDialogSubmitting">
+            <a-button html-type="button" @click="roleDialogVisible = false">取消</a-button>
+            <a-button type="primary" html-type="submit" :loading="roleDialogSubmitting" :disabled="roleDialogSubmitting">
               {{ roleDialogSubmitting ? '提交中...' : '确定' }}
-            </Button>
+            </a-button>
           </div>
-        </Form>
+        </a-form>
       </div>
-    </Modal>
+    </a-modal>
 
     <!-- ===================== Delete role confirmation ===================== -->
-    <Modal v-model:open="deleteRoleDialogVisible" :footer="null">
+    <a-modal v-model:open="deleteRoleDialogVisible" :footer="null">
       <div>
         <div>
           <h3>删除管理员角色</h3>
@@ -1234,8 +1234,8 @@ onMounted(() => {
           </p>
         </div>
         <div>
-          <Button :disabled="deleteRoleSubmitting">取消</Button>
-          <Button
+          <a-button :disabled="deleteRoleSubmitting">取消</a-button>
+          <a-button
             type="primary"
             danger
             :loading="deleteRoleSubmitting"
@@ -1243,9 +1243,9 @@ onMounted(() => {
             @click="handleDeleteRoleConfirm"
           >
             {{ deleteRoleSubmitting ? '处理中...' : '确认删除' }}
-          </Button>
+          </a-button>
         </div>
       </div>
-    </Modal>
+    </a-modal>
   </div>
 </template>

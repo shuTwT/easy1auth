@@ -159,11 +159,10 @@ public interface EnterpriseIdentityRepository
     sql().saveCommand(group).setMode(SaveMode.INSERT_ONLY).execute();
   }
 
-  default void updateGroup(UUID id, String name, UUID parent) {
+  default void updateGroup(UUID id, String name) {
     sql()
         .createUpdate(GROUP)
         .set(GROUP.name(), name)
-        .set(GROUP.parentId(), parent)
         .set(GROUP.updatedAt(), Instant.now())
         .where(GROUP.id().eq(id))
         .execute();
@@ -330,10 +329,10 @@ public interface EnterpriseIdentityRepository
         .fetchOptional();
   }
 
-  default boolean groupNameExists(UUID tenant, UUID self, UUID parent, String name) {
+  default boolean groupNameExists(UUID tenant, UUID self, String name) {
     return sql()
         .createQuery(GROUP)
-        .where(GROUP.tenantId().eq(tenant), GROUP.parentId().eq(parent), GROUP.name().eq(name))
+        .where(GROUP.tenantId().eq(tenant), GROUP.name().eq(name))
         .whereIf(self != null, () -> GROUP.id().ne(self))
         .select(GROUP.id())
         .exists();

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted, reactive } from 'vue'
-import { Form, FormItem, Modal, Pagination as AntPagination, Table, message, Upload as AUpload } from 'antdv-next'
+import { ref, onMounted, onBeforeUnmount, reactive, watch } from 'vue'
+import { Modal, message } from 'antdv-next'
+import type { UploadProps } from 'antdv-next'
 import { Plus, Upload, Download, Search, RefreshCw } from '@lucide/vue'
 import { userApi } from '@/api/user'
 import { roleApi } from '@/api/role'
@@ -50,6 +51,57 @@ const userForm = reactive<CreateUserDto & UpdateUserDto>({
   department: '',
   position: ''
 })
+
+const avatarLoading = ref(false)
+let avatarReader: FileReader | null = null
+
+function cancelAvatarRead() {
+  const reader = avatarReader
+  avatarReader = null
+  reader?.abort()
+  avatarLoading.value = false
+}
+
+const beforeAvatarUpload: UploadProps['beforeUpload'] = (file) => {
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+    message.error('请选择 JPG、PNG 或 WebP 格式的图片')
+    return false
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    message.error('头像图片不能超过 2 MB')
+    return false
+  }
+
+  cancelAvatarRead()
+  const reader = new FileReader()
+  avatarReader = reader
+  avatarLoading.value = true
+  reader.onload = () => {
+    if (avatarReader === reader && typeof reader.result === 'string') {
+      userForm.avatar = reader.result
+    }
+  }
+  reader.onerror = () => {
+    if (avatarReader === reader) {
+      message.error('头像图片读取失败，请重新选择')
+    }
+  }
+  reader.onloadend = () => {
+    if (avatarReader === reader) {
+      avatarReader = null
+      avatarLoading.value = false
+    }
+  }
+  reader.readAsDataURL(file)
+  return false
+}
+
+watch(dialogVisible, (open) => {
+  if (!open) {
+    cancelAvatarRead()
+  }
+}, { flush: 'sync' })
+onBeforeUnmount(cancelAvatarRead)
 
 const resetPasswordForm = reactive({
   newPassword: '',
@@ -108,6 +160,7 @@ const handleReset = () => {
 }
 
 const handleAdd = () => {
+  cancelAvatarRead()
   dialogTitle.value = '新增用户'
   Object.assign(userForm, {
     username: '',
@@ -124,6 +177,7 @@ const handleAdd = () => {
 }
 
 const handleEdit = (row: User) => {
+  cancelAvatarRead()
   dialogTitle.value = '编辑用户'
   Object.assign(userForm, {
     username: row.username,
@@ -177,6 +231,9 @@ const handleResetPassword = (row: User) => {
 }
 
 const handleSubmit = async () => {
+  if (avatarLoading.value) {
+    return
+  }
   try {
     if (currentUser.value.id) {
       await userApi.update(currentUser.value.id, userForm)
@@ -333,53 +390,53 @@ const toggleRole = (roleId: string) => {
         <p class="text-sm text-muted-foreground">管理系统用户，包括添加、编辑、删除和分配角色</p>
       </div>
       <div class="flex gap-3">
-        <Button  @click="handleImport">
+        <a-button  @click="handleImport">
           <Upload class="size-4 mr-2" />
           导入用户
-        </Button>
-        <Button @click="handleAdd">
+        </a-button>
+        <a-button @click="handleAdd">
           <Plus class="size-4 mr-2" />
           新增用户
-        </Button>
+        </a-button>
       </div>
     </div>
 
-    <Card class="mb-4">
+    <a-card class="mb-4!">
       <div class="pt-6">
         <div class="flex flex-wrap gap-4 items-end">
           <div class="grid gap-2">
             <label class="text-sm font-medium">用户名</label>
-            <Input v-model:value="queryForm.username" placeholder="请输入用户名" class="w-40" />
+            <a-input v-model:value="queryForm.username" placeholder="请输入用户名" class="w-40" />
           </div>
           <div class="grid gap-2">
             <label class="text-sm font-medium">邮箱</label>
-            <Input v-model:value="queryForm.email" placeholder="请输入邮箱" class="w-40" />
+            <a-input v-model:value="queryForm.email" placeholder="请输入邮箱" class="w-40" />
           </div>
           <div class="grid gap-2">
             <label class="text-sm font-medium">姓名</label>
-            <Input v-model:value="queryForm.name" placeholder="请输入姓名" class="w-40" />
+            <a-input v-model:value="queryForm.name" placeholder="请输入姓名" class="w-40" />
           </div>
           <div class="grid gap-2">
             <label class="text-sm font-medium">状态</label>
-            <Select v-model:value="queryForm.status" class="w-32" allow-clear :options="userStatusOptions" />
+            <a-select v-model:value="queryForm.status" placeholder="请选择状态" class="w-42" allow-clear :options="userStatusOptions" />
           </div>
           <div class="flex gap-2">
-            <Button @click="handleSearch">
+            <a-button @click="handleSearch">
               <Search class="size-4 mr-2" />
               搜索
-            </Button>
-            <Button  @click="handleReset">
+            </a-button>
+            <a-button  @click="handleReset">
               <RefreshCw class="size-4 mr-2" />
               重置
-            </Button>
+            </a-button>
           </div>
         </div>
       </div>
-    </Card>
+    </a-card>
 
-    <Card>
+    <a-card>
       <div class="pt-6">
-        <Table :columns="[
+        <a-table :columns="[
           { title: '用户名', key: 'username', width: 160 }, { title: '邮箱', dataIndex: 'email', width: 192 },
           { title: '手机号', key: 'phone', width: 128 }, { title: '部门', key: 'department', width: 112 },
           { title: '状态', key: 'status', width: 96 }, { title: '最后登录', key: 'lastLoginAt', width: 160 },
@@ -388,11 +445,11 @@ const toggleRole = (roleId: string) => {
           <template #bodyCell="{ column, record: row }">
             <template v-if="column.key === 'username'">
                 <div class="flex items-center gap-3">
-                  <Avatar class="size-8 bg-gradient-to-br from-blue-500 to-purple-600">
+                  <a-avatar class="size-8 bg-gradient-to-br from-blue-500 to-purple-600">
                     <span class="bg-transparent text-white text-sm font-semibold">
                       {{ row.name?.charAt(0) || row.username.charAt(0).toUpperCase() }}
                     </span>
-                  </Avatar>
+                  </a-avatar>
                   <div class="flex flex-col">
                     <span class="font-medium">{{ row.username }}</span>
                     <span class="text-xs text-muted-foreground">{{ row.name }}</span>
@@ -402,34 +459,34 @@ const toggleRole = (roleId: string) => {
             <template v-else-if="column.key === 'phone'">{{ row.phone || '-' }}</template>
             <template v-else-if="column.key === 'department'">{{ row.department || '-' }}</template>
             <template v-else-if="column.key === 'status'">
-                <Tag :color="getStatusVariant(row.status)">
+                <a-tag :color="getStatusVariant(row.status)">
                   {{ getStatusText(row.status) }}
-                </Tag>
+                </a-tag>
             </template>
             <template v-else-if="column.key === 'lastLoginAt'">{{ row.lastLoginAt ? new Date(row.lastLoginAt).toLocaleString() : '-' }}</template>
             <template v-else-if="column.key === 'createdAt'">{{ new Date(row.createdAt).toLocaleString() }}</template>
             <template v-else-if="column.key === 'actions'">
                 <div class="flex gap-1 flex-wrap">
-                  <Button type="link" size="small" class="h-auto p-0" @click="handleEdit(row)">编辑</Button>
-                  <Button type="link" size="small" class="h-auto p-0" @click="handleAssignRole(row)">分配角色</Button>
-                  <Button type="link" size="small" class="h-auto p-0" @click="handleResetPassword(row)">重置密码</Button>
-                  <Button
+                  <a-button type="link" size="small" class="h-auto p-0" @click="handleEdit(row)">编辑</a-button>
+                  <a-button type="link" size="small" class="h-auto p-0" @click="handleAssignRole(row)">分配角色</a-button>
+                  <a-button type="link" size="small" class="h-auto p-0" @click="handleResetPassword(row)">重置密码</a-button>
+                  <a-button
                     type="link"
                     size="small"
                     class="h-auto p-0"
                     @click="handleStatusChange(row, row.status === 'active' ? 'disabled' : 'active')"
                   >
                     {{ row.status === 'active' ? '禁用' : '启用' }}
-                  </Button>
-                  <Button type="link" size="small" class="h-auto p-0 text-destructive" @click="handleDelete(row)">删除</Button>
+                  </a-button>
+                  <a-button type="link" size="small" class="h-auto p-0 text-destructive" @click="handleDelete(row)">删除</a-button>
                 </div>
             </template>
           </template>
-        </Table>
+        </a-table>
 
         <div class="flex items-center justify-between mt-4 pt-4 border-t">
           <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
-          <AntPagination
+          <a-pagination
             :current="queryForm.page"
             :page-size="queryForm.pageSize"
             :total="total"
@@ -441,71 +498,96 @@ const toggleRole = (roleId: string) => {
           />
         </div>
       </div>
-    </Card>
+    </a-card>
 
-    <Modal v-model:open="dialogVisible" :footer="null">
-      <div class="max-w-lg">
-        <div>
-          <h3>{{ dialogTitle }}</h3>
-        </div>
-        <Form :model="userForm" :rules="userFormRules" layout="vertical" class="py-4" @finish="handleSubmit">
-          <div class="grid gap-4">
-            <FormItem label="用户名" name="username">
-              <Input v-model:value="userForm.username" placeholder="请输入用户名" :disabled="!!currentUser.id" />
-            </FormItem>
-            <FormItem label="邮箱" name="email">
-              <Input v-model:value="userForm.email" placeholder="请输入邮箱" />
-            </FormItem>
-            <FormItem v-if="!currentUser.id" label="密码" name="password" :rules="[{ required: true, message: '请输入密码' }]">
-              <Input v-model:value="userForm.password" type="password" placeholder="请输入密码" />
-            </FormItem>
-            <FormItem label="姓名" name="name">
-              <Input v-model:value="userForm.name" placeholder="请输入姓名" />
-            </FormItem>
-            <FormItem label="手机号" name="phone">
-              <Input v-model:value="userForm.phone" placeholder="请输入手机号" />
-            </FormItem>
-            <FormItem label="部门" name="department">
-              <Input v-model:value="userForm.department" placeholder="请输入部门" />
-            </FormItem>
-            <FormItem label="岗位" name="position">
-              <Input v-model:value="userForm.position" placeholder="请输入岗位" />
-            </FormItem>
-            <FormItem label="头像" name="avatar">
-              <Input v-model:value="userForm.avatar" placeholder="请输入头像URL" />
-            </FormItem>
+    <a-modal v-model:open="dialogVisible" :title="dialogTitle" :width="720" :footer="null">
+      <div>
+        <a-form :model="userForm" :rules="userFormRules" layout="vertical" class="py-4" @finish="handleSubmit">
+          <div class="grid grid-cols-1 gap-x-6 md:grid-cols-2">
+            <a-form-item label="用户名" name="username">
+              <a-input v-model:value="userForm.username" placeholder="请输入用户名" :disabled="!!currentUser.id" />
+            </a-form-item>
+            <a-form-item label="邮箱" name="email">
+              <a-input v-model:value="userForm.email" placeholder="请输入邮箱" />
+            </a-form-item>
+            <a-form-item v-if="!currentUser.id" label="密码" name="password" :rules="[{ required: true, message: '请输入密码' }]">
+              <a-input v-model:value="userForm.password" type="password" placeholder="请输入密码" />
+            </a-form-item>
+            <a-form-item label="姓名" name="name">
+              <a-input v-model:value="userForm.name" placeholder="请输入姓名" />
+            </a-form-item>
+            <a-form-item label="手机号" name="phone">
+              <a-input v-model:value="userForm.phone" placeholder="请输入手机号" />
+            </a-form-item>
+            <a-form-item label="部门" name="department">
+              <a-input v-model:value="userForm.department" placeholder="请输入部门" />
+            </a-form-item>
+            <a-form-item label="岗位" name="position">
+              <a-input v-model:value="userForm.position" placeholder="请输入岗位" />
+            </a-form-item>
+            <a-form-item label="头像" name="avatar">
+              <div class="flex items-start gap-3">
+                <a-upload
+                  accept="image/jpeg,image/png,image/webp"
+                  list-type="picture-card"
+                  :file-list="[]"
+                  :show-upload-list="false"
+                  :multiple="false"
+                  :disabled="avatarLoading"
+                  :before-upload="beforeAvatarUpload"
+                >
+                  <button
+                    type="button"
+                    class="flex h-full w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-lg border-0 bg-transparent p-0"
+                    :disabled="avatarLoading"
+                    :aria-label="userForm.avatar ? '更换头像' : '上传头像'"
+                  >
+                    <a-spin v-if="avatarLoading" size="small" />
+                    <img v-else-if="userForm.avatar" :src="userForm.avatar" alt="用户头像预览" class="h-full w-full object-cover" />
+                    <template v-else>
+                      <Plus :size="20" />
+                      <span class="text-sm">上传头像</span>
+                    </template>
+                  </button>
+                </a-upload>
+                <div class="pt-1">
+                  <p class="text-xs text-muted-foreground">支持 JPG、PNG、WebP，最大 2 MB</p>
+                  <a-button v-if="userForm.avatar" type="link" size="small" :disabled="avatarLoading" @click="userForm.avatar = ''">移除头像</a-button>
+                </div>
+              </div>
+            </a-form-item>
           </div>
           <div class="flex justify-end gap-2">
-            <Button @click="dialogVisible = false">取消</Button>
-            <Button type="primary" html-type="submit">确定</Button>
+            <a-button @click="dialogVisible = false">取消</a-button>
+            <a-button type="primary" html-type="submit" :disabled="avatarLoading">确定</a-button>
           </div>
-        </Form>
+        </a-form>
       </div>
-    </Modal>
+    </a-modal>
 
-    <Modal v-model:open="resetPasswordDialogVisible" :footer="null">
+    <a-modal v-model:open="resetPasswordDialogVisible" :footer="null">
       <div class="max-w-md">
         <div>
           <h3>重置密码</h3>
         </div>
-        <Form :model="resetPasswordForm" :rules="resetPasswordFormRules" layout="vertical" class="py-4" @finish="handleResetPasswordSubmit">
+        <a-form :model="resetPasswordForm" :rules="resetPasswordFormRules" layout="vertical" class="py-4" @finish="handleResetPasswordSubmit">
           <div class="grid gap-4">
-            <FormItem label="新密码" name="newPassword">
-              <Input v-model:value="resetPasswordForm.newPassword" type="password" placeholder="请输入新密码" />
-            </FormItem>
-            <FormItem label="确认密码" name="confirmPassword">
-              <Input v-model:value="resetPasswordForm.confirmPassword" type="password" placeholder="请确认新密码" />
-            </FormItem>
+            <a-form-item label="新密码" name="newPassword">
+              <a-input v-model:value="resetPasswordForm.newPassword" type="password" placeholder="请输入新密码" />
+            </a-form-item>
+            <a-form-item label="确认密码" name="confirmPassword">
+              <a-input v-model:value="resetPasswordForm.confirmPassword" type="password" placeholder="请确认新密码" />
+            </a-form-item>
           </div>
           <div class="flex justify-end gap-2">
-            <Button @click="resetPasswordDialogVisible = false">取消</Button>
-            <Button type="primary" html-type="submit">确定</Button>
+            <a-button @click="resetPasswordDialogVisible = false">取消</a-button>
+            <a-button type="primary" html-type="submit">确定</a-button>
           </div>
-        </Form>
+        </a-form>
       </div>
-    </Modal>
+    </a-modal>
 
-    <Modal v-model:open="assignRoleDialogVisible" :footer="null">
+    <a-modal v-model:open="assignRoleDialogVisible" :footer="null">
       <div class="max-w-lg">
         <div>
           <h3>分配角色</h3>
@@ -515,13 +597,13 @@ const toggleRole = (roleId: string) => {
             <div class="grid gap-2">
               <label class="text-sm font-medium">当前角色</label>
               <div v-if="userRoles.length > 0" class="flex flex-wrap gap-2">
-                <Tag
+                <a-tag
                   v-for="role in userRoles"
                   :key="role.id"
                   :color="role.type === 'system' ? 'purple' : 'blue'"
                 >
                   {{ role.name }}
-                </Tag>
+                </a-tag>
               </div>
               <div v-else class="text-muted-foreground text-sm">暂未分配角色</div>
             </div>
@@ -533,16 +615,16 @@ const toggleRole = (roleId: string) => {
                   :key="role.id"
                   class="flex items-center gap-2"
                 >
-                  <Checkbox
+                  <a-checkbox
                     :checked="selectedRoleIds.includes(role.id)"
                     @update:checked="toggleRole(role.id)"
                   />
-                  <Tag
+                  <a-tag
                     :color="role.type === 'system' ? 'purple' : 'blue'"
                     class="text-xs"
                   >
                     {{ role.type === 'system' ? '系统' : '自定义' }}
-                  </Tag>
+                  </a-tag>
                   <span class="font-medium">{{ role.name }}</span>
                   <span class="text-xs text-muted-foreground">({{ role.code }})</span>
                 </div>
@@ -551,19 +633,19 @@ const toggleRole = (roleId: string) => {
           </div>
         </form>
         <div>
-          <Button  @click="assignRoleDialogVisible = false">取消</Button>
-          <Button @click="handleAssignRoleSubmit" :disabled="assignRoleLoading">确定</Button>
+          <a-button  @click="assignRoleDialogVisible = false">取消</a-button>
+          <a-button @click="handleAssignRoleSubmit" :disabled="assignRoleLoading">确定</a-button>
         </div>
       </div>
-    </Modal>
+    </a-modal>
 
-    <Modal v-model:open="importDialogVisible" :footer="null">
+    <a-modal v-model:open="importDialogVisible" :footer="null">
       <div class="max-w-2xl">
         <div>
           <h3>导入用户</h3>
         </div>
         <div class="py-4">
-          <Alert class="mb-6" type="info" show-icon title="导入说明">
+          <a-alert class="mb-6!" type="info" show-icon title="导入说明">
             <template #description>
               <div class="space-y-1">
                 <div>1. 请先下载导入模板，按照模板格式填写用户信息</div>
@@ -572,18 +654,18 @@ const toggleRole = (roleId: string) => {
                 <div>4. 文件格式：.xlsx 或 .xls</div>
               </div>
             </template>
-          </Alert>
+          </a-alert>
 
           <div class="text-center mb-6">
-            <Button @click="handleDownloadTemplate">
+            <a-button @click="handleDownloadTemplate">
               <Download class="size-4 mr-2" />
               下载导入模板
-            </Button>
+            </a-button>
           </div>
 
-          <Divider class="my-4" />
+          <a-divider class="my-4" />
 
-          <AUpload
+          <a-upload
             drag
             accept=".xlsx,.xls"
             :auto-upload="false"
@@ -594,10 +676,10 @@ const toggleRole = (roleId: string) => {
               <p class="text-sm font-medium">将文件拖到此处，或<em class="text-primary not-italic">点击上传</em></p>
               <p class="text-xs text-muted-foreground mt-1">仅支持 xlsx/xls 文件</p>
             </template>
-          </AUpload>
+          </a-upload>
 
           <div v-if="importResult" class="mt-6">
-            <Divider class="my-4" />
+            <a-divider class="my-4" />
             <h4 class="font-semibold mb-4">导入结果</h4>
             <div class="grid grid-cols-3 gap-4 mb-4">
               <div class="border rounded-lg p-3">
@@ -616,20 +698,20 @@ const toggleRole = (roleId: string) => {
 
             <div v-if="importResult.errors && importResult.errors.length > 0" class="mt-4">
               <h4 class="font-semibold mb-2">错误详情</h4>
-              <Table :columns="[{ title: '行号', dataIndex: 'row', width: 80 }, { title: '用户名', dataIndex: 'username', width: 144 }, { title: '错误信息', dataIndex: 'error' }]" :data-source="importResult.errors" :pagination="false" row-key="row" size="small" />
+              <a-table :columns="[{ title: '行号', dataIndex: 'row', width: 80 }, { title: '用户名', dataIndex: 'username', width: 144 }, { title: '错误信息', dataIndex: 'error' }]" :data-source="importResult.errors" :pagination="false" row-key="row" size="small" />
             </div>
 
             <div v-if="importResult.importedUsers && importResult.importedUsers.length > 0" class="mt-4">
               <h4 class="font-semibold mb-2">成功导入的用户</h4>
-              <Table :columns="[{ title: '用户名', dataIndex: 'username', width: 144 }, { title: '邮箱', dataIndex: 'email', width: 192 }, { title: '姓名', dataIndex: 'name' }]" :data-source="importResult.importedUsers" :pagination="false" row-key="username" size="small" />
+              <a-table :columns="[{ title: '用户名', dataIndex: 'username', width: 144 }, { title: '邮箱', dataIndex: 'email', width: 192 }, { title: '姓名', dataIndex: 'name' }]" :data-source="importResult.importedUsers" :pagination="false" row-key="username" size="small" />
             </div>
           </div>
         </div>
         <div>
-          <Button  @click="importDialogVisible = false">关闭</Button>
+          <a-button  @click="importDialogVisible = false">关闭</a-button>
         </div>
       </div>
-    </Modal>
+    </a-modal>
     <contextHolder />
   </div>
 </template>

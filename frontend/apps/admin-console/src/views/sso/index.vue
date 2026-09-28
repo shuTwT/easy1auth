@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { Table, message } from 'antdv-next'
+import { message } from 'antdv-next'
 import { Copy } from '@lucide/vue'
 import { applicationApi } from '@/api/application'
 import type { Application } from '@/types/application'
@@ -100,85 +100,85 @@ onMounted(() => {
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-5 mb-6">
-      <Card>
+      <a-card>
         <div class="pt-6">
           <div class="text-center">
             <div class="text-2xl font-bold text-foreground mb-1">{{ stats.totalApps }}</div>
             <div class="text-sm text-muted-foreground">应用总数</div>
           </div>
         </div>
-      </Card>
-      <Card>
+      </a-card>
+      <a-card>
         <div class="pt-6">
           <div class="text-center">
             <div class="text-2xl font-bold text-foreground mb-1">{{ stats.activeApps }}</div>
             <div class="text-sm text-muted-foreground">启用应用</div>
           </div>
         </div>
-      </Card>
-      <Card>
+      </a-card>
+      <a-card>
         <div class="pt-6">
           <div class="text-center">
             <div class="text-2xl font-bold text-foreground mb-1">{{ stats.webApps }}</div>
             <div class="text-sm text-muted-foreground">Web应用</div>
           </div>
         </div>
-      </Card>
-      <Card>
+      </a-card>
+      <a-card>
         <div class="pt-6">
           <div class="text-center">
             <div class="text-2xl font-bold text-foreground mb-1">{{ stats.spaApps }}</div>
             <div class="text-sm text-muted-foreground">单页应用</div>
           </div>
         </div>
-      </Card>
-      <Card>
+      </a-card>
+      <a-card>
         <div class="pt-6">
           <div class="text-center">
             <div class="text-2xl font-bold text-foreground mb-1">{{ stats.nativeApps }}</div>
             <div class="text-sm text-muted-foreground">原生应用</div>
           </div>
         </div>
-      </Card>
-      <Card>
+      </a-card>
+      <a-card>
         <div class="pt-6">
           <div class="text-center">
             <div class="text-2xl font-bold text-foreground mb-1">{{ stats.machineApps }}</div>
             <div class="text-sm text-muted-foreground">机器应用</div>
           </div>
         </div>
-      </Card>
+      </a-card>
     </div>
 
-    <Card>
+    <a-card>
       <div class="pt-6">
-        <Alert class="mb-5" type="info" show-icon title="单点登录说明">
+        <a-alert class="mb-5!" type="info" show-icon title="单点登录说明">
           <template #description>
             <div>
             <div>单点登录（SSO）允许用户使用一个账号登录多个应用。系统支持 OAuth 2.0 和 OpenID Connect 协议。</div>
             <div class="mt-3">
               <strong>OAuth 2.0 授权端点：</strong>
-              <Button type="link" size="small" class="p-0 h-auto" @click="copyToClipboard(`${baseUrl}/oauth2/authorize`)">
+              <a-button type="link" size="small" class="p-0 h-auto" @click="copyToClipboard(`${baseUrl}/oauth2/authorize`)">
                 {{ baseUrl }}/oauth2/authorize
-              </Button>
+              </a-button>
             </div>
             <div class="mt-1">
               <strong>Token 端点：</strong>
-              <Button type="link" size="small" class="p-0 h-auto" @click="copyToClipboard(`${baseUrl}/oauth2/token`)">
+              <a-button type="link" size="small" class="p-0 h-auto" @click="copyToClipboard(`${baseUrl}/oauth2/token`)">
                 {{ baseUrl }}/oauth2/token
-              </Button>
+              </a-button>
             </div>
             <div class="mt-1">
               <strong>用户信息端点：</strong>
-              <Button type="link" size="small" class="p-0 h-auto" @click="copyToClipboard(`${baseUrl}/oauth2/userinfo`)">
+              <a-button type="link" size="small" class="p-0 h-auto" @click="copyToClipboard(`${baseUrl}/oauth2/userinfo`)">
                 {{ baseUrl }}/oauth2/userinfo
-              </Button>
+              </a-button>
             </div>
             </div>
           </template>
-        </Alert>
+        </a-alert>
 
-        <Table :columns="[
+        <a-table :columns="[
           { title: '应用名称', dataIndex: 'name', width: 200 }, { title: '应用类型', key: 'type', width: 120 },
           { title: 'Client ID', key: 'clientId', width: 300 }, { title: '回调地址', key: 'redirectUris', width: 240 },
           { title: 'Access Token 有效期', key: 'accessTokenLifetime', width: 150, align: 'center' },
@@ -187,16 +187,16 @@ onMounted(() => {
         ]" :data-source="applications" :loading="loading" row-key="id" :pagination="false" :scroll="{ x: 1260 }">
           <template #bodyCell="{ column, record: item }">
             <template v-if="column.key === 'type'">
-                <Tag :color="getTypeVariant(item.type)">
+                <a-tag :color="getTypeVariant(item.type)">
                   {{ getTypeText(item.type) }}
-                </Tag>
+                </a-tag>
             </template>
             <template v-else-if="column.key === 'clientId'">
                 <div class="flex items-center gap-2">
                   <span class="font-mono text-xs">{{ item.clientId }}</span>
-                  <Button type="text" size="small" shape="circle" aria-label="复制客户端 ID" class="h-6 w-6" @click="copyToClipboard(item.clientId)">
+                  <a-button type="text" size="small" shape="circle" aria-label="复制客户端 ID" class="h-6 w-6" @click="copyToClipboard(item.clientId)">
                     <Copy class="size-3" />
-                  </Button>
+                  </a-button>
                 </div>
             </template>
             <template v-else-if="column.key === 'redirectUris'">
@@ -210,25 +210,25 @@ onMounted(() => {
             <template v-else-if="column.key === 'accessTokenLifetime'">{{ item.accessTokenLifetime }} 秒</template>
             <template v-else-if="column.key === 'refreshTokenLifetime'">{{ item.refreshTokenLifetime }} 秒</template>
             <template v-else-if="column.key === 'status'">
-                <Tag :color="getStatusVariant(item.status)">
+                <a-tag :color="getStatusVariant(item.status)">
                   {{ getStatusText(item.status) }}
-                </Tag>
+                </a-tag>
             </template>
           </template>
-        </Table>
+        </a-table>
       </div>
-    </Card>
+    </a-card>
 
-    <Card class="mt-6">
+    <a-card class="mt-6">
       <div class="pt-6">
         <h3>集成指南</h3>
       </div>
       <div>
         <div>
           <div>
-            <Button :type="ssoTab === 'oauth2' ? 'primary' : 'default'" @click="ssoTab = 'oauth2'">OAuth 2.0 授权码流程</Button>
-            <Button :type="ssoTab === 'pkce' ? 'primary' : 'default'" @click="ssoTab = 'pkce'">PKCE 安全增强</Button>
-            <Button :type="ssoTab === 'client' ? 'primary' : 'default'" @click="ssoTab = 'client'">客户端凭证流程</Button>
+            <a-button :type="ssoTab === 'oauth2' ? 'primary' : 'default'" @click="ssoTab = 'oauth2'">OAuth 2.0 授权码流程</a-button>
+            <a-button :type="ssoTab === 'pkce' ? 'primary' : 'default'" @click="ssoTab = 'pkce'">PKCE 安全增强</a-button>
+            <a-button :type="ssoTab === 'client' ? 'primary' : 'default'" @click="ssoTab = 'client'">客户端凭证流程</a-button>
           </div>
           <div v-show="ssoTab === 'oauth2'">
             <div class="p-5">
@@ -278,6 +278,6 @@ grant_type=client_credentials&client_id=YOUR_CLIENT_ID&client_secret=YOUR_CLIENT
           </div>
         </div>
       </div>
-    </Card>
+    </a-card>
   </div>
 </template>

@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { AppWindow, FolderTree, LockKeyhole, RefreshCw, Search, ShieldCheck } from '@lucide/vue'
 import { authorizationApi } from '@/api/authorization'
 import type { ManagementMenu } from '@/types/authorization'
-import { Empty, Spin, Table as ATable, message } from 'antdv-next'
+import { message } from 'antdv-next'
 interface MenuTreeNode {
   id: string
   label: string
@@ -112,27 +112,27 @@ onMounted(loadCatalog)
         <p class="mt-1 text-sm text-muted-foreground">查看管理端菜单权限、层级和关联操作；菜单的可见范围由租户套餐授权决定。</p>
       </div>
       <div class="flex gap-2">
-        <Button  :disabled="loading" @click="loadCatalog"><RefreshCw class="size-4 mr-2" :class="loading ? 'animate-spin' : ''" />刷新</Button>
-        <Button @click="router.push('/tenant-package')"><ShieldCheck />配置套餐权限</Button>
+        <a-button  :disabled="loading" @click="loadCatalog"><RefreshCw class="size-4 mr-2" :class="loading ? 'animate-spin' : ''" />刷新</a-button>
+        <a-button @click="router.push('/tenant-package')"><ShieldCheck />配置套餐权限</a-button>
       </div>
     </div>
 
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <Card><div class="pb-3"><p>目录</p><h3 class="text-2xl">{{ directoryCount }}</h3></div><div class="flex items-center gap-2 text-xs text-muted-foreground"><FolderTree /> 仅承载层级，不对应路由</div></Card>
-      <Card><div class="pb-3"><p>菜单</p><h3 class="text-2xl">{{ menuCount }}</h3></div><div class="flex items-center gap-2 text-xs text-muted-foreground"><AppWindow /> 对应一个管理端路由</div></Card>
-      <Card><div class="pb-3"><p>权限目录</p><h3 class="text-2xl">{{ menus.length }}</h3></div><div class="flex items-center gap-2 text-xs text-muted-foreground"><ShieldCheck /> 平台和租户菜单节点</div></Card>
-      <Card><div class="pb-3"><p>关联操作</p><h3 class="text-2xl">{{ assignedActionCount }}</h3></div><div class="flex items-center gap-2 text-xs text-muted-foreground"><LockKeyhole /> 菜单下的操作权限</div></Card>
+      <a-card><div class="pb-3"><p>目录</p><h3 class="text-2xl">{{ directoryCount }}</h3></div><div class="flex items-center gap-2 text-xs text-muted-foreground"><FolderTree /> 仅承载层级，不对应路由</div></a-card>
+      <a-card><div class="pb-3"><p>菜单</p><h3 class="text-2xl">{{ menuCount }}</h3></div><div class="flex items-center gap-2 text-xs text-muted-foreground"><AppWindow /> 对应一个管理端路由</div></a-card>
+      <a-card><div class="pb-3"><p>权限目录</p><h3 class="text-2xl">{{ menus.length }}</h3></div><div class="flex items-center gap-2 text-xs text-muted-foreground"><ShieldCheck /> 平台和租户菜单节点</div></a-card>
+      <a-card><div class="pb-3"><p>关联操作</p><h3 class="text-2xl">{{ assignedActionCount }}</h3></div><div class="flex items-center gap-2 text-xs text-muted-foreground"><LockKeyhole /> 菜单下的操作权限</div></a-card>
     </div>
 
-    <Card>
+    <a-card>
       <div class="gap-4 md:flex-row md:items-center md:justify-between">
         <div><h3>菜单权限树</h3><p>平台菜单仅在系统租户中出现；租户菜单按套餐的菜单权限动态显示。</p></div>
-        <div class="relative w-full md:w-80"><Search class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" /><Input v-model:value="search" class="pl-9" placeholder="搜索菜单名称、编码或资源" /></div>
+        <div class="relative w-full md:w-80"><Search class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" /><a-input v-model:value="search" class="pl-9" placeholder="搜索菜单名称、编码或资源" /></div>
       </div>
       <div>
-        <Spin v-if="loading" class="flex min-h-48 items-center justify-center" />
-        <Empty v-else-if="filteredTree.length === 0" class="flex min-h-48 flex-col items-center justify-center" description="暂无匹配菜单" />
-        <ATable
+        <a-spin v-if="loading" class="flex min-h-48 items-center justify-center" />
+        <a-empty v-else-if="filteredTree.length === 0" class="flex min-h-48 flex-col items-center justify-center" description="暂无匹配菜单" />
+        <a-table
           v-else
           :columns="menuColumns"
           :data-source="filteredTree"
@@ -151,10 +151,10 @@ onMounted(loadCatalog)
               </div>
             </template>
             <template v-else-if="column.key === 'type'">
-              <Tag :color="item.type === 'menu' ? 'blue' : item.type === 'directory' ? 'purple' : 'green'">{{ item.type === 'directory' ? '目录' : item.type === 'menu' ? '菜单' : '按钮' }}</Tag>
+              <a-tag :color="item.type === 'menu' ? 'blue' : item.type === 'directory' ? 'purple' : 'green'">{{ item.type === 'directory' ? '目录' : item.type === 'menu' ? '菜单' : '按钮' }}</a-tag>
             </template>
             <template v-else-if="column.key === 'scope'">
-              <Tag v-if="item.type !== 'action'">{{ scopeLabel(item.scope) }}</Tag>
+              <a-tag v-if="item.type !== 'action'">{{ scopeLabel(item.scope) }}</a-tag>
               <span v-else class="text-muted-foreground">-</span>
             </template>
             <template v-else-if="column.key === 'code'">
@@ -164,8 +164,8 @@ onMounted(loadCatalog)
               <span class="text-sm text-muted-foreground">{{ item.resource || '-' }}</span>
             </template>
           </template>
-        </ATable>
+        </a-table>
       </div>
-    </Card>
+    </a-card>
   </div>
 </template>

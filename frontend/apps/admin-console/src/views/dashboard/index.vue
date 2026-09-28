@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { dashboardApi } from '@/api/dashboard'
 import type { DashboardStats, RecentLogin } from '@/api/dashboard'
-import { Dropdown, Empty, Spin, Table as AntTable, Tag, message } from 'antdv-next'
+import { message } from 'antdv-next'
 import { Building2, TrendingUp, User, Monitor, Link, MoreHorizontal, RefreshCw, ArrowRight, Library, FileText } from '@lucide/vue'
 const router = useRouter()
 const userStore = useUserStore()
@@ -117,15 +117,15 @@ onMounted(() => {
         <p class="page-subtitle">欢迎回来，{{ userStore.userInfo?.username || '管理员' }}</p>
       </div>
       <div class="header-actions">
-        <Button @click="handleRefresh" :disabled="loading" :loading="loading">
+        <a-button @click="handleRefresh" :disabled="loading" :loading="loading">
           <RefreshCw v-if="!loading" class="w-4 h-4 mr-2" />
           刷新数据
-        </Button>
+        </a-button>
       </div>
     </div>
 
     <div class="stats-grid">
-      <Card v-for="stat in statCards" :key="stat.key" class="stat-card">
+      <a-card v-for="stat in statCards" :key="stat.key" class="stat-card">
         <div class="pt-6">
           <div class="stat-content">
             <div class="stat-icon" :class="stat.color">
@@ -140,48 +140,48 @@ onMounted(() => {
             </div>
           </div>
           </div>
-        </Card>
+        </a-card>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div class="lg:col-span-2 space-y-6">
-        <Card>
+        <a-card>
           <div>
             <div class="card-header">
               <h3>最近登录</h3>
-              <Button type="link" size="small" @click="navigateTo('/audit')">
+              <a-button type="link" size="small" @click="navigateTo('/audit')">
                 查看全部
                 <ArrowRight class="w-4 h-4 ml-1" />
-              </Button>
+              </a-button>
             </div>
           </div>
           <div>
             <div v-if="loading" class="flex justify-center py-12">
-              <Spin />
+              <a-spin />
             </div>
 
-            <Empty v-else-if="recentLogins.length === 0" class="py-12" description="暂无登录记录" />
+            <a-empty v-else-if="recentLogins.length === 0" class="py-12" description="暂无登录记录" />
 
-            <AntTable v-else :columns="recentLoginColumns" :data-source="recentLogins" :pagination="false" :row-key="login => `${login.username}-${login.time}`" size="small">
+            <a-table v-else :columns="recentLoginColumns" :data-source="recentLogins" :pagination="false" :row-key="login => `${login.username}-${login.time}`" size="small">
               <template #bodyCell="{ column, record }">
                 <template v-if="column.key === 'username'">
-                  <div class="user-cell"><Avatar class="size-7"><span class="text-xs">{{ record.username.charAt(0).toUpperCase() }}</span></Avatar><span>{{ record.username }}</span></div>
+                  <div class="user-cell"><a-avatar class="size-7"><span class="text-xs">{{ record.username.charAt(0).toUpperCase() }}</span></a-avatar><span>{{ record.username }}</span></div>
                 </template>
                 <template v-else-if="column.key === 'email'">{{ record.email || '-' }}</template>
                 <template v-else-if="column.key === 'time'">{{ formatTime(record.time) }}</template>
-                <Tag v-else-if="column.key === 'status'" :color="record.status === 'success' ? 'success' : 'error'">{{ getStatusText(record.status) }}</Tag>
+                <a-tag v-else-if="column.key === 'status'" :color="record.status === 'success' ? 'success' : 'error'">{{ getStatusText(record.status) }}</a-tag>
               </template>
-            </AntTable>
+            </a-table>
           </div>
-        </Card>
+        </a-card>
 
-        <Card>
+        <a-card>
           <div>
             <div class="card-header">
               <h3>登录趋势</h3>
-              <Dropdown :menu="{ items: trendRangeItems }" :trigger="['click']" placement="bottomRight">
-                <Button type="text" size="small" aria-label="选择登录趋势时间范围"><MoreHorizontal class="size-4" /></Button>
-              </Dropdown>
+              <a-dropdown :menu="{ items: trendRangeItems }" :trigger="['click']" placement="bottomRight">
+                <a-button type="text" size="small" aria-label="选择登录趋势时间范围"><MoreHorizontal class="size-4" /></a-button>
+              </a-dropdown>
             </div>
           </div>
           <div>
@@ -191,11 +191,11 @@ onMounted(() => {
               <p class="chart-hint">集成图表库后显示数据可视化</p>
             </div>
           </div>
-        </Card>
+        </a-card>
       </div>
 
       <div class="space-y-6">
-        <Card>
+        <a-card>
           <div>
             <h3>快捷操作</h3>
           </div>
@@ -215,9 +215,9 @@ onMounted(() => {
               </div>
             </div>
           </div>
-        </Card>
+        </a-card>
 
-        <Card>
+        <a-card>
           <div>
             <h3>系统公告</h3>
           </div>
@@ -233,9 +233,9 @@ onMounted(() => {
               </div>
             </div>
           </div>
-        </Card>
+        </a-card>
 
-        <Card>
+        <a-card>
           <div>
             <h3>系统信息</h3>
           </div>
@@ -254,25 +254,25 @@ onMounted(() => {
                   <span class="info-label">CPU使用率</span>
                   <span class="info-value">{{ systemInfo.cpuUsage }}%</span>
                 </div>
-                <Progress :percent="systemInfo.cpuUsage" class="h-1.5" />
+                <a-progress :percent="systemInfo.cpuUsage" class="h-1.5" />
               </div>
               <div class="info-item">
                 <div class="flex justify-between mb-2">
                   <span class="info-label">内存使用率</span>
                   <span class="info-value">{{ systemInfo.memoryUsage }}%</span>
                 </div>
-                <Progress :percent="systemInfo.memoryUsage" class="h-1.5" />
+                <a-progress :percent="systemInfo.memoryUsage" class="h-1.5" />
               </div>
               <div class="info-item">
                 <div class="flex justify-between mb-2">
                   <span class="info-label">磁盘使用率</span>
                   <span class="info-value">{{ systemInfo.diskUsage }}%</span>
                 </div>
-                <Progress :percent="systemInfo.diskUsage" class="h-1.5" />
+                <a-progress :percent="systemInfo.diskUsage" class="h-1.5" />
               </div>
             </div>
           </div>
-        </Card>
+        </a-card>
       </div>
     </div>
   </div>

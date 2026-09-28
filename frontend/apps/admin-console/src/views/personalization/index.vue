@@ -5,20 +5,20 @@
       <p class="text-sm text-muted-foreground">{{ pageDescription }}</p>
     </div>
 
-    <Card>
+    <a-card>
       <div class="pt-6">
         <div>
           <div v-if="section === 'domains'" class="px-2">
             <div class="flex justify-between items-center mb-5">
               <h3 class="text-base font-semibold">域名管理</h3>
-              <Button @click="showDomainDialog = true">
+              <a-button @click="showDomainDialog = true">
                 <Plus class="size-4 mr-2" />
                 添加域名
-              </Button>
+              </a-button>
             </div>
 
             <div class="rounded-md border mb-6">
-              <Table :columns="[
+              <a-table :columns="[
                 { title: '域名', key: 'domain', width: 200 }, { title: 'SSL状态', key: 'sslStatus', width: 120 },
                 { title: '验证方式', key: 'verificationMethod', width: 100 }, { title: '创建时间', key: 'createdAt', width: 180 },
                 { title: '操作', key: 'actions', width: 200, align: 'right' }
@@ -27,89 +27,89 @@
                   <template v-if="column.key === 'domain'">
                       <div class="flex items-center gap-2">
                         <span class="font-medium">{{ domain.domain }}</span>
-                        <Tag v-if="domain.status === 'verified'" color="processing" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">已验证</Tag>
-                        <Tag v-else-if="domain.status === 'pending'" color="blue" class="bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20">待验证</Tag>
-                        <Tag v-else-if="domain.status === 'verifying'" >验证中</Tag>
-                        <Tag v-else color="red">验证失败</Tag>
+                        <a-tag v-if="domain.status === 'verified'" color="processing" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">已验证</a-tag>
+                        <a-tag v-else-if="domain.status === 'pending'" color="blue" class="bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20">待验证</a-tag>
+                        <a-tag v-else-if="domain.status === 'verifying'" >验证中</a-tag>
+                        <a-tag v-else color="red">验证失败</a-tag>
                       </div>
                   </template>
                   <template v-else-if="column.key === 'sslStatus'">
-                      <Tag v-if="domain.sslStatus === 'active'" color="processing" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">已配置</Tag>
-                      <Tag v-else >未配置</Tag>
+                      <a-tag v-if="domain.sslStatus === 'active'" color="processing" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">已配置</a-tag>
+                      <a-tag v-else >未配置</a-tag>
                   </template>
                   <template v-else-if="column.key === 'verificationMethod'">{{ domain.verificationMethod === 'dns' ? 'DNS记录' : '文件验证' }}</template>
                   <template v-else-if="column.key === 'createdAt'">{{ formatDate(domain.createdAt) }}</template>
                   <template v-else-if="column.key === 'actions'">
                       <div class="flex justify-end gap-2">
-                        <Button v-if="domain.status !== 'verified'" type="link" size="small" class="h-auto p-0" disabled title="阶段 6 仅登记域名">验证未启用</Button>
-                        <Button v-if="domain.status === 'verified'" type="link" size="small" class="h-auto p-0" disabled title="TLS 由外部网关管理">TLS由网关管理</Button>
-                        <Button type="link" size="small" class="h-auto p-0 text-destructive" @click="handleDeleteDomain(domain)">删除</Button>
+                        <a-button v-if="domain.status !== 'verified'" type="link" size="small" class="h-auto p-0" disabled title="阶段 6 仅登记域名">验证未启用</a-button>
+                        <a-button v-if="domain.status === 'verified'" type="link" size="small" class="h-auto p-0" disabled title="TLS 由外部网关管理">TLS由网关管理</a-button>
+                        <a-button type="link" size="small" class="h-auto p-0 text-destructive" @click="handleDeleteDomain(domain)">删除</a-button>
                       </div>
                   </template>
                 </template>
-              </Table>
+              </a-table>
             </div>
 
-            <Alert class="bg-muted border" type="info" show-icon title="阶段 6 域名管理说明">
+            <a-alert class="bg-muted border" type="info" show-icon title="阶段 6 域名管理说明">
               <template #description>
                 <div class="space-y-1">
                   <div>当前仅登记域名和验证令牌，不执行自动所有权验证。</div>
                   <div>TLS 证书由部署网关或证书控制面管理，Easy1Auth 不接收证书私钥。</div>
                 </div>
               </template>
-            </Alert>
+            </a-alert>
           </div>
 
           <div v-else-if="section === 'templates'" class="px-2">
             <div class="flex justify-between items-center mb-5">
               <h3 class="text-base font-semibold">模板管理</h3>
               <div class="flex gap-3">
-              <Button type="primary" :loading="initingTemplates" :disabled="initingTemplates" @click="handleInitTemplates">
+              <a-button type="primary" :loading="initingTemplates" :disabled="initingTemplates" @click="handleInitTemplates">
                   初始化默认模板
-                </Button>
-                <Button @click="showTemplateDialog = true">
+                </a-button>
+                <a-button @click="showTemplateDialog = true">
                   <Plus class="size-4 mr-2" />
                   新建模板
-                </Button>
+                </a-button>
               </div>
             </div>
 
             <div>
               <div class="mb-4">
-                <Button :type="templateType === 'email' ? 'primary' : 'default'" @click="templateType = 'email'">邮件模板</Button>
-                <Button :type="templateType === 'sms' ? 'primary' : 'default'" @click="templateType = 'sms'">短信模板</Button>
+                <a-button :type="templateType === 'email' ? 'primary' : 'default'" @click="templateType = 'email'">邮件模板</a-button>
+                <a-button :type="templateType === 'sms' ? 'primary' : 'default'" @click="templateType = 'sms'">短信模板</a-button>
               </div>
 
               <div v-show="templateType === 'email'">
                 <div class="rounded-md border">
-                  <Table :columns="[
+                  <a-table :columns="[
                     { title: '模板名称', dataIndex: 'name', width: 150 }, { title: '模板代码', dataIndex: 'code', width: 150 },
                     { title: '邮件主题', dataIndex: 'subject', width: 200 }, { title: '默认', key: 'isDefault', width: 80 },
                     { title: '状态', key: 'status', width: 80 }, { title: '操作', key: 'actions', width: 150, align: 'right' }
                   ]" :data-source="emailTemplates" :loading="templatesLoading" row-key="id" :pagination="false" :scroll="{ x: 810 }">
                     <template #bodyCell="{ column, record: template }">
                       <template v-if="column.key === 'isDefault'">
-                          <Tag v-if="template.isDefault" color="processing" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">是</Tag>
-                          <Tag v-else >否</Tag>
+                          <a-tag v-if="template.isDefault" color="processing" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">是</a-tag>
+                          <a-tag v-else >否</a-tag>
                       </template>
                       <template v-else-if="column.key === 'status'">
-                          <Tag v-if="template.status === 'active'" color="processing" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">启用</Tag>
-                          <Tag v-else >禁用</Tag>
+                          <a-tag v-if="template.status === 'active'" color="processing" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">启用</a-tag>
+                          <a-tag v-else >禁用</a-tag>
                       </template>
                       <template v-else-if="column.key === 'actions'">
                           <div class="flex justify-end gap-2">
-                            <Button type="link" size="small" class="h-auto p-0" @click="handleEditTemplate(template)">编辑</Button>
-                            <Button type="link" size="small" class="h-auto p-0 text-destructive" @click="handleDeleteTemplate(template)">删除</Button>
+                            <a-button type="link" size="small" class="h-auto p-0" @click="handleEditTemplate(template)">编辑</a-button>
+                            <a-button type="link" size="small" class="h-auto p-0 text-destructive" @click="handleDeleteTemplate(template)">删除</a-button>
                           </div>
                       </template>
                     </template>
-                  </Table>
+                  </a-table>
                 </div>
               </div>
 
               <div v-show="templateType === 'sms'">
                 <div class="rounded-md border">
-                  <Table :columns="[
+                  <a-table :columns="[
                     { title: '模板名称', dataIndex: 'name', width: 150 }, { title: '模板代码', dataIndex: 'code', width: 150 },
                     { title: '模板内容', key: 'content', width: 300 }, { title: '默认', key: 'isDefault', width: 80 },
                     { title: '状态', key: 'status', width: 80 }, { title: '操作', key: 'actions', width: 150, align: 'right' }
@@ -117,30 +117,30 @@
                     <template #bodyCell="{ column, record: template }">
                       <template v-if="column.key === 'content'"><span class="block truncate">{{ template.content }}</span></template>
                       <template v-else-if="column.key === 'isDefault'">
-                          <Tag v-if="template.isDefault" color="processing" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">是</Tag>
-                          <Tag v-else >否</Tag>
+                          <a-tag v-if="template.isDefault" color="processing" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">是</a-tag>
+                          <a-tag v-else >否</a-tag>
                       </template>
                       <template v-else-if="column.key === 'status'">
-                          <Tag v-if="template.status === 'active'" color="processing" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">启用</Tag>
-                          <Tag v-else >禁用</Tag>
+                          <a-tag v-if="template.status === 'active'" color="processing" class="bg-green-500/10 text-green-600 hover:bg-green-500/20">启用</a-tag>
+                          <a-tag v-else >禁用</a-tag>
                       </template>
                       <template v-else-if="column.key === 'actions'">
                           <div class="flex justify-end gap-2">
-                            <Button type="link" size="small" class="h-auto p-0" @click="handleEditTemplate(template)">编辑</Button>
-                            <Button type="link" size="small" class="h-auto p-0 text-destructive" @click="handleDeleteTemplate(template)">删除</Button>
+                            <a-button type="link" size="small" class="h-auto p-0" @click="handleEditTemplate(template)">编辑</a-button>
+                            <a-button type="link" size="small" class="h-auto p-0 text-destructive" @click="handleDeleteTemplate(template)">删除</a-button>
                           </div>
                       </template>
                     </template>
-                  </Table>
+                  </a-table>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </Card>
+    </a-card>
 
-    <Modal v-model:open="showDomainDialog" :footer="null">
+    <a-modal v-model:open="showDomainDialog" :footer="null">
       <div class="sm:max-w-[500px]">
         <div>
           <h3>添加域名</h3>
@@ -151,32 +151,32 @@
               <label class="text-sm font-medium">域名</label>
               <div class="flex">
                 <div class="flex items-center px-3 bg-muted border border-r-0 rounded-l-md text-sm text-muted-foreground">https://</div>
-                <Input v-model:value="domainForm.domain" placeholder="例如：login.yourcompany.com" class="rounded-l-none" />
+                <a-input v-model:value="domainForm.domain" placeholder="例如：login.yourcompany.com" class="rounded-l-none" />
               </div>
             </div>
             <div class="grid gap-2">
               <label class="text-sm font-medium">验证方式</label>
-              <RadioGroup v-model:value="domainForm.verificationMethod">
+              <a-radio-group v-model:value="domainForm.verificationMethod">
                 <div class="flex items-center gap-2">
-                  <Radio value="dns" />
+                  <a-radio value="dns" />
                   <label class="text-sm cursor-pointer">DNS记录验证</label>
                 </div>
                 <div class="flex items-center gap-2">
-                  <Radio value="file" />
+                  <a-radio value="file" />
                   <label class="text-sm cursor-pointer">文件验证</label>
                 </div>
-              </RadioGroup>
+              </a-radio-group>
             </div>
           </div>
         </form>
         <div>
-          <Button  @click="showDomainDialog = false">取消</Button>
-          <Button type="primary" :loading="creatingDomain" :disabled="creatingDomain" @click="handleCreateDomain">添加</Button>
+          <a-button  @click="showDomainDialog = false">取消</a-button>
+          <a-button type="primary" :loading="creatingDomain" :disabled="creatingDomain" @click="handleCreateDomain">添加</a-button>
         </div>
       </div>
-    </Modal>
+    </a-modal>
 
-    <Modal v-model:open="showSSLDialog" :footer="null">
+    <a-modal v-model:open="showSSLDialog" :footer="null">
       <div class="sm:max-w-[600px]">
         <div>
           <h3>配置SSL证书</h3>
@@ -185,14 +185,14 @@
           <div class="grid gap-4 py-4">
             <div class="grid gap-2">
               <label class="text-sm font-medium">SSL证书</label>
-              <InputTextArea v-model:value="sslForm.sslCertificate"
+              <a-textarea v-model:value="sslForm.sslCertificate"
                 :rows="8"
                 placeholder="请粘贴SSL证书内容（PEM格式）"
               />
             </div>
             <div class="grid gap-2">
               <label class="text-sm font-medium">私钥</label>
-              <InputTextArea v-model:value="sslForm.sslPrivateKey"
+              <a-textarea v-model:value="sslForm.sslPrivateKey"
                 :rows="8"
                 placeholder="请粘贴SSL私钥内容（PEM格式）"
               />
@@ -200,13 +200,13 @@
           </div>
         </form>
         <div>
-          <Button  @click="showSSLDialog = false">取消</Button>
-          <Button type="primary" :loading="savingSSL" :disabled="savingSSL" @click="handleSaveSSL">保存</Button>
+          <a-button  @click="showSSLDialog = false">取消</a-button>
+          <a-button type="primary" :loading="savingSSL" :disabled="savingSSL" @click="handleSaveSSL">保存</a-button>
         </div>
       </div>
-    </Modal>
+    </a-modal>
 
-    <Modal v-model:open="showTemplateDialog" :footer="null">
+    <a-modal v-model:open="showTemplateDialog" :footer="null">
       <div class="sm:max-w-[700px]">
         <div>
           <h3>{{ editingTemplate ? '编辑模板' : '新建模板' }}</h3>
@@ -215,56 +215,56 @@
           <div class="grid gap-4 py-4">
             <div class="grid gap-2">
               <label class="text-sm font-medium">模板类型</label>
-              <RadioGroup v-model:value="templateForm.type" :disabled="!!editingTemplate">
+              <a-radio-group v-model:value="templateForm.type" :disabled="!!editingTemplate">
                 <div class="flex items-center gap-2">
-                  <Radio value="email" />
+                  <a-radio value="email" />
                   <label class="text-sm cursor-pointer">邮件</label>
                 </div>
                 <div class="flex items-center gap-2">
-                  <Radio value="sms" />
+                  <a-radio value="sms" />
                   <label class="text-sm cursor-pointer">短信</label>
                 </div>
-              </RadioGroup>
+              </a-radio-group>
             </div>
             <div class="grid gap-2">
               <label class="text-sm font-medium">模板代码</label>
-              <Input v-model:value="templateForm.code" placeholder="例如：verification_code" :disabled="!!editingTemplate" />
+              <a-input v-model:value="templateForm.code" placeholder="例如：verification_code" :disabled="!!editingTemplate" />
             </div>
             <div class="grid gap-2">
               <label class="text-sm font-medium">模板名称</label>
-              <Input v-model:value="templateForm.name" placeholder="请输入模板名称" />
+              <a-input v-model:value="templateForm.name" placeholder="请输入模板名称" />
             </div>
             <div v-if="templateForm.type === 'email'" class="grid gap-2">
               <label class="text-sm font-medium">邮件主题</label>
-              <Input v-model:value="templateForm.subject" placeholder="请输入邮件主题，支持变量如 {{appName}}" />
+              <a-input v-model:value="templateForm.subject" placeholder="请输入邮件主题，支持变量如 {{appName}}" />
             </div>
             <div class="grid gap-2">
               <label class="text-sm font-medium">模板内容</label>
-              <InputTextArea v-model:value="templateForm.content"
+              <a-textarea v-model:value="templateForm.content"
                 :rows="10"
                 placeholder="请输入模板内容，支持变量如 {{code}}, {{username}} 等"
               />
             </div>
             <div class="flex items-center gap-2">
-              <Switch :checked="templateForm.isDefault" @update:checked="templateForm.isDefault = $event" />
+              <a-switch :checked="templateForm.isDefault" @update:checked="templateForm.isDefault = $event === true" />
               <label class="text-sm cursor-pointer">设为默认</label>
             </div>
           </div>
         </form>
         <div>
-          <Button  @click="showTemplateDialog = false">取消</Button>
-          <Button type="primary" :loading="savingTemplate" :disabled="savingTemplate" @click="handleSaveTemplate">保存</Button>
+          <a-button  @click="showTemplateDialog = false">取消</a-button>
+          <a-button type="primary" :loading="savingTemplate" :disabled="savingTemplate" @click="handleSaveTemplate">保存</a-button>
         </div>
       </div>
-    </Modal>
+    </a-modal>
 
-    <Modal v-model:open="showVerifyDialog" :footer="null">
+    <a-modal v-model:open="showVerifyDialog" :footer="null">
       <div class="sm:max-w-[600px]">
         <div>
           <h3>域名验证</h3>
         </div>
         <div class="py-4">
-          <Alert class="mb-5" type="info" show-icon title="请按照以下步骤完成验证" />
+          <a-alert class="mb-5!" type="info" show-icon title="请按照以下步骤完成验证" />
           <div v-if="verifyingDomain?.verificationMethod === 'dns'" class="space-y-3">
             <h4 class="font-semibold">DNS记录验证</h4>
             <p class="text-sm text-muted-foreground">在您的DNS服务商处添加以下TXT记录：</p>
@@ -286,18 +286,18 @@
           </div>
         </div>
         <div>
-          <Button  @click="showVerifyDialog = false">取消</Button>
-          <Button type="primary" :loading="verifying" :disabled="verifying" @click="handleVerifyDomainConfirm">验证</Button>
+          <a-button  @click="showVerifyDialog = false">取消</a-button>
+          <a-button type="primary" :loading="verifying" :disabled="verifying" @click="handleVerifyDomainConfirm">验证</a-button>
         </div>
       </div>
-    </Modal>
+    </a-modal>
     <contextHolder />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed, reactive } from 'vue'
-import { Modal, Table, message } from 'antdv-next'
+import { Modal, message } from 'antdv-next'
 import { Plus } from '@lucide/vue'
 import { useRoute } from 'vue-router'
 

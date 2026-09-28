@@ -5,13 +5,10 @@ import type {
   UpdateGroupDto,
   GroupQueryDto,
   GroupListResponse,
-  GroupTreeResponse,
   GroupMembersResponse,
   GroupStats,
   AddMembersDto,
-  RemoveMembersDto,
-  AddAdminsDto,
-  RemoveAdminsDto
+  RemoveMembersDto
 } from '@/types/group'
 
 export const groupApi = {
@@ -35,10 +32,6 @@ export const groupApi = {
     return request.delete(`/groups/${id}`)
   },
 
-  getTree(): Promise<GroupTreeResponse[]> {
-    return request.get('/groups/tree')
-  },
-
   getStats(): Promise<GroupStats> {
     return request.get('/groups/stats')
   },
@@ -53,13 +46,5 @@ export const groupApi = {
 
   removeMembers(id: string, data: RemoveMembersDto): Promise<void> {
     return request.delete(`/groups/${id}/members`, { data })
-  },
-
-  addAdmins(id: string, data: AddAdminsDto): Promise<void> {
-    return request.post(`/groups/${id}/admins`, data)
-  },
-
-  removeAdmins(id: string, data: RemoveAdminsDto): Promise<void> {
-    return request.delete(`/groups/${id}/admins`, { data })
   }
 }

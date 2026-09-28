@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { Empty, Form, FormItem, Spin, message, Table as ATable } from 'antdv-next'
+import { message } from 'antdv-next'
 import {
   AppWindow,
   Check,
@@ -310,44 +310,44 @@ onMounted(loadData)
         <p class="text-sm text-muted-foreground">配置租户的资源配额和可用管理权限。</p>
       </div>
       <div class="flex gap-3">
-        <Button :disabled="loading" @click="loadData">
+        <a-button :disabled="loading" @click="loadData">
           <RefreshCw class="size-4 mr-2" :class="loading ? 'animate-spin' : ''" />
           刷新
-        </Button>
-        <Button @click="openCreateDialog">
+        </a-button>
+        <a-button @click="openCreateDialog">
           <Plus class="size-4 mr-2" />
           新建套餐
-        </Button>
+        </a-button>
       </div>
     </div>
 
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <Card>
+      <a-card>
         <div class="pb-3"><p class="text-sm text-muted-foreground">套餐总数</p><h3 class="text-2xl font-bold text-foreground">{{ packages.length }}</h3></div>
         <div class="flex items-center gap-2 text-xs text-muted-foreground"><Package class="size-3" /> 已配置的套餐</div>
-      </Card>
-      <Card>
+      </a-card>
+      <a-card>
         <div class="pb-3"><p class="text-sm text-muted-foreground">启用中</p><h3 class="text-2xl font-bold text-foreground">{{ activeCount }}</h3></div>
         <div class="flex items-center gap-2 text-xs text-muted-foreground"><Check class="size-3" /> 可分配给新租户</div>
-      </Card>
-      <Card>
+      </a-card>
+      <a-card>
         <div class="pb-3"><p class="text-sm text-muted-foreground">默认套餐</p><h3 class="truncate text-2xl font-bold text-foreground">{{ defaultPackage?.name || '-' }}</h3></div>
         <div class="flex items-center gap-2 text-xs text-muted-foreground"><Gauge class="size-3" /> 新租户的默认方案</div>
-      </Card>
-      <Card>
+      </a-card>
+      <a-card>
         <div class="pb-3"><p class="text-sm text-muted-foreground">已使用权限</p><h3 class="text-2xl font-bold text-foreground">{{ totalPermissionCount }}</h3></div>
         <div class="flex items-center gap-2 text-xs text-muted-foreground"><ShieldCheck class="size-3" /> 去重后的权限项</div>
-      </Card>
+      </a-card>
     </div>
 
-    <Alert
+    <a-alert
       type="info"
       show-icon
       title="权限作用域提示"
       description="这里只能配置租户作用域权限；平台级权限不会出现在权限目录中。"
     />
 
-    <Card>
+    <a-card>
       <div class="gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h3>套餐列表</h3>
@@ -355,13 +355,13 @@ onMounted(loadData)
         </div>
         <div class="relative w-full md:w-72">
           <Search class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input v-model:value="search" class="pl-9" placeholder="搜索套餐名称或编码" />
+          <a-input v-model:value="search" class="pl-9" placeholder="搜索套餐名称或编码" />
         </div>
       </div>
       <div>
-        <Spin v-if="loading" class="flex min-h-40 items-center justify-center" />
-        <Empty v-else-if="filteredPackages.length === 0" class="flex min-h-40 flex-col items-center justify-center" description="暂无匹配套餐" />
-        <ATable
+        <a-spin v-if="loading" class="flex min-h-40 items-center justify-center" />
+        <a-empty v-else-if="filteredPackages.length === 0" class="flex min-h-40 flex-col items-center justify-center" description="暂无匹配套餐" />
+        <a-table
           v-else
           :columns="packageColumns"
           :data-source="filteredPackages"
@@ -374,13 +374,13 @@ onMounted(loadData)
                 <div class="flex items-center gap-3">
                   <div class="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary"><Package /></div>
                   <div>
-                    <div class="flex items-center gap-2 font-medium">{{ item.name }}<Tag v-if="item.defaultPackage" color="blue">默认</Tag></div>
+                    <div class="flex items-center gap-2 font-medium">{{ item.name }}<a-tag v-if="item.defaultPackage" color="blue">默认</a-tag></div>
                     <code class="text-xs text-muted-foreground">{{ item.code }}</code>
                   </div>
                 </div>
             </template>
             <template v-else-if="column.key === 'status'">
-              <Tag :color="statusVariant(item.status)">{{ item.status === 'active' ? '启用中' : '已停用' }}</Tag>
+              <a-tag :color="statusVariant(item.status)">{{ item.status === 'active' ? '启用中' : '已停用' }}</a-tag>
             </template>
             <template v-else-if="column.key === 'quota'">
                 <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
@@ -396,64 +396,64 @@ onMounted(loadData)
             </template>
             <template v-else-if="column.key === 'actions'">
                 <div class="flex flex-wrap justify-end gap-1">
-                  <Button type="link" size="small" class="h-auto p-0" @click="openPermissionDialog(item)"><ShieldCheck class="size-3 mr-1" />权限</Button>
-                  <Button type="link" size="small" class="h-auto p-0" @click="openEditDialog(item)"><Pencil class="size-3 mr-1" />编辑</Button>
-                  <Button type="link" size="small" class="h-auto p-0" :disabled="item.defaultPackage" @click="toggleStatus(item)">{{ item.status === 'active' ? '停用' : '启用' }}</Button>
-                  <Button type="link" size="small" class="h-auto p-0 text-destructive" :disabled="item.defaultPackage" @click="openDeleteDialog(item)"><Trash2 class="size-3 mr-1" />删除</Button>
+                  <a-button type="link" size="small" class="h-auto p-0" @click="openPermissionDialog(item)"><ShieldCheck class="size-3 mr-1" />权限</a-button>
+                  <a-button type="link" size="small" class="h-auto p-0" @click="openEditDialog(item)"><Pencil class="size-3 mr-1" />编辑</a-button>
+                  <a-button type="link" size="small" class="h-auto p-0" :disabled="item.defaultPackage" @click="toggleStatus(item)">{{ item.status === 'active' ? '停用' : '启用' }}</a-button>
+                  <a-button type="link" size="small" class="h-auto p-0 text-destructive" :disabled="item.defaultPackage" @click="openDeleteDialog(item)"><Trash2 class="size-3 mr-1" />删除</a-button>
                 </div>
             </template>
           </template>
-        </ATable>
+        </a-table>
       </div>
-    </Card>
+    </a-card>
 
-    <Modal v-model:open="packageDialogVisible" :footer="null">
+    <a-modal v-model:open="packageDialogVisible" :footer="null">
       <div class="max-w-xl">
         <div>
           <h3>{{ packageDialogTitle }}</h3>
           <p>设置套餐标识、资源上限和初始权限。</p>
         </div>
-        <Form :model="packageForm" :rules="packageFormRules" layout="vertical" class="py-4" @finish="submitPackage">
+        <a-form :model="packageForm" :rules="packageFormRules" layout="vertical" class="py-4" @finish="submitPackage">
           <div class="grid gap-4">
             <div class="grid gap-4 sm:grid-cols-2">
-              <FormItem label="套餐编码" name="code">
-                <Input v-model:value="packageForm.code" :disabled="!!editingPackage" placeholder="例如 professional" />
-              </FormItem>
-              <FormItem label="套餐名称" name="name">
-                <Input v-model:value="packageForm.name" placeholder="例如 专业版" />
-              </FormItem>
+              <a-form-item label="套餐编码" name="code">
+                <a-input v-model:value="packageForm.code" :disabled="!!editingPackage" placeholder="例如 professional" />
+              </a-form-item>
+              <a-form-item label="套餐名称" name="name">
+                <a-input v-model:value="packageForm.name" placeholder="例如 专业版" />
+              </a-form-item>
             </div>
             <div class="grid gap-4 sm:grid-cols-2">
-              <FormItem label="用户上限" name="maxUsers">
-                <InputNumber v-model:value="packageForm.maxUsers" :min="1" :max="2147483647" />
-              </FormItem>
-              <FormItem label="应用上限" name="maxApps">
-                <InputNumber v-model:value="packageForm.maxApps" :min="1" :max="2147483647" />
-              </FormItem>
+              <a-form-item label="用户上限" name="maxUsers">
+                <a-input-number v-model:value="packageForm.maxUsers" :min="1" :max="2147483647" />
+              </a-form-item>
+              <a-form-item label="应用上限" name="maxApps">
+                <a-input-number v-model:value="packageForm.maxApps" :min="1" :max="2147483647" />
+              </a-form-item>
             </div>
-            <FormItem label="套餐权限">
-              <Button html-type="button" class="w-full justify-between" @click="permissionReturnsToPackageForm = true; permissionTarget = null; selectedPermissions = [...packageForm.permissionCodes]; packageDialogVisible = false; permissionDialogVisible = true">
+            <a-form-item label="套餐权限">
+              <a-button html-type="button" class="w-full justify-between" @click="permissionReturnsToPackageForm = true; permissionTarget = null; selectedPermissions = [...packageForm.permissionCodes]; packageDialogVisible = false; permissionDialogVisible = true">
                 <span>{{ packageForm.permissionCodes.length }} 项权限已选择</span><ShieldCheck class="size-4" />
-              </Button>
-            </FormItem>
+              </a-button>
+            </a-form-item>
           </div>
           <div class="flex justify-end gap-2">
-            <Button @click="packageDialogVisible = false">取消</Button>
-            <Button type="primary" html-type="submit" :loading="submitting">保存套餐</Button>
+            <a-button @click="packageDialogVisible = false">取消</a-button>
+            <a-button type="primary" html-type="submit" :loading="submitting">保存套餐</a-button>
           </div>
-        </Form>
+        </a-form>
       </div>
-    </Modal>
+    </a-modal>
 
-    <Modal v-model:open="permissionDialogVisible">
+    <a-modal v-model:open="permissionDialogVisible">
       <div class="max-w-3xl">
         <div>
           <h3>配置套餐权限{{ permissionTarget ? ` · ${permissionTarget.name}` : '' }}</h3>
         <p>按菜单层级选择权限；选择操作时会自动保留其父菜单，取消菜单会同时取消子菜单和关联操作。</p>
         </div>
         <div class="h-[min(60vh,520px)] overflow-y-auto rounded-md border p-4">
-          <Empty v-if="permissionTree.length === 0" class="py-12" description="暂无可用权限" />
-          <Tree
+          <a-empty v-if="permissionTree.length === 0" class="py-12" description="暂无可用权限" />
+          <a-tree
             v-else
             :tree-data="permissionTree"
             :field-names="{ key: 'id', title: 'label', children: 'children' }"
@@ -462,31 +462,31 @@ onMounted(loadData)
           >
             <template #titleRender="data">
               <div class="flex min-w-0 items-center gap-2 py-1">
-                <Checkbox v-if="data.code" :checked="selectedPermissions.includes(data.code)" @update:checked="toggleTreePermission(data)" />
+                <a-checkbox v-if="data.code" :checked="selectedPermissions.includes(data.code)" @update:checked="toggleTreePermission(data as unknown as PermissionTreeNode)" />
                 <span :class="data.type === 'group' ? 'font-medium' : 'text-sm'">{{ data.label }}</span>
-                <Tag v-if="data.type !== 'group'" :color="permissionTypeVariant(data.type)">{{ permissionTypeLabel(data.type) }}</Tag>
+                <a-tag v-if="data.type !== 'group'" :color="permissionTypeVariant(data.type)">{{ permissionTypeLabel(data.type) }}</a-tag>
                 <code v-if="data.code" class="ml-auto hidden truncate text-xs text-muted-foreground md:block">{{ data.code }}</code>
               </div>
             </template>
-          </Tree>
+          </a-tree>
         </div>
       </div>
       <template #footer>
         <div class="flex items-center">
           <span class="mr-auto text-sm text-muted-foreground">已选择 {{ selectedPermissions.length }} 项</span>
           <div class="flex gap-2">
-            <Button @click="closePermissionDialog">取消</Button>
-            <Button type="primary" :disabled="permissionSubmitting" @click="submitPermissions">{{ permissionSubmitting ? '保存中...' : '保存权限' }}</Button>
+            <a-button @click="closePermissionDialog">取消</a-button>
+            <a-button type="primary" :disabled="permissionSubmitting" @click="submitPermissions">{{ permissionSubmitting ? '保存中...' : '保存权限' }}</a-button>
           </div>
         </div>
       </template>
-    </Modal>
+    </a-modal>
 
-    <Modal v-model:open="deleteDialogVisible" :footer="null">
+    <a-modal v-model:open="deleteDialogVisible" :footer="null">
       <div>
         <div><h3>删除租户套餐</h3><p>确定删除“{{ deletingPackage?.name }}”吗？已分配给租户的套餐不能删除。</p></div>
-        <div><Button @click="deleteDialogVisible = false">取消</Button><Button danger @click="confirmDelete">确认删除</Button></div>
+        <div><a-button @click="deleteDialogVisible = false">取消</a-button><a-button danger @click="confirmDelete">确认删除</a-button></div>
       </div>
-    </Modal>
+    </a-modal>
   </div>
 </template>

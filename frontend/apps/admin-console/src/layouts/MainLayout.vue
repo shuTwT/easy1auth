@@ -1,23 +1,7 @@
 <script setup lang="ts">
 import { computed, h, onBeforeUnmount, onMounted, ref, watch, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import {
-  Avatar,
-  Badge,
-  Button,
-  Drawer,
-  Dropdown,
-  Layout,
-  LayoutContent,
-  LayoutHeader,
-  LayoutSider,
-  Menu,
-  Modal,
-  Input,
-  Select,
-  Spin,
-  message,
-} from 'antdv-next'
+import { message } from 'antdv-next'
 import { useUserStore } from '@/stores/user'
 import { authorizationApi } from '@/api/authorization'
 import { tenantApi, type TenantPackageOption } from '@/api/tenant'
@@ -251,8 +235,8 @@ watch(() => userStore.currentTenant?.id, loadAuthorizedMenus, { immediate: true 
 </script>
 
 <template>
-  <Layout class="app-shell bg-slate-100">
-    <LayoutSider
+  <a-layout class="app-shell bg-slate-100">
+    <a-layout-sider
       v-if="!mobile"
       v-model:collapsed="collapsed"
       :width="240"
@@ -268,15 +252,15 @@ watch(() => userStore.currentTenant?.id, loadAuthorizedMenus, { immediate: true 
         <span v-if="!collapsed" class="text-base font-semibold tracking-wide">Easy1Auth</span>
       </div>
       <div v-if="!collapsed" class="shrink-0 px-3 pb-3">
-        <Dropdown :menu="{ items: tenantItems, onClick: onTenantClick }" :trigger="['click']">
+        <a-dropdown :menu="{ items: tenantItems, onClick: onTenantClick }" :trigger="['click']">
           <button class="flex w-full items-center gap-2 rounded-md bg-white/5 px-3 py-2 text-sm text-slate-300 hover:bg-white/10 hover:text-white">
             <Building2 :size="16" /><span class="flex-1 truncate text-left">{{ userStore.currentTenant?.name || '选择租户' }}</span><ChevronDown :size="14" />
           </button>
-        </Dropdown>
+        </a-dropdown>
       </div>
       <div class="min-h-0 flex-1 overflow-y-auto">
-        <div v-if="menuLoading" class="p-6 text-center text-slate-400"><Spin size="small" /> <span class="ml-2 text-xs">正在加载菜单…</span></div>
-        <Menu
+        <div v-if="menuLoading" class="p-6 text-center text-slate-400"><a-spin size="small" /> <span class="ml-2 text-xs">正在加载菜单…</span></div>
+        <a-menu
           v-else
           v-model:open-keys="openKeys"
           :selected-keys="selectedKeys"
@@ -289,50 +273,50 @@ watch(() => userStore.currentTenant?.id, loadAuthorizedMenus, { immediate: true 
         />
       </div>
       <div class="shrink-0 border-t border-white/10 p-3">
-        <Dropdown :menu="{ items: profileItems, onClick: onProfileClick }" :trigger="['click']" placement="top">
+        <a-dropdown :menu="{ items: profileItems, onClick: onProfileClick }" :trigger="['click']" placement="top">
           <button class="flex w-full items-center gap-3 rounded-md p-2 text-left hover:bg-white/5">
-            <Avatar class="shrink-0 bg-sky-600">{{ (userStore.userInfo?.username || '管理员').charAt(0).toUpperCase() }}</Avatar>
+            <a-avatar class="shrink-0 bg-sky-600">{{ (userStore.userInfo?.username || '管理员').charAt(0).toUpperCase() }}</a-avatar>
             <span v-if="!collapsed" class="min-w-0 flex-1 truncate text-sm text-slate-200">{{ userStore.userInfo?.username || '管理员' }}</span>
           </button>
-        </Dropdown>
-        <Button type="text" class="!mt-2 !w-full !text-slate-400 hover:!text-white" @click="collapsed = !collapsed"><PanelLeftClose :size="16" /></Button>
+        </a-dropdown>
+        <a-button type="text" class="!mt-2 !w-full !text-slate-400 hover:!text-white" @click="collapsed = !collapsed"><PanelLeftClose :size="16" /></a-button>
       </div>
-    </LayoutSider>
+    </a-layout-sider>
 
-      <Drawer v-model:open="mobileOpen" title="Easy1Auth" placement="left" :size="280" :styles="{ body: { padding: 0 } }">
-      <div class="p-3"><Dropdown :menu="{ items: tenantItems, onClick: onTenantClick }" :trigger="['click']"><Button block><Building2 :size="16" class="mr-2" />{{ userStore.currentTenant?.name || '选择租户' }}</Button></Dropdown></div>
-      <Menu :selected-keys="selectedKeys" :items="menuItems" mode="inline" @click="onMenuClick" />
-    </Drawer>
+      <a-drawer v-model:open="mobileOpen" title="Easy1Auth" placement="left" :size="280" :styles="{ body: { padding: 0 } }">
+      <div class="p-3"><a-dropdown :menu="{ items: tenantItems, onClick: onTenantClick }" :trigger="['click']"><a-button block><Building2 :size="16" class="mr-2" />{{ userStore.currentTenant?.name || '选择租户' }}</a-button></a-dropdown></div>
+      <a-menu :selected-keys="selectedKeys" :items="menuItems" mode="inline" @click="onMenuClick" />
+    </a-drawer>
 
-    <Layout class="main-layout">
-      <LayoutHeader class="!flex !h-14 !items-center !justify-between !border-b !border-slate-200 !px-4 !shadow-sm">
+    <a-layout class="main-layout">
+      <a-layout-header class="!flex !h-14 !items-center !justify-between !border-b !border-slate-200 !px-4 !shadow-sm">
         <div class="flex items-center gap-2 text-sm font-medium text-slate-700">
-          <Button v-if="mobile" type="text" @click="mobileOpen = true"><MenuIcon :size="18" /></Button>
+          <a-button v-if="mobile" type="text" @click="mobileOpen = true"><MenuIcon :size="18" /></a-button>
           <span>{{ currentTitle }}</span>
         </div>
         <div class="flex items-center gap-1">
-          <Badge :count="3" size="small"><Button type="text" aria-label="通知"><Bell :size="18" /></Button></Badge>
-          <Dropdown v-if="mobile" :menu="{ items: profileItems, onClick: onProfileClick }" :trigger="['click']" placement="bottomRight">
+          <a-badge :count="3" size="small"><a-button type="text" aria-label="通知"><Bell :size="18" /></a-button></a-badge>
+          <a-dropdown v-if="mobile" :menu="{ items: profileItems, onClick: onProfileClick }" :trigger="['click']" placement="bottomRight">
             <button class="ml-1 flex cursor-pointer items-center rounded-full p-0.5 transition-colors hover:bg-slate-100" aria-label="打开账户菜单">
-              <Avatar class="bg-sky-600">{{ (userStore.userInfo?.username || '管理员').charAt(0).toUpperCase() }}</Avatar>
+              <a-avatar class="bg-sky-600">{{ (userStore.userInfo?.username || '管理员').charAt(0).toUpperCase() }}</a-avatar>
             </button>
-          </Dropdown>
+          </a-dropdown>
         </div>
-      </LayoutHeader>
-      <LayoutContent class="page-content overflow-auto bg-slate-50/50">
+      </a-layout-header>
+      <a-layout-content class="page-content overflow-auto bg-slate-50/50">
         <router-view v-slot="{ Component }"><transition name="slide-fade" mode="out-in"><component :is="Component" /></transition></router-view>
-      </LayoutContent>
-    </Layout>
+      </a-layout-content>
+    </a-layout>
 
-    <Modal v-model:open="createTenantDialogOpen" title="新建租户" :footer="null">
+    <a-modal v-model:open="createTenantDialogOpen" title="新建租户" :footer="null">
       <form class="grid gap-4" @submit.prevent="submitCreateTenant">
         <div class="grid gap-2">
           <label for="create-tenant-name">租户名称</label>
-          <Input id="create-tenant-name" v-model:value="createTenantName" placeholder="请输入租户名称" />
+          <a-input id="create-tenant-name" v-model:value="createTenantName" placeholder="请输入租户名称" />
         </div>
         <div class="grid gap-2">
           <label for="create-tenant-package">租户套餐</label>
-          <Select
+          <a-select
             id="create-tenant-package"
             v-model:value="createTenantPackageId"
             class="w-full"
@@ -341,12 +325,12 @@ watch(() => userStore.currentTenant?.id, loadAuthorizedMenus, { immediate: true 
           />
         </div>
         <div class="flex justify-end gap-2 pt-2">
-          <Button html-type="button" @click="createTenantDialogOpen = false">取消</Button>
-          <Button html-type="submit" :disabled="createTenantSubmitting">{{ createTenantSubmitting ? '创建中...' : '创建租户' }}</Button>
+          <a-button html-type="button" @click="createTenantDialogOpen = false">取消</a-button>
+          <a-button html-type="submit" :disabled="createTenantSubmitting">{{ createTenantSubmitting ? '创建中...' : '创建租户' }}</a-button>
         </div>
       </form>
-    </Modal>
-  </Layout>
+    </a-modal>
+  </a-layout>
 </template>
 
 <style scoped>

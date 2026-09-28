@@ -1,3 +1,5 @@
+@layer reset, theme, base, antd, components, utilities;
+@import "antdv-next/dist/reset.css" layer(reset);
 @import "tailwindcss";
 @import "@antdv-next/tailwind/compat.css";
 

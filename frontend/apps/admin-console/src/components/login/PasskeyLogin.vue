@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { useAuth } from '@/composables/useAuth'
 import { message } from 'antdv-next'
-import { Alert } from 'antdv-next'
 
 const { loading, passkeyLogin } = useAuth()
 
@@ -40,7 +39,7 @@ async function handlePasskeyLogin() {
     </button>
 
     <div class="passkey-tips">
-      <Alert type="info" show-icon title="Passkey 是一种更安全、更便捷的登录方式" description="支持指纹、面部识别或安全密钥" />
+      <a-alert type="info" show-icon title="Passkey 是一种更安全、更便捷的登录方式" description="支持指纹、面部识别或安全密钥" />
     </div>
   </div>
 </template>

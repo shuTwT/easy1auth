@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { shallowRef } from 'vue'
-import { Tabs } from 'antdv-next'
+
 import PasswordLoginForm from '@/components/login/PasswordLoginForm.vue'
 import EmailCodeLoginForm from '@/components/login/EmailCodeLoginForm.vue'
 import PasskeyLogin from '@/components/login/PasskeyLogin.vue'
@@ -58,7 +58,7 @@ function switchToRegister() {
         </div>
       </div>
 
-      <Tabs
+      <a-tabs
         v-if="currentMode !== 'register'"
         v-model:active-key="currentMode"
         :items="loginTabs"

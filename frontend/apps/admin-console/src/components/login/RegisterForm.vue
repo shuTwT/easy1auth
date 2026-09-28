@@ -60,7 +60,7 @@ async function handleSubmit() {
       <label class="form-label">用户名 <span class="text-xs font-normal text-slate-400">（选填）</span></label>
       <div class="relative">
         <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>
-        <Input v-model:value="form.username" autocomplete="username" placeholder="留空则使用邮箱前缀" :maxlength="100" class="login-input h-11 pl-10" />
+        <a-input v-model:value="form.username" autocomplete="username" placeholder="留空则使用邮箱前缀" :maxlength="100" class="login-input h-11 pl-10" />
       </div>
     </div>
 
@@ -74,7 +74,7 @@ async function handleSubmit() {
           <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
           <polyline points="22,6 12,13 2,6"/>
         </svg>
-        <Input v-model:value="form.email"
+        <a-input v-model:value="form.email"
           autocomplete="email"
           placeholder="请输入邮箱地址"
           class="login-input h-11 pl-10"
@@ -93,7 +93,7 @@ async function handleSubmit() {
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
             <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
           </svg>
-          <Input v-model:value="form.code"
+          <a-input v-model:value="form.code"
             placeholder="请输入6位验证码"
             :maxlength="6"
             inputmode="numeric"
@@ -123,7 +123,7 @@ async function handleSubmit() {
           <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
           <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
         </svg>
-        <Input v-model:value="form.password"
+        <a-input v-model:value="form.password"
           :type="showPassword ? 'text' : 'password'"
           autocomplete="new-password"
           placeholder="请输入密码（至少8位，包含大小写字母和数字）"

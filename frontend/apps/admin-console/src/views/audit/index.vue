@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue'
-import { Modal, Table, message, Pagination as AntPagination } from 'antdv-next'
+import { Modal, message } from 'antdv-next'
 import { FileText, CheckCircle, XCircle, Clock, Search, RefreshCw, Download, Trash2 } from '@lucide/vue'
 import { auditApi } from '@/api/audit'
 import type { AuditLog, AuditLogQueryDto, AuditLogStats } from '@/types/audit'
@@ -83,7 +83,6 @@ const handlePageChange = (page: number, _pageSize?: number) => {
   queryForm.page = page
   loadLogs()
 }
-
 
 const handleViewDetail = (row: AuditLog) => {
   currentLog.value = row
@@ -204,7 +203,7 @@ onMounted(() => {
       </div>
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-5">
-      <Card>
+      <a-card>
         <div class="pt-6">
           <div class="flex items-center">
             <div class="size-11 rounded-lg flex items-center justify-center mr-4 bg-primary">
@@ -216,8 +215,8 @@ onMounted(() => {
             </div>
           </div>
         </div>
-      </Card>
-      <Card>
+      </a-card>
+      <a-card>
         <div class="pt-6">
           <div class="flex items-center">
             <div class="size-11 rounded-lg flex items-center justify-center mr-4 bg-emerald-500">
@@ -229,8 +228,8 @@ onMounted(() => {
             </div>
           </div>
         </div>
-      </Card>
-      <Card>
+      </a-card>
+      <a-card>
         <div class="pt-6">
           <div class="flex items-center">
             <div class="size-11 rounded-lg flex items-center justify-center mr-4 bg-destructive">
@@ -242,8 +241,8 @@ onMounted(() => {
             </div>
           </div>
         </div>
-      </Card>
-      <Card>
+      </a-card>
+      <a-card>
         <div class="pt-6">
           <div class="flex items-center">
             <div class="size-11 rounded-lg flex items-center justify-center mr-4 bg-amber-500">
@@ -255,70 +254,70 @@ onMounted(() => {
             </div>
           </div>
         </div>
-      </Card>
+      </a-card>
     </div>
 
-    <Card>
+    <a-card>
       <div class="flex flex-row items-center justify-between">
         <div></div>
         <div class="flex gap-2">
-          <Button size="small" @click="handleExport('json')">
+          <a-button size="small" @click="handleExport('json')">
             <Download class="size-4 mr-2" />
             导出JSON
-          </Button>
-          <Button size="small"  @click="handleExport('csv')">
+          </a-button>
+          <a-button size="small"  @click="handleExport('csv')">
             <Download class="size-4 mr-2" />
             导出CSV
-          </Button>
-            <Button size="small" danger @click="handleCleanup">
+          </a-button>
+            <a-button size="small" danger @click="handleCleanup">
             <Trash2 class="size-4 mr-2" />
             清理日志
-          </Button>
+          </a-button>
         </div>
       </div>
       <div>
         <div class="flex flex-wrap items-end gap-4 mb-5">
           <div class="grid gap-2">
             <label>用户名</label>
-            <Input v-model:value="queryForm.username" placeholder="请输入用户名" class="w-[150px]" />
+            <a-input v-model:value="queryForm.username" placeholder="请输入用户名" class="w-[150px]" />
           </div>
           <div class="grid gap-2">
             <label>日志类型</label>
-            <Select v-model:value="queryForm.type" class="w-[150px]" allow-clear :options="auditTypeOptions" />
+            <a-select v-model:value="queryForm.type" class="w-[150px]" allow-clear :options="auditTypeOptions" />
           </div>
           <div class="grid gap-2">
             <label>操作</label>
-            <Input v-model:value="queryForm.action" placeholder="请输入操作" class="w-[150px]" />
+            <a-input v-model:value="queryForm.action" placeholder="请输入操作" class="w-[150px]" />
           </div>
           <div class="grid gap-2">
             <label>状态</label>
-            <Select v-model:value="queryForm.status" class="w-[120px]" allow-clear :options="auditStatusOptions" />
+            <a-select v-model:value="queryForm.status" class="w-[120px]" allow-clear :options="auditStatusOptions" />
           </div>
           <div class="grid gap-2">
             <label>IP地址</label>
-            <Input v-model:value="queryForm.ip" placeholder="请输入IP地址" class="w-[150px]" />
+            <a-input v-model:value="queryForm.ip" placeholder="请输入IP地址" class="w-[150px]" />
           </div>
           <div class="grid gap-2">
             <label>时间范围</label>
             <div class="flex items-center gap-2">
-              <Input v-model:value="queryForm.startDate" type="date" class="w-[140px]" />
+              <a-input v-model:value="queryForm.startDate" type="date" class="w-[140px]" />
               <span class="text-muted-foreground">至</span>
-              <Input v-model:value="queryForm.endDate" type="date" class="w-[140px]" />
+              <a-input v-model:value="queryForm.endDate" type="date" class="w-[140px]" />
             </div>
           </div>
           <div class="flex gap-2">
-            <Button size="small" @click="handleSearch">
+            <a-button size="small" @click="handleSearch">
               <Search class="size-4 mr-2" />
               搜索
-            </Button>
-            <Button size="small"  @click="handleReset">
+            </a-button>
+            <a-button size="small"  @click="handleReset">
               <RefreshCw class="size-4 mr-2" />
               重置
-            </Button>
+            </a-button>
           </div>
         </div>
 
-        <Table :columns="[
+        <a-table :columns="[
           { title: '时间', key: 'createdAt', width: 180 }, { title: '用户', key: 'username', width: 120 },
           { title: '类型', key: 'type', width: 100 }, { title: '操作', key: 'action', width: 120 },
           { title: '资源', dataIndex: 'resource', width: 120 }, { title: 'IP地址', dataIndex: 'ip', width: 140 },
@@ -329,26 +328,26 @@ onMounted(() => {
             <template v-if="column.key === 'createdAt'">{{ formatDate(item.createdAt) }}</template>
             <template v-else-if="column.key === 'username'">{{ item.username || '-' }}</template>
             <template v-else-if="column.key === 'type'">
-            <Tag :color="getTypeVariant(item.type)">
+            <a-tag :color="getTypeVariant(item.type)">
                   {{ getTypeText(item.type) }}
-                </Tag>
+                </a-tag>
             </template>
             <template v-else-if="column.key === 'action'">{{ getActionText(item.action) }}</template>
             <template v-else-if="column.key === 'status'">
-            <Tag :color="getStatusVariant(item.status)">
+            <a-tag :color="getStatusVariant(item.status)">
                   {{ getStatusText(item.status) }}
-                </Tag>
+                </a-tag>
             </template>
             <template v-else-if="column.key === 'errorMessage'"><span class="text-muted-foreground">{{ item.errorMessage || '-' }}</span></template>
             <template v-else-if="column.key === 'actions'">
-                <Button type="link" size="small" class="h-auto p-0" @click="handleViewDetail(item)">详情</Button>
+                <a-button type="link" size="small" class="h-auto p-0" @click="handleViewDetail(item)">详情</a-button>
             </template>
           </template>
-        </Table>
+        </a-table>
 
         <div class="flex items-center justify-between mt-4 pt-4 border-t">
           <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
-          <AntPagination
+          <a-pagination
             :current="queryForm.page"
             :page-size="queryForm.pageSize"
             :total="total"
@@ -358,9 +357,9 @@ onMounted(() => {
           />
         </div>
       </div>
-    </Card>
+    </a-card>
 
-    <Modal v-model:open="detailDialogVisible" :footer="null">
+    <a-modal v-model:open="detailDialogVisible" :footer="null">
       <div class="sm:max-w-[700px]">
         <div>
           <h3>审计日志详情</h3>
@@ -385,9 +384,9 @@ onMounted(() => {
           <div class="space-y-1">
             <label class="text-muted-foreground">类型</label>
             <div class="text-sm">
-          <Tag :color="getTypeVariant(currentLog.type)">
+          <a-tag :color="getTypeVariant(currentLog.type)">
                 {{ getTypeText(currentLog.type) }}
-              </Tag>
+              </a-tag>
             </div>
           </div>
           <div class="space-y-1">
@@ -421,9 +420,9 @@ onMounted(() => {
           <div class="space-y-1">
             <label class="text-muted-foreground">状态</label>
             <div class="text-sm">
-          <Tag :color="getStatusVariant(currentLog.status)">
+          <a-tag :color="getStatusVariant(currentLog.status)">
                 {{ getStatusText(currentLog.status) }}
-              </Tag>
+              </a-tag>
             </div>
           </div>
           <div v-if="currentLog.errorMessage" class="col-span-2 space-y-1">
@@ -436,10 +435,10 @@ onMounted(() => {
           </div>
         </div>
         <div>
-          <Button  @click="detailDialogVisible = false">关闭</Button>
+          <a-button  @click="detailDialogVisible = false">关闭</a-button>
         </div>
       </div>
-    </Modal>
+    </a-modal>
     <contextHolder />
   </div>
 </template>

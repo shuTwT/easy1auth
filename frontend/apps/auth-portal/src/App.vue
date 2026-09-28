@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Button, Checkbox, ConfigProvider, Empty, Form, FormItem, Input, Modal, Result, Segmented, Spin, message } from 'antdv-next'
+import { message } from 'antdv-next'
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { AuthPortalRenderer } from '@easy1auth/components'
@@ -297,7 +297,7 @@ onBeforeUnmount(() => customStyleElement?.remove())
 </script>
 
 <template>
-  <ConfigProvider :theme="antdTheme">
+  <a-config-provider :theme="antdTheme">
     <AuthPortalRenderer
     id="auth-portal-root"
     :config="styleConfig"
@@ -306,39 +306,39 @@ onBeforeUnmount(() => customStyleElement?.remove())
     :subtitle-override="rendererMode === 'consent' ? '确认后，该应用将获得以下权限。' : undefined"
     >
     <template #content>
-      <div v-if="loading" class="portal-loading"><Spin size="large" description="正在加载安全登录环境…" /></div>
+      <div v-if="loading" class="portal-loading"><a-spin size="large" description="正在加载安全登录环境…" /></div>
       <template v-else-if="rendererMode === 'consent'">
         <ul class="scope-list"><li v-for="scope in context?.scopes ?? []" :key="scope"><span class="scope-dot"></span><span>{{ scope }}</span></li></ul>
-        <div class="portal-actions"><Button :disabled="submitting" @click="consent('deny')">拒绝</Button><Button type="primary" :loading="submitting" @click="consent('approve')">同意并继续</Button></div>
+        <div class="portal-actions"><a-button :disabled="submitting" @click="consent('deny')">拒绝</a-button><a-button type="primary" :loading="submitting" @click="consent('approve')">同意并继续</a-button></div>
       </template>
-      <Form v-else-if="rendererMode === 'mfa'" class="portal-form" :model="mfaForm" layout="vertical" @finish="verifyMfa"><FormItem label="动态验证码" name="code"><Input v-model:value="mfaForm.code" inputmode="numeric" autocomplete="one-time-code" :maxlength="6" placeholder="000000" autofocus /></FormItem><Button html-type="submit" type="primary" block :loading="submitting" :disabled="!mfaForm.code">验证并继续</Button></Form>
+      <a-form v-else-if="rendererMode === 'mfa'" class="portal-form" :model="mfaForm" layout="vertical" @finish="verifyMfa"><a-form-item label="动态验证码" name="code"><a-input v-model:value="mfaForm.code" inputmode="numeric" autocomplete="one-time-code" :maxlength="6" placeholder="000000" autofocus /></a-form-item><a-button html-type="submit" type="primary" block :loading="submitting" :disabled="!mfaForm.code">验证并继续</a-button></a-form>
       <template v-else-if="socialProfile">
-        <Result v-if="socialAction === 'select'" status="info" title="选择账号处理方式" :sub-title="socialProfile.name ? `已验证社会化账号：${socialProfile.name}` : '已验证社会化账号'">
-          <template #extra><div class="social-account-actions"><Button type="primary" :disabled="!socialProfile.canProvision" title="身份源未提供邮箱时无法创建用户" @click="socialAction = 'create'">创建新用户</Button><Button @click="socialAction = 'bind'">绑定已有用户</Button></div></template>
-        </Result>
-        <Form v-else-if="socialAction === 'create'" class="portal-form" :model="socialProvisionForm" layout="vertical" @finish="provisionSocialUser"><FormItem label="用户名" name="username"><Input v-model:value="socialProvisionForm.username" autocomplete="username" placeholder="请输入用户名" /></FormItem><div class="portal-actions"><Button @click="socialAction = 'select'">返回</Button><Button html-type="submit" type="primary" :loading="submitting" :disabled="!socialProvisionForm.username">创建并继续</Button></div></Form>
-        <Form v-else class="portal-form" :model="passwordForm" layout="vertical" @finish="passwordLogin"><FormItem label="账号" name="username"><Input v-model:value="passwordForm.username" autocomplete="username" placeholder="请输入账号或邮箱" /></FormItem><FormItem label="密码" name="password"><Input v-model:value="passwordForm.password" type="password" autocomplete="current-password" placeholder="请输入登录密码" /></FormItem><div class="portal-actions"><Button @click="socialAction = 'select'">返回</Button><Button html-type="submit" type="primary" :loading="submitting" :disabled="!passwordForm.username || !passwordForm.password">验证并绑定</Button></div></Form>
+        <a-result v-if="socialAction === 'select'" status="info" title="选择账号处理方式" :sub-title="socialProfile.name ? `已验证社会化账号：${socialProfile.name}` : '已验证社会化账号'">
+          <template #extra><div class="social-account-actions"><a-button type="primary" :disabled="!socialProfile.canProvision" title="身份源未提供邮箱时无法创建用户" @click="socialAction = 'create'">创建新用户</a-button><a-button @click="socialAction = 'bind'">绑定已有用户</a-button></div></template>
+        </a-result>
+        <a-form v-else-if="socialAction === 'create'" class="portal-form" :model="socialProvisionForm" layout="vertical" @finish="provisionSocialUser"><a-form-item label="用户名" name="username"><a-input v-model:value="socialProvisionForm.username" autocomplete="username" placeholder="请输入用户名" /></a-form-item><div class="portal-actions"><a-button @click="socialAction = 'select'">返回</a-button><a-button html-type="submit" type="primary" :loading="submitting" :disabled="!socialProvisionForm.username">创建并继续</a-button></div></a-form>
+        <a-form v-else class="portal-form" :model="passwordForm" layout="vertical" @finish="passwordLogin"><a-form-item label="账号" name="username"><a-input v-model:value="passwordForm.username" autocomplete="username" placeholder="请输入账号或邮箱" /></a-form-item><a-form-item label="密码" name="password"><a-input v-model:value="passwordForm.password" type="password" autocomplete="current-password" placeholder="请输入登录密码" /></a-form-item><div class="portal-actions"><a-button @click="socialAction = 'select'">返回</a-button><a-button html-type="submit" type="primary" :loading="submitting" :disabled="!passwordForm.username || !passwordForm.password">验证并绑定</a-button></div></a-form>
       </template>
       <template v-else-if="mode === 'login'">
-        <Segmented v-if="availableMethods.length > 1" v-model:value="loginMethod" class="login-method-switch" block :options="loginMethodOptions" />
-        <Form v-if="availableMethods.includes('password') && loginMethod === 'password' && !challengeToken" class="portal-form" :model="passwordForm" layout="vertical" @finish="passwordLogin"><FormItem label="账号" name="username"><Input v-model:value="passwordForm.username" autocomplete="username" placeholder="请输入账号或邮箱" /></FormItem><FormItem label="密码" name="password"><Input v-model:value="passwordForm.password" type="password" autocomplete="current-password" placeholder="请输入登录密码" /></FormItem><Button html-type="submit" type="primary" block :loading="submitting" :disabled="!passwordForm.username || !passwordForm.password">登录</Button></Form>
-        <Form v-else-if="availableMethods.includes('email') && !challengeToken" class="portal-form" :model="emailForm" layout="vertical" @finish="sendCode('login')"><FormItem label="邮箱" name="email"><Input v-model:value="emailForm.email" type="email" autocomplete="email" placeholder="请输入邮箱" /></FormItem><Button html-type="submit" type="primary" block :loading="submitting" :disabled="!emailForm.email">下一步</Button></Form>
-        <Form v-else-if="challengeToken" class="portal-form" :model="verifyForm" layout="vertical" @finish="verifyAndComplete('login')"><FormItem label="验证码" name="code"><Input v-model:value="verifyForm.code" inputmode="numeric" autocomplete="one-time-code" :maxlength="6" placeholder="请输入6位验证码" /></FormItem><Button html-type="submit" type="primary" block :loading="submitting" :disabled="!verifyForm.code">登录</Button></Form>
-        <Empty v-else-if="!style?.socialSources?.length || !standard.methods.includes('social')" class="portal-empty" description="暂无可用登录方式" />
+        <a-segmented v-if="availableMethods.length > 1" v-model:value="loginMethod" class="login-method-switch" block :options="loginMethodOptions" />
+        <a-form v-if="availableMethods.includes('password') && loginMethod === 'password' && !challengeToken" class="portal-form" :model="passwordForm" layout="vertical" @finish="passwordLogin"><a-form-item label="账号" name="username"><a-input v-model:value="passwordForm.username" autocomplete="username" placeholder="请输入账号或邮箱" /></a-form-item><a-form-item label="密码" name="password"><a-input v-model:value="passwordForm.password" type="password" autocomplete="current-password" placeholder="请输入登录密码" /></a-form-item><a-button html-type="submit" type="primary" block :loading="submitting" :disabled="!passwordForm.username || !passwordForm.password">登录</a-button></a-form>
+        <a-form v-else-if="availableMethods.includes('email') && !challengeToken" class="portal-form" :model="emailForm" layout="vertical" @finish="sendCode('login')"><a-form-item label="邮箱" name="email"><a-input v-model:value="emailForm.email" type="email" autocomplete="email" placeholder="请输入邮箱" /></a-form-item><a-button html-type="submit" type="primary" block :loading="submitting" :disabled="!emailForm.email">下一步</a-button></a-form>
+        <a-form v-else-if="challengeToken" class="portal-form" :model="verifyForm" layout="vertical" @finish="verifyAndComplete('login')"><a-form-item label="验证码" name="code"><a-input v-model:value="verifyForm.code" inputmode="numeric" autocomplete="one-time-code" :maxlength="6" placeholder="请输入6位验证码" /></a-form-item><a-button html-type="submit" type="primary" block :loading="submitting" :disabled="!verifyForm.code">登录</a-button></a-form>
+        <a-empty v-else-if="!style?.socialSources?.length || !standard.methods.includes('social')" class="portal-empty" description="暂无可用登录方式" />
         <div v-if="registrationEnabled" class="portal-switch">还没有账号？<a href="#" @click.prevent="switchMode('register')">立即注册</a></div>
         <div v-if="style?.socialSources?.length && standard.methods.includes('social')" class="federation"><span>或使用社会化登录</span><a v-for="source in style.socialSources" :key="source.id" :href="socialUrl(source.id)">使用 {{ source.name }} 登录</a></div>
       </template>
       <template v-else>
-        <Form v-if="!challengeToken" class="portal-form" :model="emailForm" layout="vertical" @finish="sendCode('register')"><FormItem label="邮箱" name="email"><Input v-model:value="emailForm.email" type="email" autocomplete="email" placeholder="请输入邮箱" /></FormItem><Button html-type="submit" type="primary" block :loading="submitting" :disabled="!emailForm.email">发送验证码</Button></Form>
-        <Form v-else class="portal-form" :model="verifyForm" layout="vertical" @finish="verifyAndComplete('register')"><FormItem label="验证码" name="code"><Input v-model:value="verifyForm.code" inputmode="numeric" autocomplete="one-time-code" :maxlength="6" placeholder="请输入6位验证码" /></FormItem><Button html-type="submit" type="primary" block :loading="submitting" :disabled="!verifyForm.code">完成注册</Button></Form>
+        <a-form v-if="!challengeToken" class="portal-form" :model="emailForm" layout="vertical" @finish="sendCode('register')"><a-form-item label="邮箱" name="email"><a-input v-model:value="emailForm.email" type="email" autocomplete="email" placeholder="请输入邮箱" /></a-form-item><a-button html-type="submit" type="primary" block :loading="submitting" :disabled="!emailForm.email">发送验证码</a-button></a-form>
+        <a-form v-else class="portal-form" :model="verifyForm" layout="vertical" @finish="verifyAndComplete('register')"><a-form-item label="验证码" name="code"><a-input v-model:value="verifyForm.code" inputmode="numeric" autocomplete="one-time-code" :maxlength="6" placeholder="请输入6位验证码" /></a-form-item><a-button html-type="submit" type="primary" block :loading="submitting" :disabled="!verifyForm.code">完成注册</a-button></a-form>
         <div class="portal-switch">已有账号？<a href="#" @click.prevent="switchMode('login')">返回登录</a></div>
       </template>
     </template>
 
     <template #legal>
-      <Checkbox v-if="context?.style?.termsOfService || context?.style?.privacyPolicy" v-model:checked="termsAccepted" class="portal-legal">我已阅读并同意 <a v-if="context?.style?.termsOfService" href="#" @click.prevent="legalDocument = 'terms'">服务条款</a><span v-if="context?.style?.termsOfService && context?.style?.privacyPolicy">和</span><a v-if="context?.style?.privacyPolicy" href="#" @click.prevent="legalDocument = 'privacy'">隐私政策</a></Checkbox>
+      <a-checkbox v-if="context?.style?.termsOfService || context?.style?.privacyPolicy" v-model:checked="termsAccepted" class="portal-legal">我已阅读并同意 <a v-if="context?.style?.termsOfService" href="#" @click.prevent="legalDocument = 'terms'">服务条款</a><span v-if="context?.style?.termsOfService && context?.style?.privacyPolicy">和</span><a v-if="context?.style?.privacyPolicy" href="#" @click.prevent="legalDocument = 'privacy'">隐私政策</a></a-checkbox>
     </template>
   </AuthPortalRenderer>
-    <Modal v-model:open="legalModalOpen" :title="legalTitle" :footer="null"><div class="legal-content">{{ legalContent }}</div></Modal>
-  </ConfigProvider>
+    <a-modal v-model:open="legalModalOpen" :title="legalTitle" :footer="null"><div class="legal-content">{{ legalContent }}</div></a-modal>
+  </a-config-provider>
 </template>

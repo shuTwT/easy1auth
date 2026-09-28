@@ -4,14 +4,10 @@ export interface UserGroup {
   name: string
   description?: string
   type: GroupType
-  parentId?: string
   createdAt: string
   updatedAt: string
-  parent?: UserGroup | null
   _count?: {
     members: number
-    admins: number
-    children: number
   }
 }
 
@@ -21,14 +17,12 @@ export interface CreateGroupDto {
   name: string
   description?: string
   type?: GroupType
-  parentId?: string
 }
 
 export interface UpdateGroupDto {
   name?: string
   description?: string
   type?: GroupType
-  parentId?: string
 }
 
 export interface GroupQueryDto {
@@ -36,7 +30,6 @@ export interface GroupQueryDto {
   pageSize?: number
   name?: string
   type?: GroupType
-  parentId?: string
 }
 
 export interface GroupListResponse {
@@ -44,17 +37,6 @@ export interface GroupListResponse {
   total: number
   page: number
   pageSize: number
-}
-
-export interface GroupTreeResponse {
-  id: string
-  name: string
-  description?: string | null
-  type: string
-  parentId?: string | null
-  children: GroupTreeResponse[]
-  memberCount: number
-  adminCount: number
 }
 
 export interface AddMembersDto {
@@ -65,17 +47,8 @@ export interface RemoveMembersDto {
   userIds: string[]
 }
 
-export interface AddAdminsDto {
-  userIds: string[]
-}
-
-export interface RemoveAdminsDto {
-  userIds: string[]
-}
-
 export interface GroupMembersResponse {
   members: User[]
-  admins: User[]
   total: number
 }
 
@@ -85,7 +58,6 @@ export interface GroupStats {
   departmentGroups: number
   projectGroups: number
   organizationGroups: number
-  rootGroups: number
 }
 
 export interface User {

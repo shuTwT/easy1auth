@@ -32,10 +32,7 @@ public interface ErrorCodeConstants {
     ErrorCode DIRECTORY_USER_NOT_FOUND = new ErrorCode(14004, "用户不存在");
     ErrorCode ENTERPRISE_IDENTITY_MANAGED_DEPARTMENT = new ErrorCode(14005, "该部门由企业身份源管理，请在身份源中修改");
     ErrorCode ENTERPRISE_IDENTITY_MANAGED_USER = new ErrorCode(14006, "该用户由企业身份源管理，请在身份源中修改");
-    ErrorCode GROUP_CYCLE = new ErrorCode(14007, "用户组层级不能形成循环");
-    ErrorCode GROUP_HAS_CHILDREN = new ErrorCode(14008, "用户组下仍有子组，不能删除");
     ErrorCode GROUP_INVALID = new ErrorCode(14009, "用户组名称或类型无效");
-    ErrorCode GROUP_PARENT_SELF = new ErrorCode(14010, "不能将自身设为父组");
     ErrorCode PASSWORD_WEAK = new ErrorCode(14011, "密码至少8位");
     ErrorCode POOL_USER_INVALID = new ErrorCode(14012, "用户名、姓名以及邮箱或手机号为必填项");
     ErrorCode POOL_USER_NOT_FOUND = new ErrorCode(14013, "用户不存在");

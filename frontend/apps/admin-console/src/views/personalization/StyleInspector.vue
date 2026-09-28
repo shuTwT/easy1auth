@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Select } from 'antdv-next'
+
 import type { LoginStyleConfig, LoginStyleLegalDocuments } from '@easy1auth/types'
 import type { SocialIdentitySource } from '@/types/socialIdentitySource'
 
@@ -62,7 +62,7 @@ function toggleMethod(method: 'password' | 'email' | 'social') {
       <label>页面副标题<input v-model="config.global.subtitle" class="text-input" maxlength="500" @input="changed"></label>
       <div class="option-list"><span class="field-label">登录方式</span><label><input type="checkbox" :checked="config.standard.methods.includes('password')" @change="toggleMethod('password')">密码登录</label><label><input type="checkbox" :checked="config.standard.methods.includes('email')" @change="toggleMethod('email')">邮箱验证码</label><label><input type="checkbox" :checked="config.standard.methods.includes('social')" @change="toggleMethod('social')">社会化登录</label></div>
       <label v-if="config.standard.methods.includes('social')">身份源
-        <Select v-model:value="selectedSocialProviderIds" class="social-source-select" mode="multiple" :options="socialSourceOptions" :loading="socialSourcesLoading" :disabled="socialSourcesLoading" :show-search="true" :allow-clear="true" option-filter-prop="label" placeholder="选择已启用的社会化身份源" aria-label="选择社会化身份源" @change="changed" />
+        <a-select v-model:value="selectedSocialProviderIds" class="social-source-select" mode="multiple" :options="socialSourceOptions" :loading="socialSourcesLoading" :disabled="socialSourcesLoading" :show-search="true" :allow-clear="true" option-filter-prop="label" placeholder="选择已启用的社会化身份源" aria-label="选择社会化身份源" @change="changed" />
         <span v-if="!socialSourcesLoading && !socialSources.length" class="field-help">没有可选择的已启用身份源，请先在“社会化身份源”中创建并启用。</span>
       </label>
       <label class="switch-row"><input v-model="config.standard.registrationEnabled" type="checkbox" @change="changed"><span>显示注册入口</span></label>

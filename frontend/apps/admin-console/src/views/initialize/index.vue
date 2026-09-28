@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Button, Form, FormItem, Input, message } from 'antdv-next'
+import { message } from 'antdv-next'
 import type { FormInstance } from 'antdv-next'
 import { Check, KeyRound, LockKeyhole, Mail, ShieldCheck, UserRoundCog } from '@lucide/vue'
 import { systemInitializationApi } from '@/api/systemInitialization'
@@ -107,7 +107,7 @@ async function handleSubmit() {
           <p>该账号将作为平台的最高权限管理员，请妥善保管登录信息。</p>
         </div>
 
-        <Form
+        <a-form
           ref="formRef"
           :model="model"
           layout="vertical"
@@ -117,7 +117,7 @@ async function handleSubmit() {
           class="initialize-form"
           @finish="handleSubmit"
         >
-          <FormItem
+          <a-form-item
             label="系统管理员账号"
             name="account"
             :rules="[
@@ -126,7 +126,7 @@ async function handleSubmit() {
               { max: 320, message: '邮箱地址不能超过 320 个字符' },
             ]"
           >
-            <Input
+            <a-input
               v-model:value="model.account"
               size="large"
               type="email"
@@ -134,12 +134,12 @@ async function handleSubmit() {
               placeholder="admin@example.com"
             >
               <template #prefix><Mail :size="18" aria-hidden="true" /></template>
-            </Input>
+            </a-input>
             <p class="field-hint">使用邮箱作为管理员登录账号，后续也可用于安全通知。</p>
-          </FormItem>
+          </a-form-item>
 
-          <FormItem label="管理员密码" name="password" :rules="passwordRules" has-feedback>
-            <Input.Password
+          <a-form-item label="管理员密码" name="password" :rules="passwordRules" has-feedback>
+            <a-input-password
               v-model:value="model.password"
               size="large"
               autocomplete="new-password"
@@ -147,8 +147,8 @@ async function handleSubmit() {
               @change="formRef?.validateFields(['confirmPassword'])"
             >
               <template #prefix><KeyRound :size="18" aria-hidden="true" /></template>
-            </Input.Password>
-          </FormItem>
+            </a-input-password>
+          </a-form-item>
 
           <div class="password-policy" aria-label="密码要求">
             <span :class="{ met: model.password.length >= 8 }"><Check :size="14" />至少 8 位</span>
@@ -156,21 +156,21 @@ async function handleSubmit() {
             <span :class="{ met: /\d/.test(model.password) }"><Check :size="14" />至少 1 个数字</span>
           </div>
 
-          <FormItem label="确认密码" name="confirmPassword" :rules="confirmPasswordRules" has-feedback>
-            <Input.Password
+          <a-form-item label="确认密码" name="confirmPassword" :rules="confirmPasswordRules" has-feedback>
+            <a-input-password
               v-model:value="model.confirmPassword"
               size="large"
               autocomplete="new-password"
               placeholder="再次输入管理员密码"
             >
               <template #prefix><LockKeyhole :size="18" aria-hidden="true" /></template>
-            </Input.Password>
-          </FormItem>
+            </a-input-password>
+          </a-form-item>
 
-          <Button type="primary" html-type="submit" size="large" block :loading="submitting" class="submit-button">
+          <a-button type="primary" html-type="submit" size="large" block :loading="submitting" class="submit-button">
             {{ submitting ? '正在初始化…' : '完成初始化' }}
-          </Button>
-        </Form>
+          </a-button>
+        </a-form>
 
         <p class="form-footnote">
           提交即表示创建系统租户并授予此账号平台最高管理权限。

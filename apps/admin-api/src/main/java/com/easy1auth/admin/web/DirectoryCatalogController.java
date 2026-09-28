@@ -15,7 +15,7 @@ import java.util.*;
  * 组织架构目录接口（用户组与岗位）。
  *
  * <p>管理端 REST 入口，提供用户组（{@code /api/groups}）与岗位（{@code /api/positions}）
- * 的分页查询、树形结构、统计、增删改以及成员 / 管理员管理能力。所有操作均通过
+ * 的分页查询、统计、增删改以及成员管理能力。所有操作均通过
  * {@link TenantManagementPermission} 做租户级权限控制，并以 {@link ApiResponse}
  * 统一包装返回。</p>
  */
@@ -28,20 +28,13 @@ public class DirectoryCatalogController {
         this.catalog = catalog;
     }
 
-    /** 分页查询用户组列表，支持按名称、类型与上级组过滤。 */
+    /** 分页查询用户组列表，支持按名称与类型过滤。 */
     @TenantManagementPermission(value = ManagementPermissionCode.GROUP_LIST)
     @GetMapping("/api/groups")
     ApiResponse<?> groups(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,
-                          @RequestParam(required = false) String name, @RequestParam(required = false) String type, @RequestParam(required = false) UUID parentId) {
-        var x = catalog.groups(page, pageSize, name, type, parentId);
+                          @RequestParam(required = false) String name, @RequestParam(required = false) String type) {
+        var x = catalog.groups(page, pageSize, name, type);
         return ApiResponse.ok(x);
-    }
-
-    /** 查询用户组的树形结构。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.GROUP_TREE)
-    @GetMapping("/api/groups/tree")
-    ApiResponse<?> groupTree() {
-        return ApiResponse.ok(catalog.groupTree());
     }
 
     /** 查询用户组的统计信息。 */
@@ -103,22 +96,6 @@ public class DirectoryCatalogController {
         return ApiResponse.ok(null, "成员移除成功");
     }
 
-    /** 向指定用户组批量添加管理员。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.GROUP_ADMIN_ADD)
-    @PostMapping("/api/groups/{id}/admins")
-    ApiResponse<Void> addAdmins(@PathVariable UUID id, @RequestBody DirectoryUserIds in) {
-        catalog.addAdmins(id, in.userIds());
-        return ApiResponse.ok(null, "管理员添加成功");
-    }
-
-    /** 从指定用户组批量移除管理员。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.GROUP_ADMIN_REMOVE)
-    @DeleteMapping("/api/groups/{id}/admins")
-    ApiResponse<Void> removeAdmins(@PathVariable UUID id, @RequestBody DirectoryUserIds in) {
-        catalog.removeAdmins(id, in.userIds());
-        return ApiResponse.ok(null, "管理员移除成功");
-    }
-
     /** 分页查询岗位列表，支持按名称、编码、部门与层级过滤。 */
     @TenantManagementPermission(value = ManagementPermissionCode.POSITION_LIST)
     @GetMapping("/api/positions")
@@ -165,9 +142,4 @@ public class DirectoryCatalogController {
         return ApiResponse.ok(null, "岗位删除成功");
     }
 
-    /**
-     * 用户 ID 集合请求体（用于批量添加 / 移除成员或管理员）。
-     *
-     * @param userIds 用户 ID 列表，为空时按空列表处理
-     */
 }

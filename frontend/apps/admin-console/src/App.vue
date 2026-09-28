@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
-import { App as AntApp, ConfigProvider, message } from 'antdv-next'
+import { message } from 'antdv-next'
 import { useUserStore } from '@/stores/user'
 import { tenantApi } from '@/api/tenant'
 import { antdLocale, antdTheme } from '@/config/antd'
@@ -41,9 +41,9 @@ onMounted(async () => {
 </script>
 
 <template>
-  <ConfigProvider :locale="antdLocale" :theme="antdTheme" component-size="middle">
-    <AntApp>
+  <a-config-provider :locale="antdLocale" :theme="antdTheme" component-size="middle">
+    <a-app>
       <router-view />
-    </AntApp>
-  </ConfigProvider>
+    </a-app>
+  </a-config-provider>
 </template>

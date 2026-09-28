@@ -21,8 +21,8 @@ import java.util.*;
 /**
  * 目录目录服务：管理 pool_user 的用户组（Group）、岗位（Position）及其组织关系。
  *
- * <p>用户组支持树形层级与多种类型（team / department / project / organization），
- * 可维护组成员与组管理员；岗位记录编码、层级与部门归属。用户组、岗位均按租户隔离，
+ * <p>用户组相互独立，支持多种类型（team / department / project / organization），
+ * 可维护组成员；岗位记录编码、层级与部门归属。用户组、岗位均按租户隔离，
  * 服务于 pool_user 的组织架构管理。</p>
  */
 @Service
@@ -35,8 +35,6 @@ public class DirectoryCatalogService {
     private static final PoolUserEntityTable USER = PoolUserEntityTable.$;
     /** 用户-组成员分配表（pool_user_group）静态描述符 */
     private static final UserGroupAssignmentEntityTable MEMBER = UserGroupAssignmentEntityTable.$;
-    /** 用户-组管理员分配表（pool_group_admin）静态描述符 */
-    private static final GroupAdminAssignmentEntityTable ADMIN = GroupAdminAssignmentEntityTable.$;
     /** jimmer SQL 客户端 */
     private final JSqlClient sql;
 
@@ -44,14 +42,13 @@ public class DirectoryCatalogService {
         this.sql = sql;
     }
 
-    /** 分页查询租户下的用户组，可按名称模糊搜索、按类型/父组过滤，按创建时间倒序。 */
+    /** 分页查询租户下的用户组，可按名称模糊搜索、按类型过滤，按创建时间倒序。 */
     @Transactional(readOnly = true)
-    public PageData<GroupView> groups(UUID tenant, int page, int size, String name, String type, UUID parentId) {
+    public PageData<GroupView> groups(UUID tenant, int page, int size, String name, String type) {
         int p = Math.max(1, page), s = Math.min(100, Math.max(1, size));
         var query = sql.createQuery(GROUP).where(GROUP.tenantId().eq(tenant))
                 .whereIf(name != null, () -> GROUP.name().ilike(name, LikeMode.ANYWHERE))
                 .whereIf(type != null, () -> GROUP.type().eq(type))
-                .whereIf(parentId != null, () -> GROUP.parentId().eq(parentId))
                 .orderBy(GROUP.createdAt().desc()).select(GROUP);
         long total = query.fetchUnlimitedCount();
         return PageData.of(query.limit(s, (long) (p - 1) * s).execute().stream().map(this::groupView).toList(), p, s, total);
@@ -63,20 +60,25 @@ public class DirectoryCatalogService {
         return groupView(groupEntity(tenant, id));
     }
 
-    /** 创建用户组（默认类型 team）：校验名称/类型与父组合法性。 */
+    /** 创建用户组（默认类型 team）：校验名称与类型。 */
     @Transactional
     public GroupView createGroup(UUID tenant, GroupInput in) {
         validateGroup(in.name(), in.type());
-        validateParent(tenant, null, in.parentId());
         Instant now = Instant.now();
-        var entity = UserGroupEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTenantId(tenant)
-                .setName(in.name().strip()).setDescription(in.description()).setType(in.type() == null ? "team" : in.type())
-                .setParentId(in.parentId()).setCreatedAt(now).setUpdatedAt(now));
+        var entity = UserGroupEntityDraft.$.produce(d -> {
+            d.setId(UuidV7.randomUuid());
+            d.setTenantId(tenant);
+            d.setName(in.name().strip());
+            d.setDescription(in.description());
+            d.setType(in.type() == null ? "team" : in.type());
+            d.setCreatedAt(now);
+            d.setUpdatedAt(now);
+        });
         sql.saveCommand(entity).setMode(SaveMode.INSERT_ONLY).execute();
         return groupView(entity);
     }
 
-    /** 更新用户组的名称、类型、描述与父组（仅更新传入的非空字段）；企业身份源托管的组不可修改。 */
+    /** 更新用户组的名称、类型与描述（仅更新传入的非空字段）；企业身份源托管的组不可修改。 */
     @Transactional
     public GroupView updateGroup(UUID tenant, UUID id, GroupInput in) {
         var old = groupEntity(tenant, id);
@@ -84,86 +86,48 @@ public class DirectoryCatalogService {
         String name = in.name() == null ? old.name() : in.name();
         String type = in.type() == null ? old.type() : in.type();
         validateGroup(name, type);
-        validateParent(tenant, id, in.parentId());
         var update = sql.createUpdate(GROUP).set(GROUP.name(), name).set(GROUP.type(), type).set(GROUP.updatedAt(), Instant.now())
                 .where(GROUP.id().eq(id), GROUP.tenantId().eq(tenant));
         if (in.description() != null) {
             update.set(GROUP.description(), in.description());
         }
-        if (in.parentId() != null) {
-            update.set(GROUP.parentId(), in.parentId());
-        }
         update.execute();
         return group(tenant, id);
     }
 
-    /** 删除用户组；存在子组的用户组不可删除，企业身份源托管的组不可删除。 */
+    /** 删除用户组；企业身份源托管的组不可删除。 */
     @Transactional
     public void deleteGroup(UUID tenant, UUID id) {
         rejectEnterpriseManaged(groupEntity(tenant, id));
-        if (sql.createQuery(GROUP).where(GROUP.tenantId().eq(tenant), GROUP.parentId().eq(id)).select(GROUP.id()).exists()) {
-            throw new DomainException(ErrorCodeConstants.GROUP_HAS_CHILDREN);
-        }
         sql.createDelete(GROUP).where(GROUP.id().eq(id), GROUP.tenantId().eq(tenant)).execute();
     }
 
-    /** 构建租户下的用户组树（按父组 parentId 组织层级，含成员/管理员/子组数量）。 */
-    @Transactional(readOnly = true)
-    public List<GroupTree> groupTree(UUID tenant) {
-        var groups = sql.createQuery(GROUP).where(GROUP.tenantId().eq(tenant)).orderBy(GROUP.createdAt()).select(GROUP).execute();
-        Map<UUID, MutableGroupTree> nodes = new LinkedHashMap<>();
-        groups.forEach(g -> nodes.put(g.id(), new MutableGroupTree(g, memberCount(g.tenantId(), g.id()), adminCount(g.tenantId(), g.id()))));
-        List<MutableGroupTree> roots = new ArrayList<>();
-        nodes.values().forEach(n -> {
-            var parent = n.entity.parentId() == null ? null : nodes.get(n.entity.parentId());
-            if (parent == null) {
-                roots.add(n);
-            } else {
-                parent.children.add(n);
-            }
-        });
-        return roots.stream().map(MutableGroupTree::freeze).toList();
-    }
-
-    /** 统计租户下的用户组数量（按类型拆分，含顶级组数量）。 */
+    /** 统计租户下的用户组数量（按类型拆分）。 */
     @Transactional(readOnly = true)
     public GroupStats groupStats(UUID tenant) {
         var rows = sql.createQuery(GROUP).where(GROUP.tenantId().eq(tenant)).select(GROUP).execute();
         return new GroupStats(rows.size(), countType(rows, "team"), countType(rows, "department"), countType(rows, "project"),
-                countType(rows, "organization"), rows.stream().filter(g -> g.parentId() == null).count());
+                countType(rows, "organization"));
     }
 
-    /** 查询用户组的成员与管理员列表（含成员总数）。 */
+    /** 查询用户组的成员列表（含成员总数）。 */
     @Transactional(readOnly = true)
     public GroupMembers groupMembers(UUID tenant, UUID groupId) {
         groupEntity(tenant, groupId);
         var memberIds = sql.createQuery(MEMBER).where(MEMBER.id().tenantId().eq(tenant), MEMBER.id().groupId().eq(groupId)).select(MEMBER.id().userId()).execute();
-        var adminIds = sql.createQuery(ADMIN).where(ADMIN.id().tenantId().eq(tenant), ADMIN.id().groupId().eq(groupId)).select(ADMIN.id().userId()).execute();
-        return new GroupMembers(userViews(tenant, memberIds), userViews(tenant, adminIds), memberIds.size());
+        return new GroupMembers(userViews(tenant, memberIds), memberIds.size());
     }
 
     /** 批量向用户组添加成员（已存在的分配自动跳过）。 */
     @Transactional
     public void addMembers(UUID tenant, UUID groupId, Collection<UUID> users) {
-        mutateGroupUsers(tenant, groupId, users, false, true);
+        mutateGroupMembers(tenant, groupId, users, true);
     }
 
     /** 批量从用户组移除成员。 */
     @Transactional
     public void removeMembers(UUID tenant, UUID groupId, Collection<UUID> users) {
-        mutateGroupUsers(tenant, groupId, users, false, false);
-    }
-
-    /** 批量向用户组添加管理员（已存在的分配自动跳过）。 */
-    @Transactional
-    public void addAdmins(UUID tenant, UUID groupId, Collection<UUID> users) {
-        mutateGroupUsers(tenant, groupId, users, true, true);
-    }
-
-    /** 批量移除用户组的组管理员。 */
-    @Transactional
-    public void removeAdmins(UUID tenant, UUID groupId, Collection<UUID> users) {
-        mutateGroupUsers(tenant, groupId, users, true, false);
+        mutateGroupMembers(tenant, groupId, users, false);
     }
 
     /** 分页查询租户下的岗位，可按名称/编码模糊搜索、按部门/层级过滤，按创建时间倒序。 */
@@ -259,22 +223,20 @@ public class DirectoryCatalogService {
         groupIds.forEach(groupId -> insertMember(tenant, userId, groupId));
     }
 
-    private void mutateGroupUsers(UUID tenant, UUID groupId, Collection<UUID> userIds, boolean admins, boolean add) {
+    private void mutateGroupMembers(UUID tenant, UUID groupId, Collection<UUID> userIds, boolean add) {
         rejectEnterpriseManaged(groupEntity(tenant, groupId));
         userIds.forEach(id -> userEntity(tenant, id));
         for (UUID userId : userIds) {
-            if (admins) {
-                if (add) {
-                    insertAdmin(tenant, groupId, userId);
-                } else {
-                    sql.createDelete(ADMIN).where(ADMIN.id().tenantId().eq(tenant), ADMIN.id().groupId().eq(groupId), ADMIN.id().userId().eq(userId)).execute();
-                }
+            if (add) {
+                insertMember(tenant, userId, groupId);
             } else {
-                if (add) {
-                    insertMember(tenant, userId, groupId);
-                } else {
-                    sql.createDelete(MEMBER).where(MEMBER.id().tenantId().eq(tenant), MEMBER.id().groupId().eq(groupId), MEMBER.id().userId().eq(userId)).execute();
-                }
+                sql.createDelete(MEMBER)
+                        .where(
+                                MEMBER.id().tenantId().eq(tenant),
+                                MEMBER.id().groupId().eq(groupId),
+                                MEMBER.id().userId().eq(userId)
+                        )
+                        .execute();
             }
         }
     }
@@ -282,11 +244,6 @@ public class DirectoryCatalogService {
     private void insertMember(UUID tenant, UUID user, UUID group) {
         var id = UserGroupAssignmentIdDraft.$.produce(d -> d.setTenantId(tenant).setUserId(user).setGroupId(group));
         sql.saveCommand(UserGroupAssignmentEntityDraft.$.produce(d -> d.setId(id))).setMode(SaveMode.INSERT_IF_ABSENT).execute();
-    }
-
-    private void insertAdmin(UUID tenant, UUID group, UUID user) {
-        var id = GroupAdminAssignmentIdDraft.$.produce(d -> d.setTenantId(tenant).setGroupId(group).setUserId(user));
-        sql.saveCommand(GroupAdminAssignmentEntityDraft.$.produce(d -> d.setId(id))).setMode(SaveMode.INSERT_IF_ABSENT).execute();
     }
 
     private UserGroupEntity groupEntity(UUID tenant, UUID id) {
@@ -309,7 +266,11 @@ public class DirectoryCatalogService {
     }
 
     private GroupView groupView(UserGroupEntity g) {
-        return new GroupView(g.id(), g.tenantId(), g.name(), g.description(), g.type(), g.parentId(), g.createdAt(), g.updatedAt(), new Counts(memberCount(g.tenantId(), g.id()), adminCount(g.tenantId(), g.id()), childCount(g.tenantId(), g.id())));
+        return new GroupView(
+                g.id(), g.tenantId(), g.name(), g.description(), g.type(),
+                g.createdAt(), g.updatedAt(),
+                new Counts(memberCount(g.tenantId(), g.id()))
+        );
     }
 
     private PositionView positionView(PositionEntity p) {
@@ -324,33 +285,8 @@ public class DirectoryCatalogService {
         return sql.createQuery(MEMBER).where(MEMBER.id().tenantId().eq(tenant), MEMBER.id().groupId().eq(group)).select(MEMBER.id()).fetchUnlimitedCount();
     }
 
-    private long adminCount(UUID tenant, UUID group) {
-        return sql.createQuery(ADMIN).where(ADMIN.id().tenantId().eq(tenant), ADMIN.id().groupId().eq(group)).select(ADMIN.id()).fetchUnlimitedCount();
-    }
-
-    private long childCount(UUID tenant, UUID parent) {
-        return sql.createQuery(GROUP).where(GROUP.tenantId().eq(tenant), GROUP.parentId().eq(parent)).select(GROUP.id()).fetchUnlimitedCount();
-    }
-
     private long positionUserCount(PositionEntity p) {
         return sql.createQuery(USER).where(USER.tenantId().eq(p.tenantId()), USER.position().eq(p.name())).select(USER.id()).fetchUnlimitedCount();
-    }
-
-    private void validateParent(UUID tenant, UUID self, UUID parent) {
-        if (parent == null) {
-            return;
-        }
-        if (parent.equals(self)) {
-            throw new DomainException(ErrorCodeConstants.GROUP_PARENT_SELF);
-        }
-        var current = groupEntity(tenant, parent);
-        Set<UUID> seen = new HashSet<>();
-        while (current.parentId() != null) {
-            if (!seen.add(current.id()) || current.parentId().equals(self)) {
-                throw new DomainException(ErrorCodeConstants.GROUP_CYCLE);
-            }
-            current = groupEntity(tenant, current.parentId());
-        }
     }
 
     private void validateGroup(String name, String type) {
@@ -377,8 +313,8 @@ public class DirectoryCatalogService {
 
     /** 从当前租户上下文取租户 ID 后分页查询用户组。 */
     @Transactional(readOnly = true)
-    public PageData<GroupView> groups(int page, int size, String name, String type, UUID parentId) {
-        return groups(TenantContextHolder.requireTenantId(), page, size, name, type, parentId);
+    public PageData<GroupView> groups(int page, int size, String name, String type) {
+        return groups(TenantContextHolder.requireTenantId(), page, size, name, type);
     }
 
     /** 从当前租户上下文取租户 ID 后查询用户组详情。 */
@@ -405,19 +341,13 @@ public class DirectoryCatalogService {
         deleteGroup(TenantContextHolder.requireTenantId(), id);
     }
 
-    /** 从当前租户上下文取租户 ID 后构建用户组树。 */
-    @Transactional(readOnly = true)
-    public List<GroupTree> groupTree() {
-        return groupTree(TenantContextHolder.requireTenantId());
-    }
-
     /** 从当前租户上下文取租户 ID 后统计用户组。 */
     @Transactional(readOnly = true)
     public GroupStats groupStats() {
         return groupStats(TenantContextHolder.requireTenantId());
     }
 
-    /** 从当前租户上下文取租户 ID 后查询用户组成员与管理员。 */
+    /** 从当前租户上下文取租户 ID 后查询用户组成员。 */
     @Transactional(readOnly = true)
     public GroupMembers groupMembers(UUID groupId) {
         return groupMembers(TenantContextHolder.requireTenantId(), groupId);
@@ -433,18 +363,6 @@ public class DirectoryCatalogService {
     @Transactional
     public void removeMembers(UUID groupId, Collection<UUID> users) {
         removeMembers(TenantContextHolder.requireTenantId(), groupId, users);
-    }
-
-    /** 从当前租户上下文取租户 ID 后向用户组添加管理员。 */
-    @Transactional
-    public void addAdmins(UUID groupId, Collection<UUID> users) {
-        addAdmins(TenantContextHolder.requireTenantId(), groupId, users);
-    }
-
-    /** 从当前租户上下文取租户 ID 后移除用户组管理员。 */
-    @Transactional
-    public void removeAdmins(UUID groupId, Collection<UUID> users) {
-        removeAdmins(TenantContextHolder.requireTenantId(), groupId, users);
     }
 
     /** 从当前租户上下文取租户 ID 后分页查询岗位。 */
@@ -493,40 +411,5 @@ public class DirectoryCatalogService {
     @Transactional
     public void replaceUserGroups(UUID userId, Collection<UUID> groupIds) {
         replaceUserGroups(TenantContextHolder.requireTenantId(), userId, groupIds);
-    }
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    /** 用户组树的可变构建节点（组装完成后转为不可变的 {@link GroupTree}）。 */
-    private static final class MutableGroupTree {
-        final UserGroupEntity entity;
-        final long members, admins;
-        final List<MutableGroupTree> children = new ArrayList<>();
-
-        MutableGroupTree(UserGroupEntity e, long m, long a) {
-            entity = e;
-            members = m;
-            admins = a;
-        }
-
-        GroupTree freeze() {
-            return new GroupTree(entity.id(), entity.name(), entity.description(), entity.type(), entity.parentId(), children.stream().map(MutableGroupTree::freeze).toList(), members, admins);
-        }
     }
 }

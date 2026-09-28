@@ -350,54 +350,54 @@ onMounted(loadApplication)
   <div class="min-h-full p-4 sm:p-6">
     <div v-if="loading" class="mx-auto flex max-w-6xl flex-col gap-6">
       <div class="flex items-center gap-3">
-        <Skeleton class="h-9 w-24" />
+        <a-skeleton class="h-9 w-24" />
         <div class="flex flex-col gap-2">
-          <Skeleton class="h-8 w-64" />
-          <Skeleton class="h-4 w-40" />
+          <a-skeleton class="h-8 w-64" />
+          <a-skeleton class="h-4 w-40" />
         </div>
       </div>
-      <Card>
+      <a-card>
         <div>
-          <Skeleton class="h-6 w-32" />
-          <Skeleton class="h-4 w-72" />
+          <a-skeleton class="h-6 w-32" />
+          <a-skeleton class="h-4 w-72" />
         </div>
         <div class="grid gap-6 md:grid-cols-2">
-          <Skeleton class="h-10 w-full" />
-          <Skeleton class="h-10 w-full" />
-          <Skeleton class="h-10 w-full" />
-          <Skeleton class="h-24 w-full" />
+          <a-skeleton class="h-10 w-full" />
+          <a-skeleton class="h-10 w-full" />
+          <a-skeleton class="h-10 w-full" />
+          <a-skeleton class="h-24 w-full" />
         </div>
-      </Card>
+      </a-card>
     </div>
 
-    <Card v-else-if="notFound" class="mx-auto max-w-lg">
+    <a-card v-else-if="notFound" class="mx-auto max-w-lg">
       <div>
         <h3>应用不存在</h3>
         <p>找不到对应的应用，可能已被删除或你没有访问权限。</p>
       </div>
       <div>
-        <Button html-type="button" @click="goBack">返回应用列表</Button>
+        <a-button html-type="button" @click="goBack">返回应用列表</a-button>
       </div>
-    </Card>
+    </a-card>
 
-    <Card v-else-if="loadFailed" class="mx-auto max-w-lg">
+    <a-card v-else-if="loadFailed" class="mx-auto max-w-lg">
       <div>
         <h3>加载失败</h3>
         <p>应用详情加载失败，请重试或返回应用列表。</p>
       </div>
       <div class="flex gap-2">
-        <Button html-type="button" @click="loadApplication">重新加载</Button>
-        <Button html-type="button" @click="goBack">返回应用列表</Button>
+        <a-button html-type="button" @click="loadApplication">重新加载</a-button>
+        <a-button html-type="button" @click="goBack">返回应用列表</a-button>
       </div>
-    </Card>
+    </a-card>
 
     <div v-else-if="application" class="mx-auto flex max-w-6xl flex-col gap-6">
       <header class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div class="flex items-start gap-3">
-          <Button type="text" html-type="button" class="-ml-3 shrink-0" @click="goBack">
+          <a-button type="text" html-type="button" class="-ml-3 shrink-0" @click="goBack">
             <ArrowLeft data-icon="inline-start" />
             返回
-          </Button>
+          </a-button>
           <div class="flex min-w-0 items-start gap-3">
             <img
               v-if="application.logo"
@@ -413,10 +413,10 @@ onMounted(loadApplication)
             <div class="min-w-0">
               <div class="flex flex-wrap items-center gap-2">
                 <h1 class="truncate text-2xl font-semibold tracking-tight">{{ application.name }}</h1>
-                <Tag :color="application.status === 'active' ? 'green' : 'orange'">
+                <a-tag :color="application.status === 'active' ? 'green' : 'orange'">
                   {{ statusLabels[application.status] }}
-                </Tag>
-                <Tag >{{ typeLabels[application.type] }}</Tag>
+                </a-tag>
+                <a-tag >{{ typeLabels[application.type] }}</a-tag>
               </div>
               <p class="mt-1 truncate font-mono text-xs text-muted-foreground">{{ application.clientId }}</p>
             </div>
@@ -426,13 +426,13 @@ onMounted(loadApplication)
 
       <div class="w-full">
         <div class="grid h-auto w-full max-w-xl grid-cols-3">
-          <Button :type="appTab === 'config' ? 'primary' : 'default'" @click="appTab = 'config'">应用配置</Button>
-          <Button :type="appTab === 'login' ? 'primary' : 'default'" @click="appTab = 'login'">登录控制</Button>
-          <Button :type="appTab === 'access' ? 'primary' : 'default'" @click="appTab = 'access'">访问授权</Button>
+          <a-button :type="appTab === 'config' ? 'primary' : 'default'" @click="appTab = 'config'">应用配置</a-button>
+          <a-button :type="appTab === 'login' ? 'primary' : 'default'" @click="appTab = 'login'">登录控制</a-button>
+          <a-button :type="appTab === 'access' ? 'primary' : 'default'" @click="appTab = 'access'">访问授权</a-button>
         </div>
 
         <div v-show="appTab === 'config'" class="mt-6">
-          <Card>
+          <a-card>
             <div>
               <h3>应用配置</h3>
               <p>管理应用的基本信息和客户端凭证。</p>
@@ -442,27 +442,27 @@ onMounted(loadApplication)
                 <div class="grid gap-2">
                   <label for="application-client-id" class="text-sm font-medium">AppID / Client ID</label>
                   <div class="flex min-h-10 items-center gap-2">
-                    <Input id="application-client-id" :value="application.clientId" readonly class="min-w-0 flex-1 font-mono text-sm" />
-                    <Button html-type="button" size="small" shape="circle" class="shrink-0" aria-label="复制 AppID" @click="copyToClipboard(application.clientId)">
+                    <a-input id="application-client-id" :value="application.clientId" readonly class="min-w-0 flex-1 font-mono text-sm" />
+                    <a-button html-type="button" size="small" shape="circle" class="shrink-0" aria-label="复制 AppID" @click="copyToClipboard(application.clientId)">
                       <Copy data-icon="inline-start" />
-                    </Button>
+                    </a-button>
                   </div>
                   <p class="min-h-4 text-xs text-transparent" aria-hidden="true">占位</p>
                 </div>
                 <div class="grid gap-2">
                   <label for="application-client-secret" class="text-sm font-medium">AppSecret / Client Secret</label>
                   <div class="flex min-h-10 items-center gap-2">
-                    <Input id="application-client-secret" :value="clientSecretDisplay" readonly class="min-w-0 flex-1 font-mono text-sm" />
-                    <Button html-type="button" size="small" shape="circle" class="shrink-0" :aria-label="secretVisible ? '隐藏 AppSecret' : '显示 AppSecret'" @click="secretVisible = !secretVisible">
+                    <a-input id="application-client-secret" :value="clientSecretDisplay" readonly class="min-w-0 flex-1 font-mono text-sm" />
+                    <a-button html-type="button" size="small" shape="circle" class="shrink-0" :aria-label="secretVisible ? '隐藏 AppSecret' : '显示 AppSecret'" @click="secretVisible = !secretVisible">
                       <EyeOff v-if="secretVisible" data-icon="inline-start" />
                       <Eye v-else data-icon="inline-start" />
-                    </Button>
-                    <Button html-type="button" size="small" shape="circle" class="shrink-0" aria-label="复制 AppSecret" @click="copyToClipboard(application.clientSecret ?? '')">
+                    </a-button>
+                    <a-button html-type="button" size="small" shape="circle" class="shrink-0" aria-label="复制 AppSecret" @click="copyToClipboard(application.clientSecret ?? '')">
                       <Copy data-icon="inline-start" />
-                    </Button>
-                    <Button html-type="button" size="small" shape="circle" class="shrink-0" aria-label="重新生成 AppSecret" @click="regenerateSecret">
+                    </a-button>
+                    <a-button html-type="button" size="small" shape="circle" class="shrink-0" aria-label="重新生成 AppSecret" @click="regenerateSecret">
                       <RefreshCw data-icon="inline-start" />
-                    </Button>
+                    </a-button>
                   </div>
                   <p class="min-h-4 text-xs text-muted-foreground">重新生成后，旧密钥会立即失效。</p>
                 </div>
@@ -472,45 +472,45 @@ onMounted(loadApplication)
                 <div class="grid gap-4 md:grid-cols-2">
                   <div class="grid gap-2">
                     <label for="application-name" class="text-sm font-medium">应用名称</label>
-                    <Input id="application-name" v-model:value="configForm.name" placeholder="请输入应用名称" />
+                    <a-input id="application-name" v-model:value="configForm.name" placeholder="请输入应用名称" />
                   </div>
                   <div class="grid gap-2">
                     <label class="text-sm font-medium">应用类型</label>
-                    <Select v-model:value="configForm.type" :options="applicationTypeOptions" />
+                    <a-select v-model:value="configForm.type" :options="applicationTypeOptions" />
                   </div>
                   <div class="grid gap-2">
                     <label for="application-logo" class="text-sm font-medium">应用 Logo</label>
-                    <Input id="application-logo" v-model:value="configForm.logo" placeholder="请输入 Logo URL" />
+                    <a-input id="application-logo" v-model:value="configForm.logo" placeholder="请输入 Logo URL" />
                   </div>
                   <div class="grid gap-2">
                     <label class="text-sm font-medium">应用状态</label>
-                    <Select v-model:value="configForm.status" :options="applicationStatusOptions" />
+                    <a-select v-model:value="configForm.status" :options="applicationStatusOptions" />
                   </div>
                 </div>
                 <div class="grid gap-2">
                   <label for="application-description" class="text-sm font-medium">应用描述</label>
-                  <InputTextArea id="application-description" v-model:value="configForm.description" :rows="4" placeholder="请输入应用描述" />
+                  <a-textarea id="application-description" v-model:value="configForm.description" :rows="4" placeholder="请输入应用描述" />
                 </div>
                 <div class="flex justify-end">
-                  <Button type="primary" html-type="submit" :loading="configSaving">
+                  <a-button type="primary" html-type="submit" :loading="configSaving">
                     <Check v-if="!configSaving" data-icon="inline-start" />
                     {{ configSaving ? '保存中...' : '保存配置' }}
-                  </Button>
+                  </a-button>
                 </div>
               </form>
             </div>
-          </Card>
+          </a-card>
         </div>
 
         <div v-show="appTab === 'login'" class="mt-6">
-          <Card>
+          <a-card>
             <div>
               <h3>登录控制</h3>
               <p>配置 OAuth 登录的回调地址、授权类型和令牌有效期。</p>
             </div>
             <div>
-              <Alert
-                class="mb-6"
+              <a-alert
+                class="mb-6!"
                 type="info"
                 show-icon
                 title="OAuth 登录配置"
@@ -521,17 +521,17 @@ onMounted(loadApplication)
                 <div class="grid gap-2">
                   <label for="redirect-uri" class="text-sm font-medium">回调地址</label>
                   <div class="flex gap-2">
-                    <Input id="redirect-uri" v-model:value="redirectUriInput" class="flex-1" placeholder="https://example.com/oauth/callback" @keyup.enter.prevent="addRedirectUri" />
-                    <Button html-type="button" @click="addRedirectUri">
+                    <a-input id="redirect-uri" v-model:value="redirectUriInput" class="flex-1" placeholder="https://example.com/oauth/callback" @keyup.enter.prevent="addRedirectUri" />
+                    <a-button html-type="button" @click="addRedirectUri">
                       <Plus data-icon="inline-start" />
                       添加
-                    </Button>
+                    </a-button>
                   </div>
                   <div v-if="loginForm.redirectUris.length" class="flex flex-wrap gap-2 pt-1">
-                    <Tag v-for="(uri, index) in loginForm.redirectUris" :key="uri" color="blue" class="max-w-full cursor-pointer" @click="removeRedirectUri(index)">
+                    <a-tag v-for="(uri, index) in loginForm.redirectUris" :key="uri" color="blue" class="max-w-full cursor-pointer" @click="removeRedirectUri(index)">
                       <span class="truncate">{{ uri }}</span>
                       <Trash2 data-icon="inline-end" />
-                    </Tag>
+                    </a-tag>
                   </div>
                   <p v-else class="text-sm text-muted-foreground">尚未配置回调地址，授权码流程将无法完成回调。</p>
                 </div>
@@ -540,7 +540,7 @@ onMounted(loadApplication)
                   <legend class="text-sm font-medium">允许的授权类型</legend>
                   <div class="grid gap-3 md:grid-cols-3">
                     <label v-for="grantType in grantTypeOptions" :key="grantType.value" class="flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50">
-                      <Checkbox :checked="loginForm.allowedGrantTypes.includes(grantType.value)" @update:checked="toggleGrantType(grantType.value)" />
+                      <a-checkbox :checked="loginForm.allowedGrantTypes.includes(grantType.value)" @update:checked="toggleGrantType(grantType.value)" />
                       <span class="grid gap-1">
                         <span class="text-sm font-medium">{{ grantType.label }}</span>
                         <span class="text-xs text-muted-foreground">{{ grantType.description }}</span>
@@ -553,7 +553,7 @@ onMounted(loadApplication)
                   <div class="grid gap-2">
                     <label class="text-sm font-medium">访问令牌有效期</label>
                     <div class="flex items-center gap-2">
-                      <InputNumber v-model:value="loginForm.accessTokenLifetime" :min="60" :max="86400" />
+                      <a-input-number v-model:value="loginForm.accessTokenLifetime" :min="60" :max="86400" />
                       <span class="shrink-0 text-sm text-muted-foreground">秒</span>
                     </div>
                     <p class="text-xs text-muted-foreground">最短 60 秒。</p>
@@ -561,7 +561,7 @@ onMounted(loadApplication)
                   <div class="grid gap-2">
                     <label class="text-sm font-medium">刷新令牌有效期</label>
                     <div class="flex items-center gap-2">
-                      <InputNumber v-model:value="loginForm.refreshTokenLifetime" :min="3600" :max="31536000" />
+                      <a-input-number v-model:value="loginForm.refreshTokenLifetime" :min="3600" :max="31536000" />
                       <span class="shrink-0 text-sm text-muted-foreground">秒</span>
                     </div>
                     <p class="text-xs text-muted-foreground">最短 3600 秒。</p>
@@ -569,18 +569,18 @@ onMounted(loadApplication)
                 </div>
 
                 <div class="flex justify-end">
-                  <Button type="primary" html-type="submit" :loading="loginSaving">
+                  <a-button type="primary" html-type="submit" :loading="loginSaving">
                     <Check v-if="!loginSaving" data-icon="inline-start" />
                     {{ loginSaving ? '保存中...' : '保存登录控制' }}
-                  </Button>
+                  </a-button>
                 </div>
               </form>
             </div>
-          </Card>
+          </a-card>
         </div>
 
         <div v-show="appTab === 'access'" class="mt-6 flex flex-col gap-6">
-          <Card>
+          <a-card>
             <div>
               <h3>OAuth2 / OIDC 端点</h3>
               <p>以下端点可直接用于当前应用的 OAuth2 和 OpenID Connect 集成。</p>
@@ -591,15 +591,15 @@ onMounted(loadApplication)
                   <span class="text-sm font-medium">{{ endpoint.label }}</span>
                   <code class="break-all text-xs text-muted-foreground">{{ endpoint.value }}</code>
                 </div>
-                <Button html-type="button" size="small" class="shrink-0" @click="copyToClipboard(endpoint.value)">
+                <a-button html-type="button" size="small" class="shrink-0" @click="copyToClipboard(endpoint.value)">
                   <Copy data-icon="inline-start" />
                   复制
-                </Button>
+                </a-button>
               </div>
             </div>
-          </Card>
+          </a-card>
 
-          <Alert
+          <a-alert
             v-if="!hasRedirectUri"
             type="warning"
             show-icon
@@ -607,7 +607,7 @@ onMounted(loadApplication)
             description="请先在「登录控制」标签页配置回调地址"
           />
 
-          <Card>
+          <a-card>
             <div>
               <h3>集成指南</h3>
               <p>代码示例已使用当前应用的 Client ID；Client Secret 仅在你显示密钥后写入示例。</p>
@@ -615,9 +615,9 @@ onMounted(loadApplication)
             <div>
               <div>
                 <div class="grid h-auto w-full grid-cols-1 md:grid-cols-3">
-                  <Button :type="appTab === 'oauth2' ? 'primary' : 'default'" @click="appTab = 'oauth2'">OAuth2 授权码流程</Button>
-                  <Button :type="appTab === 'pkce' ? 'primary' : 'default'" @click="appTab = 'pkce'">PKCE 安全增强</Button>
-                  <Button :type="appTab === 'client' ? 'primary' : 'default'" @click="appTab = 'client'">客户端凭证流程</Button>
+                  <a-button :type="appTab === 'oauth2' ? 'primary' : 'default'" @click="appTab = 'oauth2'">OAuth2 授权码流程</a-button>
+                  <a-button :type="appTab === 'pkce' ? 'primary' : 'default'" @click="appTab = 'pkce'">PKCE 安全增强</a-button>
+                  <a-button :type="appTab === 'client' ? 'primary' : 'default'" @click="appTab = 'client'">客户端凭证流程</a-button>
                 </div>
 
                 <div v-show="appTab === 'oauth2'" class="mt-6 grid gap-6">
@@ -626,9 +626,9 @@ onMounted(loadApplication)
                     <p class="text-sm text-muted-foreground">{{ example.description }}</p>
                     <div class="relative">
                       <pre class="max-h-80 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-muted p-4 pr-14 font-mono text-xs leading-6">{{ example.code }}</pre>
-                <Button type="text" html-type="button" size="small" shape="circle" class="absolute right-2 top-2" :aria-label="`复制${example.title}`" @click="copyToClipboard(example.code)">
+                <a-button type="text" html-type="button" size="small" shape="circle" class="absolute right-2 top-2" :aria-label="`复制${example.title}`" @click="copyToClipboard(example.code)">
                         <Copy data-icon="inline-start" />
-                      </Button>
+                      </a-button>
                     </div>
                   </div>
                 </div>
@@ -639,9 +639,9 @@ onMounted(loadApplication)
                     <p class="text-sm text-muted-foreground">{{ example.description }}</p>
                     <div class="relative">
                       <pre class="max-h-80 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-muted p-4 pr-14 font-mono text-xs leading-6">{{ example.code }}</pre>
-                <Button type="text" html-type="button" size="small" shape="circle" class="absolute right-2 top-2" :aria-label="`复制${example.title}`" @click="copyToClipboard(example.code)">
+                <a-button type="text" html-type="button" size="small" shape="circle" class="absolute right-2 top-2" :aria-label="`复制${example.title}`" @click="copyToClipboard(example.code)">
                         <Copy data-icon="inline-start" />
-                      </Button>
+                      </a-button>
                     </div>
                   </div>
                 </div>
@@ -652,15 +652,15 @@ onMounted(loadApplication)
                     <p class="text-sm text-muted-foreground">{{ example.description }}</p>
                     <div class="relative">
                       <pre class="max-h-80 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-muted p-4 pr-14 font-mono text-xs leading-6">{{ example.code }}</pre>
-                <Button type="text" html-type="button" size="small" shape="circle" class="absolute right-2 top-2" :aria-label="`复制${example.title}`" @click="copyToClipboard(example.code)">
+                <a-button type="text" html-type="button" size="small" shape="circle" class="absolute right-2 top-2" :aria-label="`复制${example.title}`" @click="copyToClipboard(example.code)">
                         <Copy data-icon="inline-start" />
-                      </Button>
+                      </a-button>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </Card>
+          </a-card>
         </div>
       </div>
     </div>

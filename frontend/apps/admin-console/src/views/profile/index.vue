@@ -1,18 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import {
-  Avatar,
-  Button,
-  Card,
-  Form,
-  FormItem,
-  Input,
-  Modal,
-  Skeleton,
-  Tag,
-  message,
-} from 'antdv-next'
+import { message } from 'antdv-next'
 import {
   Building2,
   CheckCircle2,
@@ -216,26 +205,26 @@ onBeforeUnmount(() => {
     </header>
 
     <div v-if="loading" class="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
-      <Card class="profile-card"><Skeleton active avatar :paragraph="{ rows: 5 }" /></Card>
+      <a-card class="profile-card"><a-skeleton active avatar :paragraph="{ rows: 5 }" /></a-card>
       <div class="space-y-6">
-        <Card><Skeleton active :paragraph="{ rows: 6 }" /></Card>
-        <Card><Skeleton active :paragraph="{ rows: 3 }" /></Card>
+        <a-card><a-skeleton active :paragraph="{ rows: 6 }" /></a-card>
+        <a-card><a-skeleton active :paragraph="{ rows: 3 }" /></a-card>
       </div>
     </div>
 
     <div v-else-if="profile" class="grid items-start gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
       <aside class="space-y-6">
-        <Card class="profile-card overflow-hidden" :styles="{ body: { padding: 0 } }">
+        <a-card class="profile-card overflow-hidden" :styles="{ body: { padding: 0 } }">
           <div class="profile-cover" aria-hidden="true"></div>
           <div class="px-6 pb-6 text-center">
-            <Avatar :size="88" class="profile-avatar" :alt="`${displayName} 的头像`">
+            <a-avatar :size="88" class="profile-avatar" :alt="`${displayName} 的头像`">
               {{ avatarLetter }}
-            </Avatar>
+            </a-avatar>
             <h2 class="mt-4 text-xl font-semibold text-foreground">{{ displayName }}</h2>
             <p class="mt-1 break-all text-sm text-muted-foreground">{{ profile.email }}</p>
-            <Tag color="success" class="!mt-3">
+            <a-tag color="success" class="!mt-3">
               <span class="inline-flex items-center gap-1"><CheckCircle2 class="size-3" />账户正常</span>
-            </Tag>
+            </a-tag>
 
             <dl class="mt-6 space-y-4 border-t border-border pt-5 text-left">
               <div class="profile-meta-row">
@@ -252,15 +241,15 @@ onBeforeUnmount(() => {
               </div>
             </dl>
           </div>
-        </Card>
+        </a-card>
 
-        <Card title="账户标识" size="small">
+        <a-card title="账户标识" size="small">
           <p class="break-all font-mono text-xs leading-5 text-muted-foreground">{{ profile.id }}</p>
-        </Card>
+        </a-card>
       </aside>
 
       <section class="min-w-0 space-y-6">
-        <Card class="profile-card">
+        <a-card class="profile-card">
           <template #title>
             <div>
               <h2 class="text-base font-semibold text-foreground">基本资料</h2>
@@ -268,40 +257,40 @@ onBeforeUnmount(() => {
             </div>
           </template>
 
-          <Form :model="form" :rules="rules" layout="vertical" class="max-w-2xl" @finish="saveProfile">
+          <a-form :model="form" :rules="rules" layout="vertical" class="max-w-2xl" @finish="saveProfile">
             <div class="grid gap-x-5 md:grid-cols-2">
-              <FormItem label="用户名" name="username">
-                <Input v-model:value="form.username" autocomplete="username" :maxlength="100" placeholder="请输入用户名">
+              <a-form-item label="用户名" name="username">
+                <a-input v-model:value="form.username" autocomplete="username" :maxlength="100" placeholder="请输入用户名">
                   <template #prefix><UserRound class="size-4 text-muted-foreground" /></template>
-                </Input>
-              </FormItem>
+                </a-input>
+              </a-form-item>
 
-              <FormItem label="手机号" name="phone">
-                <Input v-model:value="form.phone" autocomplete="tel" :maxlength="32" placeholder="选填，用于账户联系">
+              <a-form-item label="手机号" name="phone">
+                <a-input v-model:value="form.phone" autocomplete="tel" :maxlength="32" placeholder="选填，用于账户联系">
                   <template #prefix><Phone class="size-4 text-muted-foreground" /></template>
-                </Input>
-              </FormItem>
+                </a-input>
+              </a-form-item>
             </div>
 
-            <FormItem label="邮箱地址" extra="换绑邮箱需要验证新邮箱，成功后当前登录会话将失效。">
+            <a-form-item label="邮箱地址" extra="换绑邮箱需要验证新邮箱，成功后当前登录会话将失效。">
               <div class="flex flex-col gap-3 sm:flex-row">
-                <Input :value="profile.email" readonly class="min-w-0 flex-1">
+                <a-input :value="profile.email" readonly class="min-w-0 flex-1">
                   <template #prefix><Mail class="size-4 text-muted-foreground" /></template>
-                </Input>
-                <Button class="shrink-0" @click="openEmailChange">换绑邮箱</Button>
+                </a-input>
+                <a-button class="shrink-0" @click="openEmailChange">换绑邮箱</a-button>
               </div>
-            </FormItem>
+            </a-form-item>
 
             <div class="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
               <p class="text-xs text-muted-foreground">最近更新：{{ formatDate(profile.updatedAt) }}</p>
-              <Button type="primary" html-type="submit" :loading="saving" :disabled="!isDirty">
+              <a-button type="primary" html-type="submit" :loading="saving" :disabled="!isDirty">
                 <Save class="size-4 mr-1" />保存修改
-              </Button>
+              </a-button>
             </div>
-          </Form>
-        </Card>
+          </a-form>
+        </a-card>
 
-        <Card class="profile-card">
+        <a-card class="profile-card">
           <template #title>
             <div>
               <h2 class="text-base font-semibold text-foreground">账户安全</h2>
@@ -316,7 +305,7 @@ onBeforeUnmount(() => {
                 <h3 class="text-sm font-medium text-foreground">登录密码</h3>
                 <p class="mt-1 text-sm text-muted-foreground">定期更换密码可以降低账户泄露风险</p>
               </div>
-              <Tag color="success">已设置</Tag>
+              <a-tag color="success">已设置</a-tag>
             </div>
 
             <div class="security-row">
@@ -327,7 +316,7 @@ onBeforeUnmount(() => {
                 <h3 class="text-sm font-medium text-foreground">多因素认证</h3>
                 <p class="mt-1 text-sm text-muted-foreground">{{ mfaStatus.enabled ? '登录时需要额外身份验证' : '建议启用身份验证器保护账户' }}</p>
               </div>
-              <Tag :color="mfaStatus.enabled ? 'success' : 'warning'">{{ mfaLabel }}</Tag>
+              <a-tag :color="mfaStatus.enabled ? 'success' : 'warning'">{{ mfaLabel }}</a-tag>
             </div>
 
             <div class="security-row">
@@ -336,26 +325,26 @@ onBeforeUnmount(() => {
                 <h3 class="text-sm font-medium text-foreground">安全设置</h3>
                 <p class="mt-1 text-sm text-muted-foreground">修改密码、配置 MFA 和查看密码策略</p>
               </div>
-              <Button type="link" class="!px-0" @click="router.push('/security')">
+              <a-button type="link" class="!px-0" @click="router.push('/security')">
                 前往设置<ChevronRight class="size-4" />
-              </Button>
+              </a-button>
             </div>
           </div>
-        </Card>
+        </a-card>
       </section>
     </div>
-  <Modal v-model:open="emailModalOpen" title="换绑邮箱" :footer="null" :mask-closable="!emailSending && !emailVerifying">
+  <a-modal v-model:open="emailModalOpen" title="换绑邮箱" :footer="null" :mask-closable="!emailSending && !emailVerifying">
     <div v-if="emailStep === 'email'" class="space-y-5 pt-2">
       <div class="rounded-lg border border-sky-100 bg-sky-50 p-4 text-sm text-sky-900">
         当前邮箱：<span class="font-medium">{{ profile?.email }}</span>
       </div>
       <div class="grid gap-2">
         <label for="new-admin-email" class="text-sm font-medium text-foreground">新邮箱地址</label>
-        <Input id="new-admin-email" v-model:value="emailForm.email" autocomplete="email" :maxlength="320" placeholder="name@company.com">
+        <a-input id="new-admin-email" v-model:value="emailForm.email" autocomplete="email" :maxlength="320" placeholder="name@company.com">
           <template #prefix><Mail class="size-4 text-muted-foreground" /></template>
-        </Input>
+        </a-input>
       </div>
-      <Button type="primary" block :loading="emailSending" @click="sendEmailChangeCode">发送验证码</Button>
+      <a-button type="primary" block :loading="emailSending" @click="sendEmailChangeCode">发送验证码</a-button>
     </div>
 
     <div v-else class="space-y-5 pt-2">
@@ -365,16 +354,16 @@ onBeforeUnmount(() => {
       </div>
       <div class="grid gap-2">
         <label for="admin-email-code" class="text-sm font-medium text-foreground">邮箱验证码</label>
-        <Input id="admin-email-code" v-model:value="emailForm.code" inputmode="numeric" autocomplete="one-time-code" :maxlength="6" placeholder="请输入6位验证码" @press-enter="verifyEmailChange" />
+        <a-input id="admin-email-code" v-model:value="emailForm.code" inputmode="numeric" autocomplete="one-time-code" :maxlength="6" placeholder="请输入6位验证码" @press-enter="verifyEmailChange" />
       </div>
       <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-        <Button :disabled="emailCountdown > 0" :loading="emailSending" @click="sendEmailChangeCode">
+        <a-button :disabled="emailCountdown > 0" :loading="emailSending" @click="sendEmailChangeCode">
           {{ emailCountdown > 0 ? `${emailCountdown}s 后可重新发送` : '重新发送' }}
-        </Button>
-        <Button type="primary" :loading="emailVerifying" @click="verifyEmailChange">验证并换绑</Button>
+        </a-button>
+        <a-button type="primary" :loading="emailVerifying" @click="verifyEmailChange">验证并换绑</a-button>
       </div>
     </div>
-  </Modal>
+  </a-modal>
 </main>
 </template>
 

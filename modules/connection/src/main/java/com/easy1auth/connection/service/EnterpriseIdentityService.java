@@ -264,7 +264,7 @@ public class EnterpriseIdentityService {
       roots = List.of("0");
     }
     for (String root : roots) {
-      syncDepartmentTree(source, token, root, null, seenUsers, summary, new HashSet<>());
+      syncDepartmentTree(source, token, root, seenUsers, summary, new HashSet<>());
     }
     summary.putIfAbsent("users", seenUsers.size());
   }
@@ -274,7 +274,6 @@ public class EnterpriseIdentityService {
       EnterpriseIdentitySourceEntity source,
       String token,
       String externalId,
-      UUID parent,
       Set<String> seenUsers,
       Map<String, Object> summary,
       Set<String> traversed)
@@ -290,7 +289,7 @@ public class EnterpriseIdentityService {
                   "/open-apis/contact/v3/departments/"
                       + enc(externalId)
                       + "?department_id_type=open_department_id"));
-      parent = upsertGroup(source, externalId, string(department.get("name")), parent);
+      upsertGroup(source, externalId, string(department.get("name")));
     }
     for (Map<String, Object> user :
         paged(
@@ -316,7 +315,6 @@ public class EnterpriseIdentityService {
           source,
           token,
           string(child.get("open_department_id")),
-          parent,
           seenUsers,
           summary,
           traversed);
@@ -360,8 +358,7 @@ public class EnterpriseIdentityService {
         upsertGroup(
             source,
             id,
-            string(d.get("name")),
-            sourceGroupId(source, string(d.get("parent_department_id"))));
+            string(d.get("name")));
         summary.put("departments", 1);
       }
     }
@@ -369,10 +366,10 @@ public class EnterpriseIdentityService {
 
   /** 新建或更新某个同步部门对应的用户组，返回其 ID。 */
   private UUID upsertGroup(
-      EnterpriseIdentitySourceEntity source, String externalId, String name, UUID parent) {
+      EnterpriseIdentitySourceEntity source, String externalId, String name) {
     UUID tenant = source.tenantId();
     var old = repository.findGroup(tenant, source.id(), externalId).orElse(null);
-    String safe = uniqueGroupName(tenant, old == null ? null : old.id(), parent, name);
+    String safe = uniqueGroupName(tenant, old == null ? null : old.id(), name);
     if (old == null) {
       UUID id = UuidV7.randomUuid();
       Instant now = Instant.now();
@@ -384,14 +381,13 @@ public class EnterpriseIdentityService {
                       .setName(safe)
                       .setDescription("由飞书同步管理")
                       .setType("department")
-                      .setParentId(parent)
                       .setEnterpriseIdentitySourceId(source.id())
                       .setEnterpriseIdentityExternalId(externalId)
                       .setCreatedAt(now)
                       .setUpdatedAt(now)));
       return id;
     }
-    repository.updateGroup(old.id(), safe, parent);
+    repository.updateGroup(old.id(), safe);
     return old.id();
   }
 
@@ -621,23 +617,15 @@ public class EnterpriseIdentityService {
     return cipher.decrypt("enterprise-identity:" + s.tenantId() + ":" + s.id() + ":" + part, v);
   }
 
-  /** 生成同级用户组下唯一的名称，冲突时添加"飞书-"前缀与序号。 */
-  private String uniqueGroupName(UUID tenant, UUID self, UUID parent, String desired) {
+  /** 生成租户下唯一的用户组名称，冲突时添加"飞书-"前缀与序号。 */
+  private String uniqueGroupName(UUID tenant, UUID self, String desired) {
     String base = nonBlank(desired, "未命名部门");
     String value = base;
     int n = 0;
-    while (repository.groupNameExists(tenant, self, parent, value)) {
+    while (repository.groupNameExists(tenant, self, value)) {
       value = "飞书-" + base + (n++ == 0 ? "" : "-" + n);
     }
     return value;
-  }
-
-  private UUID sourceGroupId(EnterpriseIdentitySourceEntity source, String externalId) {
-    if (!present(externalId) || "0".equals(externalId)) {
-      return null;
-    }
-    var group = repository.findSourceGroup(source.id(), externalId).orElse(null);
-    return group == null ? null : group.id();
   }
 
   private void validate(EnterpriseIdentityInput x, boolean create) {

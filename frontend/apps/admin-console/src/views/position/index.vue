@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue'
-import { Form, FormItem, Modal, Pagination as AntPagination, Table, message } from 'antdv-next'
+import { Modal, message } from 'antdv-next'
 import { Plus, Search, RefreshCw } from '@lucide/vue'
 import { positionApi } from '@/api/position'
 import type { Position, CreatePositionDto, UpdatePositionDto, PositionQueryDto, PositionStats } from '@/types/position'
@@ -170,7 +170,6 @@ const handlePageChange = (page: number, ps?: number) => {
   loadPositions()
 }
 
-
 const getLevelColor = (level?: number) => {
   if (!level) return 'default'
   if (level >= 9) return 'red'
@@ -203,71 +202,71 @@ onMounted(() => {
         <p class="text-sm text-muted-foreground">管理系统岗位，包括添加、编辑和删除</p>
       </div>
       <div class="flex gap-3">
-        <Button @click="handleAdd">
+        <a-button @click="handleAdd">
           <Plus class="size-4 mr-2" />
           新增岗位
-        </Button>
+        </a-button>
       </div>
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
-      <Card>
+      <a-card>
         <div class="pt-6">
           <div class="text-center">
             <div class="text-2xl font-bold text-foreground">{{ stats?.totalPositions || 0 }}</div>
             <div class="text-sm text-muted-foreground">岗位总数</div>
           </div>
         </div>
-      </Card>
-      <Card>
+      </a-card>
+      <a-card>
         <div class="pt-6">
           <div class="text-center">
             <div class="text-2xl font-bold text-foreground">{{ stats?.filledPositions || 0 }}</div>
             <div class="text-sm text-muted-foreground">已分配岗位</div>
           </div>
         </div>
-      </Card>
-      <Card>
+      </a-card>
+      <a-card>
         <div class="pt-6">
           <div class="text-center">
             <div class="text-2xl font-bold text-foreground">{{ stats?.vacantPositions || 0 }}</div>
             <div class="text-sm text-muted-foreground">空缺岗位</div>
           </div>
         </div>
-      </Card>
-      <Card>
+      </a-card>
+      <a-card>
         <div class="pt-6">
           <div class="text-center">
             <div class="text-2xl font-bold text-foreground">{{ stats?.averageLevel || 0 }}</div>
             <div class="text-sm text-muted-foreground">平均级别</div>
           </div>
         </div>
-      </Card>
+      </a-card>
     </div>
 
-    <Card>
+    <a-card>
       <div class="pt-6">
         <div class="flex flex-wrap gap-4 mb-5">
           <div class="grid gap-2">
-            <Input v-model:value="queryForm.name" placeholder="请输入岗位名称" class="w-48" />
+            <a-input v-model:value="queryForm.name" placeholder="请输入岗位名称" class="w-48" />
           </div>
           <div class="grid gap-2">
-            <Input v-model:value="queryForm.code" placeholder="请输入岗位编码" class="w-48" />
+            <a-input v-model:value="queryForm.code" placeholder="请输入岗位编码" class="w-48" />
           </div>
           <div class="grid gap-2">
-            <Select v-model:value="queryForm.level" class="w-40" allow-clear placeholder="请选择级别" :options="levelOptions" />
+            <a-select v-model:value="queryForm.level" class="w-40" allow-clear placeholder="请选择级别" :options="levelOptions" />
           </div>
-          <Button @click="handleSearch">
+          <a-button @click="handleSearch">
             <Search class="size-4 mr-2" />
             搜索
-          </Button>
-          <Button  @click="handleReset">
+          </a-button>
+          <a-button  @click="handleReset">
             <RefreshCw class="size-4 mr-2" />
             重置
-          </Button>
+          </a-button>
         </div>
 
-        <Table :columns="[
+        <a-table :columns="[
           { title: '岗位名称', dataIndex: 'name', width: 176 }, { title: '岗位编码', key: 'code', width: 144 },
           { title: '描述', key: 'description' }, { title: '岗位级别', key: 'level', width: 112, align: 'center' },
           { title: '在职人数', key: 'userCount', width: 96, align: 'center' }, { title: '创建时间', key: 'createdAt', width: 176 },
@@ -279,9 +278,9 @@ onMounted(() => {
             </template>
             <template v-else-if="column.key === 'description'">{{ position.description || '-' }}</template>
             <template v-else-if="column.key === 'level'">
-                <Tag :color="getLevelColor(position.level)">
+                <a-tag :color="getLevelColor(position.level)">
                   {{ position.level }} - {{ getLevelText(position.level) }}
-                </Tag>
+                </a-tag>
             </template>
             <template v-else-if="column.key === 'userCount'">
                 {{ position.userCount }}{{ position.maxCount ? ` / ${position.maxCount}` : '' }}
@@ -289,16 +288,16 @@ onMounted(() => {
             <template v-else-if="column.key === 'createdAt'">{{ new Date(position.createdAt).toLocaleString() }}</template>
             <template v-else-if="column.key === 'actions'">
                 <div class="flex justify-end gap-1">
-                  <Button type="link" size="small" class="h-auto p-0" @click="handleEdit(position)">编辑</Button>
-                  <Button type="link" size="small" class="h-auto p-0 text-destructive" @click="handleDelete(position)">删除</Button>
+                  <a-button type="link" size="small" class="h-auto p-0" @click="handleEdit(position)">编辑</a-button>
+                  <a-button type="link" size="small" class="h-auto p-0 text-destructive" @click="handleDelete(position)">删除</a-button>
                 </div>
             </template>
           </template>
-        </Table>
+        </a-table>
 
         <div class="flex items-center justify-between mt-4 pt-4 border-t">
           <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
-          <AntPagination
+          <a-pagination
             :current="queryForm.page"
             :page-size="queryForm.pageSize"
             :total="total"
@@ -308,56 +307,56 @@ onMounted(() => {
           />
         </div>
       </div>
-    </Card>
+    </a-card>
 
-    <Modal v-model:open="dialogVisible" :footer="null">
+    <a-modal v-model:open="dialogVisible" :footer="null">
       <div class="max-w-lg">
         <div>
           <h3>{{ dialogTitle }}</h3>
         </div>
-        <Form :model="positionForm" :rules="positionFormRules" layout="vertical" class="py-4" @finish="handleSubmit">
+        <a-form :model="positionForm" :rules="positionFormRules" layout="vertical" class="py-4" @finish="handleSubmit">
           <div class="grid gap-4">
-            <FormItem label="岗位名称" name="name">
-              <Input v-model:value="positionForm.name" placeholder="请输入岗位名称" />
-            </FormItem>
-            <FormItem label="岗位编码" name="code">
-              <Input v-model:value="positionForm.code"
+            <a-form-item label="岗位名称" name="name">
+              <a-input v-model:value="positionForm.name" placeholder="请输入岗位名称" />
+            </a-form-item>
+            <a-form-item label="岗位编码" name="code">
+              <a-input v-model:value="positionForm.code"
                 placeholder="请输入岗位编码（大写字母和下划线）"
                 :disabled="!!currentPosition.id"
               />
-            </FormItem>
-            <FormItem label="描述" name="description">
-              <InputTextArea v-model:value="positionForm.description"
+            </a-form-item>
+            <a-form-item label="描述" name="description">
+              <a-textarea v-model:value="positionForm.description"
                 placeholder="请输入岗位描述"
                 :rows="3"
               />
-            </FormItem>
-            <FormItem label="岗位级别" name="level">
-              <Slider v-model:value="positionForm.level"
+            </a-form-item>
+            <a-form-item label="岗位级别" name="level">
+              <a-slider v-model:value="positionForm.level"
                 :min="1"
                 :max="10"
                 :step="1"
               />
               <div class="text-center mt-2">
-                <Tag :color="getLevelColor(positionForm.level)">
+                <a-tag :color="getLevelColor(positionForm.level)">
                   {{ positionForm.level }} - {{ getLevelText(positionForm.level) }}
-                </Tag>
+                </a-tag>
               </div>
-            </FormItem>
-            <FormItem label="最大人数" name="maxCount">
-              <InputNumber v-model:value="positionForm.maxCount" :min="1" :max="999" />
-            </FormItem>
-            <FormItem label="排序" name="sequence">
-              <Input v-model:value="positionForm.sequence" placeholder="请输入排序标识" />
-            </FormItem>
+            </a-form-item>
+            <a-form-item label="最大人数" name="maxCount">
+              <a-input-number v-model:value="positionForm.maxCount" :min="1" :max="999" />
+            </a-form-item>
+            <a-form-item label="排序" name="sequence">
+              <a-input v-model:value="positionForm.sequence" placeholder="请输入排序标识" />
+            </a-form-item>
           </div>
           <div class="flex justify-end gap-2">
-            <Button @click="dialogVisible = false">取消</Button>
-            <Button type="primary" html-type="submit" :loading="submitting">确定</Button>
+            <a-button @click="dialogVisible = false">取消</a-button>
+            <a-button type="primary" html-type="submit" :loading="submitting">确定</a-button>
           </div>
-        </Form>
+        </a-form>
       </div>
-    </Modal>
+    </a-modal>
     <contextHolder />
   </div>
 </template>

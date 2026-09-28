@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { Form, FormItem, Modal, Pagination as AntPagination, Table, message } from 'antdv-next'
+import { Modal, message } from 'antdv-next'
 import { Link, CheckCircle, XCircle, Grid3X3, Plus, Search, RefreshCw } from '@lucide/vue'
 import { socialIdentitySourceApi } from '@/api/socialIdentitySource'
 import type {
@@ -248,7 +248,7 @@ onMounted(() => {
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
-      <Card>
+      <a-card>
         <div class="pt-6">
           <div class="flex items-center gap-4">
             <div class="w-14 h-14 rounded-lg flex items-center justify-center text-white text-xl bg-gradient-to-br from-indigo-500 to-purple-600">
@@ -260,8 +260,8 @@ onMounted(() => {
             </div>
           </div>
         </div>
-      </Card>
-      <Card>
+      </a-card>
+      <a-card>
         <div class="pt-6">
           <div class="flex items-center gap-4">
             <div class="w-14 h-14 rounded-lg flex items-center justify-center text-white text-xl bg-gradient-to-br from-emerald-400 to-teal-400">
@@ -273,8 +273,8 @@ onMounted(() => {
             </div>
           </div>
         </div>
-      </Card>
-      <Card>
+      </a-card>
+      <a-card>
         <div class="pt-6">
           <div class="flex items-center gap-4">
             <div class="w-14 h-14 rounded-lg flex items-center justify-center text-white text-xl bg-gradient-to-br from-pink-400 to-rose-500">
@@ -286,8 +286,8 @@ onMounted(() => {
             </div>
           </div>
         </div>
-      </Card>
-      <Card>
+      </a-card>
+      <a-card>
         <div class="pt-6">
           <div class="flex items-center gap-4">
             <div class="w-14 h-14 rounded-lg flex items-center justify-center text-white text-xl bg-gradient-to-br from-blue-400 to-cyan-400">
@@ -299,37 +299,37 @@ onMounted(() => {
             </div>
           </div>
         </div>
-      </Card>
+      </a-card>
     </div>
 
-    <Card>
+    <a-card>
       <div>
         <div class="flex justify-between items-center">
           <div class="flex items-center gap-3">
-            <Input v-model:value="searchQuery" placeholder="搜索身份源名称" class="w-52">
+            <a-input v-model:value="searchQuery" placeholder="搜索身份源名称" class="w-52">
               <template #prefix>
                 <Search class="size-4 text-muted-foreground" />
               </template>
-            </Input>
-            <Select v-model:value="filterType" class="w-36" allow-clear :options="filterTypeOptions" @update:value="loadSources" />
-            <Select v-model:value="filterStatus" class="w-28" allow-clear :options="filterStatusOptions" @update:value="loadSources" />
-            <Button @click="handleSearch">
+            </a-input>
+            <a-select v-model:value="filterType" class="w-36" allow-clear :options="filterTypeOptions" @update:value="loadSources" />
+            <a-select v-model:value="filterStatus" class="w-28" allow-clear :options="filterStatusOptions" @update:value="loadSources" />
+            <a-button @click="handleSearch">
               <Search class="w-4 h-4 mr-2" />
               搜索
-            </Button>
-            <Button @click="handleReset">
+            </a-button>
+            <a-button @click="handleReset">
               <RefreshCw class="w-4 h-4 mr-2" />
               重置
-            </Button>
+            </a-button>
           </div>
-          <Button @click="handleCreate">
+          <a-button @click="handleCreate">
             <Plus class="w-4 h-4 mr-2" />
             添加身份源
-          </Button>
+          </a-button>
         </div>
       </div>
       <div>
-        <Table :columns="[
+        <a-table :columns="[
           { title: '名称', dataIndex: 'name', width: 192 },
           { title: '类型', key: 'type', width: 144 },
           { title: 'Client ID', dataIndex: 'clientId', width: 256 },
@@ -345,26 +345,26 @@ onMounted(() => {
               </div>
             </template>
             <template v-else-if="column.key === 'status'">
-              <Tag :color="row.status === 'active' ? 'green' : 'red'">
+              <a-tag :color="row.status === 'active' ? 'green' : 'red'">
                 {{ row.status === 'active' ? '已启用' : '已禁用' }}
-              </Tag>
+              </a-tag>
             </template>
             <template v-else-if="column.key === 'createdAt'">{{ formatDate(row.createdAt) }}</template>
             <template v-else-if="column.key === 'actions'">
               <div class="flex gap-1 flex-wrap">
-                <Button type="link" size="small" class="h-auto p-0" @click="handleEdit(row)">编辑</Button>
-                <Button type="link" size="small" class="h-auto p-0" @click="handleToggleStatus(row)">
+                <a-button type="link" size="small" class="h-auto p-0" @click="handleEdit(row)">编辑</a-button>
+                <a-button type="link" size="small" class="h-auto p-0" @click="handleToggleStatus(row)">
                   {{ row.status === 'active' ? '禁用' : '启用' }}
-                </Button>
-                <Button type="link" size="small" class="h-auto p-0 text-destructive" @click="handleDelete(row)">删除</Button>
+                </a-button>
+                <a-button type="link" size="small" class="h-auto p-0 text-destructive" @click="handleDelete(row)">删除</a-button>
               </div>
             </template>
           </template>
-        </Table>
+        </a-table>
 
         <div class="flex items-center justify-between mt-4 pt-4 border-t">
           <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
-          <AntPagination
+          <a-pagination
             :current="page"
             :page-size="pageSize"
             :total="total"
@@ -374,45 +374,45 @@ onMounted(() => {
           />
         </div>
       </div>
-    </Card>
+    </a-card>
 
-    <Modal v-model:open="dialogVisible" :footer="null">
+    <a-modal v-model:open="dialogVisible" :footer="null">
       <div class="max-w-xl">
         <div>
           <h3>{{ dialogTitle }}</h3>
           <p>配置预定义的社会化登录身份源，端点由系统自动管理。</p>
         </div>
-        <Form :model="sourceForm" :rules="sourceFormRules" layout="vertical" class="py-4" @finish="handleSubmit">
+        <a-form :model="sourceForm" :rules="sourceFormRules" layout="vertical" class="py-4" @finish="handleSubmit">
           <div class="grid gap-4">
-            <FormItem label="身份源类型" name="type">
-              <Select
+            <a-form-item label="身份源类型" name="type">
+              <a-select
                 v-model:value="sourceForm.type"
                 :options="sourceTypeOptions"
                 :disabled="isEdit"
                 @update:value="handleTypeChange($event as SocialSourceType)"
               />
-            </FormItem>
-            <FormItem label="身份源名称" name="name">
-              <Input v-model:value="sourceForm.name" placeholder="请输入身份源名称" />
-            </FormItem>
-            <FormItem :label="currentTypeConfig.clientIdLabel" name="clientId">
-              <Input v-model:value="sourceForm.clientId" :placeholder="`请输入${currentTypeConfig.clientIdLabel}`" />
-            </FormItem>
-            <FormItem :label="currentTypeConfig.clientSecretLabel" name="clientSecret">
-              <Input
+            </a-form-item>
+            <a-form-item label="身份源名称" name="name">
+              <a-input v-model:value="sourceForm.name" placeholder="请输入身份源名称" />
+            </a-form-item>
+            <a-form-item :label="currentTypeConfig.clientIdLabel" name="clientId">
+              <a-input v-model:value="sourceForm.clientId" :placeholder="`请输入${currentTypeConfig.clientIdLabel}`" />
+            </a-form-item>
+            <a-form-item :label="currentTypeConfig.clientSecretLabel" name="clientSecret">
+              <a-input
                 v-model:value="sourceForm.clientSecret"
                 type="password"
                 :placeholder="isEdit ? '留空表示保持原值' : `请输入${currentTypeConfig.clientSecretLabel}`"
               />
-            </FormItem>
+            </a-form-item>
           </div>
           <div class="flex justify-end gap-2">
-            <Button @click="dialogVisible = false">取消</Button>
-            <Button type="primary" html-type="submit" :loading="submitting">确定</Button>
+            <a-button @click="dialogVisible = false">取消</a-button>
+            <a-button type="primary" html-type="submit" :loading="submitting">确定</a-button>
           </div>
-        </Form>
+        </a-form>
       </div>
-    </Modal>
+    </a-modal>
     <contextHolder />
   </div>
 </template>

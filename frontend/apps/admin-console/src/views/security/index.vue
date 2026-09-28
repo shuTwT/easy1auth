@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
-import { Form, FormItem, message } from 'antdv-next'
+import { message } from 'antdv-next'
 import { securityApi, type PasswordPolicy, type MfaStatus } from '@/api/security'
 const activeTab = ref('password')
 
@@ -165,18 +165,18 @@ onMounted(() => {
 
     <div class="bg-white rounded-xl p-4">
       <div class="mb-4">
-        <Button :type="activeTab === 'password' ? 'primary' : 'default'" @click="activeTab = 'password'">密码管理</Button>
-        <Button :type="activeTab === 'mfa' ? 'primary' : 'default'" @click="activeTab = 'mfa'">多因素认证</Button>
+        <a-button :type="activeTab === 'password' ? 'primary' : 'default'" @click="activeTab = 'password'">密码管理</a-button>
+        <a-button :type="activeTab === 'mfa' ? 'primary' : 'default'" @click="activeTab = 'mfa'">多因素认证</a-button>
       </div>
 
       <div v-show="activeTab === 'password'">
-        <Card class="">
+        <a-card class="">
           <div class="flex flex-row items-center gap-3">
             <h3>修改密码</h3>
-            <Tag v-if="expiryStatus.expired" color="red">密码已过期</Tag>
-            <Tag v-else-if="expiryStatus.daysUntilExpiry <= 7" >
+            <a-tag v-if="expiryStatus.expired" color="red">密码已过期</a-tag>
+            <a-tag v-else-if="expiryStatus.daysUntilExpiry <= 7" >
               密码将在 {{ expiryStatus.daysUntilExpiry }} 天后过期
-            </Tag>
+            </a-tag>
           </div>
           <div>
             <div v-if="passwordPolicy" class="bg-muted rounded-lg p-4 mb-6">
@@ -219,51 +219,51 @@ onMounted(() => {
               </ul>
             </div>
 
-            <Form :model="passwordForm" :rules="passwordFormRules" layout="vertical" class="max-w-md space-y-4" @finish="handleChangePassword">
-              <FormItem label="当前密码" name="currentPassword">
-                <Input v-model:value="passwordForm.currentPassword"
+            <a-form :model="passwordForm" :rules="passwordFormRules" layout="vertical" class="max-w-md space-y-4" @finish="handleChangePassword">
+              <a-form-item label="当前密码" name="currentPassword">
+                <a-input v-model:value="passwordForm.currentPassword"
                   type="password"
                   autocomplete="current-password"
                   placeholder="请输入当前密码"
                 />
-              </FormItem>
+              </a-form-item>
 
-              <FormItem label="新密码" name="newPassword">
-                <Input v-model:value="passwordForm.newPassword"
+              <a-form-item label="新密码" name="newPassword">
+                <a-input v-model:value="passwordForm.newPassword"
                   type="password"
                   autocomplete="new-password"
                   placeholder="请输入新密码"
                 />
                 <div v-if="passwordForm.newPassword" class="flex items-center gap-2 text-sm">
                   <span>密码强度：</span>
-                  <Progress :percent="passwordStrength.level * 33.33" class="w-24 h-2" />
+                  <a-progress :percent="passwordStrength.level * 33.33" class="w-24 h-2" />
                   <span :style="{ color: passwordStrength.color }">{{ passwordStrength.text }}</span>
                 </div>
-              </FormItem>
+              </a-form-item>
 
-              <FormItem label="确认密码" name="confirmPassword">
-                <Input v-model:value="passwordForm.confirmPassword"
+              <a-form-item label="确认密码" name="confirmPassword">
+                <a-input v-model:value="passwordForm.confirmPassword"
                   type="password"
                   autocomplete="new-password"
                   placeholder="请再次输入新密码"
                 />
-              </FormItem>
+              </a-form-item>
 
-              <Button type="primary" html-type="submit" :loading="loading">
+              <a-button type="primary" html-type="submit" :loading="loading">
                 修改密码
-              </Button>
-            </Form>
+              </a-button>
+            </a-form>
           </div>
-        </Card>
+        </a-card>
       </div>
 
       <div v-show="activeTab === 'mfa'">
-        <Card class="">
+        <a-card class="">
           <div class="flex flex-row items-center gap-3">
             <h3>多因素认证 (MFA)</h3>
-            <Tag :color="mfaStatus.enabled ? 'green' : 'orange'">
+            <a-tag :color="mfaStatus.enabled ? 'green' : 'orange'">
               {{ mfaStatus.enabled ? '已启用' : '未启用' }}
-            </Tag>
+            </a-tag>
           </div>
           <div>
             <div v-if="!showMfaSetup && !mfaStatus.enabled" class="text-center py-10 px-5">
@@ -275,9 +275,9 @@ onMounted(() => {
               </div>
               <h3 class="text-lg font-semibold text-foreground mb-2">增强账户安全</h3>
               <p class="text-muted-foreground mb-6">启用多因素认证后，登录时需要输入验证码，大大提高账户安全性。</p>
-              <Button @click="handleSetupMfa">
+              <a-button @click="handleSetupMfa">
                 启用 MFA
-              </Button>
+              </a-button>
             </div>
 
             <div v-else-if="showMfaSetup" class="max-w-lg mx-auto">
@@ -304,22 +304,22 @@ onMounted(() => {
                     {{ code }}
                   </code>
                 </div>
-                <Button size="small"  @click="copyBackupCodes">复制备用码</Button>
+                <a-button size="small"  @click="copyBackupCodes">复制备用码</a-button>
               </div>
 
               <div>
                 <h4 class="text-base font-semibold text-foreground mb-2">步骤 3：验证设置</h4>
                 <p class="text-sm text-muted-foreground mb-3">请输入验证器显示的 6 位数字验证码：</p>
-                <Input v-model:value="mfaToken"
+                <a-input v-model:value="mfaToken"
                   placeholder="请输入验证码"
-                  maxlength="6"
+                  :maxlength="6"
                   class="w-50 mb-4"
                 />
                 <div class="flex gap-3">
-                  <Button  @click="showMfaSetup = false">取消</Button>
-                  <Button :disabled="loading" @click="handleEnableMfa">
+                  <a-button  @click="showMfaSetup = false">取消</a-button>
+                  <a-button :disabled="loading" @click="handleEnableMfa">
                     确认启用
-                  </Button>
+                  </a-button>
                 </div>
               </div>
             </div>
@@ -334,25 +334,25 @@ onMounted(() => {
                 <p class="text-muted-foreground">当前认证方式：{{ mfaStatus.type === 'totp' ? '验证器应用' : '邮箱验证码' }}</p>
               </div>
 
-              <Divider class="my-6" />
+              <a-divider class="my-6" />
 
               <div>
                 <h4 class="text-sm font-semibold text-foreground mb-2">禁用 MFA</h4>
                 <p class="text-sm text-muted-foreground mb-3">禁用后，登录时将不再需要验证码。</p>
                 <div class="flex items-center gap-3">
-                  <Input v-model:value="mfaToken"
+                  <a-input v-model:value="mfaToken"
                     placeholder="请输入验证码以禁用 MFA"
-                    maxlength="6"
+                    :maxlength="6"
                     class="w-64"
                   />
-                  <Button danger :disabled="loading" @click="handleDisableMfa">
+                  <a-button danger :disabled="loading" @click="handleDisableMfa">
                     禁用 MFA
-                  </Button>
+                  </a-button>
                 </div>
               </div>
             </div>
           </div>
-        </Card>
+        </a-card>
       </div>
     </div>
   </div>

@@ -1,4 +1,6 @@
 import { createApp } from 'vue'
+import Antd from 'antdv-next'
+import 'antdv-next/dist/reset.css'
 import { createRouter, createWebHistory } from 'vue-router'
 import App from './App.vue'
 import './style.css'
@@ -15,4 +17,4 @@ const router = createRouter({
   ]
 })
 
-createApp(App).use(router).mount('#app')
+createApp(App).use(router).use(Antd).mount('#app')
