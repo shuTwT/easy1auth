@@ -74,6 +74,7 @@ public class AdminRoleController {
                 tenantAccess.tenantId(),
                 tenantAccess.permissions(),
                 in.name(),
+                in.code(),
                 in.description(),
                 in.permissions()), "管理员角色创建成功");
     }
@@ -89,6 +90,7 @@ public class AdminRoleController {
                 tenantAccess.permissions(),
                 id,
                 in.name(),
+                in.code(),
                 in.description(),
                 in.permissions()), "管理员角色更新成功");
     }

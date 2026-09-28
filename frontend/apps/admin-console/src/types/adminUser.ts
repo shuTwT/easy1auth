@@ -18,6 +18,7 @@ export type AdminStatus = 'active' | 'disabled'
 export interface AdminRoleSummary {
   id: string
   name: string
+  code: string
   permissions: string[]
 }
 

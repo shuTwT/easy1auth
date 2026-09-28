@@ -10,6 +10,8 @@ import com.easy1auth.customization.model.MessageTemplateEntity;
 import com.easy1auth.customization.model.MessageTemplateEntityTable;
 import org.babyfish.jimmer.spring.repository.JRepository;
 import org.babyfish.jimmer.sql.ast.mutation.SaveMode;
+import org.babyfish.jimmer.sql.ast.LikeMode;
+import org.babyfish.jimmer.sql.ast.Predicate;
 
 import java.time.Instant;
 import java.util.List;
@@ -98,9 +100,15 @@ public interface CustomizationRepository extends JRepository<LoginStyleEntity, U
                 .getTotalAffectedRowCount() == 1;
     }
 
-    default List<MessageTemplateEntity> templates(String type) {
+    default List<MessageTemplateEntity> templates(String type, String search, String status) {
         return sql().createQuery(TEMPLATE)
                 .whereIf(type != null && !type.isBlank(), () -> TEMPLATE.type().eq(type))
+                .whereIf(status != null && !status.isBlank(), () -> TEMPLATE.status().eq(status))
+                .whereIf(search != null && !search.isBlank(), () -> Predicate.or(
+                        TEMPLATE.name().ilike(search, LikeMode.ANYWHERE),
+                        TEMPLATE.code().ilike(search, LikeMode.ANYWHERE),
+                        TEMPLATE.subject().ilike(search, LikeMode.ANYWHERE),
+                        TEMPLATE.content().ilike(search, LikeMode.ANYWHERE)))
                 .orderBy(TEMPLATE.type(), TEMPLATE.code())
                 .select(TEMPLATE)
                 .execute();

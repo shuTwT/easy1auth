@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import axios from 'axios'
-import { message } from 'antdv-next'
+import { message, type TabsProps } from 'antdv-next'
 import {
   Search,
   RefreshCw,
@@ -31,6 +31,7 @@ import type {
   AdminRoleStats,
   CreateAdminRoleDto,
   UpdateAdminRoleDto,
+  PermissionCatalogItem,
 } from '@/types/adminRole'
 type ApiErrorResponse = {
   readonly msg?: string
@@ -45,6 +46,10 @@ const userStore = useUserStore()
 const currentAdminId = computed<string>(() => userStore.userInfo?.id || '')
 
 const activeTab = ref<'admins' | 'roles'>('admins')
+const adminTabs: TabsProps['items'] = [
+  { key: 'admins', label: '管理员', forceRender: true },
+  { key: 'roles', label: '管理员角色', forceRender: true },
+]
 
 // ---------------------------------------------------------------------------
 // Admin tab state
@@ -130,7 +135,7 @@ const rolePage = ref(1)
 const rolePageSize = ref(10)
 const roleSearch = ref('')
 
-const permissionCatalog = ref<string[]>([])
+const permissionCatalog = ref<PermissionCatalogItem[]>([])
 
 // create/edit role dialog
 const roleDialogVisible = ref(false)
@@ -138,11 +143,16 @@ const roleDialogIsEdit = ref(false)
 const roleDialogSubmitting = ref(false)
 const roleForm = reactive<CreateAdminRoleDto & { id?: string }>({
   name: '',
+  code: '',
   description: '',
   permissions: [],
 })
 const roleFormRules = {
   name: [{ required: true, message: '请输入角色名称' }],
+  code: [
+    { required: true, message: '请输入角色编码' },
+    { pattern: /^[a-z][a-z0-9_]{1,99}$/, message: '请输入2至100位小写字母、数字或下划线，且以字母开头' },
+  ],
 }
 const roleDialogTitle = computed(() => (roleDialogIsEdit.value ? '编辑管理员角色' : '创建管理员角色'))
 
@@ -159,21 +169,6 @@ const CATEGORY_LABELS: Record<string, string> = {
   'admin-role': '管理员角色管理',
 }
 
-const PERMISSION_LABELS: Record<string, string> = {
-  'admin-user:read': '查看管理员',
-  'admin-user:update': '编辑管理员',
-  'admin-user:status': '启用/禁用管理员',
-  'admin-user:reset-password': '重置管理员密码',
-  'admin-user:reset-mfa': '重置管理员 MFA',
-  'admin-user:assign-role': '分配管理员角色',
-  'admin-user:remove-tenant': '移除管理员出租户',
-  'admin-role:read': '查看管理员角色',
-  'admin-role:create': '创建管理员角色',
-  'admin-role:update': '编辑管理员角色',
-  'admin-role:delete': '删除管理员角色',
-  'admin-role:assign': '分配管理员角色给管理员',
-}
-
 interface PermissionCategory {
   code: string
   name: string
@@ -182,14 +177,17 @@ interface PermissionCategory {
 
 const permissionCategories = computed<PermissionCategory[]>(() => {
   const groups: Record<string, { code: string; name: string }[]> = {}
-  for (const code of permissionCatalog.value) {
-    const prefix = code.split(':')[0] ?? code
+  const menuNames = new Map(permissionCatalog.value
+    .filter(permission => permission.type.toLowerCase() === 'menu')
+    .map(permission => [permission.resource, permission.name]))
+  for (const permission of permissionCatalog.value) {
+    const prefix = permission.resource || permission.code.split(':')[0] || permission.code
     if (!groups[prefix]) groups[prefix] = []
-    groups[prefix].push({ code, name: PERMISSION_LABELS[code] || code })
+    groups[prefix].push({ code: permission.code, name: permission.name || permission.code })
   }
   return Object.entries(groups).map(([prefix, items]) => ({
     code: prefix,
-    name: CATEGORY_LABELS[prefix] || prefix,
+    name: CATEGORY_LABELS[prefix] || menuNames.get(prefix) || prefix,
     items,
   }))
 })
@@ -504,6 +502,7 @@ const roleStatsCards = computed(() => [
 
 const roleColumns = [
   { title: '角色名称', key: 'name', width: 220 },
+  { title: '角色编码', dataIndex: 'code', key: 'code', width: 200 },
   { title: '描述', key: 'description', minWidth: 220 },
   { title: '权限', key: 'permissions', width: 140 },
   { title: '管理员数', key: 'adminCount', width: 110, align: 'center' as const },
@@ -570,6 +569,7 @@ const openCreateRoleDialog = () => {
   roleDialogIsEdit.value = false
   roleForm.id = undefined
   roleForm.name = ''
+  roleForm.code = ''
   roleForm.description = ''
   roleForm.permissions = []
   roleDialogVisible.value = true
@@ -579,6 +579,7 @@ const openEditRoleDialog = (row: AdminRole) => {
   roleDialogIsEdit.value = true
   roleForm.id = row.id
   roleForm.name = row.name
+  roleForm.code = row.code
   roleForm.description = row.description || ''
   roleForm.permissions = [...row.permissions]
   roleDialogVisible.value = true
@@ -598,6 +599,10 @@ const handleRoleSubmit = async () => {
     message.warning('请填写角色名称')
     return
   }
+  if (!/^[a-z][a-z0-9_]{1,99}$/.test(roleForm.code.trim())) {
+    message.warning('请填写有效的角色编码')
+    return
+  }
   roleDialogSubmitting.value = true
   try {
     if (roleDialogIsEdit.value && roleForm.id) {
@@ -611,6 +616,7 @@ const handleRoleSubmit = async () => {
     } else {
       const payload: CreateAdminRoleDto = {
         name: roleForm.name,
+        code: roleForm.code.trim(),
         description: roleForm.description || undefined,
         permissions: roleForm.permissions,
       }
@@ -676,353 +682,318 @@ onMounted(() => {
       <p class="text-sm text-muted-foreground">管理员账号为全局账号；管理员角色归属于当前选中的租户</p>
     </div>
 
-    <div>
-      <div class="mb-4">
-        <a-button :type="activeTab === 'admins' ? 'primary' : 'default'" @click="activeTab = 'admins'">管理员</a-button>
-        <a-button :type="activeTab === 'roles' ? 'primary' : 'default'" @click="activeTab = 'roles'">管理员角色</a-button>
-      </div>
-
-      <!-- ===================== 管理员 Tab ===================== -->
-      <div v-show="activeTab === 'admins'">
-        <!-- stats -->
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
-          <a-card v-for="(stat, index) in adminStatsCards" :key="index" class="transition-all hover:shadow-md">
-            <div class="pt-4">
-              <div class="flex items-center gap-3">
-                <div
-                  class="size-11 rounded-lg flex items-center justify-center text-white shrink-0"
-                  :class="{
-                    'bg-gradient-to-br from-primary to-primary/60': stat.tone === 'primary',
-                    'bg-gradient-to-br from-emerald-500 to-emerald-400': stat.tone === 'success',
-                    'bg-gradient-to-br from-red-500 to-red-400': stat.tone === 'danger',
-                    'bg-gradient-to-br from-sky-500 to-sky-400': stat.tone === 'info',
-                    'bg-gradient-to-br from-amber-500 to-amber-400': stat.tone === 'warning',
-                  }"
-                >
-                  <component :is="stat.icon" class="size-5" />
-                </div>
-                <div>
-                  <div class="text-2xl font-bold text-foreground leading-tight">{{ stat.value }}</div>
-                  <div class="text-xs text-muted-foreground mt-0.5">{{ stat.label }}</div>
-                </div>
-              </div>
-            </div>
-          </a-card>
-        </div>
-
-        <!-- search -->
-        <a-card class="mb-4!">
-          <div class="pt-6">
-            <div class="flex flex-wrap gap-4 items-end">
-              <div class="grid gap-2">
-                <label>用户名</label>
-                <a-input v-model:value="adminQuery.username" placeholder="请输入用户名" class="w-40" />
-              </div>
-              <div class="grid gap-2">
-                <label>邮箱</label>
-                <a-input v-model:value="adminQuery.email" placeholder="请输入邮箱" class="w-40" />
-              </div>
-              <div class="grid gap-2">
-                <label>手机号</label>
-                <a-input v-model:value="adminQuery.phone" placeholder="请输入手机号" class="w-40" />
-              </div>
-              <div class="grid gap-2">
-                <label>状态</label>
-                <a-select v-model:value="adminQuery.status" class="w-32" allow-clear :options="adminStatusOptions" />
-              </div>
-              <div class="grid gap-2">
-                <label>管理员角色</label>
-                <a-select v-model:value="adminQuery.roleId" class="w-44" allow-clear :options="adminRoleOptions" />
-              </div>
-              <div class="flex gap-2">
-                <a-button @click="handleAdminSearch">
-                  <Search class="size-4 mr-1" />
-                  搜索
-                </a-button>
-                <a-button  @click="handleAdminReset">
-                  <RefreshCw class="size-4 mr-1" />
-                  重置
-                </a-button>
-              </div>
-            </div>
-          </div>
-        </a-card>
-
-        <!-- table -->
-        <a-card>
-          <div class="pt-6">
-            <a-table
-              :columns="adminColumns"
-              :data-source="admins"
-              :loading="adminLoading"
-              :pagination="false"
-              row-key="id"
-              :scroll="{ x: 1540 }"
-            >
-              <template #bodyCell="{ column, record: row }">
-                <template v-if="column.key === 'username'">
-                    <div class="flex items-center gap-2">
-                      <a-avatar class="size-8 bg-gradient-to-br from-primary to-primary/60">
-                        <span class="bg-transparent text-white text-xs font-semibold">
-                          {{ row.username.charAt(0).toUpperCase() }}
-                        </span>
-                      </a-avatar>
-                      <div class="flex flex-col">
-                        <span class="font-medium">{{ row.username }}</span>
-                        <span v-if="isSelf(row)" class="text-xs text-primary">（我）</span>
-                      </div>
-                    </div>
-                </template>
-                <template v-else-if="column.key === 'email'">{{ row.email }}</template>
-                <template v-else-if="column.key === 'phone'">{{ row.phone || '-' }}</template>
-                <template v-else-if="column.key === 'tenantRole'">
-                    <a-tag v-if="currentTenantRole(row)" :color="tenantRoleVariant(currentTenantRole(row))" class="text-xs">
-                      {{ tenantRoleText(currentTenantRole(row)) }}
-                    </a-tag>
-                    <span v-else class="text-muted-foreground">-</span>
-                </template>
-                <template v-else-if="column.key === 'status'">
-                    <a-tag :color="adminStatusVariant(row.status)" class="text-xs">
-                      {{ adminStatusText(row.status) }}
-                    </a-tag>
-                </template>
-                <template v-else-if="column.key === 'mfa'">
-                    <a-tag :color="row.mfaEnabled ? 'green' : 'default'" class="text-xs">
-                      {{ row.mfaEnabled ? '已启用' : '未启用' }}
-                    </a-tag>
-                </template>
-                <span v-else-if="column.key === 'lastLoginAt'" class="text-muted-foreground">{{ formatDate(row.lastLoginAt) }}</span>
-                <span v-else-if="column.key === 'createdAt'" class="text-muted-foreground">{{ formatDate(row.createdAt) }}</span>
-                <template v-else-if="column.key === 'actions'">
-                    <div class="flex gap-1 flex-wrap">
-                      <a-button
-                        type="link"
-                        size="small"
-                        class="h-auto p-0"
-                        :disabled="isSelf(row) || isAccountOwner(row)"
-                        @click="openEditDialog(row)"
-                      >
-                        编辑
-                      </a-button>
-                      <a-button
-                        type="link"
-                        size="small"
-                        class="h-auto p-0"
-                        :disabled="isSelf(row) || isAccountOwner(row)"
-                        @click="handleStatusToggle(row)"
-                      >
-                        {{ row.status === 'active' ? '禁用' : '启用' }}
-                      </a-button>
-                      <a-button
-                        type="link"
-                        size="small"
-                        class="h-auto p-0"
-                        :disabled="isSelf(row) || !currentMembership(row) || isCurrentMembershipOwner(row)"
-                        @click="openAssignRolesDialog(row)"
-                      >
-                        分配角色
-                      </a-button>
-                      <a-button
-                        type="link"
-                        size="small"
-                        class="h-auto p-0"
-                        :disabled="isSelf(row) || isAccountOwner(row)"
-                        @click="openResetPwdDialog(row)"
-                      >
-                        重置密码
-                      </a-button>
-                      <a-button
-                        type="link"
-                        size="small"
-                        class="h-auto p-0"
-                        :disabled="isSelf(row) || isAccountOwner(row) || !row.mfaEnabled"
-                        @click="openResetMfaDialog(row)"
-                      >
-                        重置 MFA
-                      </a-button>
-                      <a-button
-                        type="link"
-                        size="small"
-                        class="h-auto p-0 text-destructive disabled:text-muted-foreground"
-                        :disabled="isSelf(row) || !currentMembership(row) || isCurrentMembershipOwner(row)"
-                        @click="openRemoveDialog(row)"
-                      >
-                        移出租户
-                      </a-button>
-                    </div>
-                </template>
-              </template>
-            </a-table>
-
-            <div class="flex items-center justify-between mt-4 pt-4 border-t">
-              <span class="text-sm text-muted-foreground">共 {{ adminTotal }} 条</span>
-              <a-pagination
-                :current="adminQuery.page"
-                :page-size="adminQuery.pageSize"
-                :total="adminTotal"
-                :show-size-changer="true"
-                :page-size-options="['10', '20', '50']"
-                size="small"
-                @change="handleAdminPageChange"
-                @show-size-change="handleAdminPageSizeChange"
-              />
-            </div>
-          </div>
-        </a-card>
-      </div>
-
-      <!-- ===================== 管理员角色 Tab ===================== -->
-      <div v-show="activeTab === 'roles'">
-        <!-- stats -->
-        <div class="grid grid-cols-3 gap-4 mb-6">
-          <a-card v-for="(stat, index) in roleStatsCards" :key="index" class="transition-all hover:shadow-md">
-            <div class="pt-4">
-              <div class="flex items-center gap-3">
-                <div
-                  class="size-11 rounded-lg flex items-center justify-center text-white shrink-0"
-                  :class="{
-                    'bg-gradient-to-br from-primary to-primary/60': stat.tone === 'primary',
-                    'bg-gradient-to-br from-red-500 to-red-400': stat.tone === 'danger',
-                    'bg-gradient-to-br from-emerald-500 to-emerald-400': stat.tone === 'success',
-                  }"
-                >
-                  <component :is="stat.icon" class="size-5" />
-                </div>
-                <div>
-                  <div class="text-2xl font-bold text-foreground leading-tight">{{ stat.value }}</div>
-                  <div class="text-xs text-muted-foreground mt-0.5">{{ stat.label }}</div>
-                </div>
-              </div>
-            </div>
-          </a-card>
-        </div>
-
-        <!-- permission catalog display -->
-        <a-card class="mb-4!">
-          <div class="pt-6">
-            <div class="flex items-center gap-2 mb-4">
-              <Shield class="size-4 text-primary" />
-              <h3 class="text-sm font-semibold">权限目录</h3>
-              <span class="text-xs text-muted-foreground">（共 {{ permissionCatalog.length }} 项权限）</span>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div
-                v-for="category in permissionCategories"
-                :key="category.code"
-                class="border rounded-lg p-3"
-              >
-                <div class="text-sm font-medium mb-2">{{ category.name }}</div>
-                <div class="flex flex-wrap gap-1.5">
-                  <a-tag
-                    v-for="item in category.items"
-                    :key="item.code"
-
-                    class="text-xs"
+    <a-tabs v-model:active-key="activeTab" :items="adminTabs">
+      <template #contentRender="{ item }">
+        <template v-if="item.key === 'admins'">
+          <!-- stats -->
+          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+            <a-card v-for="(stat, index) in adminStatsCards" :key="index" class="transition-all hover:shadow-md">
+              <div class="pt-4">
+                <div class="flex items-center gap-3">
+                  <div
+                    class="size-11 rounded-lg flex items-center justify-center text-white shrink-0"
+                    :class="{
+                      'bg-gradient-to-br from-primary to-primary/60': stat.tone === 'primary',
+                      'bg-gradient-to-br from-emerald-500 to-emerald-400': stat.tone === 'success',
+                      'bg-gradient-to-br from-red-500 to-red-400': stat.tone === 'danger',
+                      'bg-gradient-to-br from-sky-500 to-sky-400': stat.tone === 'info',
+                      'bg-gradient-to-br from-amber-500 to-amber-400': stat.tone === 'warning',
+                    }"
                   >
-                    {{ item.name }}
-                  </a-tag>
+                    <component :is="stat.icon" class="size-5" />
+                  </div>
+                  <div>
+                    <div class="text-2xl font-bold text-foreground leading-tight">{{ stat.value }}</div>
+                    <div class="text-xs text-muted-foreground mt-0.5">{{ stat.label }}</div>
+                  </div>
                 </div>
               </div>
-            </div>
+            </a-card>
           </div>
-        </a-card>
 
-        <!-- role list -->
-        <a-card>
-          <div class="pt-6">
-            <div class="flex justify-between items-center mb-4">
-              <div class="flex items-center gap-2">
-                <div class="relative">
-                  <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                  <a-input v-model:value="roleSearch"
-                    placeholder="搜索角色名称"
-                    class="w-64 pl-8"
-                    @keyup.enter="handleRoleSearch"
-                  />
+          <!-- search -->
+          <a-card class="mb-4!">
+            <div class="pt-6">
+              <div class="flex flex-wrap gap-4 items-end">
+                <div class="grid gap-2">
+                  <label>用户名</label>
+                  <a-input v-model:value="adminQuery.username" placeholder="请输入用户名" class="w-40" />
                 </div>
-                <a-button @click="handleRoleSearch">
-                  <Search class="size-4 mr-1" />
-                  搜索
-                </a-button>
-                <a-button  @click="handleRoleReset">
-                  <RefreshCw class="size-4 mr-1" />
-                  重置
+                <div class="grid gap-2">
+                  <label>邮箱</label>
+                  <a-input v-model:value="adminQuery.email" placeholder="请输入邮箱" class="w-40" />
+                </div>
+                <div class="grid gap-2">
+                  <label>手机号</label>
+                  <a-input v-model:value="adminQuery.phone" placeholder="请输入手机号" class="w-40" />
+                </div>
+                <div class="grid gap-2">
+                  <label>状态</label>
+                  <a-select v-model:value="adminQuery.status" class="w-32" allow-clear :options="adminStatusOptions" />
+                </div>
+                <div class="grid gap-2">
+                  <label>管理员角色</label>
+                  <a-select v-model:value="adminQuery.roleId" class="w-44" allow-clear :options="adminRoleOptions" />
+                </div>
+                <div class="flex gap-2">
+                  <a-button @click="handleAdminSearch">
+                    <Search class="size-4 mr-1" />
+                    搜索
+                  </a-button>
+                  <a-button  @click="handleAdminReset">
+                    <RefreshCw class="size-4 mr-1" />
+                    重置
+                  </a-button>
+                </div>
+              </div>
+            </div>
+          </a-card>
+
+          <!-- table -->
+          <a-card>
+            <div class="pt-6">
+              <a-table
+                :columns="adminColumns"
+                :data-source="admins"
+                :loading="adminLoading"
+                :pagination="false"
+                row-key="id"
+                :scroll="{ x: 1540 }"
+              >
+                <template #bodyCell="{ column, record: row }">
+                  <template v-if="column.key === 'username'">
+                      <div class="flex items-center gap-2">
+                        <a-avatar class="size-8 bg-gradient-to-br from-primary to-primary/60">
+                          <span class="bg-transparent text-white text-xs font-semibold">
+                            {{ row.username.charAt(0).toUpperCase() }}
+                          </span>
+                        </a-avatar>
+                        <div class="flex flex-col">
+                          <span class="font-medium">{{ row.username }}</span>
+                          <span v-if="isSelf(row)" class="text-xs text-primary">（我）</span>
+                        </div>
+                      </div>
+                  </template>
+                  <template v-else-if="column.key === 'email'">{{ row.email }}</template>
+                  <template v-else-if="column.key === 'phone'">{{ row.phone || '-' }}</template>
+                  <template v-else-if="column.key === 'tenantRole'">
+                      <a-tag v-if="currentTenantRole(row)" :color="tenantRoleVariant(currentTenantRole(row))" class="text-xs">
+                        {{ tenantRoleText(currentTenantRole(row)) }}
+                      </a-tag>
+                      <span v-else class="text-muted-foreground">-</span>
+                  </template>
+                  <template v-else-if="column.key === 'status'">
+                      <a-tag :color="adminStatusVariant(row.status)" class="text-xs">
+                        {{ adminStatusText(row.status) }}
+                      </a-tag>
+                  </template>
+                  <template v-else-if="column.key === 'mfa'">
+                      <a-tag :color="row.mfaEnabled ? 'green' : 'default'" class="text-xs">
+                        {{ row.mfaEnabled ? '已启用' : '未启用' }}
+                      </a-tag>
+                  </template>
+                  <span v-else-if="column.key === 'lastLoginAt'" class="text-muted-foreground">{{ formatDate(row.lastLoginAt) }}</span>
+                  <span v-else-if="column.key === 'createdAt'" class="text-muted-foreground">{{ formatDate(row.createdAt) }}</span>
+                  <template v-else-if="column.key === 'actions'">
+                      <div class="flex gap-1 flex-wrap">
+                        <a-button
+                          type="link"
+                          size="small"
+                          class="h-auto p-0"
+                          :disabled="isSelf(row) || isAccountOwner(row)"
+                          @click="openEditDialog(row)"
+                        >
+                          编辑
+                        </a-button>
+                        <a-button
+                          type="link"
+                          size="small"
+                          class="h-auto p-0"
+                          :disabled="isSelf(row) || isAccountOwner(row)"
+                          @click="handleStatusToggle(row)"
+                        >
+                          {{ row.status === 'active' ? '禁用' : '启用' }}
+                        </a-button>
+                        <a-button
+                          type="link"
+                          size="small"
+                          class="h-auto p-0"
+                          :disabled="isSelf(row) || !currentMembership(row) || isCurrentMembershipOwner(row)"
+                          @click="openAssignRolesDialog(row)"
+                        >
+                          分配角色
+                        </a-button>
+                        <a-button
+                          type="link"
+                          size="small"
+                          class="h-auto p-0"
+                          :disabled="isSelf(row) || isAccountOwner(row)"
+                          @click="openResetPwdDialog(row)"
+                        >
+                          重置密码
+                        </a-button>
+                        <a-button
+                          type="link"
+                          size="small"
+                          class="h-auto p-0"
+                          :disabled="isSelf(row) || isAccountOwner(row) || !row.mfaEnabled"
+                          @click="openResetMfaDialog(row)"
+                        >
+                          重置 MFA
+                        </a-button>
+                        <a-button
+                          type="link"
+                          size="small"
+                          class="h-auto p-0 text-destructive disabled:text-muted-foreground"
+                          :disabled="isSelf(row) || !currentMembership(row) || isCurrentMembershipOwner(row)"
+                          @click="openRemoveDialog(row)"
+                        >
+                          移出租户
+                        </a-button>
+                      </div>
+                  </template>
+                </template>
+              </a-table>
+
+              <div class="flex items-center justify-between mt-4 pt-4 border-t">
+                <span class="text-sm text-muted-foreground">共 {{ adminTotal }} 条</span>
+                <a-pagination
+                  :current="adminQuery.page"
+                  :page-size="adminQuery.pageSize"
+                  :total="adminTotal"
+                  :show-size-changer="true"
+                  :page-size-options="['10', '20', '50']"
+                  size="small"
+                  @change="handleAdminPageChange"
+                  @show-size-change="handleAdminPageSizeChange"
+                />
+              </div>
+            </div>
+          </a-card>
+        </template>
+        <template v-else-if="item.key === 'roles'">
+          <!-- stats -->
+          <div class="grid grid-cols-3 gap-4 mb-6">
+            <a-card v-for="(stat, index) in roleStatsCards" :key="index" class="transition-all hover:shadow-md">
+              <div class="pt-4">
+                <div class="flex items-center gap-3">
+                  <div
+                    class="size-11 rounded-lg flex items-center justify-center text-white shrink-0"
+                    :class="{
+                      'bg-gradient-to-br from-primary to-primary/60': stat.tone === 'primary',
+                      'bg-gradient-to-br from-red-500 to-red-400': stat.tone === 'danger',
+                      'bg-gradient-to-br from-emerald-500 to-emerald-400': stat.tone === 'success',
+                    }"
+                  >
+                    <component :is="stat.icon" class="size-5" />
+                  </div>
+                  <div>
+                    <div class="text-2xl font-bold text-foreground leading-tight">{{ stat.value }}</div>
+                    <div class="text-xs text-muted-foreground mt-0.5">{{ stat.label }}</div>
+                  </div>
+                </div>
+              </div>
+            </a-card>
+          </div>
+
+          <!-- role list -->
+          <a-card>
+            <div>
+              <div class="flex justify-between items-center mb-4">
+                <div class="flex items-center gap-2">
+                  <div class="relative">
+                    <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                    <a-input v-model:value="roleSearch"
+                      placeholder="搜索角色名称"
+                      class="w-64 pl-8"
+                      @keyup.enter="handleRoleSearch"
+                    />
+                  </div>
+                  <a-button @click="handleRoleSearch">
+                    <Search class="size-4 mr-1" />
+                    搜索
+                  </a-button>
+                  <a-button  @click="handleRoleReset">
+                    <RefreshCw class="size-4 mr-1" />
+                    重置
+                  </a-button>
+                </div>
+                <a-button @click="openCreateRoleDialog">
+                  <Plus class="size-4 mr-1" />
+                  创建自定义角色
                 </a-button>
               </div>
-              <a-button @click="openCreateRoleDialog">
-                <Plus class="size-4 mr-1" />
-                创建自定义角色
-              </a-button>
-            </div>
 
-            <a-table
-              :columns="roleColumns"
-              :data-source="roles"
-              :loading="roleLoading"
-              :pagination="false"
-              row-key="id"
-              :scroll="{ x: 1110 }"
-            >
-              <template #bodyCell="{ column, record: row }">
-                <template v-if="column.key === 'name'">
-                    <div class="flex items-center gap-2">
-                      <a-tag :color="roleTypeVariant(row.isSystem)" class="text-xs">
+              <a-table
+                :columns="roleColumns"
+                :data-source="roles"
+                :loading="roleLoading"
+                :pagination="false"
+                row-key="id"
+                :scroll="{ x: 1310 }"
+              >
+                <template #bodyCell="{ column, record: row }">
+                  <template v-if="column.key === 'name'">
+                      <div class="flex items-center gap-2">
+                        <a-tag :color="roleTypeVariant(row.isSystem)" class="text-xs">
+                          {{ row.isSystem ? '系统' : '自定义' }}
+                        </a-tag>
+                        <span class="font-medium">{{ row.name }}</span>
+                      </div>
+                  </template>
+                  <code v-else-if="column.key === 'code'" class="font-mono text-sm text-muted-foreground">{{ row.code }}</code>
+                  <span v-else-if="column.key === 'description'" class="text-muted-foreground">{{ row.description || '-' }}</span>
+                  <template v-else-if="column.key === 'permissions'">
+                      <a-tag  class="text-xs">{{ permissionsSummary(row.permissions) }}</a-tag>
+                  </template>
+                  <template v-else-if="column.key === 'adminCount'">{{ row.adminCount || 0 }}</template>
+                  <template v-else-if="column.key === 'type'">
+                      <a-tag :color="row.isSystem ? 'purple' : 'blue'" class="text-xs">
                         {{ row.isSystem ? '系统' : '自定义' }}
                       </a-tag>
-                      <span class="font-medium">{{ row.name }}</span>
-                    </div>
+                  </template>
+                  <span v-else-if="column.key === 'createdAt'" class="text-muted-foreground">{{ formatDate(row.createdAt) }}</span>
+                  <template v-else-if="column.key === 'actions'">
+                      <div class="flex gap-2">
+                        <a-button
+                          type="link"
+                          size="small"
+                          class="h-auto p-0"
+                          :disabled="row.isSystem"
+                          @click="openEditRoleDialog(row)"
+                        >
+                          编辑
+                        </a-button>
+                        <a-button
+                          type="link"
+                          size="small"
+                          class="h-auto p-0 text-destructive"
+                          :disabled="row.isSystem"
+                          @click="openDeleteRoleDialog(row)"
+                        >
+                          删除
+                        </a-button>
+                      </div>
+                  </template>
                 </template>
-                <span v-else-if="column.key === 'description'" class="text-muted-foreground">{{ row.description || '-' }}</span>
-                <template v-else-if="column.key === 'permissions'">
-                    <a-tag  class="text-xs">{{ permissionsSummary(row.permissions) }}</a-tag>
-                </template>
-                <template v-else-if="column.key === 'adminCount'">{{ row.adminCount || 0 }}</template>
-                <template v-else-if="column.key === 'type'">
-                    <a-tag :color="row.isSystem ? 'purple' : 'blue'" class="text-xs">
-                      {{ row.isSystem ? '系统' : '自定义' }}
-                    </a-tag>
-                </template>
-                <span v-else-if="column.key === 'createdAt'" class="text-muted-foreground">{{ formatDate(row.createdAt) }}</span>
-                <template v-else-if="column.key === 'actions'">
-                    <div class="flex gap-2">
-                      <a-button
-                        type="link"
-                        size="small"
-                        class="h-auto p-0"
-                        :disabled="row.isSystem"
-                        @click="openEditRoleDialog(row)"
-                      >
-                        编辑
-                      </a-button>
-                      <a-button
-                        type="link"
-                        size="small"
-                        class="h-auto p-0 text-destructive"
-                        :disabled="row.isSystem"
-                        @click="openDeleteRoleDialog(row)"
-                      >
-                        删除
-                      </a-button>
-                    </div>
-                </template>
-              </template>
-            </a-table>
+              </a-table>
 
-            <div class="flex items-center justify-between mt-4 pt-4 border-t">
-              <span class="text-sm text-muted-foreground">共 {{ roleTotal }} 条</span>
-              <a-pagination
-                :current="rolePage"
-                :page-size="rolePageSize"
-                :total="roleTotal"
-                :show-size-changer="false"
-                size="small"
-                @change="handleRolePageChange"
-              />
+              <div class="flex items-center justify-between mt-4 pt-4 border-t">
+                <span class="text-sm text-muted-foreground">共 {{ roleTotal }} 条</span>
+                <a-pagination
+                  :current="rolePage"
+                  :page-size="rolePageSize"
+                  :total="roleTotal"
+                  :show-size-changer="false"
+                  size="small"
+                  @change="handleRolePageChange"
+                />
+              </div>
             </div>
-          </div>
-        </a-card>
-      </div>
-    </div>
+          </a-card>
+        </template>
+      </template>
+    </a-tabs>
 
     <!-- ===================== Edit admin dialog ===================== -->
     <a-modal v-model:open="editDialogVisible" :footer="null">
@@ -1184,6 +1155,14 @@ onMounted(() => {
           <div class="grid gap-4">
             <a-form-item label="角色名称" name="name">
               <a-input v-model:value="roleForm.name" placeholder="请输入角色名称" />
+            </a-form-item>
+            <a-form-item label="角色编码" name="code" extra="创建后不可修改">
+              <a-input
+                v-model:value="roleForm.code"
+                placeholder="例如：operations_admin"
+                :maxlength="100"
+                :disabled="roleDialogIsEdit"
+              />
             </a-form-item>
             <a-form-item label="描述" name="description">
               <a-textarea v-model:value="roleForm.description" :rows="2" placeholder="请输入角色描述" />

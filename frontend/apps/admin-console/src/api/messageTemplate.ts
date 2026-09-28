@@ -24,6 +24,11 @@ export interface CreateTemplateDto {
   isDefault?: boolean
 }
 
+export interface MessageTemplateSearch {
+  search?: string
+  status?: 'active' | 'inactive'
+}
+
 export interface UpdateTemplateDto {
   name?: string
   subject?: string
@@ -34,8 +39,8 @@ export interface UpdateTemplateDto {
 }
 
 export const messageTemplateApi = {
-  list: (type?: 'email' | 'sms'):Promise<MessageTemplate[]> => 
-    request.get('/message-templates', { params: { type } }),
+  list: (type?: 'email' | 'sms', query: MessageTemplateSearch = {}):Promise<MessageTemplate[]> =>
+    request.get('/message-templates', { params: { type, ...query } }),
   
   get: (id: string):Promise<MessageTemplate > => 
     request.get(`/message-templates/${id}`),
@@ -49,6 +54,4 @@ export const messageTemplateApi = {
   delete: (id: string) => 
     request.delete(`/message-templates/${id}`),
   
-  initDefaults: () => 
-    request.post('/message-templates/init'),
 }

@@ -25,6 +25,9 @@ import java.util.List;
 @Table(name = "admin_role")
 public interface AdminRoleEntity extends BaseEntity, BaseTenantEntity {
 
+    /** 角色编码（租户内唯一，创建后不可修改） */
+    String code();
+
     /** 角色名称 */
     String name();
 

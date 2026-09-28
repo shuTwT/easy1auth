@@ -206,6 +206,14 @@ public interface AdminAccessRepository extends JRepository<AdminRoleEntity, UUID
         .exists();
   }
 
+  default boolean roleCodeExists(UUID tenant, String code) {
+    return sql()
+        .createQuery(ROLE)
+        .where(ROLE.tenantId().eq(tenant), ROLE.code().eq(code))
+        .select(ROLE.id())
+        .exists();
+  }
+
   default List<AdminRoleEntity> findRolesWithMemberships() {
     return sql()
         .createQuery(ROLE)

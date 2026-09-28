@@ -169,8 +169,7 @@ public enum ManagementPermissionCode {
     MESSAGE_TEMPLATE_LIST("message-template:list", ManagementPermissionScope.TENANT, ManagementPermissionType.ACTION),
     MESSAGE_TEMPLATE_CREATE("message-template:create", ManagementPermissionScope.TENANT, ManagementPermissionType.ACTION),
     MESSAGE_TEMPLATE_UPDATE("message-template:update", ManagementPermissionScope.TENANT, ManagementPermissionType.ACTION),
-    MESSAGE_TEMPLATE_DELETE("message-template:delete", ManagementPermissionScope.TENANT, ManagementPermissionType.ACTION),
-    MESSAGE_TEMPLATE_INIT("message-template:init", ManagementPermissionScope.TENANT, ManagementPermissionType.ACTION);
+    MESSAGE_TEMPLATE_DELETE("message-template:delete", ManagementPermissionScope.TENANT, ManagementPermissionType.ACTION);
 
     /** 权限码字符串（如 "user:list"，与管理端权限目录中的 code 一致） */
     private final String value;

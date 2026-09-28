@@ -215,8 +215,8 @@ public class CustomizationService {
 
     /** 查询消息模板列表，可按类型（email / sms）过滤，按类型与编码排序。 */
     @Transactional(readOnly = true)
-    public List<MessageTemplateEntity> templates(String type) {
-        return repository.templates(type);
+    public List<MessageTemplateEntity> templates(String type, String search, String status) {
+        return repository.templates(type, search == null ? null : search.strip(), status);
     }
 
     /** 新建（id 为空）或更新（id 非空）消息模板，校验模板参数与变量声明合法性。 */

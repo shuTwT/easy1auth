@@ -13,6 +13,7 @@ import java.util.UUID;
  * @param id          角色 ID
  * @param tenantId    所属租户 ID
  * @param name        角色名称
+ * @param code        角色编码
  * @param description 角色描述（可为 null）
  * @param permissions 角色拥有的管理端权限码列表
  * @param isSystem    是否系统预置角色（系统角色不可修改/删除）
@@ -20,6 +21,6 @@ import java.util.UUID;
  * @param createdAt   创建时间
  * @param updatedAt   最后更新时间
  */
-public record AdminRoleView(UUID id, UUID tenantId, String name, String description, List<String> permissions,
+public record AdminRoleView(UUID id, UUID tenantId, String name, String code, String description, List<String> permissions,
                             boolean isSystem, long adminCount, Instant createdAt, Instant updatedAt) {
 }

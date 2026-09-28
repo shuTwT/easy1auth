@@ -4,7 +4,7 @@ import com.easy1auth.framework.common.error.DomainException;
 import com.easy1auth.framework.common.error.ErrorCode;
 
 /**
- * 系统管理域错误码常量（12000-13017）。
+ * 系统管理域错误码常量（12000-13020）。
  *
  * <p>定义管理后台账号/凭证/会话/注册码等业务场景的错误码，
  * 供领域服务抛出 {@link DomainException} 使用。</p>
@@ -49,4 +49,7 @@ public interface ErrorCodeConstants {
     ErrorCode SYSTEM_TENANT_INVALID = new ErrorCode(13015, "系统租户状态无效");
     ErrorCode TENANT_MEMBERSHIP_ROLE_INVALID = new ErrorCode(13016, "成员角色与租户类型不匹配");
     ErrorCode TENANT_PACKAGE_MISSING = new ErrorCode(13017, "普通租户缺少有效套餐");
+    ErrorCode ROLE_CODE_INVALID = new ErrorCode(13018, "角色编码须为2至100位小写字母、数字或下划线，且以字母开头");
+    ErrorCode ROLE_CODE_EXISTS = new ErrorCode(13019, "当前租户已存在相同角色编码");
+    ErrorCode ROLE_CODE_IMMUTABLE = new ErrorCode(13020, "角色编码创建后不可修改");
 }

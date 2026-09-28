@@ -129,8 +129,11 @@ public class CustomizationController {
     /** 查询消息模板列表，可按模板类型过滤。 */
     @TenantManagementPermission(value = ManagementPermissionCode.MESSAGE_TEMPLATE_LIST)
     @GetMapping("/api/message-templates")
-    ApiResponse<?> templates(@RequestParam(required = false) String type) {
-        return ApiResponse.ok(service.templates(type));
+    ApiResponse<?> templates(
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String status) {
+        return ApiResponse.ok(service.templates(type, search, status));
     }
 
     /** 新建消息模板。 */
@@ -153,13 +156,6 @@ public class CustomizationController {
     ApiResponse<Void> deleteTemplate(@PathVariable UUID id) {
         service.deleteTemplate(id);
         return ApiResponse.ok(null, "模板删除成功");
-    }
-
-    /** 初始化默认消息模板。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.MESSAGE_TEMPLATE_INIT)
-    @PostMapping("/api/message-templates/init")
-    ApiResponse<?> initTemplates() {
-        return ApiResponse.ok(List.of(), "默认模板已初始化");
     }
 
     /**

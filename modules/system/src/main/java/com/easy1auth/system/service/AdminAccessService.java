@@ -60,8 +60,12 @@ public class AdminAccessService {
   /** 在租户下创建自定义管理角色并绑定权限（系统角色标记为 false）。 */
   @Transactional
   public AdminRoleView create(
-      UUID tenantId, Set<String> grantablePermissions, String name, String description,
+      UUID tenantId, Set<String> grantablePermissions, String name, String code, String description,
       List<String> permissions) {
+    String normalizedCode = validateCode(code);
+    if (repository.roleCodeExists(tenantId, normalizedCode)) {
+      throw new DomainException(ErrorCodeConstants.ROLE_CODE_EXISTS);
+    }
     var codes = validate(name, permissions);
     requireGrantable(grantablePermissions, codes);
     UUID id = UuidV7.randomUuid();
@@ -72,6 +76,7 @@ public class AdminAccessService {
                 d.setId(id)
                     .setTenantId(tenantId)
                     .setName(name.strip())
+                    .setCode(normalizedCode)
                     .setDescription(description)
                     .setSystemRole(false)
                     .setCreatedAt(now)
@@ -83,11 +88,14 @@ public class AdminAccessService {
   /** 更新管理角色名称、描述与权限（系统角色不可修改）。 */
   @Transactional
   public AdminRoleView update(
-      UUID tenantId, Set<String> grantablePermissions, UUID id, String name, String description,
+      UUID tenantId, Set<String> grantablePermissions, UUID id, String name, String code, String description,
       List<String> permissions) {
     var old = findEntityFetched(tenantId, id);
     if (old.systemRole()) {
       throw immutable();
+    }
+    if (code != null && !old.code().equals(code.strip())) {
+      throw new DomainException(ErrorCodeConstants.ROLE_CODE_IMMUTABLE);
     }
     var n = name == null ? old.name() : name;
     validateName(n);
@@ -95,8 +103,8 @@ public class AdminAccessService {
         permissions == null
             ? catalog.validate(
                 old.permissions().stream().map(ManagementPermissionEntity::code).toList(),
-                ManagementPermissionScope.TENANT)
-            : catalog.validate(permissions, ManagementPermissionScope.TENANT);
+                ManagementPermissionScope.PLATFORM)
+            : catalog.validate(permissions, ManagementPermissionScope.PLATFORM);
     requireGrantable(grantablePermissions, codes);
     repository.updateRole(tenantId, id, n.strip(), description);
     replacePermissions(id, codes);
@@ -172,10 +180,11 @@ public class AdminAccessService {
   /** 确保租户存在系统预置角色：超级管理员（全部权限）与只读管理员（仅查看权限）。 */
   @Transactional
   public void ensureDefaultRoles(UUID tenant) {
-    var codes = catalog.activeCodes(ManagementPermissionScope.TENANT);
-    ensureSystemRole(tenant, "超级管理员", "拥有所有权限的系统管理员", codes);
+    var codes = catalog.activeCodes(ManagementPermissionScope.PLATFORM);
+    ensureSystemRole(tenant, "super_admin", "超级管理员", "拥有所有权限的系统管理员", codes);
     ensureSystemRole(
         tenant,
+        "read_only_admin",
         "只读管理员",
         "仅拥有查看权限的系统管理员",
         codes.stream().filter(code -> code.value().endsWith(":read")).toList());
@@ -196,10 +205,10 @@ public class AdminAccessService {
             .count());
   }
 
-  /** 返回租户作用域下全部启用权限的视图列表（角色授权界面使用）。 */
+  /** 返回平台作用域下全部启用权限的视图列表（角色授权界面使用）。 */
   @Transactional(readOnly = true)
   public List<ManagementPermissionView> catalog() {
-    return catalog.activeViews(ManagementPermissionScope.TENANT);
+    return catalog.activeViews(ManagementPermissionScope.PLATFORM);
   }
 
   /** 统计管理员成员总量、启用/停用数、MFA 启用数与 owner 角色账号数。 */
@@ -352,6 +361,7 @@ public class AdminAccessService {
         r.id(),
         r.tenantId(),
         r.name(),
+        r.code(),
         r.description(),
         r.permissions().stream().map(ManagementPermissionEntity::code).toList(),
         r.systemRole(),
@@ -366,6 +376,7 @@ public class AdminAccessService {
         r.id(),
         r.tenantId(),
         r.name(),
+        r.code(),
         r.description(),
         r.permissions().stream().map(ManagementPermissionEntity::code).toList(),
         r.systemRole(),
@@ -376,7 +387,7 @@ public class AdminAccessService {
 
   /** 确保租户存在指定系统预置角色，不存在则创建并绑定权限。 */
   private void ensureSystemRole(
-      UUID tenant, String name, String description, List<ManagementPermissionCode> permissions) {
+      UUID tenant, String code, String name, String description, List<ManagementPermissionCode> permissions) {
     boolean exists = repository.roleExists(tenant, name);
     if (!exists) {
       UUID id = UuidV7.randomUuid();
@@ -387,6 +398,7 @@ public class AdminAccessService {
                   d.setId(id)
                       .setTenantId(tenant)
                       .setName(name)
+                      .setCode(code)
                       .setDescription(description)
                       .setSystemRole(true)
                       .setCreatedAt(now)
@@ -398,7 +410,15 @@ public class AdminAccessService {
   /** 校验角色名称并校验权限码（租户作用域）。 */
   private List<ManagementPermissionCode> validate(String name, List<String> permissions) {
     validateName(name);
-    return catalog.validate(permissions, ManagementPermissionScope.TENANT);
+    return catalog.validate(permissions, ManagementPermissionScope.PLATFORM);
+  }
+
+  /** 校验并规范化角色编码。 */
+  private String validateCode(String code) {
+    if (code == null || !code.strip().matches("[a-z][a-z0-9_]{1,99}")) {
+      throw new DomainException(ErrorCodeConstants.ROLE_CODE_INVALID);
+    }
+    return code.strip();
   }
 
   /** 校验角色名称非空且不超过 100 字。 */
