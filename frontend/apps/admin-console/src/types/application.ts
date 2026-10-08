@@ -3,7 +3,7 @@ export type ApplicationType = 'web' | 'native' | 'spa' | 'machine'
 
 export interface Application {
   id: string
-  tenantId: string
+  userPoolId: string
   name: string
   logo: string | null
   description: string | null

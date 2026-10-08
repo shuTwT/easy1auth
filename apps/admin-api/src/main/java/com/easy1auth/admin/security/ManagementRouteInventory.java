@@ -2,7 +2,7 @@ package com.easy1auth.admin.security;
 
 import com.easy1auth.admin.annotation.ManagementRouteClassification;
 import com.easy1auth.admin.annotation.PlatformManagementPermission;
-import com.easy1auth.admin.annotation.TenantManagementPermission;
+import com.easy1auth.admin.annotation.UserPoolManagementPermission;
 import com.easy1auth.admin.constant.ManagementRouteKind;
 import com.easy1auth.system.constant.ManagementPermissionCode;
 import com.easy1auth.system.constant.ManagementPermissionScope;
@@ -30,8 +30,8 @@ import java.util.Set;
  *
  * <p>应用启动时扫描 {@code com.easy1auth.admin.web} 包下全部控制器路由，解析每个路由
  * 声明的权限注解或路由分类并构建内部索引；运行期按请求路径与方法匹配路由，供
- * {@link TenantContextFilter} 与 {@link TenantSecurityFilter} 判断是否需要租户上下文、
- * 要求何种租户权限。</p>
+ * {@link UserPoolContextFilter} 与 {@link UserPoolSecurityFilter} 判断是否需要用户池上下文、
+ * 要求何种用户池权限。</p>
  */
 @Component
 public final class ManagementRouteInventory implements SmartInitializingSingleton {
@@ -72,16 +72,16 @@ public final class ManagementRouteInventory implements SmartInitializingSingleto
         routes = List.copyOf(discovered);
     }
 
-    /** 判断当前请求是否要求先建立租户上下文（租户权限路由或授权上下文路由）。 */
-    public boolean requiresTenantContext(HttpServletRequest request) {
-        return metadata(request).map(RouteMetadata::requiresTenantContext).orElse(false);
+    /** 判断当前请求是否要求先建立用户池上下文（用户池权限路由或授权上下文路由）。 */
+    public boolean requiresUserPoolContext(HttpServletRequest request) {
+        return metadata(request).map(RouteMetadata::requiresUserPoolContext).orElse(false);
     }
 
-    /** 返回当前请求要求的租户权限编码；路由无租户权限要求时返回空。 */
+    /** 返回当前请求要求的用户池权限编码；路由无用户池权限要求时返回空。 */
     public Optional<ManagementPermissionCode> tenantPermission(HttpServletRequest request) {
         return metadata(request)
                 .map(RouteMetadata::tenant)
-                .map(TenantManagementPermission::value);
+                .map(UserPoolManagementPermission::value);
     }
 
     /** 按请求路径与方法匹配内部路由索引，返回对应的路由元数据。 */
@@ -97,12 +97,12 @@ public final class ManagementRouteInventory implements SmartInitializingSingleto
     /**
      * 提取处理器方法的权限元数据。
      *
-     * <p>一个方法必须在租户权限、平台权限、路由分类三者中恰好声明一种，否则视为配置
+     * <p>一个方法必须在用户池权限、平台权限、路由分类三者中恰好声明一种，否则视为配置
      * 错误；同时按声明类型做对应的一致性校验。</p>
      */
     private static RouteMetadata metadata(HandlerMethod handler, RequestMappingInfo mapping) {
         Method method = handler.getMethod();
-        TenantManagementPermission tenant = method.getAnnotation(TenantManagementPermission.class);
+        UserPoolManagementPermission tenant = method.getAnnotation(UserPoolManagementPermission.class);
         PlatformManagementPermission platform = method.getAnnotation(PlatformManagementPermission.class);
         ManagementRouteClassification classification = method.getAnnotation(ManagementRouteClassification.class);
         int declarations = (tenant == null ? 0 : 1) + (platform == null ? 0 : 1) + (classification == null ? 0 : 1);
@@ -110,7 +110,7 @@ public final class ManagementRouteInventory implements SmartInitializingSingleto
             throw invalid(handler, "must declare exactly one tenant requirement, platform requirement, or explicit classification");
         }
         if (tenant != null) {
-            validateTenant(handler, tenant);
+            validateUserPool(handler, tenant);
             return new RouteMetadata(tenant, null, null);
         }
         if (platform != null) {
@@ -121,10 +121,10 @@ public final class ManagementRouteInventory implements SmartInitializingSingleto
         return new RouteMetadata(null, null, classification.value());
     }
 
-    /** 校验租户权限编码：scope 必须为 TENANT，且类型为 ACTION 或 MENU。 */
-    private static void validateTenant(HandlerMethod handler, TenantManagementPermission requirement) {
+    /** 校验用户池权限编码：scope 必须为 USER_POOL，且类型为 ACTION 或 MENU。 */
+    private static void validateUserPool(HandlerMethod handler, UserPoolManagementPermission requirement) {
         ManagementPermissionCode code = requirement.value();
-        if (code.scope() != ManagementPermissionScope.TENANT
+        if (code.scope() != ManagementPermissionScope.USER_POOL
                 || (code.type() != ManagementPermissionType.ACTION && code.type() != ManagementPermissionType.MENU)) {
             throw invalid(handler, "has an invalid tenant permission");
         }
@@ -153,7 +153,7 @@ public final class ManagementRouteInventory implements SmartInitializingSingleto
         if (kind == ManagementRouteKind.AUTHORIZATION_CONTEXT && !"AuthorizationContextController".equals(controller)) {
             throw invalid(handler, "is not the authorization context route");
         }
-        if (kind == ManagementRouteKind.DEFERRED_TODO_7 && !"TenantController".equals(controller)) {
+        if (kind == ManagementRouteKind.DEFERRED_TODO_7 && !"UserPoolController".equals(controller)) {
             throw invalid(handler, "is not a Todo 7 tenant control-plane route");
         }
     }
@@ -191,18 +191,18 @@ public final class ManagementRouteInventory implements SmartInitializingSingleto
     }
 
     /**
-     * 路由权限元数据：租户权限、平台权限与路由分类三者恰好存一。
+     * 路由权限元数据：用户池权限、平台权限与路由分类三者恰好存一。
      *
-     * @param tenant        租户级权限注解（有则要求租户上下文）
+     * @param tenant        用户池级权限注解（有则要求用户池上下文）
      * @param platform      平台级权限注解
      * @param classification 显式路由分类
      */
     private record RouteMetadata(
-            TenantManagementPermission tenant,
+            UserPoolManagementPermission tenant,
             PlatformManagementPermission platform,
             ManagementRouteKind classification) {
-        /** 是否需要先建立租户上下文（租户权限路由或授权上下文路由）。 */
-        boolean requiresTenantContext() {
+        /** 是否需要先建立用户池上下文（用户池权限路由或授权上下文路由）。 */
+        boolean requiresUserPoolContext() {
             return tenant != null || classification == ManagementRouteKind.AUTHORIZATION_CONTEXT;
         }
     }

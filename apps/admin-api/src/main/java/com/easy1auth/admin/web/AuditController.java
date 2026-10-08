@@ -1,7 +1,7 @@
 package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.web.dto.*;
-import com.easy1auth.admin.annotation.TenantManagementPermission;
+import com.easy1auth.admin.annotation.UserPoolManagementPermission;
 import com.easy1auth.system.constant.ManagementPermissionCode;
 import com.easy1auth.audit.dto.AuditQuery;
 import com.easy1auth.audit.service.AuditService;
@@ -18,7 +18,7 @@ import java.util.*;
  *
  * <p>管理端 REST 入口，基路径 {@code /api/audit-logs}，提供审计日志的分页查询、
  * 统计汇总、单条详情与按时间清理能力。所有操作均通过
- * {@link TenantManagementPermission} 做租户级权限控制，并以 {@link ApiResponse}
+ * {@link UserPoolManagementPermission} 做用户池级权限控制，并以 {@link ApiResponse}
  * 统一包装返回。</p>
  */
 @RestController
@@ -32,7 +32,7 @@ public class AuditController {
     }
 
     /** 分页查询审计日志，支持按用户名、类型、动作、状态与时间段过滤。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.AUDIT_LIST)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.AUDIT_LIST)
     @GetMapping
     ApiResponse<?> list(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int pageSize, @RequestParam(required = false) String username, @RequestParam(required = false) String type, @RequestParam(required = false) String action, @RequestParam(required = false) String status, @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startDate, @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endDate) {
         var p = service.list(page, pageSize, new AuditQuery(username, type, action, "failed".equals(status) ? "failure" : status, startDate, endDate));
@@ -40,7 +40,7 @@ public class AuditController {
     }
 
     /** 查询审计日志的整体统计汇总。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.AUDIT_STATS)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.AUDIT_STATS)
     @GetMapping("/stats")
     ApiResponse<?> stats() {
         var s = service.stats();
@@ -48,14 +48,14 @@ public class AuditController {
     }
 
     /** 查询指定审计日志的详情。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.AUDIT_READ)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.AUDIT_READ)
     @GetMapping("/{id}")
     ApiResponse<?> get(@PathVariable UUID id) {
         return ApiResponse.ok(legacy(service.get(id)));
     }
 
     /** 清理超过指定天数的历史审计日志，返回被清理的条数。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.AUDIT_CLEANUP)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.AUDIT_CLEANUP)
     @DeleteMapping("/cleanup")
     ApiResponse<?> cleanup(@RequestParam(defaultValue = "90") int days) {
         return ApiResponse.ok(new CleanupResponse(service.cleanup(days)), "审计日志清理完成");
@@ -63,7 +63,7 @@ public class AuditController {
 
     /** 把审计事件实体转换为接口层的审计日志响应（兼容旧字段命名）。 */
     private static AuditLogResponse legacy(com.easy1auth.audit.model.AuditEventEntity e) {
-        return new AuditLogResponse(e.id(), e.tenantId(), e.actorId(), e.actorName(), e.eventType(), e.action(),
+        return new AuditLogResponse(e.id(), e.userPoolId(), e.actorId(), e.actorName(), e.eventType(), e.action(),
                 e.resourceType(), e.resourceId(), e.method(), e.ipAddress() == null ? "" : e.ipAddress(),
                 e.userAgent(), null, "failure".equals(e.outcome()) ? "failed" : "success", e.errorCode(),
                 e.details(), e.createdAt());
@@ -93,7 +93,7 @@ public class AuditController {
      * 审计日志响应（接口层视图）。
      *
      * @param id           日志 ID
-     * @param tenantId     所属租户 ID
+     * @param userPoolId     所属用户池 ID
      * @param userId       操作账号 ID
      * @param username     操作账号名
      * @param type         日志类型

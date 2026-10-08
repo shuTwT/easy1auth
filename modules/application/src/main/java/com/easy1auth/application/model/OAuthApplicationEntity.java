@@ -1,7 +1,7 @@
 package com.easy1auth.application.model;
 
 import com.easy1auth.framework.persistence.model.BaseEntity;
-import com.easy1auth.framework.tenant.persistence.model.BaseTenantEntity;
+import com.easy1auth.framework.tenant.persistence.model.BaseUserPoolEntity;
 
 import org.babyfish.jimmer.sql.*;
 import org.jspecify.annotations.Nullable;
@@ -12,15 +12,15 @@ import java.util.List;
 /**
  * OAuth2 应用实体（对应 oauth_application 表）。
  *
- * <p>表示租户下注册的一个 OAuth2 / OIDC 客户端应用，配置其类型、回调地址、
+ * <p>表示用户池下注册的一个 OAuth2 / OIDC 客户端应用，配置其类型、回调地址、
  * 授权类型、作用域与令牌有效期等。继承 {@link BaseEntity} 与
- * {@link BaseTenantEntity}，具备通用字段与租户隔离能力。</p>
+ * {@link BaseUserPoolEntity}，具备通用字段与用户池隔离能力。</p>
  */
 @Entity
 @Table(name = "oauth_application")
-public interface OAuthApplicationEntity extends BaseEntity, BaseTenantEntity {
+public interface OAuthApplicationEntity extends BaseEntity, BaseUserPoolEntity {
 
-    /** 应用名称（同一租户内唯一） */
+    /** 应用名称（同一用户池内唯一） */
     String name();
 
     /** 应用 Logo（可为空） */

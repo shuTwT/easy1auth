@@ -50,17 +50,17 @@ export function useAuth() {
       const user = response.user
       userStore.setSession(response.token, response.refreshToken)
       userStore.setUserInfo(response.user)
-      if (response.tenants && response.tenants.length > 0) {
-        userStore.setTenants(response.tenants)
+      if (response.userPools && response.userPools.length > 0) {
+        userStore.setUserPools(response.userPools)
         
-        let currentTenant = response.tenants.find(t => t.id === user.currentTenantId)
+        let currentUserPool = response.userPools.find(t => t.id === user.currentUserPoolId)
         
-        if (!currentTenant) {
-          currentTenant = response.tenants[0]
+        if (!currentUserPool) {
+          currentUserPool = response.userPools[0]
         }
         
-        if (currentTenant) {
-          userStore.setCurrentTenant(currentTenant)
+        if (currentUserPool) {
+          userStore.setCurrentUserPool(currentUserPool)
         }
       }
       message.success('登录成功')
@@ -82,9 +82,9 @@ export function useAuth() {
       mfaChallenge.value = null
       userStore.setSession(response.token, response.refreshToken)
       userStore.setUserInfo(response.user)
-      if (response.tenants?.length) {
-        userStore.setTenants(response.tenants)
-        userStore.setCurrentTenant(response.tenants.find(t => t.id === response.user?.currentTenantId) || response.tenants[0] || null)
+      if (response.userPools?.length) {
+        userStore.setUserPools(response.userPools)
+        userStore.setCurrentUserPool(response.userPools.find(t => t.id === response.user?.currentUserPoolId) || response.userPools[0] || null)
       }
       message.success('登录成功')
       await router.push('/dashboard')
@@ -133,17 +133,17 @@ export function useAuth() {
       const response = await authApi.register(data)
       userStore.setSession(response.token, response.refreshToken)
       userStore.setUserInfo(response.user)
-      if (response.tenants && response.tenants.length > 0) {
-        userStore.setTenants(response.tenants)
+      if (response.userPools && response.userPools.length > 0) {
+        userStore.setUserPools(response.userPools)
         
-        let currentTenant = response.tenants.find(t => t.id === response.user.currentTenantId)
+        let currentUserPool = response.userPools.find(t => t.id === response.user.currentUserPoolId)
         
-        if (!currentTenant) {
-          currentTenant = response.tenants[0]
+        if (!currentUserPool) {
+          currentUserPool = response.userPools[0]
         }
         
-        if (currentTenant) {
-          userStore.setCurrentTenant(currentTenant)
+        if (currentUserPool) {
+          userStore.setCurrentUserPool(currentUserPool)
         }
       }
       message.success('注册成功')

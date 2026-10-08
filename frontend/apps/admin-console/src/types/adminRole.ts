@@ -2,7 +2,7 @@
 // Keep aligned with the Java admin API contract.
 // These types are intentionally separate from the normal Role types; admin roles
 // are a distinct domain with their own endpoints (/admin-roles/*).
-import type { ManagementPermission } from './tenantPackage'
+import type { ManagementPermission } from './userPoolPackage'
 
 /**
  * Admin role as returned by the admin-management API.
@@ -12,7 +12,7 @@ import type { ManagementPermission } from './tenantPackage'
  */
 export interface AdminRole {
   id: string
-  tenantId: string
+  userPoolId: string
   name: string
   code: string
   description: string | null

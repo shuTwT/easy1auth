@@ -10,7 +10,7 @@ import type {
 } from '@/types/adminRole'
 
 // Admin-role API module. Calls /admin-roles/* endpoints exclusively.
-// The request interceptor adds the Authorization header and tenant-id header
+// The request interceptor adds the Authorization header and user-pool-id header
 // automatically; no tenant params are needed here.
 
 export const adminRoleApi = {

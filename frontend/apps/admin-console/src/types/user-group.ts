@@ -1,6 +1,6 @@
 export interface UserGroup {
   id: string
-  tenantId: string
+  userPoolId: string
   name: string
   description?: string
   type: GroupType
@@ -62,7 +62,7 @@ export interface GroupStats {
 
 export interface User {
   id: string
-  tenantId: string
+  userPoolId: string
   username: string
   email: string | null
   phone?: string

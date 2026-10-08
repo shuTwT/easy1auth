@@ -1,7 +1,7 @@
 package com.easy1auth.security.model;
 
 import com.easy1auth.framework.persistence.model.BaseEntity;
-import com.easy1auth.framework.tenant.persistence.model.BaseTenantEntity;
+import com.easy1auth.framework.tenant.persistence.model.BaseUserPoolEntity;
 import org.babyfish.jimmer.sql.*;
 
 import java.time.Instant;
@@ -9,12 +9,12 @@ import java.time.Instant;
 /**
  * 安全策略实体（对应 security_policy 表）。
  *
- * <p>保存租户（tenant_id 为空的记录为平台全局策略）的密码强度、有效期、
+ * <p>保存用户池（tenant_id 为空的记录为平台全局策略）的密码强度、有效期、
  * 防重用、MFA 要求与登录锁定等配置，供登录与改密流程强制执行。</p>
  */
 @Entity
 @Table(name = "security_policy")
-public interface SecurityPolicyEntity extends BaseEntity, BaseTenantEntity {
+public interface SecurityPolicyEntity extends BaseEntity, BaseUserPoolEntity {
     /** 密码最小长度（默认 8，合法范围 8-128） */
     @Column(name = "password_min_length")
     int passwordMinLength();

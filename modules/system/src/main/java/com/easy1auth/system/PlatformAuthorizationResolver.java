@@ -6,9 +6,9 @@ import com.easy1auth.system.constant.ManagementPermissionScope;
 import com.easy1auth.system.dto.PlatformAuthorization;
 import com.easy1auth.system.model.AdminAccountEntityTable;
 import com.easy1auth.framework.common.error.DomainException;
-import com.easy1auth.tenant.model.TenantEntity;
-import com.easy1auth.tenant.model.TenantEntityTable;
-import com.easy1auth.tenant.model.TenantMembershipEntityTable;
+import com.easy1auth.tenant.model.UserPoolEntity;
+import com.easy1auth.tenant.model.UserPoolEntityTable;
+import com.easy1auth.tenant.model.UserPoolMembershipEntityTable;
 import org.babyfish.jimmer.sql.JSqlClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,8 +19,8 @@ import java.util.UUID;
 /**
  * 平台授权解析器：解析管理账号的平台级（PLATFORM 作用域）权限。
  *
- * <p>平台权限仅授予系统租户中处于 active 状态的 super_admin 账号。解析时依次
- * 校验账号有效性、系统租户唯一性以及账号是否为系统租户的激活超管，通过后
+ * <p>平台权限仅授予系统用户池中处于 active 状态的 super_admin 账号。解析时依次
+ * 校验账号有效性、系统用户池唯一性以及账号是否为系统用户池的激活超管，通过后
  * 返回其持有的全部平台权限码集合。</p>
  */
 @Service
@@ -28,9 +28,9 @@ public class PlatformAuthorizationResolver {
     /** admin_account 表静态描述符 */
     private static final AdminAccountEntityTable ACCOUNT = AdminAccountEntityTable.$;
     /** tenant 表静态描述符 */
-    private static final TenantEntityTable TENANT = TenantEntityTable.$;
+    private static final UserPoolEntityTable USER_POOL = UserPoolEntityTable.$;
     /** tenant_membership 表静态描述符 */
-    private static final TenantMembershipEntityTable MEMBERSHIP = TenantMembershipEntityTable.$;
+    private static final UserPoolMembershipEntityTable MEMBERSHIP = UserPoolMembershipEntityTable.$;
 
     /** jimmer SQL 客户端 */
     private final JSqlClient sql;
@@ -42,17 +42,17 @@ public class PlatformAuthorizationResolver {
         this.catalog = catalog;
     }
 
-    /** 解析账号的平台授权；账号非系统租户激活 super_admin 时抛出访问被拒异常。 */
+    /** 解析账号的平台授权；账号非系统用户池激活 super_admin 时抛出访问被拒异常。 */
     @Transactional(readOnly = true)
     public PlatformAuthorization resolve(UUID accountId) {
         if (!isActiveAccount(accountId)) {
             throw accessDenied();
         }
-        TenantEntity systemTenant = uniqueActiveSystemTenant();
+        UserPoolEntity systemUserPool = uniqueActiveSystemUserPool();
         boolean activeSuperAdmin = sql.createQuery(MEMBERSHIP)
                 .where(
                         MEMBERSHIP.accountId().eq(accountId),
-                        MEMBERSHIP.tenantId().eq(systemTenant.id()),
+                        MEMBERSHIP.userPoolId().eq(systemUserPool.id()),
                         MEMBERSHIP.membershipRole().eq("super_admin"),
                         MEMBERSHIP.status().eq("active"))
                 .select(MEMBERSHIP.id())
@@ -61,7 +61,7 @@ public class PlatformAuthorizationResolver {
             throw accessDenied();
         }
         Set<ManagementPermissionCode> permissions = Set.copyOf(catalog.activeCodes(ManagementPermissionScope.PLATFORM));
-        return new PlatformAuthorization(systemTenant.id(), permissions);
+        return new PlatformAuthorization(systemUserPool.id(), permissions);
     }
 
     /** 校验账号持有指定平台权限：不满足则抛出权限不足异常，满足则返回平台授权。 */
@@ -85,16 +85,16 @@ public class PlatformAuthorizationResolver {
                 .exists();
     }
 
-    /** 查询系统中唯一且激活的系统租户，数量或状态异常时抛出领域异常。 */
-    private TenantEntity uniqueActiveSystemTenant() {
-        var systemTenants = sql.createQuery(TENANT)
-                .where(TENANT.system().eq(true))
-                .select(TENANT)
+    /** 查询系统中唯一且激活的系统用户池，数量或状态异常时抛出领域异常。 */
+    private UserPoolEntity uniqueActiveSystemUserPool() {
+        var systemUserPools = sql.createQuery(USER_POOL)
+                .where(USER_POOL.system().eq(true))
+                .select(USER_POOL)
                 .execute();
-        if (systemTenants.size() != 1 || !"active".equals(systemTenants.getFirst().status())) {
-            throw new DomainException(ErrorCodeConstants.SYSTEM_TENANT_INVALID);
+        if (systemUserPools.size() != 1 || !"active".equals(systemUserPools.getFirst().status())) {
+            throw new DomainException(ErrorCodeConstants.SYSTEM_USER_POOL_INVALID);
         }
-        return systemTenants.getFirst();
+        return systemUserPools.getFirst();
     }
 
     /** 构造平台访问被拒的领域异常。 */

@@ -1,7 +1,7 @@
 package com.easy1auth.poolidentity.model;
 
 import com.easy1auth.framework.persistence.model.BaseEntity;
-import com.easy1auth.framework.tenant.persistence.model.BaseTenantEntity;
+import com.easy1auth.framework.tenant.persistence.model.BaseUserPoolEntity;
 import org.babyfish.jimmer.sql.*;
 import org.jspecify.annotations.Nullable;
 
@@ -11,14 +11,14 @@ import java.util.*;
 /**
  * pool_user 实体（对应 pool_user 表）。
  *
- * <p>第三方接入的用户体系，按租户隔离，供第三方授权登录使用。
+ * <p>第三方接入的用户体系，按用户池隔离，供第三方授权登录使用。
  * 此类用户不在系统后台登录，Token 也不得与管理端（admin_user）混用。
  * 包含登录凭证、验证状态、组织归属（部门/岗位）、企业身份源映射与自定义属性。</p>
  */
 @Entity
 @Table(name = "pool_user")
-public interface PoolUserEntity extends BaseEntity, BaseTenantEntity {
-    /** 登录用户名（租户内唯一，用于授权登录） */
+public interface PoolUserEntity extends BaseEntity, BaseUserPoolEntity {
+    /** 登录用户名（用户池内唯一，用于授权登录） */
     String username();
 
     /** 邮箱（可为 null，登录时可作备选标识） */

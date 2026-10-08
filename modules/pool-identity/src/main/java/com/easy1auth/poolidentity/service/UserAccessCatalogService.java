@@ -2,7 +2,7 @@ package com.easy1auth.poolidentity.service;
 
 import com.easy1auth.poolidentity.dto.*;
 import com.easy1auth.poolidentity.model.*;
-import com.easy1auth.framework.tenant.context.TenantContextHolder;
+import com.easy1auth.framework.tenant.context.UserPoolContextHolder;
 
 import com.easy1auth.poolidentity.dto.PoolUserView;
 import com.easy1auth.framework.common.error.DomainException;
@@ -19,7 +19,7 @@ import java.util.*;
 /**
  * 用户访问控制目录服务：管理 pool_user 的角色、权限及其层级与分配关系。
  *
- * <p>角色（{@link PoolRoleEntity}）按租户隔离，支持数据范围（dataScope）与
+ * <p>角色（{@link PoolRoleEntity}）按用户池隔离，支持数据范围（dataScope）与
  * 权限集合配置，内置角色（type=system）不可修改或删除；权限（
  * {@link PoolPermissionEntity}）区分 menu / operation / data 三类，可组成树形结构。
  * 本服务仅服务于 pool_user 的访问控制，与管理端（admin_user）角色体系相互独立。</p>
@@ -40,7 +40,7 @@ public class UserAccessCatalogService {
         this.repository = repository;
     }
 
-    /** 分页查询租户下的角色，可按名称/编码模糊搜索、按类型过滤，按创建时间倒序。 */
+    /** 分页查询用户池下的角色，可按名称/编码模糊搜索、按类型过滤，按创建时间倒序。 */
     @Transactional(readOnly = true)
     public PageData<RoleView> roles(UUID tenant, int page, int pageSize, String search, String type) {
         int p = Math.max(1, page), size = Math.min(100, Math.max(1, pageSize));
@@ -48,7 +48,7 @@ public class UserAccessCatalogService {
         return PageData.of(rows.stream().skip((long) (p - 1) * size).limit(size).map(this::roleView).toList(), p, size, rows.size());
     }
 
-    /** 查询租户下单个角色的详情视图。 */
+    /** 查询用户池下单个角色的详情视图。 */
     @Transactional(readOnly = true)
     public RoleView role(UUID tenant, UUID id) {
         return roleView(roleEntity(tenant, id));
@@ -63,7 +63,7 @@ public class UserAccessCatalogService {
         validateRole(in.name(), in.code(), in.dataScope());
         validateRoleParent(tenant, null, in.parentId());
         Instant now = Instant.now();
-        var e = PoolRoleEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTenantId(tenant)
+        var e = PoolRoleEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setUserPoolId(tenant)
                 .setName(in.name()).setCode(in.code()).setDescription(in.description()).setType(in.type() == null ? "custom" : in.type())
                 .setPermissions(in.permissions() == null ? Map.of() : in.permissions()).setDataScope(in.dataScope() == null ? "self" : in.dataScope())
                 .setParentId(in.parentId()).setCreatedAt(now).setUpdatedAt(now));
@@ -101,7 +101,7 @@ public class UserAccessCatalogService {
         repository.deleteRole(tenant, id);
     }
 
-    /** 构建租户下的角色树（按父角色 parentId 组织层级）。 */
+    /** 构建用户池下的角色树（按父角色 parentId 组织层级）。 */
     @Transactional(readOnly = true)
     public List<RoleTree> roleTree(UUID tenant) {
         var roles = repository.findAllRoles(tenant);
@@ -119,7 +119,7 @@ public class UserAccessCatalogService {
         return roots.stream().map(MutableRoleTree::freeze).toList();
     }
 
-    /** 统计租户下的角色总数、内置/自定义角色数以及已分配角色的去重用户数。 */
+    /** 统计用户池下的角色总数、内置/自定义角色数以及已分配角色的去重用户数。 */
     @Transactional(readOnly = true)
     public RoleStats roleStats(UUID tenant) {
         var roles = repository.findAllRoles(tenant);
@@ -190,7 +190,7 @@ public class UserAccessCatalogService {
         return "self";
     }
 
-    /** 分页查询租户下的权限，支持名称/编码/资源搜索及类型/资源过滤。 */
+    /** 分页查询用户池下的权限，支持名称/编码/资源搜索及类型/资源过滤。 */
     @Transactional
     public PageData<PermissionView> permissions(UUID tenant, int page, int pageSize, String search, String type, String resource) {
         int p = Math.max(1, page), size = Math.min(200, Math.max(1, pageSize));
@@ -198,7 +198,7 @@ public class UserAccessCatalogService {
         return PageData.of(rows.stream().skip((long) (p - 1) * size).limit(size).map(this::permissionView).toList(), p, size, rows.size());
     }
 
-    /** 查询租户下单个权限的详情视图。 */
+    /** 查询用户池下单个权限的详情视图。 */
     @Transactional(readOnly = true)
     public PermissionView permission(UUID tenant, UUID id) {
         return permissionView(permissionEntity(tenant, id));
@@ -210,7 +210,7 @@ public class UserAccessCatalogService {
         validatePermission(in.name(), in.code(), in.type(), in.resource(), in.action());
         validatePermissionParent(tenant, null, in.parentId());
         Instant now = Instant.now();
-        var e = PoolPermissionEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTenantId(tenant).setCode(in.code()).setName(in.name())
+        var e = PoolPermissionEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setUserPoolId(tenant).setCode(in.code()).setName(in.name())
                 .setDescription(in.description()).setType("data").setParentId(in.parentId()).setSpaceId(in.spaceId()).setOperations(in.operations() == null ? List.of() : in.operations()).setResource(in.resource()).setAction(in.action()).setCreatedAt(now).setUpdatedAt(now));
         repository.savePermission(e);
         return permissionView(e);
@@ -237,7 +237,7 @@ public class UserAccessCatalogService {
         repository.deletePermission(tenant, id);
     }
 
-    /** 构建租户下的权限树（按父权限 parentId 组织层级）。 */
+    /** 构建用户池下的权限树（按父权限 parentId 组织层级）。 */
     @Transactional
     public List<PermissionTree> permissionTree(UUID tenant) {
         var rows = repository.findAllPermissions(tenant);
@@ -255,7 +255,7 @@ public class UserAccessCatalogService {
         return roots.stream().map(MutablePermissionTree::freeze).toList();
     }
 
-    /** 统计租户下的权限总数及 menu / operation / data 三类数量。 */
+    /** 统计用户池下的权限总数及 menu / operation / data 三类数量。 */
     @Transactional
     public PermissionStats permissionStats(UUID tenant) {
         var rows = repository.findPermissionTypes(tenant);
@@ -273,7 +273,7 @@ public class UserAccessCatalogService {
             throw new DomainException(ErrorCodeConstants.PERMISSION_INVALID);
         }
         Instant now = Instant.now();
-        var entity = PoolPermissionSpaceEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTenantId(tenant)
+        var entity = PoolPermissionSpaceEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setUserPoolId(tenant)
                 .setName(in.name()).setCode(in.code()).setDescription(in.description()).setCreatedAt(now).setUpdatedAt(now));
         repository.savePermissionSpace(entity);
         return permissionSpaceView(entity);
@@ -293,11 +293,11 @@ public class UserAccessCatalogService {
     }
 
     private PermissionSpaceView permissionSpaceView(PoolPermissionSpaceEntity space) {
-        return new PermissionSpaceView(space.id(), space.tenantId(), space.name(), space.code(), space.description(), space.createdAt(), space.updatedAt());
+        return new PermissionSpaceView(space.id(), space.userPoolId(), space.name(), space.code(), space.description(), space.createdAt(), space.updatedAt());
     }
 
     private void insertAssignment(UUID tenant, UUID user, UUID role) {
-        var id = UserRoleAssignmentIdDraft.$.produce(d -> d.setTenantId(tenant).setUserId(user).setRoleId(role));
+        var id = UserRoleAssignmentIdDraft.$.produce(d -> d.setUserPoolId(tenant).setUserId(user).setRoleId(role));
         repository.saveAssignment(UserRoleAssignmentEntityDraft.$.produce(d -> d.setId(id)));
     }
 
@@ -318,11 +318,11 @@ public class UserAccessCatalogService {
     }
 
     private RoleView roleView(PoolRoleEntity r) {
-        return new RoleView(r.id(), r.tenantId(), r.name(), r.code(), r.description(), r.type(), r.permissions(), r.dataScope(), r.parentId(), r.createdAt(), r.updatedAt(), assignmentCount(r.tenantId(), r.id()), roleParent(r.tenantId(), r.parentId()));
+        return new RoleView(r.id(), r.userPoolId(), r.name(), r.code(), r.description(), r.type(), r.permissions(), r.dataScope(), r.parentId(), r.createdAt(), r.updatedAt(), assignmentCount(r.userPoolId(), r.id()), roleParent(r.userPoolId(), r.parentId()));
     }
 
     private PermissionView permissionView(PoolPermissionEntity p) {
-        return new PermissionView(p.id(), p.tenantId(), p.code(), p.name(), p.description(), p.type(), p.resource(), p.action(), p.parentId(), p.spaceId(), p.operations(), p.createdAt(), p.updatedAt(), permissionParent(p.tenantId(), p.parentId()));
+        return new PermissionView(p.id(), p.userPoolId(), p.code(), p.name(), p.description(), p.type(), p.resource(), p.action(), p.parentId(), p.spaceId(), p.operations(), p.createdAt(), p.updatedAt(), permissionParent(p.userPoolId(), p.parentId()));
     }
 
     private ParentSummary roleParent(UUID tenant, UUID id) {
@@ -342,7 +342,7 @@ public class UserAccessCatalogService {
     }
 
     private PoolUserView userView(PoolUserEntity e) {
-        return new PoolUserView(e.id(), e.tenantId(), e.username(), e.email(), e.phone(), e.name(), e.avatar(), e.status(), e.emailVerified(), e.phoneVerified(), e.department(), e.position(), e.customAttributes(), e.lastLoginAt(), e.createdAt(), e.updatedAt());
+        return new PoolUserView(e.id(), e.userPoolId(), e.username(), e.email(), e.phone(), e.name(), e.avatar(), e.status(), e.emailVerified(), e.phoneVerified(), e.department(), e.position(), e.customAttributes(), e.lastLoginAt(), e.createdAt(), e.updatedAt());
     }
 
     private void validateRoleParent(UUID tenant, UUID self, UUID parent) {
@@ -391,76 +391,76 @@ public class UserAccessCatalogService {
         }
     }
 
-    /** 从当前租户上下文取租户 ID 后查询角色下的用户。 */
+    /** 从当前用户池上下文取用户池 ID 后查询角色下的用户。 */
     @Transactional(readOnly = true)
     public RoleUsers roleUsers(UUID roleId, String search) {
-        return roleUsers(TenantContextHolder.requireTenantId(), roleId, search);
+        return roleUsers(UserPoolContextHolder.requireUserPoolId(), roleId, search);
     }
 
-    /** 从当前租户上下文取租户 ID 后给角色分配用户。 */
+    /** 从当前用户池上下文取用户池 ID 后给角色分配用户。 */
     @Transactional
     public void assignUsers(UUID roleId, Collection<UUID> users) {
-        assignUsers(TenantContextHolder.requireTenantId(), roleId, users);
+        assignUsers(UserPoolContextHolder.requireUserPoolId(), roleId, users);
     }
 
-    /** 从当前租户上下文取租户 ID 后移除角色下的用户。 */
+    /** 从当前用户池上下文取用户池 ID 后移除角色下的用户。 */
     @Transactional
     public void removeUsers(UUID roleId, Collection<UUID> users) {
-        removeUsers(TenantContextHolder.requireTenantId(), roleId, users);
+        removeUsers(UserPoolContextHolder.requireUserPoolId(), roleId, users);
     }
 
-    /** 从当前租户上下文取租户 ID 后查询用户的角色。 */
+    /** 从当前用户池上下文取用户池 ID 后查询用户的角色。 */
     @Transactional(readOnly = true)
     public List<RoleView> rolesForUser(UUID userId) {
-        return rolesForUser(TenantContextHolder.requireTenantId(), userId);
+        return rolesForUser(UserPoolContextHolder.requireUserPoolId(), userId);
     }
 
-    /** 从当前租户上下文取租户 ID 后替换用户的角色分配。 */
+    /** 从当前用户池上下文取用户池 ID 后替换用户的角色分配。 */
     @Transactional
     public void replaceUserRoles(UUID userId, Collection<UUID> roleIds) {
-        replaceUserRoles(TenantContextHolder.requireTenantId(), userId, roleIds);
+        replaceUserRoles(UserPoolContextHolder.requireUserPoolId(), userId, roleIds);
     }
 
-    /** 从当前租户上下文取租户 ID 后分页查询权限。 */
+    /** 从当前用户池上下文取用户池 ID 后分页查询权限。 */
     @Transactional
     public PageData<PermissionView> permissions(int page, int pageSize, String search, String type, String resource) {
-        return permissions(TenantContextHolder.requireTenantId(), page, pageSize, search, type, resource);
+        return permissions(UserPoolContextHolder.requireUserPoolId(), page, pageSize, search, type, resource);
     }
 
-    /** 从当前租户上下文取租户 ID 后查询权限详情。 */
+    /** 从当前用户池上下文取用户池 ID 后查询权限详情。 */
     @Transactional(readOnly = true)
     public PermissionView permission(UUID id) {
-        return permission(TenantContextHolder.requireTenantId(), id);
+        return permission(UserPoolContextHolder.requireUserPoolId(), id);
     }
 
-    /** 从当前租户上下文取租户 ID 后创建权限。 */
+    /** 从当前用户池上下文取用户池 ID 后创建权限。 */
     @Transactional
     public PermissionView createPermission(PermissionInput in) {
-        return createPermission(TenantContextHolder.requireTenantId(), in);
+        return createPermission(UserPoolContextHolder.requireUserPoolId(), in);
     }
 
-    /** 从当前租户上下文取租户 ID 后更新权限。 */
+    /** 从当前用户池上下文取用户池 ID 后更新权限。 */
     @Transactional
     public PermissionView updatePermission(UUID id, PermissionInput in) {
-        return updatePermission(TenantContextHolder.requireTenantId(), id, in);
+        return updatePermission(UserPoolContextHolder.requireUserPoolId(), id, in);
     }
 
-    /** 从当前租户上下文取租户 ID 后删除权限。 */
+    /** 从当前用户池上下文取用户池 ID 后删除权限。 */
     @Transactional
     public void deletePermission(UUID id) {
-        deletePermission(TenantContextHolder.requireTenantId(), id);
+        deletePermission(UserPoolContextHolder.requireUserPoolId(), id);
     }
 
-    /** 从当前租户上下文取租户 ID 后构建权限树。 */
+    /** 从当前用户池上下文取用户池 ID 后构建权限树。 */
     @Transactional
     public List<PermissionTree> permissionTree() {
-        return permissionTree(TenantContextHolder.requireTenantId());
+        return permissionTree(UserPoolContextHolder.requireUserPoolId());
     }
 
-    /** 从当前租户上下文取租户 ID 后统计权限。 */
+    /** 从当前用户池上下文取用户池 ID 后统计权限。 */
     @Transactional
     public PermissionStats permissionStats() {
-        return permissionStats(TenantContextHolder.requireTenantId());
+        return permissionStats(UserPoolContextHolder.requireUserPoolId());
     }
     
 

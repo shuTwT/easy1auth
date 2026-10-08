@@ -13,8 +13,8 @@ import com.easy1auth.poolidentity.dto.PoolUserInput;
 import com.easy1auth.poolidentity.model.*;
 import com.easy1auth.poolidentity.service.PoolUserService;
 import com.easy1auth.security.SecurityDataCipher;
-import com.easy1auth.framework.tenant.context.TenantContextHolder;
-import com.easy1auth.framework.tenant.util.TenantUtils;
+import com.easy1auth.framework.tenant.context.UserPoolContextHolder;
+import com.easy1auth.framework.tenant.util.UserPoolUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
@@ -34,7 +34,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 企业身份源同步服务：将租户配置的飞书身份源通讯录同步到本地用户 / 用户组体系， 支持全量同步与事件增量同步，敏感凭证加密存储。
+ * 企业身份源同步服务：将用户池配置的飞书身份源通讯录同步到本地用户 / 用户组体系， 支持全量同步与事件增量同步，敏感凭证加密存储。
  *
  * <p>注意：飞书适配器仅提供目录同步能力，不提供 SSO 登录。
  */
@@ -67,11 +67,11 @@ public class EnterpriseIdentityService {
     this.users = users;
   }
 
-  /** 分页查询当前租户的企业身份源列表，支持名称模糊搜索与状态过滤。 */
+  /** 分页查询当前用户池的企业身份源列表，支持名称模糊搜索与状态过滤。 */
   @Transactional(readOnly = true)
   public PageData<EnterpriseIdentitySourceView> list(
       int page, int pageSize, String search, String status) {
-    UUID tenant = TenantContextHolder.requireTenantId();
+    UUID tenant = UserPoolContextHolder.requireUserPoolId();
     int p = Math.max(page, 1), s = Math.min(Math.max(pageSize, 1), 100);
     var result = repository.pageSources(tenant, p, s, search, status);
     return PageData.of(
@@ -81,16 +81,16 @@ public class EnterpriseIdentityService {
         result.total());
   }
 
-  /** 查询当前租户下指定身份源的详情。 */
+  /** 查询当前用户池下指定身份源的详情。 */
   @Transactional(readOnly = true)
   public EnterpriseIdentitySourceView get(UUID id) {
-    return view(source(TenantContextHolder.requireTenantId(), id));
+    return view(source(UserPoolContextHolder.requireUserPoolId(), id));
   }
 
   /** 新建飞书企业身份源（provider=feishu），敏感凭证加密后存储，状态默认 active。 */
   @Transactional
   public EnterpriseIdentitySourceView create(EnterpriseIdentityInput input) {
-    UUID tenant = TenantContextHolder.requireTenantId();
+    UUID tenant = UserPoolContextHolder.requireUserPoolId();
     validate(input, true);
     UUID id = UuidV7.randomUuid();
     Instant now = Instant.now();
@@ -98,7 +98,7 @@ public class EnterpriseIdentityService {
         EnterpriseIdentitySourceEntityDraft.$.produce(
             d ->
                 d.setId(id)
-                    .setTenantId(tenant)
+                    .setUserPoolId(tenant)
                     .setName(input.name().strip())
                     .setProvider("feishu")
                     .setAppId(input.appId().strip())
@@ -119,7 +119,7 @@ public class EnterpriseIdentityService {
   /** 更新身份源信息：仅更新传入的非空字段，重新传入的凭证会加密覆盖。 */
   @Transactional
   public EnterpriseIdentitySourceView update(UUID id, EnterpriseIdentityInput input) {
-    UUID tenant = TenantContextHolder.requireTenantId();
+    UUID tenant = UserPoolContextHolder.requireUserPoolId();
     var old = source(tenant, id);
     validate(input, false);
     repository.updateSource(
@@ -138,7 +138,7 @@ public class EnterpriseIdentityService {
   /** 删除身份源：已导入的用户与用户组保留并转为本地管理，仅删除身份源记录本身。 */
   @Transactional
   public void delete(UUID id) {
-    UUID tenant = TenantContextHolder.requireTenantId();
+    UUID tenant = UserPoolContextHolder.requireUserPoolId();
     source(tenant, id);
     // Imported data deliberately survives source deletion and becomes locally managed.
     repository.deleteSourceAndDetachImportedData(tenant, id);
@@ -147,7 +147,7 @@ public class EnterpriseIdentityService {
   /** 触发指定启用中身份源的全量同步，返回排队中的同步任务视图。 */
   @Transactional
   public EnterpriseIdentityTaskView sync(UUID id) {
-    var source = source(TenantContextHolder.requireTenantId(), id);
+    var source = source(UserPoolContextHolder.requireUserPoolId(), id);
     if (!"active".equals(source.status())) {
       throw new DomainException(ErrorCodeConstants.ENTERPRISE_IDENTITY_SOURCE_DISABLED);
     }
@@ -157,23 +157,23 @@ public class EnterpriseIdentityService {
   /** 查询指定身份源最近的同步任务列表（最多 30 条）。 */
   @Transactional(readOnly = true)
   public List<EnterpriseIdentityTaskView> tasks(UUID id) {
-    UUID tenant = TenantContextHolder.requireTenantId();
+    UUID tenant = UserPoolContextHolder.requireUserPoolId();
     source(tenant, id);
     return repository.findRecentTasks(tenant, id).stream()
         .map(EnterpriseIdentityService::taskView)
         .toList();
   }
 
-  /** 统计当前租户身份源的总数及启用 / 停用数量。 */
+  /** 统计当前用户池身份源的总数及启用 / 停用数量。 */
   @Transactional(readOnly = true)
   public EnterpriseIdentityStatsView stats() {
-    UUID tenant = TenantContextHolder.requireTenantId();
+    UUID tenant = UserPoolContextHolder.requireUserPoolId();
     var rows = repository.findSourceStatuses(tenant);
     long active = rows.stream().filter("active"::equals).count();
     return new EnterpriseIdentityStatsView(rows.size(), active, rows.size() - active);
   }
 
-  /** 飞书事件回调入口：不依赖请求中的租户头，直接按 sourceId 解析身份源， 完成事件解密与验证后入队处理（含 url_verification 挑战应答）。 */
+  /** 飞书事件回调入口：不依赖请求中的用户池头，直接按 sourceId 解析身份源， 完成事件解密与验证后入队处理（含 url_verification 挑战应答）。 */
   @Transactional
   public FeishuEventResponseView acceptFeishuEvent(UUID sourceId, Map<String, Object> envelope) {
     EnterpriseIdentitySourceEntity source = ignored(() -> repository.findSource(sourceId));
@@ -201,8 +201,8 @@ public class EnterpriseIdentityService {
     Map<String, Object> queued = new LinkedHashMap<>(event);
     queued.remove("token");
     try {
-      TenantUtils.execute(
-          source.tenantId(), (Runnable) () -> queue(source, "event", eventId, queued));
+      UserPoolUtils.execute(
+          source.userPoolId(), (Runnable) () -> queue(source, "event", eventId, queued));
     } catch (RuntimeException ex) {
       if (!isDuplicate(ex)) {
         throw ex;
@@ -230,13 +230,13 @@ public class EnterpriseIdentityService {
     if (task == null || !"processing".equals(task.status())) {
       return;
     }
-    TenantUtils.execute(task.tenantId(), () -> processInTenant(task));
+    UserPoolUtils.execute(task.userPoolId(), () -> processInUserPool(task));
   }
 
-  /** 在任务所属租户上下文中执行同步（含异常捕获与结果回写）。 */
+  /** 在任务所属用户池上下文中执行同步（含异常捕获与结果回写）。 */
   @Transactional
-  void processInTenant(EnterpriseIdentitySyncTaskEntity task) {
-    var source = source(task.tenantId(), task.sourceId());
+  void processInUserPool(EnterpriseIdentitySyncTaskEntity task) {
+    var source = source(task.userPoolId(), task.sourceId());
     Map<String, Object> summary = new LinkedHashMap<>();
     try {
       if ("full".equals(task.type())) {
@@ -367,7 +367,7 @@ public class EnterpriseIdentityService {
   /** 新建或更新某个同步部门对应的用户组，返回其 ID。 */
   private UUID upsertGroup(
       EnterpriseIdentitySourceEntity source, String externalId, String name) {
-    UUID tenant = source.tenantId();
+    UUID tenant = source.userPoolId();
     var old = repository.findGroup(tenant, source.id(), externalId).orElse(null);
     String safe = uniqueGroupName(tenant, old == null ? null : old.id(), name);
     if (old == null) {
@@ -377,7 +377,7 @@ public class EnterpriseIdentityService {
           UserGroupEntityDraft.$.produce(
               d ->
                   d.setId(id)
-                      .setTenantId(tenant)
+                      .setUserPoolId(tenant)
                       .setName(safe)
                       .setDescription("由飞书同步管理")
                       .setType("department")
@@ -397,7 +397,7 @@ public class EnterpriseIdentityService {
       String externalId,
       Map<String, Object> remote,
       Map<String, Object> summary) {
-    UUID tenant = source.tenantId();
+    UUID tenant = source.userPoolId();
     String emailValue = string(remote.get("email")).strip().toLowerCase();
     String email = emailValue.isBlank() ? null : emailValue;
     String phone = string(remote.get("mobile")).strip();
@@ -463,7 +463,7 @@ public class EnterpriseIdentityService {
             .map(UserGroupEntity::id)
             .collect(java.util.stream.Collectors.toSet());
     repository.replaceUserGroups(
-        source.tenantId(), user.id(), sourceGroups.stream().map(UserGroupEntity::id).toList(), ids);
+        source.userPoolId(), user.id(), sourceGroups.stream().map(UserGroupEntity::id).toList(), ids);
   }
 
   /** 将飞书侧已删除用户的本地状态置为 disabled。 */
@@ -485,7 +485,7 @@ public class EnterpriseIdentityService {
         EnterpriseIdentitySyncTaskEntityDraft.$.produce(
             d ->
                 d.setId(id)
-                    .setTenantId(source.tenantId())
+                    .setUserPoolId(source.userPoolId())
                     .setSourceId(source.id())
                     .setType(type)
                     .setEventId(eventId)
@@ -505,7 +505,7 @@ public class EnterpriseIdentityService {
     repository.finishTask(id, summary, result, error);
   }
 
-  /** 按租户与 ID 查询身份源，不存在时抛出领域异常。 */
+  /** 按用户池与 ID 查询身份源，不存在时抛出领域异常。 */
   private EnterpriseIdentitySourceEntity source(UUID tenant, UUID id) {
     return repository
         .findSource(tenant, id)
@@ -601,7 +601,7 @@ public class EnterpriseIdentityService {
     return json.readValue(r.body(), new TypeReference<>() {});
   }
 
-  /** 使用安全上下文（租户 + ID + 字段名）加密凭证明文。 */
+  /** 使用安全上下文（用户池 + ID + 字段名）加密凭证明文。 */
   private String encrypt(UUID tenant, UUID id, String part, String value) {
     return cipher.encrypt("enterprise-identity:" + tenant + ":" + id + ":" + part, value);
   }
@@ -614,10 +614,10 @@ public class EnterpriseIdentityService {
           case "verification-token" -> s.encryptedVerificationToken();
           default -> s.encryptedEncryptKey();
         };
-    return cipher.decrypt("enterprise-identity:" + s.tenantId() + ":" + s.id() + ":" + part, v);
+    return cipher.decrypt("enterprise-identity:" + s.userPoolId() + ":" + s.id() + ":" + part, v);
   }
 
-  /** 生成租户下唯一的用户组名称，冲突时添加"飞书-"前缀与序号。 */
+  /** 生成用户池下唯一的用户组名称，冲突时添加"飞书-"前缀与序号。 */
   private String uniqueGroupName(UUID tenant, UUID self, String desired) {
     String base = nonBlank(desired, "未命名部门");
     String value = base;
@@ -734,10 +734,10 @@ public class EnterpriseIdentityService {
     return "feishu_" + Integer.toUnsignedString(externalId.hashCode(), 36);
   }
 
-  /** 忽略租户上下文执行回调（用于回调入口等不信任请求租户头的场景）。 */
+  /** 忽略用户池上下文执行回调（用于回调入口等不信任请求用户池头的场景）。 */
   private static <T> T ignored(java.util.concurrent.Callable<T> callable) {
     try {
-      return TenantUtils.executeIgnore(callable);
+      return UserPoolUtils.executeIgnore(callable);
     } catch (Exception ex) {
       throw new IllegalStateException(ex);
     }

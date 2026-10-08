@@ -1,7 +1,7 @@
 package com.easy1auth.customization.model;
 
 import com.easy1auth.framework.persistence.model.BaseEntity;
-import com.easy1auth.framework.tenant.persistence.model.BaseTenantEntity;
+import com.easy1auth.framework.tenant.persistence.model.BaseUserPoolEntity;
 
 import org.babyfish.jimmer.sql.*;
 import org.jspecify.annotations.Nullable;
@@ -11,12 +11,12 @@ import java.time.Instant;
 /**
  * 自定义域名实体（对应 custom_domain 表）。
  *
- * <p>记录认证页自定义域名的所有权验证信息。租户添加域名后需通过
+ * <p>记录认证页自定义域名的所有权验证信息。用户池添加域名后需通过
  * DNS 或文件方式完成所有权验证，验证通过前状态保持 pending。</p>
  */
 @Entity
 @Table(name = "custom_domain")
-public interface CustomDomainEntity extends BaseEntity, BaseTenantEntity {
+public interface CustomDomainEntity extends BaseEntity, BaseUserPoolEntity {
 
     /** 自定义域名（已做 IDN 规范化，如 auth.example.com） */
     String domain();

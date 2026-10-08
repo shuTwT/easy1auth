@@ -80,7 +80,7 @@ public interface ApplicationRepository extends JRepository<OAuthApplicationEntit
     default Optional<OAuthApplicationEntity> findActive(UUID tenant, UUID id) {
         return sql()
                 .createQuery(APP)
-                .where(APP.id().eq(id), APP.tenantId().eq(tenant), APP.status().eq("active"))
+                .where(APP.id().eq(id), APP.userPoolId().eq(tenant), APP.status().eq("active"))
                 .select(APP)
                 .fetchOptional();
     }
@@ -121,7 +121,7 @@ public interface ApplicationRepository extends JRepository<OAuthApplicationEntit
                         .set(APP.accessTokenLifetime(), access)
                         .set(APP.refreshTokenLifetime(), refresh)
                         .set(APP.updatedAt(), Instant.now())
-                        .where(APP.id().eq(id), APP.tenantId().eq(tenant));
+                        .where(APP.id().eq(id), APP.userPoolId().eq(tenant));
         if (secretHash != null) {
             u.set(APP.clientSecretHash(), secretHash);
         }
@@ -161,7 +161,7 @@ public interface ApplicationRepository extends JRepository<OAuthApplicationEntit
                         .set(APP.accessTokenLifetime(), access)
                         .set(APP.refreshTokenLifetime(), refresh)
                         .set(APP.updatedAt(), Instant.now())
-                        .where(APP.id().eq(id), APP.tenantId().eq(tenant));
+                        .where(APP.id().eq(id), APP.userPoolId().eq(tenant));
         if (updateSecret) {
             u.set(APP.clientSecretHash(), secretHash);
         }
@@ -173,7 +173,7 @@ public interface ApplicationRepository extends JRepository<OAuthApplicationEntit
                 .createUpdate(APP)
                 .set(APP.status(), status)
                 .set(APP.updatedAt(), Instant.now())
-                .where(APP.id().eq(id), APP.tenantId().eq(tenant))
+                .where(APP.id().eq(id), APP.userPoolId().eq(tenant))
                 .execute();
     }
 
@@ -182,12 +182,12 @@ public interface ApplicationRepository extends JRepository<OAuthApplicationEntit
                 .createUpdate(APP)
                 .set(APP.clientSecretHash(), hash)
                 .set(APP.updatedAt(), Instant.now())
-                .where(APP.id().eq(id), APP.tenantId().eq(tenant))
+                .where(APP.id().eq(id), APP.userPoolId().eq(tenant))
                 .execute();
     }
 
     default int delete(UUID tenant, UUID id) {
-        return sql().createDelete(APP).where(APP.id().eq(id), APP.tenantId().eq(tenant)).execute();
+        return sql().createDelete(APP).where(APP.id().eq(id), APP.userPoolId().eq(tenant)).execute();
     }
 
     default List<String> statuses() {

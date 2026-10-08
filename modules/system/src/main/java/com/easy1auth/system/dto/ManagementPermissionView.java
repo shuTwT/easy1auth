@@ -11,7 +11,7 @@ import com.easy1auth.system.constant.ManagementPermissionType;
  *
  * @param code       权限码（如 "user:list"，全局唯一）
  * @param type       权限类型：menu / directory / action
- * @param scope      权限作用域：PLATFORM（平台）/ TENANT（租户）
+ * @param scope      权限作用域：PLATFORM（平台）/ USER_POOL（用户池）
  * @param name       权限显示名称
  * @param parentCode 父级权限码（可为 null，用于构建树形目录）
  * @param resource   权限所属资源

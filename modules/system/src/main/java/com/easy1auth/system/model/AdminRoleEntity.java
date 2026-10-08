@@ -1,8 +1,8 @@
 package com.easy1auth.system.model;
 
 import com.easy1auth.framework.persistence.model.BaseEntity;
-import com.easy1auth.framework.tenant.persistence.model.BaseTenantEntity;
-import com.easy1auth.tenant.model.TenantMembershipEntity;
+import com.easy1auth.framework.tenant.persistence.model.BaseUserPoolEntity;
+import com.easy1auth.tenant.model.UserPoolMembershipEntity;
 import org.babyfish.jimmer.sql.Column;
 import org.babyfish.jimmer.sql.Entity;
 import org.babyfish.jimmer.sql.JoinTable;
@@ -16,16 +16,16 @@ import java.util.List;
 /**
  * 管理角色实体（对应 admin_role 表）。
  *
- * <p>描述租户内用于管理端授权的角色，可关联多个管理端权限
+ * <p>描述用户池内用于管理端授权的角色，可关联多个管理端权限
  * （{@link ManagementPermissionEntity}，经 admin_role_permission 关联表），
- * 并通过 membership_role_assignment 关联表与租户成员关系
- * （{@link TenantMembershipEntity}）多对多关联，即角色直接赋予成员。</p>
+ * 并通过 membership_role_assignment 关联表与用户池成员关系
+ * （{@link UserPoolMembershipEntity}）多对多关联，即角色直接赋予成员。</p>
  */
 @Entity
 @Table(name = "admin_role")
-public interface AdminRoleEntity extends BaseEntity, BaseTenantEntity {
+public interface AdminRoleEntity extends BaseEntity, BaseUserPoolEntity {
 
-    /** 角色编码（租户内唯一，创建后不可修改） */
+    /** 角色编码（用户池内唯一，创建后不可修改） */
     String code();
 
     /** 角色名称 */
@@ -52,8 +52,8 @@ public interface AdminRoleEntity extends BaseEntity, BaseTenantEntity {
     @Column(name = "updated_at")
     Instant updatedAt();
 
-    /** 被分配该角色的租户成员关系列表（多对多） */
+    /** 被分配该角色的用户池成员关系列表（多对多） */
     @ManyToMany
     @JoinTable(name = "membership_role_assignment", joinColumnName = "role_id", inverseJoinColumnName = "membership_id")
-    List<TenantMembershipEntity> memberships();
+    List<UserPoolMembershipEntity> memberships();
 }

@@ -1,254 +1,197 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
-import { message } from 'antdv-next'
-import { Building2, Pencil, RefreshCw, Search, Trash2, UserRoundCog, Users } from '@lucide/vue'
-import { adminUserApi } from '@/api/adminUser'
+import { computed, reactive, ref, watch } from 'vue'
+import { message, type TableProps } from 'antdv-next'
+import { Plus, RefreshCw, Search } from '@lucide/vue'
 import { tenantApi } from '@/api/tenant'
-import { tenantPackageApi } from '@/api/tenantPackage'
-import type { AdminUser } from '@/types/adminUser'
-import type { Tenant, TenantQueryDto } from '@/types/tenant'
-import type { TenantPackage } from '@/types/tenantPackage'
-const loading = ref(false)
-const submitting = ref(false)
-const transferSubmitting = ref(false)
-const tenants = ref<Tenant[]>([])
-const packages = ref<TenantPackage[]>([])
-const administrators = ref<AdminUser[]>([])
+import { useUserStore } from '@/stores/user'
+import type { Tenant, TenantInput, TenantQuery } from '@/types/tenant'
+
+const userStore = useUserStore()
+const rows = ref<Tenant[]>([])
 const total = ref(0)
-const tenantDialogVisible = ref(false)
-const transferDialogVisible = ref(false)
-const deleteDialogVisible = ref(false)
-const editingTenant = ref<Tenant | null>(null)
-const transferTarget = ref<Tenant | null>(null)
+const loading = ref(false)
+const saving = ref(false)
+const deleting = ref(false)
+const editorOpen = ref(false)
+const editing = ref<Tenant | null>(null)
 const deleteTarget = ref<Tenant | null>(null)
-const transferAdministratorId = ref<string>('')
-
-const queryForm = reactive<TenantQueryDto>({ page: 1, pageSize: 20, name: '', status: undefined })
-const tenantForm = reactive({ name: '', packageId: undefined as number | undefined })
-const tenantFormRules = {
-  name: [{ required: true, message: '请输入租户名称' }],
-  packageId: [{ required: true, message: '请选择租户套餐' }],
-}
-const dialogTitle = computed(() => '编辑租户')
-const packageOptions = computed(() => packages.value.map(item => ({
-  value: item.id,
-  label: `${item.name} · ${formatLimit(item.maxUsers)} 用户 / ${formatLimit(item.maxApps)} 应用`,
-})))
-const administratorOptions = computed(() => administrators.value.map(item => ({
-  value: item.id,
-  label: `${item.username} · ${item.email}`,
-})))
-
-const tenantColumns = [
-  { title: '租户', key: 'tenant' },
-  { title: '套餐', key: 'package' },
-  { title: '状态', key: 'status' },
-  { title: '配额', key: 'quota' },
-  { title: '租户管理员', key: 'administrator' },
-  { title: '操作', key: 'actions', align: 'right' as const },
+const query = reactive<TenantQuery>({ page: 1, pageSize: 20, name: '', status: undefined })
+const form = reactive<TenantInput>({ name: '', code: '', description: '', status: 'active' })
+const statusOptions = [{ label: '启用', value: 'active' }, { label: '停用', value: 'inactive' }]
+const columns: TableProps<Tenant>['columns'] = [
+  { title: '租户名称', dataIndex: 'name', key: 'name', width: 200 },
+  { title: '租户编码', dataIndex: 'code', key: 'code', width: 180 },
+  { title: '描述', dataIndex: 'description', key: 'description', ellipsis: true },
+  { title: '状态', key: 'status', width: 100 },
+  { title: '创建时间', key: 'createdAt', width: 180 },
+  { title: '操作', key: 'actions', width: 160, fixed: 'right' },
 ]
+const pagination = computed(() => ({
+  current: query.page,
+  pageSize: query.pageSize,
+  total: total.value,
+  showSizeChanger: true,
+  showTotal: (count: number) => `共 ${count} 个租户`,
+}))
+let loadVersion = 0
 
-function formatLimit(value?: number) {
-  if (value === undefined) return '-'
-  return value >= 2147483647 ? '不限' : value.toLocaleString()
+function errorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
 }
 
-function statusLabel(status: Tenant['status']) {
-  return status === 'active' ? '正常' : status === 'suspended' ? '停用' : '已删除'
-}
-
-function roleLabel(role: string) {
-  return role === 'super_admin' ? '超级管理员' : role === 'tenant_admin' ? '租户管理员' : '普通成员'
-}
-
-async function loadData() {
-  loading.value = true
-  try {
-    const [tenantPage, packageRows, administratorPage] = await Promise.all([
-      tenantApi.getList(queryForm),
-      tenantPackageApi.list(),
-      adminUserApi.getList({ page: 1, pageSize: 100, status: 'active' }),
-    ])
-    tenants.value = tenantPage.items
-    total.value = tenantPage.total
-    packages.value = packageRows.filter((item) => item.status === 'active')
-    administrators.value = administratorPage.items
-  } catch (error) {
-    console.error('加载租户数据失败:', error)
-    message.error('加载租户数据失败')
-  } finally {
+async function load() {
+  const version = ++loadVersion
+  const poolId = userStore.currentUserPool?.id
+  rows.value = []
+  total.value = 0
+  if (!poolId) {
     loading.value = false
-  }
-}
-
-function openEditDialog(tenant: Tenant) {
-  if (!tenant.tenantPackage) return
-  editingTenant.value = tenant
-  Object.assign(tenantForm, { name: tenant.name, packageId: tenant.tenantPackage.id })
-  tenantDialogVisible.value = true
-}
-
-async function submitTenant() {
-  submitting.value = true
-  try {
-    if (!editingTenant.value) return
-    await tenantApi.update(editingTenant.value.id, { name: tenantForm.name.trim(), packageId: tenantForm.packageId })
-    message.success('租户更新成功')
-    tenantDialogVisible.value = false
-    await loadData()
-  } catch (error) {
-    console.error('保存租户失败:', error)
-    message.error('保存租户失败')
-  } finally {
-    submitting.value = false
-  }
-}
-
-async function toggleStatus(tenant: Tenant) {
-  try {
-    const status = tenant.status === 'active' ? 'suspended' : 'active'
-    await tenantApi.updateStatus(tenant.id, status)
-    message.success(status === 'active' ? '租户已启用' : '租户已停用')
-    await loadData()
-  } catch (error) {
-    console.error('更新租户状态失败:', error)
-    message.error('更新租户状态失败')
-  }
-}
-
-function openTransferDialog(tenant: Tenant) {
-  transferTarget.value = tenant
-  transferAdministratorId.value = ''
-  transferDialogVisible.value = true
-}
-
-async function submitTransfer() {
-  if (!transferTarget.value || !transferAdministratorId.value) {
-    message.error('请选择目标管理员')
     return
   }
-  transferSubmitting.value = true
+  loading.value = true
   try {
-    await tenantApi.transferAdministrator(transferTarget.value.id, transferAdministratorId.value)
-    message.success('租户管理员转移成功')
-    transferDialogVisible.value = false
-    await loadData()
+    const result = await tenantApi.list({ ...query })
+    if (version !== loadVersion || poolId !== userStore.currentUserPool?.id) return
+    rows.value = result.items
+    total.value = result.total
   } catch (error) {
-    console.error('转移租户管理员失败:', error)
-    message.error('转移租户管理员失败')
+    if (version === loadVersion) message.error(errorMessage(error, '加载租户失败'))
   } finally {
-    transferSubmitting.value = false
+    if (version === loadVersion) loading.value = false
   }
 }
 
-function openDeleteDialog(tenant: Tenant) {
-  deleteTarget.value = tenant
-  deleteDialogVisible.value = true
+function search() {
+  query.page = 1
+  load()
 }
 
-async function confirmDelete() {
-  if (!deleteTarget.value) return
+function reset() {
+  query.name = ''
+  query.status = undefined
+  search()
+}
+
+function changePage(pager: { current?: number; pageSize?: number }) {
+  query.page = pager.current || 1
+  query.pageSize = pager.pageSize || 20
+  load()
+}
+
+function openEditor(row?: Tenant) {
+  editing.value = row || null
+  Object.assign(form, {
+    name: row?.name || '',
+    code: row?.code || '',
+    description: row?.description || '',
+    status: row?.status || 'active',
+  })
+  editorOpen.value = true
+}
+
+async function save() {
+  if (saving.value) return
+  const input: TenantInput = {
+    name: form.name.trim(),
+    code: form.code.trim().toLowerCase(),
+    description: form.description?.trim(),
+    status: form.status,
+  }
+  if (!input.name) {
+    message.warning('请输入租户名称')
+    return
+  }
+  if (!/^[a-z0-9_-]{1,100}$/.test(input.code)) {
+    message.warning('租户编码须为1至100位小写字母、数字、下划线或连字符')
+    return
+  }
+  saving.value = true
+  const poolId = userStore.currentUserPool?.id
   try {
-    await tenantApi.delete(deleteTarget.value.id)
-    message.success('租户已删除')
-    deleteDialogVisible.value = false
-    await loadData()
+    if (editing.value) await tenantApi.update(editing.value.id, input)
+    else await tenantApi.create(input)
+    if (poolId !== userStore.currentUserPool?.id) return
+    editorOpen.value = false
+    message.success(editing.value ? '租户已更新' : '租户已创建')
+    await load()
   } catch (error) {
-    console.error('删除租户失败:', error)
-    message.error('删除租户失败')
+    message.error(errorMessage(error, '保存租户失败'))
+  } finally {
+    saving.value = false
   }
 }
 
-async function handleSearch() {
-  queryForm.page = 1
-  await loadData()
+async function remove() {
+  const target = deleteTarget.value
+  if (!target || deleting.value) return
+  deleting.value = true
+  try {
+    await tenantApi.delete(target.id)
+    if (target.userPoolId !== userStore.currentUserPool?.id) return
+    deleteTarget.value = null
+    message.success('租户已删除')
+    if (rows.value.length === 1 && query.page > 1) query.page--
+    await load()
+  } catch (error) {
+    message.error(errorMessage(error, '删除租户失败'))
+  } finally {
+    deleting.value = false
+  }
 }
 
-async function handleReset() {
-  Object.assign(queryForm, { page: 1, name: '', status: undefined })
-  await loadData()
-}
-
-async function handlePageChange(page: number, _pageSize?: number) {
-  queryForm.page = page
-  await loadData()
-}
-
-onMounted(loadData)
+watch(() => userStore.currentUserPool?.id, () => {
+  editorOpen.value = false
+  deleteTarget.value = null
+  query.page = 1
+  load()
+}, { immediate: true })
 </script>
 
 <template>
-  <div class="p-6 min-h-[calc(100vh-64px)] space-y-6">
-    <div class="flex justify-between items-start mb-6">
-      <div class="flex-1">
-        <h1 class="text-2xl font-bold text-foreground mb-2">租户管理</h1>
-        <p class="text-sm text-muted-foreground">查看平台内全部租户，并管理普通租户的套餐、状态和租户管理员。</p>
+  <div class="space-y-6">
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-semibold text-[var(--color-text)]">租户管理</h1>
+        <p class="mt-2 text-sm text-[var(--color-text-muted)]">
+          管理用户池「{{ userStore.currentUserPool?.name || '未选择' }}」下的租户资料。租户用途待定，当前仅维护基础资料。
+        </p>
       </div>
-      <div class="flex gap-3"><a-button :disabled="loading" @click="loadData"><RefreshCw class="size-4 mr-2" :class="loading ? 'animate-spin' : ''" />刷新</a-button></div>
+      <a-button type="primary" :disabled="!userStore.currentUserPool" @click="openEditor()">
+        <template #icon><Plus :size="16" /></template>新建租户
+      </a-button>
     </div>
 
-    <a-card>
-      <div class="gap-4 flex mb-3!">
-        <div class="flex flex-col gap-2 sm:flex-row">
-          <div class="relative"><Search class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" /><a-input v-model:value="queryForm.name" class="w-full pl-9 sm:w-56" placeholder="搜索租户名称" /></div>
-          <a-select v-model:value="queryForm.status" class="w-full sm:w-32" allow-clear :options="[{ value: 'active', label: '正常' }, { value: 'suspended', label: '停用' }, { value: 'deleted', label: '已删除' }]" />
-          <a-button  @click="handleSearch">查询</a-button>
-          <a-button  @click="handleReset">重置</a-button>
-        </div>
+    <a-card :bordered="false">
+      <div class="mb-6 flex flex-wrap gap-3">
+        <a-input v-model:value="query.name" class="!w-56" placeholder="搜索租户名称" aria-label="租户名称" allow-clear @press-enter="search" />
+        <a-select v-model:value="query.status" class="!w-36" placeholder="全部状态" aria-label="租户状态" :options="statusOptions" allow-clear />
+        <a-button @click="search"><template #icon><Search :size="16" /></template>查询</a-button>
+        <a-button @click="reset"><template #icon><RefreshCw :size="16" /></template>重置</a-button>
       </div>
-      <div>
-        <a-spin v-if="loading" class="flex min-h-40 items-center justify-center" />
-        <a-empty v-else-if="tenants.length === 0" class="flex min-h-40 flex-col items-center justify-center" description="暂无租户" />
-        <a-table v-else :columns="tenantColumns" :data-source="tenants" :pagination="false" row-key="id" :scroll="{ x: 1120 }" size="middle">
-          <template #bodyCell="{ column, record: tenant }">
-            <template v-if="column.key === 'tenant'"><div class="flex items-center gap-3"><div class="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary"><Building2 /></div><div><div class="font-medium">{{ tenant.name }}</div><code class="text-xs text-muted-foreground">{{ tenant.id }}</code></div></div></template>
-            <a-tag v-else-if="column.key === 'package'" color="blue">{{ tenant.tenantPackage?.name || '未配置套餐' }}</a-tag>
-            <a-tag v-else-if="column.key === 'status'" :color="tenant.status === 'active' ? 'green' : 'red'">{{ statusLabel(tenant.status) }}</a-tag>
-            <div v-else-if="column.key === 'quota'" class="flex gap-4 text-sm text-muted-foreground"><span class="inline-flex items-center gap-1"><Users />{{ formatLimit(tenant.tenantPackage?.maxUsers) }} 用户</span><span>{{ formatLimit(tenant.tenantPackage?.maxApps) }} 应用</span></div>
-            <a-tag v-else-if="column.key === 'administrator'" >{{ roleLabel(tenant.role) }}</a-tag>
-            <div v-else-if="column.key === 'actions'" class="flex justify-end gap-1"><template v-if="!tenant.system"><a-button type="link" size="small" class="h-auto p-0" :disabled="tenant.status === 'deleted' || !tenant.tenantPackage" @click="openEditDialog(tenant)"><Pencil class="size-3 mr-1" />编辑</a-button><a-button type="link" size="small" class="h-auto p-0" :disabled="tenant.status === 'deleted'" @click="toggleStatus(tenant)">{{ tenant.status === 'active' ? '停用' : '启用' }}</a-button><a-button type="link" size="small" class="h-auto p-0" :disabled="tenant.status !== 'active'" @click="openTransferDialog(tenant)"><UserRoundCog class="size-3 mr-1" />转移管理员</a-button><a-button type="link" size="small" class="h-auto p-0 text-destructive" :disabled="tenant.status === 'deleted'" @click="openDeleteDialog(tenant)"><Trash2 class="size-3 mr-1" />删除</a-button></template><span v-else class="text-sm text-muted-foreground">系统内置</span></div>
-          </template>
-        </a-table>
-        <div class="flex items-center justify-between mt-4 pt-4 border-t">
-          <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
-          <a-pagination :current="queryForm.page" :page-size="queryForm.pageSize || 20" :total="total" :show-size-changer="false" size="small" @change="handlePageChange" />
-        </div>
-      </div>
+      <a-table row-key="id" :columns="columns" :data-source="rows" :loading="loading" :pagination="pagination" :scroll="{ x: 900 }" @change="changePage">
+        <template #bodyCell="{ column, record }">
+          <a-tag v-if="column.key === 'status'" :color="record.status === 'active' ? 'green' : 'default'">{{ record.status === 'active' ? '启用' : '停用' }}</a-tag>
+          <span v-else-if="column.key === 'createdAt'">{{ new Date(record.createdAt).toLocaleString('zh-CN', { hour12: false }) }}</span>
+          <span v-else-if="column.key === 'description'">{{ record.description || '—' }}</span>
+          <a-space v-else-if="column.key === 'actions'">
+            <a-button type="link" size="small" @click="openEditor(record)">编辑</a-button>
+            <a-button type="link" size="small" danger @click="deleteTarget = record">删除</a-button>
+          </a-space>
+        </template>
+        <template #emptyText><a-empty description="当前用户池暂无租户" /></template>
+      </a-table>
     </a-card>
 
-    <a-modal v-model:open="tenantDialogVisible" :footer="null">
-      <div class="w-full max-w-lg">
-        <div>
-          <h3>{{ dialogTitle }}</h3>
-          <p>{{ editingTenant ? '修改租户名称或更换为启用中的套餐。' : '新租户会绑定套餐，并将当前管理员设为租户管理员。' }}</p>
-        </div>
-        <a-form :model="tenantForm" :rules="tenantFormRules" layout="vertical" class="py-4" @finish="submitTenant">
-          <div class="grid gap-4">
-            <a-form-item label="租户名称" name="name">
-              <a-input v-model:value="tenantForm.name" placeholder="请输入租户名称" />
-            </a-form-item>
-            <a-form-item label="租户套餐" name="packageId">
-              <a-select v-model:value="tenantForm.packageId" class="w-full" placeholder="请选择租户套餐" :options="packageOptions" />
-            </a-form-item>
-          </div>
-          <div class="flex justify-end gap-2">
-            <a-button @click="tenantDialogVisible = false">取消</a-button>
-            <a-button type="primary" html-type="submit" :loading="submitting">保存</a-button>
-          </div>
-        </a-form>
-      </div>
+    <a-modal v-model:open="editorOpen" :title="editing ? '编辑租户' : '新建租户'" ok-text="保存" cancel-text="取消" :confirm-loading="saving" :mask="{ closable: false }" @ok="save">
+      <a-form layout="vertical" class="mt-4" @submit.prevent="save">
+        <a-form-item label="租户名称" required><a-input v-model:value="form.name" :maxlength="200" placeholder="请输入租户名称" /></a-form-item>
+        <a-form-item label="租户编码" required><a-input v-model:value="form.code" :maxlength="100" placeholder="小写字母、数字、下划线或连字符" /></a-form-item>
+        <a-form-item label="描述"><a-textarea v-model:value="form.description" :maxlength="2000" :rows="3" placeholder="可选，说明租户用途" /></a-form-item>
+        <a-form-item label="状态"><a-select v-model:value="form.status" :options="statusOptions" /></a-form-item>
+      </a-form>
     </a-modal>
-
-    <a-modal v-model:open="transferDialogVisible" :footer="null">
-      <div class="w-full max-w-lg">
-        <div><h3>转移租户管理员</h3><p>目标管理员将成为“{{ transferTarget?.name }}”的租户管理员，原管理员将被移出该租户。</p></div>
-        <div class="mt-6 grid gap-2"><label for="transfer-administrator">目标管理员</label><a-select id="transfer-administrator" v-model:value="transferAdministratorId" class="w-full" placeholder="请选择目标管理员" :options="administratorOptions" /></div>
-        <div class="mt-6 flex justify-end gap-2"><a-button @click="transferDialogVisible = false">取消</a-button><a-button :disabled="transferSubmitting" @click="submitTransfer">{{ transferSubmitting ? '转移中...' : '确认转移' }}</a-button></div>
-      </div>
-    </a-modal>
-
-    <a-modal v-model:open="deleteDialogVisible" :footer="null">
-      <div><div><h3>删除租户</h3><p>确定删除“{{ deleteTarget?.name }}”吗？删除后将停用该租户及其所有管理员成员关系，但保留业务与审计数据。</p></div><div><a-button @click="deleteDialogVisible = false">取消</a-button><a-button danger @click="confirmDelete">确认删除</a-button></div></div>
+    <a-modal :open="!!deleteTarget" title="删除租户" ok-text="删除" cancel-text="取消" :ok-button-props="{ danger: true }" :confirm-loading="deleting" @ok="remove" @cancel="deleteTarget = null">
+      <p>确定删除租户「{{ deleteTarget?.name }}」的资料吗？</p>
     </a-modal>
   </div>
 </template>

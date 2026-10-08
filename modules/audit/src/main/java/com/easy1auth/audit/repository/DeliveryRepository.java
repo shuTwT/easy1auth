@@ -36,7 +36,7 @@ public interface DeliveryRepository extends JRepository<WebhookSubscriptionEntit
         .set(HOOK.maxRetries(), retries)
         .set(HOOK.status(), status)
         .set(HOOK.updatedAt(), Instant.now())
-        .where(HOOK.tenantId().eq(tenant), HOOK.id().eq(id))
+        .where(HOOK.userPoolId().eq(tenant), HOOK.id().eq(id))
         .execute();
   }
 
@@ -47,18 +47,18 @@ public interface DeliveryRepository extends JRepository<WebhookSubscriptionEntit
         .set(HOOK.secretHash(), secretHash)
         .set(HOOK.encryptedSecret(), encryptedSecret)
         .set(HOOK.updatedAt(), Instant.now())
-        .where(HOOK.id().eq(id), HOOK.tenantId().eq(tenant))
+        .where(HOOK.id().eq(id), HOOK.userPoolId().eq(tenant))
         .execute();
   }
 
   default int deleteSubscription(UUID tenant, UUID id) {
-    return sql().createDelete(HOOK).where(HOOK.id().eq(id), HOOK.tenantId().eq(tenant)).execute();
+    return sql().createDelete(HOOK).where(HOOK.id().eq(id), HOOK.userPoolId().eq(tenant)).execute();
   }
 
   default List<WebhookSubscriptionEntity> findActiveSubscriptions(UUID tenant) {
     return sql()
         .createQuery(HOOK)
-        .where(HOOK.tenantId().eq(tenant), HOOK.status().eq("active"))
+        .where(HOOK.userPoolId().eq(tenant), HOOK.status().eq("active"))
         .select(HOOK)
         .execute();
   }
@@ -66,7 +66,7 @@ public interface DeliveryRepository extends JRepository<WebhookSubscriptionEntit
   default Optional<WebhookSubscriptionEntity> findSubscription(UUID tenant, UUID id) {
     return sql()
         .createQuery(HOOK)
-        .where(HOOK.tenantId().eq(tenant), HOOK.id().eq(id))
+        .where(HOOK.userPoolId().eq(tenant), HOOK.id().eq(id))
         .select(HOOK)
         .fetchOptional();
   }

@@ -7,8 +7,8 @@ import com.easy1auth.system.model.AdminRoleEntityTable;
 import com.easy1auth.system.model.AdminAccountEntity;
 import com.easy1auth.system.model.AdminAccountEntityTable;
 import com.easy1auth.framework.common.pagination.PageData;
-import com.easy1auth.tenant.model.TenantMembershipEntity;
-import com.easy1auth.tenant.model.TenantMembershipEntityTable;
+import com.easy1auth.tenant.model.UserPoolMembershipEntity;
+import com.easy1auth.tenant.model.UserPoolMembershipEntityTable;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -22,7 +22,7 @@ import org.babyfish.jimmer.sql.ast.mutation.SaveMode;
 public interface AdminAccessRepository extends JRepository<AdminRoleEntity, UUID> {
   AdminRoleEntityTable ROLE = AdminRoleEntityTable.$;
   AdminAccountEntityTable ACCOUNT = AdminAccountEntityTable.$;
-  TenantMembershipEntityTable MEMBERSHIP = TenantMembershipEntityTable.$;
+  UserPoolMembershipEntityTable MEMBERSHIP = UserPoolMembershipEntityTable.$;
 
   default List<AdminRoleEntity> findRoles(String name, Boolean system) {
     return sql()
@@ -57,7 +57,7 @@ public interface AdminAccessRepository extends JRepository<AdminRoleEntity, UUID
   default Optional<AdminRoleEntity> findRole(UUID tenant, UUID id) {
     return sql()
         .createQuery(ROLE)
-        .where(ROLE.id().eq(id), ROLE.tenantId().eq(tenant))
+        .where(ROLE.id().eq(id), ROLE.userPoolId().eq(tenant))
         .select(ROLE)
         .fetchOptional();
   }
@@ -73,7 +73,7 @@ public interface AdminAccessRepository extends JRepository<AdminRoleEntity, UUID
   default Optional<AdminRoleEntity> findRoleFetched(UUID tenant, UUID id) {
     return sql()
         .createQuery(ROLE)
-        .where(ROLE.id().eq(id), ROLE.tenantId().eq(tenant))
+        .where(ROLE.id().eq(id), ROLE.userPoolId().eq(tenant))
         .select(ROLE.fetch(AdminRoleEntityFetcher.$.allScalarFields().permissions().memberships()))
         .fetchOptional();
   }
@@ -96,7 +96,7 @@ public interface AdminAccessRepository extends JRepository<AdminRoleEntity, UUID
             .createUpdate(ROLE)
             .set(ROLE.name(), name)
             .set(ROLE.updatedAt(), Instant.now())
-            .where(ROLE.id().eq(id), ROLE.tenantId().eq(tenant));
+            .where(ROLE.id().eq(id), ROLE.userPoolId().eq(tenant));
     if (description != null) {
       update.set(ROLE.description(), description);
     }
@@ -133,31 +133,31 @@ public interface AdminAccessRepository extends JRepository<AdminRoleEntity, UUID
         query.fetchUnlimitedCount());
   }
 
-  default List<TenantMembershipEntity> findActiveMemberships() {
+  default List<UserPoolMembershipEntity> findActiveMemberships() {
     return sql()
         .createQuery(MEMBERSHIP)
         .where(MEMBERSHIP.status().eq("active"))
-        .orderBy(MEMBERSHIP.createdAt().asc(), MEMBERSHIP.tenantId().asc(), MEMBERSHIP.id().asc())
+        .orderBy(MEMBERSHIP.createdAt().asc(), MEMBERSHIP.userPoolId().asc(), MEMBERSHIP.id().asc())
         .select(MEMBERSHIP)
         .execute();
   }
 
-  default Optional<TenantMembershipEntity> findActiveMembership(UUID tenant, UUID account) {
+  default Optional<UserPoolMembershipEntity> findActiveMembership(UUID tenant, UUID account) {
     return sql()
         .createQuery(MEMBERSHIP)
         .where(
-            MEMBERSHIP.tenantId().eq(tenant),
+            MEMBERSHIP.userPoolId().eq(tenant),
             MEMBERSHIP.accountId().eq(account),
             MEMBERSHIP.status().eq("active"))
         .select(MEMBERSHIP)
         .fetchOptional();
   }
 
-  default List<TenantMembershipEntity> findActiveMemberships(UUID account) {
+  default List<UserPoolMembershipEntity> findActiveMemberships(UUID account) {
     return sql()
         .createQuery(MEMBERSHIP)
         .where(MEMBERSHIP.accountId().eq(account), MEMBERSHIP.status().eq("active"))
-        .orderBy(MEMBERSHIP.createdAt().asc(), MEMBERSHIP.tenantId().asc(), MEMBERSHIP.id().asc())
+        .orderBy(MEMBERSHIP.createdAt().asc(), MEMBERSHIP.userPoolId().asc(), MEMBERSHIP.id().asc())
         .select(MEMBERSHIP)
         .execute();
   }
@@ -201,7 +201,7 @@ public interface AdminAccessRepository extends JRepository<AdminRoleEntity, UUID
   default boolean roleExists(UUID tenant, String name) {
     return sql()
         .createQuery(ROLE)
-        .where(ROLE.tenantId().eq(tenant), ROLE.name().eq(name))
+        .where(ROLE.userPoolId().eq(tenant), ROLE.name().eq(name))
         .select(ROLE.id())
         .exists();
   }
@@ -209,7 +209,7 @@ public interface AdminAccessRepository extends JRepository<AdminRoleEntity, UUID
   default boolean roleCodeExists(UUID tenant, String code) {
     return sql()
         .createQuery(ROLE)
-        .where(ROLE.tenantId().eq(tenant), ROLE.code().eq(code))
+        .where(ROLE.userPoolId().eq(tenant), ROLE.code().eq(code))
         .select(ROLE.id())
         .exists();
   }

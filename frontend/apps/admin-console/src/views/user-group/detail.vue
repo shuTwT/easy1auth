@@ -219,7 +219,7 @@ onBeforeUnmount(() => {
 })
 
 watch(memberKeyword, () => { memberPage.value = 1 })
-watch([groupId, () => userStore.currentTenant?.id], () => {
+watch([groupId, () => userStore.currentUserPool?.id], () => {
   scope += 1
   candidateRequest += 1
   group.value = null

@@ -2,7 +2,7 @@
 import { onMounted } from 'vue'
 import { message } from 'antdv-next'
 import { useUserStore } from '@/stores/user'
-import { tenantApi } from '@/api/tenant'
+import { userPoolApi } from '@/api/userPool'
 import { antdLocale, antdTheme } from '@/config/antd'
 
 const userStore = useUserStore()
@@ -10,31 +10,31 @@ const userStore = useUserStore()
 onMounted(async () => {
   if (userStore.accessToken) {
     try {
-      if (userStore.tenants.length === 0) {
-        const response = await tenantApi.getCurrentSimpleList()
-        userStore.setTenants(response)
+      if (userStore.userPools.length === 0) {
+        const response = await userPoolApi.getCurrentSimpleList()
+        userStore.setUserPools(response)
       }
 
-      console.log(userStore.currentTenant , userStore.tenants)
+      console.log(userStore.currentUserPool , userStore.userPools)
 
-      if (!userStore.currentTenant && userStore.tenants.length > 0) {
-        const savedTenantId = localStorage.getItem('currentTenantId')
-        let tenant = savedTenantId
-          ? userStore.tenants.find(t => t.id === savedTenantId)
+      if (!userStore.currentUserPool && userStore.userPools.length > 0) {
+        const savedUserPoolId = localStorage.getItem('currentUserPoolId')
+        let tenant = savedUserPoolId
+          ? userStore.userPools.find(t => t.id === savedUserPoolId)
           : null
 
 
         if (!tenant) {
-          tenant = userStore.tenants[0]
+          tenant = userStore.userPools[0]
         }
 
         if (tenant) {
-          userStore.setCurrentTenant(tenant)
+          userStore.setCurrentUserPool(tenant)
         }
       }
     } catch (error) {
-      console.error('初始化租户信息失败:', error)
-      message.error('初始化租户信息失败')
+      console.error('初始化用户池信息失败:', error)
+      message.error('初始化用户池信息失败')
     }
   }
 })

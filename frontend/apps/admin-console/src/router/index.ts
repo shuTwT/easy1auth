@@ -17,16 +17,24 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '控制台', requiresAuth: true }
       },
       {
-        path: 'tenant',
+        path: 'user-pool',
+        name: 'UserPool',
+        component: () => import('@/views/userPool/index.vue'),
+        meta: { title: '用户池管理', requiresAuth: true }
+      },
+      {
+        path: 'user-pool-package',
+        name: 'UserPoolPackage',
+        component: () => import('@/views/userPoolPackage/index.vue'),
+        meta: { title: '用户池套餐', requiresAuth: true }
+      },
+      { path: 'tenant', redirect: '/user-pool' },
+      { path: 'tenant-package', redirect: '/user-pool-package' },
+      {
+        path: 'pool-tenants',
         name: 'Tenant',
         component: () => import('@/views/tenant/index.vue'),
         meta: { title: '租户管理', requiresAuth: true }
-      },
-      {
-        path: 'tenant-package',
-        name: 'TenantPackage',
-        component: () => import('@/views/tenantPackage/index.vue'),
-        meta: { title: '租户套餐', requiresAuth: true }
       },
       {
         path: 'menu-management',

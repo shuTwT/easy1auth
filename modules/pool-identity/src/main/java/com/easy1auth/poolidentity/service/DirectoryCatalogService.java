@@ -4,7 +4,7 @@ import com.easy1auth.poolidentity.constant.ErrorCodeConstants;
 import com.easy1auth.poolidentity.dto.PoolUserView;
 import com.easy1auth.poolidentity.dto.*;
 import com.easy1auth.poolidentity.model.*;
-import com.easy1auth.framework.tenant.context.TenantContextHolder;
+import com.easy1auth.framework.tenant.context.UserPoolContextHolder;
 
 import com.easy1auth.framework.common.error.DomainException;
 import com.easy1auth.framework.common.id.UuidV7;
@@ -22,7 +22,7 @@ import java.util.*;
  * 目录目录服务：管理 pool_user 的用户组（Group）、岗位（Position）及其组织关系。
  *
  * <p>用户组相互独立，支持多种类型（team / department / project / organization），
- * 可维护组成员；岗位记录编码、层级与部门归属。用户组、岗位均按租户隔离，
+ * 可维护组成员；岗位记录编码、层级与部门归属。用户组、岗位均按用户池隔离，
  * 服务于 pool_user 的组织架构管理。</p>
  */
 @Service
@@ -42,11 +42,11 @@ public class DirectoryCatalogService {
         this.sql = sql;
     }
 
-    /** 分页查询租户下的用户组，可按名称模糊搜索、按类型过滤，按创建时间倒序。 */
+    /** 分页查询用户池下的用户组，可按名称模糊搜索、按类型过滤，按创建时间倒序。 */
     @Transactional(readOnly = true)
     public PageData<GroupView> groups(UUID tenant, int page, int size, String name, String type) {
         int p = Math.max(1, page), s = Math.min(100, Math.max(1, size));
-        var query = sql.createQuery(GROUP).where(GROUP.tenantId().eq(tenant))
+        var query = sql.createQuery(GROUP).where(GROUP.userPoolId().eq(tenant))
                 .whereIf(name != null, () -> GROUP.name().ilike(name, LikeMode.ANYWHERE))
                 .whereIf(type != null, () -> GROUP.type().eq(type))
                 .orderBy(GROUP.createdAt().desc()).select(GROUP);
@@ -54,7 +54,7 @@ public class DirectoryCatalogService {
         return PageData.of(query.limit(s, (long) (p - 1) * s).execute().stream().map(this::groupView).toList(), p, s, total);
     }
 
-    /** 查询租户下单个用户组的详情视图。 */
+    /** 查询用户池下单个用户组的详情视图。 */
     @Transactional(readOnly = true)
     public GroupView group(UUID tenant, UUID id) {
         return groupView(groupEntity(tenant, id));
@@ -67,7 +67,7 @@ public class DirectoryCatalogService {
         Instant now = Instant.now();
         var entity = UserGroupEntityDraft.$.produce(d -> {
             d.setId(UuidV7.randomUuid());
-            d.setTenantId(tenant);
+            d.setUserPoolId(tenant);
             d.setName(in.name().strip());
             d.setDescription(in.description());
             d.setType(in.type() == null ? "team" : in.type());
@@ -87,7 +87,7 @@ public class DirectoryCatalogService {
         String type = in.type() == null ? old.type() : in.type();
         validateGroup(name, type);
         var update = sql.createUpdate(GROUP).set(GROUP.name(), name).set(GROUP.type(), type).set(GROUP.updatedAt(), Instant.now())
-                .where(GROUP.id().eq(id), GROUP.tenantId().eq(tenant));
+                .where(GROUP.id().eq(id), GROUP.userPoolId().eq(tenant));
         if (in.description() != null) {
             update.set(GROUP.description(), in.description());
         }
@@ -99,13 +99,13 @@ public class DirectoryCatalogService {
     @Transactional
     public void deleteGroup(UUID tenant, UUID id) {
         rejectEnterpriseManaged(groupEntity(tenant, id));
-        sql.createDelete(GROUP).where(GROUP.id().eq(id), GROUP.tenantId().eq(tenant)).execute();
+        sql.createDelete(GROUP).where(GROUP.id().eq(id), GROUP.userPoolId().eq(tenant)).execute();
     }
 
-    /** 统计租户下的用户组数量（按类型拆分）。 */
+    /** 统计用户池下的用户组数量（按类型拆分）。 */
     @Transactional(readOnly = true)
     public GroupStats groupStats(UUID tenant) {
-        var rows = sql.createQuery(GROUP).where(GROUP.tenantId().eq(tenant)).select(GROUP).execute();
+        var rows = sql.createQuery(GROUP).where(GROUP.userPoolId().eq(tenant)).select(GROUP).execute();
         return new GroupStats(rows.size(), countType(rows, "team"), countType(rows, "department"), countType(rows, "project"),
                 countType(rows, "organization"));
     }
@@ -114,7 +114,7 @@ public class DirectoryCatalogService {
     @Transactional(readOnly = true)
     public GroupMembers groupMembers(UUID tenant, UUID groupId) {
         groupEntity(tenant, groupId);
-        var memberIds = sql.createQuery(MEMBER).where(MEMBER.id().tenantId().eq(tenant), MEMBER.id().groupId().eq(groupId)).select(MEMBER.id().userId()).execute();
+        var memberIds = sql.createQuery(MEMBER).where(MEMBER.id().userPoolId().eq(tenant), MEMBER.id().groupId().eq(groupId)).select(MEMBER.id().userId()).execute();
         return new GroupMembers(userViews(tenant, memberIds), memberIds.size());
     }
 
@@ -130,11 +130,11 @@ public class DirectoryCatalogService {
         mutateGroupMembers(tenant, groupId, users, false);
     }
 
-    /** 分页查询租户下的岗位，可按名称/编码模糊搜索、按部门/层级过滤，按创建时间倒序。 */
+    /** 分页查询用户池下的岗位，可按名称/编码模糊搜索、按部门/层级过滤，按创建时间倒序。 */
     @Transactional(readOnly = true)
     public PageData<PositionView> positions(UUID tenant, int page, int size, String name, String code, UUID departmentId, Integer level) {
         int p = Math.max(1, page), s = Math.min(100, Math.max(1, size));
-        var query = sql.createQuery(POSITION).where(POSITION.tenantId().eq(tenant))
+        var query = sql.createQuery(POSITION).where(POSITION.userPoolId().eq(tenant))
                 .whereIf(name != null, () -> POSITION.name().ilike(name, LikeMode.ANYWHERE))
                 .whereIf(code != null, () -> POSITION.code().ilike(code, LikeMode.ANYWHERE))
                 .whereIf(departmentId != null, () -> POSITION.departmentId().eq(departmentId))
@@ -143,7 +143,7 @@ public class DirectoryCatalogService {
         return PageData.of(query.limit(s, (long) (p - 1) * s).execute().stream().map(this::positionView).toList(), p, s, total);
     }
 
-    /** 查询租户下单个岗位的详情视图。 */
+    /** 查询用户池下单个岗位的详情视图。 */
     @Transactional(readOnly = true)
     public PositionView position(UUID tenant, UUID id) {
         return positionView(positionEntity(tenant, id));
@@ -154,7 +154,7 @@ public class DirectoryCatalogService {
     public PositionView createPosition(UUID tenant, PositionInput in) {
         validatePosition(in.name(), in.code());
         Instant now = Instant.now();
-        var e = PositionEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTenantId(tenant).setName(in.name()).setCode(in.code())
+        var e = PositionEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setUserPoolId(tenant).setName(in.name()).setCode(in.code())
                 .setDescription(in.description()).setDepartmentId(in.departmentId()).setLevel(in.level() == null ? 1 : in.level())
                 .setSequence(in.sequence()).setMaxCount(in.maxCount()).setCreatedAt(now).setUpdatedAt(now));
         sql.saveCommand(e).setMode(SaveMode.INSERT_ONLY).execute();
@@ -168,7 +168,7 @@ public class DirectoryCatalogService {
         String name = in.name() == null ? old.name() : in.name();
         String code = in.code() == null ? old.code() : in.code();
         validatePosition(name, code);
-        var u = sql.createUpdate(POSITION).set(POSITION.name(), name).set(POSITION.code(), code).set(POSITION.updatedAt(), Instant.now()).where(POSITION.id().eq(id), POSITION.tenantId().eq(tenant));
+        var u = sql.createUpdate(POSITION).set(POSITION.name(), name).set(POSITION.code(), code).set(POSITION.updatedAt(), Instant.now()).where(POSITION.id().eq(id), POSITION.userPoolId().eq(tenant));
         if (in.description() != null) {
             u.set(POSITION.description(), in.description());
         }
@@ -192,13 +192,13 @@ public class DirectoryCatalogService {
     @Transactional
     public void deletePosition(UUID tenant, UUID id) {
         positionEntity(tenant, id);
-        sql.createDelete(POSITION).where(POSITION.id().eq(id), POSITION.tenantId().eq(tenant)).execute();
+        sql.createDelete(POSITION).where(POSITION.id().eq(id), POSITION.userPoolId().eq(tenant)).execute();
     }
 
-    /** 统计租户下的岗位数量：总数、在编（有用户）/空编数量及平均层级。 */
+    /** 统计用户池下的岗位数量：总数、在编（有用户）/空编数量及平均层级。 */
     @Transactional(readOnly = true)
     public PositionStats positionStats(UUID tenant) {
-        var rows = sql.createQuery(POSITION).where(POSITION.tenantId().eq(tenant)).select(POSITION).execute();
+        var rows = sql.createQuery(POSITION).where(POSITION.userPoolId().eq(tenant)).select(POSITION).execute();
         long filled = rows.stream().filter(p -> positionUserCount(p) > 0).count();
         return new PositionStats(rows.size(), filled, rows.size() - filled,
                 rows.stream().mapToInt(PositionEntity::level).average().orElse(0));
@@ -208,8 +208,8 @@ public class DirectoryCatalogService {
     @Transactional(readOnly = true)
     public List<GroupView> groupsForUser(UUID tenant, UUID userId) {
         userEntity(tenant, userId);
-        var ids = sql.createQuery(MEMBER).where(MEMBER.id().tenantId().eq(tenant), MEMBER.id().userId().eq(userId)).select(MEMBER.id().groupId()).execute();
-        return ids.isEmpty() ? List.of() : sql.createQuery(GROUP).where(GROUP.tenantId().eq(tenant), GROUP.id().in(ids)).select(GROUP).execute().stream().map(this::groupView).toList();
+        var ids = sql.createQuery(MEMBER).where(MEMBER.id().userPoolId().eq(tenant), MEMBER.id().userId().eq(userId)).select(MEMBER.id().groupId()).execute();
+        return ids.isEmpty() ? List.of() : sql.createQuery(GROUP).where(GROUP.userPoolId().eq(tenant), GROUP.id().in(ids)).select(GROUP).execute().stream().map(this::groupView).toList();
     }
 
     /** 替换用户加入的用户组：先删除旧的成员分配，再批量插入新的分配。 */
@@ -219,7 +219,7 @@ public class DirectoryCatalogService {
         for (UUID groupId : groupIds) {
             groupEntity(tenant, groupId);
         }
-        sql.createDelete(MEMBER).where(MEMBER.id().tenantId().eq(tenant), MEMBER.id().userId().eq(userId)).execute();
+        sql.createDelete(MEMBER).where(MEMBER.id().userPoolId().eq(tenant), MEMBER.id().userId().eq(userId)).execute();
         groupIds.forEach(groupId -> insertMember(tenant, userId, groupId));
     }
 
@@ -232,7 +232,7 @@ public class DirectoryCatalogService {
             } else {
                 sql.createDelete(MEMBER)
                         .where(
-                                MEMBER.id().tenantId().eq(tenant),
+                                MEMBER.id().userPoolId().eq(tenant),
                                 MEMBER.id().groupId().eq(groupId),
                                 MEMBER.id().userId().eq(userId)
                         )
@@ -242,51 +242,51 @@ public class DirectoryCatalogService {
     }
 
     private void insertMember(UUID tenant, UUID user, UUID group) {
-        var id = UserGroupAssignmentIdDraft.$.produce(d -> d.setTenantId(tenant).setUserId(user).setGroupId(group));
+        var id = UserGroupAssignmentIdDraft.$.produce(d -> d.setUserPoolId(tenant).setUserId(user).setGroupId(group));
         sql.saveCommand(UserGroupAssignmentEntityDraft.$.produce(d -> d.setId(id))).setMode(SaveMode.INSERT_IF_ABSENT).execute();
     }
 
     private UserGroupEntity groupEntity(UUID tenant, UUID id) {
-        return sql.createQuery(GROUP).where(GROUP.id().eq(id), GROUP.tenantId().eq(tenant)).select(GROUP).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.DIRECTORY_GROUP_NOT_FOUND));
+        return sql.createQuery(GROUP).where(GROUP.id().eq(id), GROUP.userPoolId().eq(tenant)).select(GROUP).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.DIRECTORY_GROUP_NOT_FOUND));
     }
 
     private PositionEntity positionEntity(UUID tenant, UUID id) {
-        return sql.createQuery(POSITION).where(POSITION.id().eq(id), POSITION.tenantId().eq(tenant)).select(POSITION).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.DIRECTORY_POSITION_NOT_FOUND));
+        return sql.createQuery(POSITION).where(POSITION.id().eq(id), POSITION.userPoolId().eq(tenant)).select(POSITION).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.DIRECTORY_POSITION_NOT_FOUND));
     }
 
     private PoolUserEntity userEntity(UUID tenant, UUID id) {
-        return sql.createQuery(USER).where(USER.id().eq(id), USER.tenantId().eq(tenant)).select(USER).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.DIRECTORY_USER_NOT_FOUND));
+        return sql.createQuery(USER).where(USER.id().eq(id), USER.userPoolId().eq(tenant)).select(USER).fetchOptional().orElseThrow(() -> new DomainException(ErrorCodeConstants.DIRECTORY_USER_NOT_FOUND));
     }
 
     private List<PoolUserView> userViews(UUID tenant, Collection<UUID> ids) {
         if (ids.isEmpty()) {
             return List.of();
         }
-        return sql.createQuery(USER).where(USER.tenantId().eq(tenant), USER.id().in(ids)).select(USER).execute().stream().map(this::userView).toList();
+        return sql.createQuery(USER).where(USER.userPoolId().eq(tenant), USER.id().in(ids)).select(USER).execute().stream().map(this::userView).toList();
     }
 
     private GroupView groupView(UserGroupEntity g) {
         return new GroupView(
-                g.id(), g.tenantId(), g.name(), g.description(), g.type(),
+                g.id(), g.userPoolId(), g.name(), g.description(), g.type(),
                 g.createdAt(), g.updatedAt(),
-                new Counts(memberCount(g.tenantId(), g.id()))
+                new Counts(memberCount(g.userPoolId(), g.id()))
         );
     }
 
     private PositionView positionView(PositionEntity p) {
-        return new PositionView(p.id(), p.tenantId(), p.name(), p.code(), p.description(), p.departmentId(), p.level(), p.sequence(), positionUserCount(p), p.maxCount(), p.createdAt(), p.updatedAt());
+        return new PositionView(p.id(), p.userPoolId(), p.name(), p.code(), p.description(), p.departmentId(), p.level(), p.sequence(), positionUserCount(p), p.maxCount(), p.createdAt(), p.updatedAt());
     }
 
     private PoolUserView userView(PoolUserEntity e) {
-        return new PoolUserView(e.id(), e.tenantId(), e.username(), e.email(), e.phone(), e.name(), e.avatar(), e.status(), e.emailVerified(), e.phoneVerified(), e.department(), e.position(), e.customAttributes(), e.lastLoginAt(), e.createdAt(), e.updatedAt());
+        return new PoolUserView(e.id(), e.userPoolId(), e.username(), e.email(), e.phone(), e.name(), e.avatar(), e.status(), e.emailVerified(), e.phoneVerified(), e.department(), e.position(), e.customAttributes(), e.lastLoginAt(), e.createdAt(), e.updatedAt());
     }
 
     private long memberCount(UUID tenant, UUID group) {
-        return sql.createQuery(MEMBER).where(MEMBER.id().tenantId().eq(tenant), MEMBER.id().groupId().eq(group)).select(MEMBER.id()).fetchUnlimitedCount();
+        return sql.createQuery(MEMBER).where(MEMBER.id().userPoolId().eq(tenant), MEMBER.id().groupId().eq(group)).select(MEMBER.id()).fetchUnlimitedCount();
     }
 
     private long positionUserCount(PositionEntity p) {
-        return sql.createQuery(USER).where(USER.tenantId().eq(p.tenantId()), USER.position().eq(p.name())).select(USER.id()).fetchUnlimitedCount();
+        return sql.createQuery(USER).where(USER.userPoolId().eq(p.userPoolId()), USER.position().eq(p.name())).select(USER.id()).fetchUnlimitedCount();
     }
 
     private void validateGroup(String name, String type) {
@@ -311,105 +311,105 @@ public class DirectoryCatalogService {
         return groups.stream().filter(g -> type.equals(g.type())).count();
     }
 
-    /** 从当前租户上下文取租户 ID 后分页查询用户组。 */
+    /** 从当前用户池上下文取用户池 ID 后分页查询用户组。 */
     @Transactional(readOnly = true)
     public PageData<GroupView> groups(int page, int size, String name, String type) {
-        return groups(TenantContextHolder.requireTenantId(), page, size, name, type);
+        return groups(UserPoolContextHolder.requireUserPoolId(), page, size, name, type);
     }
 
-    /** 从当前租户上下文取租户 ID 后查询用户组详情。 */
+    /** 从当前用户池上下文取用户池 ID 后查询用户组详情。 */
     @Transactional(readOnly = true)
     public GroupView group(UUID id) {
-        return group(TenantContextHolder.requireTenantId(), id);
+        return group(UserPoolContextHolder.requireUserPoolId(), id);
     }
 
-    /** 从当前租户上下文取租户 ID 后创建用户组。 */
+    /** 从当前用户池上下文取用户池 ID 后创建用户组。 */
     @Transactional
     public GroupView createGroup(GroupInput in) {
-        return createGroup(TenantContextHolder.requireTenantId(), in);
+        return createGroup(UserPoolContextHolder.requireUserPoolId(), in);
     }
 
-    /** 从当前租户上下文取租户 ID 后更新用户组。 */
+    /** 从当前用户池上下文取用户池 ID 后更新用户组。 */
     @Transactional
     public GroupView updateGroup(UUID id, GroupInput in) {
-        return updateGroup(TenantContextHolder.requireTenantId(), id, in);
+        return updateGroup(UserPoolContextHolder.requireUserPoolId(), id, in);
     }
 
-    /** 从当前租户上下文取租户 ID 后删除用户组。 */
+    /** 从当前用户池上下文取用户池 ID 后删除用户组。 */
     @Transactional
     public void deleteGroup(UUID id) {
-        deleteGroup(TenantContextHolder.requireTenantId(), id);
+        deleteGroup(UserPoolContextHolder.requireUserPoolId(), id);
     }
 
-    /** 从当前租户上下文取租户 ID 后统计用户组。 */
+    /** 从当前用户池上下文取用户池 ID 后统计用户组。 */
     @Transactional(readOnly = true)
     public GroupStats groupStats() {
-        return groupStats(TenantContextHolder.requireTenantId());
+        return groupStats(UserPoolContextHolder.requireUserPoolId());
     }
 
-    /** 从当前租户上下文取租户 ID 后查询用户组成员。 */
+    /** 从当前用户池上下文取用户池 ID 后查询用户组成员。 */
     @Transactional(readOnly = true)
     public GroupMembers groupMembers(UUID groupId) {
-        return groupMembers(TenantContextHolder.requireTenantId(), groupId);
+        return groupMembers(UserPoolContextHolder.requireUserPoolId(), groupId);
     }
 
-    /** 从当前租户上下文取租户 ID 后向用户组添加成员。 */
+    /** 从当前用户池上下文取用户池 ID 后向用户组添加成员。 */
     @Transactional
     public void addMembers(UUID groupId, Collection<UUID> users) {
-        addMembers(TenantContextHolder.requireTenantId(), groupId, users);
+        addMembers(UserPoolContextHolder.requireUserPoolId(), groupId, users);
     }
 
-    /** 从当前租户上下文取租户 ID 后移除用户组成员。 */
+    /** 从当前用户池上下文取用户池 ID 后移除用户组成员。 */
     @Transactional
     public void removeMembers(UUID groupId, Collection<UUID> users) {
-        removeMembers(TenantContextHolder.requireTenantId(), groupId, users);
+        removeMembers(UserPoolContextHolder.requireUserPoolId(), groupId, users);
     }
 
-    /** 从当前租户上下文取租户 ID 后分页查询岗位。 */
+    /** 从当前用户池上下文取用户池 ID 后分页查询岗位。 */
     @Transactional(readOnly = true)
     public PageData<PositionView> positions(int page, int size, String name, String code, UUID departmentId, Integer level) {
-        return positions(TenantContextHolder.requireTenantId(), page, size, name, code, departmentId, level);
+        return positions(UserPoolContextHolder.requireUserPoolId(), page, size, name, code, departmentId, level);
     }
 
-    /** 从当前租户上下文取租户 ID 后查询岗位详情。 */
+    /** 从当前用户池上下文取用户池 ID 后查询岗位详情。 */
     @Transactional(readOnly = true)
     public PositionView position(UUID id) {
-        return position(TenantContextHolder.requireTenantId(), id);
+        return position(UserPoolContextHolder.requireUserPoolId(), id);
     }
 
-    /** 从当前租户上下文取租户 ID 后创建岗位。 */
+    /** 从当前用户池上下文取用户池 ID 后创建岗位。 */
     @Transactional
     public PositionView createPosition(PositionInput in) {
-        return createPosition(TenantContextHolder.requireTenantId(), in);
+        return createPosition(UserPoolContextHolder.requireUserPoolId(), in);
     }
 
-    /** 从当前租户上下文取租户 ID 后更新岗位。 */
+    /** 从当前用户池上下文取用户池 ID 后更新岗位。 */
     @Transactional
     public PositionView updatePosition(UUID id, PositionInput in) {
-        return updatePosition(TenantContextHolder.requireTenantId(), id, in);
+        return updatePosition(UserPoolContextHolder.requireUserPoolId(), id, in);
     }
 
-    /** 从当前租户上下文取租户 ID 后删除岗位。 */
+    /** 从当前用户池上下文取用户池 ID 后删除岗位。 */
     @Transactional
     public void deletePosition(UUID id) {
-        deletePosition(TenantContextHolder.requireTenantId(), id);
+        deletePosition(UserPoolContextHolder.requireUserPoolId(), id);
     }
 
-    /** 从当前租户上下文取租户 ID 后统计岗位。 */
+    /** 从当前用户池上下文取用户池 ID 后统计岗位。 */
     @Transactional(readOnly = true)
     public PositionStats positionStats() {
-        return positionStats(TenantContextHolder.requireTenantId());
+        return positionStats(UserPoolContextHolder.requireUserPoolId());
     }
 
-    /** 从当前租户上下文取租户 ID 后查询用户加入的用户组。 */
+    /** 从当前用户池上下文取用户池 ID 后查询用户加入的用户组。 */
     @Transactional(readOnly = true)
     public List<GroupView> groupsForUser(UUID userId) {
-        return groupsForUser(TenantContextHolder.requireTenantId(), userId);
+        return groupsForUser(UserPoolContextHolder.requireUserPoolId(), userId);
     }
 
-    /** 从当前租户上下文取租户 ID 后替换用户加入的用户组。 */
+    /** 从当前用户池上下文取用户池 ID 后替换用户加入的用户组。 */
     @Transactional
     public void replaceUserGroups(UUID userId, Collection<UUID> groupIds) {
-        replaceUserGroups(TenantContextHolder.requireTenantId(), userId, groupIds);
+        replaceUserGroups(UserPoolContextHolder.requireUserPoolId(), userId, groupIds);
     }
 }

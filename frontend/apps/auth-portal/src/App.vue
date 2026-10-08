@@ -279,7 +279,7 @@ function completeLogin(redirectUrl?: string) {
 }
 
 function socialUrl(sourceId: string) {
-  return context.value?.tenantId ? `/t/${context.value.tenantId}/social/${sourceId}/authorize` : '#'
+  return context.value?.userPoolId ? `/t/${context.value.userPoolId}/social/${sourceId}/authorize` : '#'
 }
 
 const legalTitle = computed(() => legalDocument.value === 'terms' ? '服务条款' : '隐私政策')

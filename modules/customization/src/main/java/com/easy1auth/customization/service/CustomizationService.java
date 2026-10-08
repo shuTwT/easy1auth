@@ -128,7 +128,7 @@ public class CustomizationService {
         return updateDraft(new DraftInput(defaultConfig(), List.of(), new LegalDocumentsInput(null, null)));
     }
 
-    /** 查询（或自动初始化）当前租户的登录样式实体；首次访问时写入默认样式。 */
+    /** 查询（或自动初始化）当前用户池的登录样式实体；首次访问时写入默认样式。 */
     @Transactional
     public LoginStyleEntity style() {
         var e = repository.style().orElse(null);
@@ -141,20 +141,20 @@ public class CustomizationService {
         return e;
     }
 
-    /** 查询指定租户的登录样式（面向 pool_user 登录页的公开访问；不存在则初始化默认样式）。 */
+    /** 查询指定用户池的登录样式（面向 pool_user 登录页的公开访问；不存在则初始化默认样式）。 */
     @Transactional
     public LoginStyleEntity publicStyle(UUID tenant) {
         var e = repository.style(tenant).orElse(null);
         if (e == null) {
             Instant now = Instant.now();
             Map<String, Object> defaults = defaultConfig();
-            e = LoginStyleEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTenantId(tenant).setLogo(null).setLogoDark(null).setBackgroundImage(null).setBackgroundColor("#f5f7fa").setPrimaryColor("#0369A1").setTitle("Easy1Auth").setSubtitle("企业级身份管理平台").setCustomCss(null).setLoginMethods(List.of("password")).setSocialProviders(List.of()).setDraftSocialProviders(List.of()).setDraftConfig(defaults).setPublishedConfig(defaults).setRegistrationEnabled(true).setDraftUpdatedAt(now).setPublishedAt(now).setCreatedAt(now).setUpdatedAt(now));
+            e = LoginStyleEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setUserPoolId(tenant).setLogo(null).setLogoDark(null).setBackgroundImage(null).setBackgroundColor("#f5f7fa").setPrimaryColor("#0369A1").setTitle("Easy1Auth").setSubtitle("企业级身份管理平台").setCustomCss(null).setLoginMethods(List.of("password")).setSocialProviders(List.of()).setDraftSocialProviders(List.of()).setDraftConfig(defaults).setPublishedConfig(defaults).setRegistrationEnabled(true).setDraftUpdatedAt(now).setPublishedAt(now).setCreatedAt(now).setUpdatedAt(now));
             repository.insertStyle(e);
         }
         return e;
     }
 
-    /** 查询指定租户已发布的登录样式配置（供登录页渲染使用；未配置时返回默认配置）。 */
+    /** 查询指定用户池已发布的登录样式配置（供登录页渲染使用；未配置时返回默认配置）。 */
     @Transactional(readOnly = true)
     public Map<String, Object> publishedConfig(UUID tenant) {
         var style = repository.style(tenant).orElse(null);
@@ -164,7 +164,7 @@ public class CustomizationService {
         return config(style.publishedConfig(), style);
     }
 
-    /** 查询指定租户已发布的法律文档（服务条款与隐私政策，供登录 / 注册页展示）。 */
+    /** 查询指定用户池已发布的法律文档（服务条款与隐私政策，供登录 / 注册页展示）。 */
     @Transactional(readOnly = true)
     public PublishedLegalDocuments publishedLegalDocuments(UUID tenant) {
         var legal = repository.legalDocuments(tenant).orElse(null);

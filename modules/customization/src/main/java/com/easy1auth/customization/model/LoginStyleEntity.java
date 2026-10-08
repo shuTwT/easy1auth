@@ -1,7 +1,7 @@
 package com.easy1auth.customization.model;
 
 import com.easy1auth.framework.persistence.model.BaseEntity;
-import com.easy1auth.framework.tenant.persistence.model.BaseTenantEntity;
+import com.easy1auth.framework.tenant.persistence.model.BaseUserPoolEntity;
 import org.babyfish.jimmer.sql.*;
 import org.jspecify.annotations.Nullable;
 
@@ -18,7 +18,7 @@ import java.util.*;
  */
 @Entity
 @Table(name = "login_style")
-public interface LoginStyleEntity extends BaseEntity, BaseTenantEntity {
+public interface LoginStyleEntity extends BaseEntity, BaseUserPoolEntity {
 
     /** 亮色主题 logo 图片 URL（可为空） */
     @Nullable String logo();

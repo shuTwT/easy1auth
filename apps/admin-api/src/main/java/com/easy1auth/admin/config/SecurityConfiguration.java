@@ -18,8 +18,8 @@ import org.springframework.security.oauth2.core.*;
 import org.springframework.security.oauth2.jwt.*;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
-import com.easy1auth.admin.security.TenantContextFilter;
-import com.easy1auth.admin.security.TenantSecurityFilter;
+import com.easy1auth.admin.security.UserPoolContextFilter;
+import com.easy1auth.admin.security.UserPoolSecurityFilter;
 import com.easy1auth.admin.security.AuditMutationFilter;
 import com.easy1auth.admin.security.ApiErrorWriter;
 
@@ -28,7 +28,7 @@ import com.easy1auth.admin.security.ApiErrorWriter;
  *
  * <p>装配管理端安全过滤链：配置公开路由白名单，其余请求要求 JWT 认证；提供 HS256
  * 的 JWT 编解码器并校验 issuer / audience / subject_type 与账号会话有效性；同时在
- * 认证过滤器之后挂载租户上下文解析、租户权限与审计三个自定义过滤器。</p>
+ * 认证过滤器之后挂载用户池上下文解析、用户池权限与审计三个自定义过滤器。</p>
  */
 @Configuration
 @EnableConfigurationProperties({AdminJwtProperties.class, RegistrationProperties.class})
@@ -72,10 +72,10 @@ public class SecurityConfiguration {
      * 声明管理端安全过滤链。
      *
      * <p>关闭 CSRF（无状态 JWT 认证）；放行健康检查、登录/注册/刷新等公开端点；
-     * 其余请求需认证。认证通过后依次执行租户上下文解析、租户安全校验与审计过滤器。</p>
+     * 其余请求需认证。认证通过后依次执行用户池上下文解析、用户池安全校验与审计过滤器。</p>
      */
     @Bean
-    SecurityFilterChain security(HttpSecurity http, TenantContextFilter tenantContextFilter, TenantSecurityFilter tenantSecurityFilter,
+    SecurityFilterChain security(HttpSecurity http, UserPoolContextFilter tenantContextFilter, UserPoolSecurityFilter tenantSecurityFilter,
                                  AuditMutationFilter auditMutationFilter, ApiErrorWriter errors) throws Exception {
         return http
                 .csrf(csrf -> csrf.disable())
@@ -102,8 +102,8 @@ public class SecurityConfiguration {
                 .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> {
                 }).authenticationEntryPoint((request, response, exception) -> errors.writeTransport(response, 401, ErrorCodeConstants.AUTHENTICATION_REQUIRED)))
                 .addFilterAfter(tenantContextFilter, BearerTokenAuthenticationFilter.class)
-                .addFilterAfter(tenantSecurityFilter, TenantContextFilter.class)
-                .addFilterAfter(auditMutationFilter, TenantSecurityFilter.class)
+                .addFilterAfter(tenantSecurityFilter, UserPoolContextFilter.class)
+                .addFilterAfter(auditMutationFilter, UserPoolSecurityFilter.class)
                 .build();
     }
 

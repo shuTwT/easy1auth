@@ -7,7 +7,7 @@ export interface AdminProfile {
   phone: string | null
   status: 'active' | 'disabled'
   securityVersion: number
-  lastTenantId: string | null
+  lastUserPoolId: string | null
   mfaEnabled: boolean
   mfaType: string | null
   lastLoginAt: string | null

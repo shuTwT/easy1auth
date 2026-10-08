@@ -1,4 +1,4 @@
-import type { TenantPackage } from '@/types/tenantPackage'
+import type { UserPoolPackage } from '@/types/userPoolPackage'
 
 export interface ManagementMenu {
   code: string
@@ -13,10 +13,10 @@ export interface ManagementMenu {
 }
 
 export interface AuthorizationContext {
-  tenantId: string
+  userPoolId: string
   membershipRole: string
   permissions: string[]
-  tenantPackage: TenantPackage | null
+  userPoolPackage: UserPoolPackage | null
   menus: ManagementMenu[]
 }
 

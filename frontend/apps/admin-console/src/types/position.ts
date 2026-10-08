@@ -1,6 +1,6 @@
 export interface Position {
   id: string
-  tenantId: string
+  userPoolId: string
   name: string
   code: string
   description?: string

@@ -10,7 +10,7 @@ const router = useRouter()
 const userStore = useUserStore()
 
 const stats = ref<DashboardStats>({
-  tenantCount: 0,
+  userPoolCount: 0,
   userCount: 0,
   applicationCount: 0,
   todayLoginCount: 0
@@ -49,7 +49,7 @@ const formatTime = (timeStr: string) => {
 }
 
 const statCards = [
-  { key: 'tenantCount' as const, title: '租户总数', icon: Building2, color: 'primary' },
+  { key: 'userPoolCount' as const, title: '用户池总数', icon: Building2, color: 'primary' },
   { key: 'userCount' as const, title: '用户总数', icon: User, color: 'success' },
   { key: 'applicationCount' as const, title: '应用总数', icon: Monitor, color: 'warning' },
   { key: 'todayLoginCount' as const, title: '今日登录', icon: Link, color: 'info' }

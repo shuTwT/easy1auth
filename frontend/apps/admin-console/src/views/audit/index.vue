@@ -28,7 +28,7 @@ const queryForm = reactive<AuditLogQueryDto>({
 const dateRange = ref<[string, string] | null>(null)
 const auditTypeOptions = [
   { value: 'auth', label: '认证' }, { value: 'user', label: '用户' }, { value: 'application', label: '应用' },
-  { value: 'tenant', label: '租户' }, { value: 'role', label: '角色' }, { value: 'group', label: '用户组' }, { value: 'system', label: '系统' },
+  { value: 'tenant', label: '用户池' }, { value: 'role', label: '角色' }, { value: 'group', label: '用户组' }, { value: 'system', label: '系统' },
 ]
 const auditStatusOptions = [{ value: 'success', label: '成功' }, { value: 'failed', label: '失败' }]
 
@@ -131,7 +131,7 @@ const getTypeText = (type: string) => {
     auth: '认证',
     user: '用户',
     application: '应用',
-    tenant: '租户',
+    tenant: '用户池',
     role: '角色',
     group: '用户组',
     system: '系统'

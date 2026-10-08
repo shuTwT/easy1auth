@@ -33,10 +33,10 @@ public interface AuthenticationChallengeEntity {
     @Column(name = "subject_id")
     UUID subjectId();
 
-    /** 所属租户 ID（可为 null） */
+    /** 所属用户池 ID（可为 null） */
     @Nullable
     @Column(name = "tenant_id")
-    UUID tenantId();
+    UUID userPoolId();
 
     /** 挑战用途标识（区分场景，消费时须一致） */
     String purpose();

@@ -98,7 +98,7 @@ const loginForm = reactive<LoginForm>({
   refreshTokenLifetime: 2592000
 })
 
-const issuerEndpoint = computed(() => `${authorizationServerBase}/t/${application.value?.tenantId ?? 'TENANT_ID'}`)
+const issuerEndpoint = computed(() => `${authorizationServerBase}/t/${application.value?.userPoolId ?? 'USER_POOL_ID'}`)
 const authorizationEndpoint = computed(() => `${issuerEndpoint.value}/oauth2/authorize`)
 const tokenEndpoint = computed(() => `${issuerEndpoint.value}/oauth2/token`)
 const userinfoEndpoint = computed(() => `${issuerEndpoint.value}/userinfo`)

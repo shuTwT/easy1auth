@@ -10,7 +10,7 @@ import com.easy1auth.oauth2.*;
 import com.easy1auth.poolidentity.service.UserAccessCatalogService;
 import com.easy1auth.security.service.SecurityPolicyService;
 import com.easy1auth.authorization.security.IssuerHostValidationFilter;
-import com.easy1auth.authorization.security.TenantPrincipalValidationFilter;
+import com.easy1auth.authorization.security.UserPoolPrincipalValidationFilter;
 import com.easy1auth.authorization.web.AuthorizationInteractionService;
 import com.easy1auth.security.service.PoolUserDeviceService;
 import com.nimbusds.jose.jwk.JWKSet;
@@ -53,7 +53,7 @@ import java.util.*;
  *
  * <p>装配两条过滤链：{@code @Order(1)} 处理 OAuth2 授权端点（含授权、令牌、吊销、
  * JWKS 与 OIDC），{@code @Order(2)} 处理登录门户与常规请求。提供 pool_user 的
- * 认证提供者、多租户 JWT 密钥源、令牌声明定制与门户跳转等能力。</p>
+ * 认证提供者、多用户池 JWT 密钥源、令牌声明定制与门户跳转等能力。</p>
  */
 @Configuration
 public class SecurityConfiguration {
@@ -71,9 +71,9 @@ public class SecurityConfiguration {
         return registration;
     }
 
-    /** 声明并默认禁用 {@link TenantPrincipalValidationFilter}（由授权过滤链按需启用）。 */
+    /** 声明并默认禁用 {@link UserPoolPrincipalValidationFilter}（由授权过滤链按需启用）。 */
     @Bean
-    FilterRegistrationBean<TenantPrincipalValidationFilter> tenantPrincipalValidationFilterRegistration(TenantPrincipalValidationFilter filter) {
+    FilterRegistrationBean<UserPoolPrincipalValidationFilter> tenantPrincipalValidationFilterRegistration(UserPoolPrincipalValidationFilter filter) {
         var registration = new FilterRegistrationBean<>(filter);
         registration.setEnabled(false);
         return registration;
@@ -82,7 +82,7 @@ public class SecurityConfiguration {
     /**
      * 声明 pool_user 用户名/密码认证提供者。
      *
-     * <p>从认证细节中的租户解析用户，校验通过后授予 ROLE_POOL_USER、TENANT_{租户} 权限，
+     * <p>从认证细节中的用户池解析用户，校验通过后授予 ROLE_POOL_USER、TENANT_{用户池} 兼容权限，
      * 并按策略在需要时附加 MFA_REQUIRED，供登录流程进入多因素认证。</p>
      */
     @Bean
@@ -97,17 +97,17 @@ public class SecurityConfiguration {
                     if (principal == null) {
                         throw new BadCredentialsException("用户名或密码错误");
                     }
-                    devices.seen(principal.tenantId(), principal.id(), details.userAgent(), details.ip());
+                    devices.seen(principal.userPoolId(), principal.id(), details.userAgent(), details.ip());
                     var authorities = new ArrayList<GrantedAuthority>();
                     authorities.add(new SimpleGrantedAuthority("ROLE_POOL_USER"));
-                    authorities.add(new SimpleGrantedAuthority("TENANT_" + principal.tenantId()));
+                    authorities.add(new SimpleGrantedAuthority("TENANT_" + principal.userPoolId()));
                     var mfa = security.status("pool_user", principal.id());
-                    if (mfa.enabled() || security.policy(principal.tenantId()).mfaRequired()) {
+                    if (mfa.enabled() || security.policy(principal.userPoolId()).mfaRequired()) {
                         authorities.add(new SimpleGrantedAuthority("MFA_REQUIRED"));
                     }
                     return UsernamePasswordAuthenticationToken.authenticated(org.springframework.security.core.userdetails.User.withUsername(principal.id().toString()).password("").authorities(authorities).build(), null, authorities);
                 } catch (IllegalArgumentException ex) {
-                    throw new BadCredentialsException("租户或凭据无效");
+                    throw new BadCredentialsException("用户池或凭据无效");
                 }
             }
 
@@ -122,11 +122,11 @@ public class SecurityConfiguration {
      * 声明 OAuth2 授权服务器安全过滤链（最高优先级）。
      *
      * <p>配置授权、令牌、吊销、JWKS 与 OIDC 端点；在安全上下文之后挂载 issuer 主机
-     * 校验与租户主体校验过滤器；未认证的 HTML 请求跳转到登录门户并捕获原始授权请求。</p>
+     * 校验与用户池主体校验过滤器；未认证的 HTML 请求跳转到登录门户并捕获原始授权请求。</p>
      */
     @Bean
     @Order(1)
-    SecurityFilterChain authorizationServerSecurity(HttpSecurity http, RegisteredClientRepository clients, OAuth2AuthorizationService authorizations, OAuth2AuthorizationConsentService consents, IssuerHostValidationFilter issuerHostValidation, TenantPrincipalValidationFilter tenantPrincipalValidation, AuthorizationInteractionService interactions) throws Exception {
+    SecurityFilterChain authorizationServerSecurity(HttpSecurity http, RegisteredClientRepository clients, OAuth2AuthorizationService authorizations, OAuth2AuthorizationConsentService consents, IssuerHostValidationFilter issuerHostValidation, UserPoolPrincipalValidationFilter tenantPrincipalValidation, AuthorizationInteractionService interactions) throws Exception {
         var configurer = OAuth2AuthorizationServerConfigurer.authorizationServer();
         http.securityMatcher(configurer.getEndpointsMatcher())
                 .with(configurer, server -> server.registeredClientRepository(clients).authorizationService(authorizations).authorizationConsentService(consents)
@@ -197,13 +197,13 @@ public class SecurityConfiguration {
         return AuthorizationServerSettings.builder().multipleIssuersAllowed(true).authorizationEndpoint("/oauth2/authorize").tokenEndpoint("/oauth2/token").tokenRevocationEndpoint("/oauth2/revoke").jwkSetEndpoint("/oauth2/jwks").oidcUserInfoEndpoint("/userinfo").oidcLogoutEndpoint("/connect/logout").build();
     }
 
-    /** 声明 JWKS 密钥源：按当前租户上下文返回该租户激活的签名密钥集。 */
+    /** 声明 JWKS 密钥源：按当前用户池上下文返回该用户池激活的签名密钥集。 */
     @Bean
-    JWKSource<SecurityContext> jwkSource(TenantSigningKeyService keys) {
-        return (selector, context) -> selector.select(new JWKSet(keys.active(TenantIssuerContext.tenantId())));
+    JWKSource<SecurityContext> jwkSource(UserPoolSigningKeyService keys) {
+        return (selector, context) -> selector.select(new JWKSet(keys.active(UserPoolIssuerContext.userPoolId())));
     }
 
-    /** 声明基于多租户密钥源的 JWT 解码器。 */
+    /** 声明基于多用户池密钥源的 JWT 解码器。 */
     @Bean
     JwtDecoder jwtDecoder(JWKSource<SecurityContext> source) {
         return OAuth2AuthorizationServerConfiguration.jwtDecoder(source);
@@ -218,8 +218,10 @@ public class SecurityConfiguration {
     @Bean
     OAuth2TokenCustomizer<JwtEncodingContext> tokenClaims(PoolUserService users, DirectoryCatalogService directory, UserAccessCatalogService access) {
         return context -> {
-            UUID tenant = TenantIssuerContext.tenantId();
-            context.getClaims().audience(new ArrayList<>(List.of(context.getRegisteredClient().getClientId()))).claim("tenant_id", tenant.toString());
+            UUID tenant = UserPoolIssuerContext.userPoolId();
+            context.getClaims().audience(new ArrayList<>(List.of(context.getRegisteredClient().getClientId())))
+                    .claim("user_pool_id", tenant.toString())
+                    .claim("tenant_id", tenant.toString()); // Legacy claim also identifies the user pool.
             if (AuthorizationGrantType.CLIENT_CREDENTIALS.equals(context.getAuthorizationGrantType())) {
                 context.getClaims().claim("subject_type", "oauth_client");
                 return;
@@ -252,7 +254,7 @@ public class SecurityConfiguration {
     /**
      * 门户登录附带信息，随认证请求传入认证提供者。
      *
-     * @param tenant    登录所属租户 UUID
+     * @param tenant    登录所属用户池 UUID
      * @param userAgent 用户代理（浏览器标识）
      * @param ip        客户端 IP
      */

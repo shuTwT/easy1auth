@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { message } from 'antdv-next'
 import { useUserStore } from '@/stores/user'
 import { authorizationApi } from '@/api/authorization'
-import { tenantApi, type TenantPackageOption } from '@/api/tenant'
+import { userPoolApi, type UserPoolPackageOption } from '@/api/userPool'
 import type { ManagementMenu } from '@/types/authorization'
 import {
   Bell,
@@ -50,11 +50,11 @@ const collapsed = ref(false)
 const mobileOpen = ref(false)
 const mobile = ref(false)
 const openKeys = ref<string[]>([])
-const createTenantDialogOpen = ref(false)
-const createTenantSubmitting = ref(false)
-const createTenantName = ref('')
-const createTenantPackageId = ref<number | undefined>()
-const createTenantPackages = ref<TenantPackageOption[]>([])
+const createUserPoolDialogOpen = ref(false)
+const createUserPoolSubmitting = ref(false)
+const createUserPoolName = ref('')
+const createUserPoolPackageId = ref<number | undefined>()
+const createUserPoolPackages = ref<UserPoolPackageOption[]>([])
 
 const menuIcons: Record<string, Component> = {
   dashboard: LayoutDashboard,
@@ -70,8 +70,9 @@ const menuIcons: Record<string, Component> = {
   'enterprise-identity-source': Building2,
   'sync-identity-source': Building2,
   'identity-source-management': KeyRound,
-  tenant: Building2,
-  'tenant-package': Package,
+  'user-pool': Users,
+  'user-pool-package': Package,
+  'pool-tenants': Building2,
   'menu-management': MenuIcon,
   'brand-management': Palette,
   'brand-login-style': Palette,
@@ -83,6 +84,9 @@ const menuIcons: Record<string, Component> = {
 
 const menuResourceRoutes: Record<string, string> = {
   group: 'user-group',
+  tenant: 'user-pool',
+  'tenant-package': 'user-pool-package',
+  'pool-tenant': 'pool-tenants',
 }
 
 const menuTree = computed(() => {
@@ -126,13 +130,13 @@ const menuItems = computed<any[]>(() => {
 })
 
 const selectedKeys = computed(() => [typeof route.meta.activeMenu === 'string' ? route.meta.activeMenu : route.path])
-const tenantItems = computed(() => [
-  ...userStore.tenants.map(tenant => ({
+const userPoolItems = computed(() => [
+  ...userStore.userPools.map(tenant => ({
     key: tenant.id,
-    label: `${tenant.name}${tenant.tenantPackage?.name ? ` · ${tenant.tenantPackage.name}` : ''}`,
+    label: `${tenant.name}${tenant.userPoolPackage?.name ? ` · ${tenant.userPoolPackage.name}` : ''}`,
   })),
   { type: 'divider' as const },
-  { key: 'create-tenant', label: '新建租户' },
+  { key: 'create-tenant', label: '新建用户池' },
 ])
 const profileItems: any[] = [
   { key: 'profile', label: '个人中心', icon: h(UserRound, { size: 16 }) },
@@ -153,52 +157,52 @@ function onMenuClick({ key }: { key: string }) {
   }
 }
 
-function onTenantClick({ key }: { key: string }) {
+function onUserPoolClick({ key }: { key: string }) {
   if (key === 'create-tenant') {
-    openCreateTenantDialog()
+    openCreateUserPoolDialog()
     return
   }
-  const tenant = userStore.tenants.find(item => item.id === key)
-  if (tenant) userStore.setCurrentTenant(tenant)
+  const tenant = userStore.userPools.find(item => item.id === key)
+  if (tenant) userStore.setCurrentUserPool(tenant)
 }
 
-async function openCreateTenantDialog() {
-  createTenantName.value = ''
-  createTenantPackageId.value = undefined
-  createTenantDialogOpen.value = true
+async function openCreateUserPoolDialog() {
+  createUserPoolName.value = ''
+  createUserPoolPackageId.value = undefined
+  createUserPoolDialogOpen.value = true
   try {
-    createTenantPackages.value = await tenantApi.getAvailablePackages()
-    createTenantPackageId.value = createTenantPackages.value.find(item => item.id > 0)?.id
+    createUserPoolPackages.value = await userPoolApi.getAvailablePackages()
+    createUserPoolPackageId.value = createUserPoolPackages.value.find(item => item.id > 0)?.id
   } catch (error) {
-    console.error('加载可用租户套餐失败:', error)
-    message.error('加载可用租户套餐失败')
+    console.error('加载可用用户池套餐失败:', error)
+    message.error('加载可用用户池套餐失败')
   }
 }
 
-async function submitCreateTenant() {
-  if (!createTenantName.value.trim()) {
-    message.warning('请输入租户名称')
+async function submitCreateUserPool() {
+  if (!createUserPoolName.value.trim()) {
+    message.warning('请输入用户池名称')
     return
   }
-  if (!createTenantPackageId.value) {
-    message.warning('请选择租户套餐')
+  if (!createUserPoolPackageId.value) {
+    message.warning('请选择用户池套餐')
     return
   }
-  createTenantSubmitting.value = true
+  createUserPoolSubmitting.value = true
   try {
-    const tenant = await tenantApi.createTenant({
-      name: createTenantName.value.trim(),
-      packageId: createTenantPackageId.value,
+    const tenant = await userPoolApi.createUserPool({
+      name: createUserPoolName.value.trim(),
+      packageId: createUserPoolPackageId.value,
     })
-    userStore.setTenants([...userStore.tenants, tenant])
-    userStore.setCurrentTenant(tenant)
-    createTenantDialogOpen.value = false
-    message.success('租户创建成功')
+    userStore.setUserPools([...userStore.userPools, tenant])
+    userStore.setCurrentUserPool(tenant)
+    createUserPoolDialogOpen.value = false
+    message.success('用户池创建成功')
   } catch (error) {
-    console.error('创建租户失败:', error)
-    message.error('创建租户失败')
+    console.error('创建用户池失败:', error)
+    message.error('创建用户池失败')
   } finally {
-    createTenantSubmitting.value = false
+    createUserPoolSubmitting.value = false
   }
 }
 
@@ -213,7 +217,7 @@ function onProfileClick({ key }: { key: string }) {
 }
 
 async function loadAuthorizedMenus() {
-  if (!userStore.currentTenant?.id) {
+  if (!userStore.currentUserPool?.id) {
     authorizedMenus.value = []
     return
   }
@@ -221,8 +225,8 @@ async function loadAuthorizedMenus() {
   try {
     authorizedMenus.value = (await authorizationApi.getContext()).menus
   } catch (error) {
-    console.error('加载当前租户菜单失败:', error)
-    message.error('加载当前租户菜单失败')
+    console.error('加载当前用户池菜单失败:', error)
+    message.error('加载当前用户池菜单失败')
     authorizedMenus.value = []
   } finally {
     menuLoading.value = false
@@ -235,7 +239,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => window.removeEventListener('resize', updateMobile))
-watch(() => userStore.currentTenant?.id, loadAuthorizedMenus, { immediate: true })
+watch(() => userStore.currentUserPool?.id, loadAuthorizedMenus, { immediate: true })
 </script>
 
 <template>
@@ -256,9 +260,9 @@ watch(() => userStore.currentTenant?.id, loadAuthorizedMenus, { immediate: true 
         <span v-if="!collapsed" class="text-base font-semibold tracking-wide">Easy1Auth</span>
       </div>
       <div v-if="!collapsed" class="shrink-0 px-3 pb-3">
-        <a-dropdown :menu="{ items: tenantItems, onClick: onTenantClick }" :trigger="['click']">
+        <a-dropdown :menu="{ items: userPoolItems, onClick: onUserPoolClick }" :trigger="['click']">
           <button class="flex w-full items-center gap-2 rounded-md bg-white/5 px-3 py-2 text-sm text-slate-300 hover:bg-white/10 hover:text-white">
-            <Building2 :size="16" /><span class="flex-1 truncate text-left">{{ userStore.currentTenant?.name || '选择租户' }}</span><ChevronDown :size="14" />
+            <Building2 :size="16" /><span class="flex-1 truncate text-left">{{ userStore.currentUserPool?.name || '选择用户池' }}</span><ChevronDown :size="14" />
           </button>
         </a-dropdown>
       </div>
@@ -288,7 +292,7 @@ watch(() => userStore.currentTenant?.id, loadAuthorizedMenus, { immediate: true 
     </a-layout-sider>
 
       <a-drawer v-model:open="mobileOpen" title="Easy1Auth" placement="left" :size="280" :styles="{ body: { padding: 0 } }">
-      <div class="p-3"><a-dropdown :menu="{ items: tenantItems, onClick: onTenantClick }" :trigger="['click']"><a-button block><Building2 :size="16" class="mr-2" />{{ userStore.currentTenant?.name || '选择租户' }}</a-button></a-dropdown></div>
+      <div class="p-3"><a-dropdown :menu="{ items: userPoolItems, onClick: onUserPoolClick }" :trigger="['click']"><a-button block><Building2 :size="16" class="mr-2" />{{ userStore.currentUserPool?.name || '选择用户池' }}</a-button></a-dropdown></div>
       <a-menu :selected-keys="selectedKeys" :items="menuItems" mode="inline" @click="onMenuClick" />
     </a-drawer>
 
@@ -312,25 +316,25 @@ watch(() => userStore.currentTenant?.id, loadAuthorizedMenus, { immediate: true 
       </a-layout-content>
     </a-layout>
 
-    <a-modal v-model:open="createTenantDialogOpen" title="新建租户" :footer="null">
-      <form class="grid gap-4" @submit.prevent="submitCreateTenant">
+    <a-modal v-model:open="createUserPoolDialogOpen" title="新建用户池" :footer="null">
+      <form class="grid gap-4" @submit.prevent="submitCreateUserPool">
         <div class="grid gap-2">
-          <label for="create-tenant-name">租户名称</label>
-          <a-input id="create-tenant-name" v-model:value="createTenantName" placeholder="请输入租户名称" />
+          <label for="create-tenant-name">用户池名称</label>
+          <a-input id="create-tenant-name" v-model:value="createUserPoolName" placeholder="请输入用户池名称" />
         </div>
         <div class="grid gap-2">
-          <label for="create-tenant-package">租户套餐</label>
+          <label for="create-tenant-package">用户池套餐</label>
           <a-select
             id="create-tenant-package"
-            v-model:value="createTenantPackageId"
+            v-model:value="createUserPoolPackageId"
             class="w-full"
-            placeholder="请选择租户套餐"
-            :options="createTenantPackages.map(item => ({ value: item.id, label: `${item.name} · ${item.maxUsers.toLocaleString()} 用户 / ${item.maxApps.toLocaleString()} 应用` }))"
+            placeholder="请选择用户池套餐"
+            :options="createUserPoolPackages.map(item => ({ value: item.id, label: `${item.name} · ${item.maxUsers.toLocaleString()} 用户 / ${item.maxApps.toLocaleString()} 应用` }))"
           />
         </div>
         <div class="flex justify-end gap-2 pt-2">
-          <a-button html-type="button" @click="createTenantDialogOpen = false">取消</a-button>
-          <a-button html-type="submit" :disabled="createTenantSubmitting">{{ createTenantSubmitting ? '创建中...' : '创建租户' }}</a-button>
+          <a-button html-type="button" @click="createUserPoolDialogOpen = false">取消</a-button>
+          <a-button html-type="submit" :disabled="createUserPoolSubmitting">{{ createUserPoolSubmitting ? '创建中...' : '创建用户池' }}</a-button>
         </div>
       </form>
     </a-modal>

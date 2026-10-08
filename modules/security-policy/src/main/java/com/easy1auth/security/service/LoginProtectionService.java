@@ -15,7 +15,7 @@ import java.util.*;
 /**
  * 登录保护服务：基于失败次数限制实现账号/密钥的临时锁定与解锁。
  *
- * <p>以「主体类型 + 主体键 + 租户」为维度记录失败次数，连续失败达到阈值后
+ * <p>以「主体类型 + 主体键 + 用户池」为维度记录失败次数，连续失败达到阈值后
  * 锁定一段时间；登录成功或锁定期过后自动恢复。支持对登录名、设备、验证码
  * 等多种主体分别计数。</p>
  */
@@ -46,7 +46,7 @@ public class LoginProtectionService {
         var row = find(type, normalized, tenant, true);
         Instant now = Instant.now();
         if (row == null) {
-            var e = LoginFailureStateEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setSubjectType(type).setSubjectKey(normalized).setTenantId(tenant).setFailedAttempts(1).setLockedUntil(limit <= 1 ? now.plusSeconds(lockSeconds) : null).setLastFailedAt(now));
+            var e = LoginFailureStateEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setSubjectType(type).setSubjectKey(normalized).setUserPoolId(tenant).setFailedAttempts(1).setLockedUntil(limit <= 1 ? now.plusSeconds(lockSeconds) : null).setLastFailedAt(now));
             sql.saveCommand(e).setMode(SaveMode.INSERT_IF_ABSENT).execute();
             return;
         }
@@ -57,12 +57,12 @@ public class LoginProtectionService {
     /** 记录一次成功登录：清除该主体的失败计数记录。 */
     @Transactional
     public void succeeded(String type, String key, UUID tenant) {
-        sql.createDelete(STATE).where(STATE.subjectType().eq(type), STATE.subjectKey().eq(normalize(key)), tenant == null ? STATE.tenantId().isNull() : STATE.tenantId().eq(tenant)).execute();
+        sql.createDelete(STATE).where(STATE.subjectType().eq(type), STATE.subjectKey().eq(normalize(key)), tenant == null ? STATE.userPoolId().isNull() : STATE.userPoolId().eq(tenant)).execute();
     }
 
     /** 查询失败状态记录，lock 为 true 时加行级锁（配合事务内的计数更新）。 */
     private LoginFailureStateEntity find(String type, String key, UUID tenant, boolean lock) {
-        var q = sql.createQuery(STATE).where(STATE.subjectType().eq(type), STATE.subjectKey().eq(key), tenant == null ? STATE.tenantId().isNull() : STATE.tenantId().eq(tenant)).select(STATE);
+        var q = sql.createQuery(STATE).where(STATE.subjectType().eq(type), STATE.subjectKey().eq(key), tenant == null ? STATE.userPoolId().isNull() : STATE.userPoolId().eq(tenant)).select(STATE);
         return lock ? q.forUpdate().fetchOneOrNull() : q.fetchOneOrNull();
     }
 

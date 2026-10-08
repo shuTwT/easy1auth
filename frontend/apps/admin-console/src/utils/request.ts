@@ -61,8 +61,8 @@ request.interceptors.request.use(
     }
 
     const userStore = useUserStore()
-    if (userStore.currentTenant?.id) {
-      config.headers['tenant-id'] = userStore.currentTenant.id
+    if (userStore.currentUserPool?.id) {
+      config.headers['user-pool-id'] = userStore.currentUserPool.id
     }
 
     return config

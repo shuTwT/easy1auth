@@ -19,9 +19,9 @@ export interface LoginResponse {
     username: string
     email: string
     avatar?: string
-    currentTenantId?: string
+    currentUserPoolId?: string
   }
-  tenants?: TenantInfo[]
+  userPools?: UserPoolInfo[]
 }
 
 export interface SendCodeRequest {
@@ -49,12 +49,12 @@ export interface RegisterResponse {
     username: string
     email: string
     avatar?: string
-    currentTenantId?: string
+    currentUserPoolId?: string
   }
-  tenants?: TenantInfo[]
+  userPools?: UserPoolInfo[]
 }
 
-export interface TenantInfo {
+export interface UserPoolInfo {
   id: string
   name: string
   role: string
@@ -62,7 +62,7 @@ export interface TenantInfo {
   logo?: string
   status?: string
   plan?: string
-  tenantPackage?: {
+  userPoolPackage?: {
     id: number
     name: string
     maxUsers: number

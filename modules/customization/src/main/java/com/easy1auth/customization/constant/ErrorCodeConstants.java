@@ -22,5 +22,5 @@ public interface ErrorCodeConstants {
     ErrorCode STYLE_TEXT_INVALID = new ErrorCode(20010, "登录样式文本无效");
     ErrorCode TEMPLATE_VARIABLE_UNKNOWN = new ErrorCode(20011, "模板包含未声明变量");
     ErrorCode STYLE_CONFIG_INVALID = new ErrorCode(20012, "登录样式配置无效");
-    ErrorCode SOCIAL_PROVIDER_INVALID = new ErrorCode(20013, "所选登录身份源不存在、已停用或不属于当前租户");
+    ErrorCode SOCIAL_PROVIDER_INVALID = new ErrorCode(20013, "所选登录身份源不存在、已停用或不属于当前用户池");
 }

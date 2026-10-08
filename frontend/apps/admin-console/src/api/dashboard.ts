@@ -1,7 +1,7 @@
 import request from '@/utils/request'
 
 export interface DashboardStats {
-  tenantCount: number
+  userPoolCount: number
   userCount: number
   applicationCount: number
   todayLoginCount: number

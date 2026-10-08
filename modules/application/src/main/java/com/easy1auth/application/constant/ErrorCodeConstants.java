@@ -20,6 +20,6 @@ public interface ErrorCodeConstants {
     ErrorCode PUBLIC_CLIENT_GRANT_INVALID = new ErrorCode(16007, "公共客户端不能使用 Client Credentials");
     ErrorCode PUBLIC_CLIENT_HAS_NO_SECRET = new ErrorCode(16008, "公共客户端不使用客户端密钥");
     ErrorCode REDIRECT_URI_INVALID = new ErrorCode(16009, "重定向 URI 必须是无 fragment 的绝对 HTTP(S) URI");
-    ErrorCode TENANT_APP_LIMIT = new ErrorCode(16010, "已达到租户应用数量上限");
+    ErrorCode USER_POOL_APP_LIMIT = new ErrorCode(16010, "已达到用户池应用数量上限");
     ErrorCode TOKEN_LIFETIME_INVALID = new ErrorCode(16011, "Token 有效期超出允许范围");
 }

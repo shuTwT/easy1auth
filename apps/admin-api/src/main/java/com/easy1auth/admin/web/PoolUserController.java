@@ -1,7 +1,7 @@
 package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.web.dto.*;
-import com.easy1auth.admin.annotation.TenantManagementPermission;
+import com.easy1auth.admin.annotation.UserPoolManagementPermission;
 import com.easy1auth.system.constant.ManagementPermissionCode;
 import com.easy1auth.poolidentity.service.DirectoryCatalogService;
 import com.easy1auth.poolidentity.service.PoolUserService;
@@ -17,7 +17,7 @@ import java.util.*;
  *
  * <p>管理端 REST 入口，基路径 {@code /api/users}，提供目录用户的分页查询、统计、
  * 增删改、启停、密码重置 / 修改，以及角色与用户组分配能力。所有操作均通过
- * {@link TenantManagementPermission} 做租户级权限控制，并以 {@link ApiResponse}
+ * {@link UserPoolManagementPermission} 做用户池级权限控制，并以 {@link ApiResponse}
  * 统一包装返回。</p>
  */
 @RestController
@@ -37,7 +37,7 @@ public class PoolUserController {
     }
 
     /** 分页查询目录用户列表，支持按用户名、邮箱、手机号、姓名、状态、部门过滤。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.USER_LIST)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.USER_LIST)
     @GetMapping
     public ApiResponse<?> list(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, @RequestParam(required = false) String username, @RequestParam(required = false) String email, @RequestParam(required = false) String phone, @RequestParam(required = false) String name, @RequestParam(required = false) String status, @RequestParam(required = false) String department) {
         var p = users.list(page, pageSize, username, email, phone, name, status, department);
@@ -45,35 +45,35 @@ public class PoolUserController {
     }
 
     /** 查询目录用户的统计信息。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.USER_STATS)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.USER_STATS)
     @GetMapping("/stats")
     public ApiResponse<?> stats() {
         return ApiResponse.ok(users.stats());
     }
 
     /** 查询指定目录用户的详情。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.USER_READ)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.USER_READ)
     @GetMapping("/{id}")
     public ApiResponse<?> get(@PathVariable UUID id) {
         return ApiResponse.ok(users.get(id));
     }
 
     /** 创建目录用户。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.USER_CREATE)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.USER_CREATE)
     @PostMapping
     public ApiResponse<?> create(@RequestBody PoolUserInput in) {
         return ApiResponse.ok(users.create(in), "用户创建成功");
     }
 
     /** 更新指定目录用户的信息。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.USER_UPDATE)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.USER_UPDATE)
     @PutMapping("/{id}")
     public ApiResponse<?> update(@PathVariable UUID id, @RequestBody PoolUserInput in) {
         return ApiResponse.ok(users.update(id, in), "用户更新成功");
     }
 
     /** 删除指定目录用户。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.USER_DELETE)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.USER_DELETE)
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable UUID id) {
         users.delete(id);
@@ -81,14 +81,14 @@ public class PoolUserController {
     }
 
     /** 更新指定目录用户的启停状态。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.USER_STATUS)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.USER_STATUS)
     @PutMapping("/{id}/status")
     public ApiResponse<?> status(@PathVariable UUID id, @RequestBody PoolUserStatusInput in) {
         return ApiResponse.ok(users.status(id, in.status()), "状态更新成功");
     }
 
     /** 重置指定目录用户的登录密码。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.USER_RESET_PASSWORD)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.USER_RESET_PASSWORD)
     @PostMapping("/{id}/reset-password")
     public ApiResponse<Void> password(@PathVariable UUID id, @RequestBody PoolUserPasswordInput in) {
         users.resetPassword(id, in.newPassword());
@@ -96,7 +96,7 @@ public class PoolUserController {
     }
 
     /** 修改指定目录用户的密码（需校验原密码）。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.USER_CHANGE_PASSWORD)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.USER_CHANGE_PASSWORD)
     @PostMapping("/{id}/change-password")
     public ApiResponse<Void> changePassword(@PathVariable UUID id, @RequestBody ChangePasswordInput in) {
         users.changePassword(id, in.oldPassword(), in.newPassword());
@@ -104,14 +104,14 @@ public class PoolUserController {
     }
 
     /** 查询指定目录用户已分配的角色。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.USER_ROLES_READ)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.USER_ROLES_READ)
     @GetMapping("/{id}/roles")
     public ApiResponse<?> roles(@PathVariable UUID id) {
         return ApiResponse.ok(access.rolesForUser(id));
     }
 
     /** 全量替换指定目录用户的角色分配。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.USER_ROLES_ASSIGN)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.USER_ROLES_ASSIGN)
     @PostMapping("/{id}/roles")
     public ApiResponse<Void> assignRoles(@PathVariable UUID id, @RequestBody PoolUserRoleIds in) {
         access.replaceUserRoles(id, in.roleIds());
@@ -119,14 +119,14 @@ public class PoolUserController {
     }
 
     /** 查询指定目录用户所属的用户组。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.USER_GROUPS_READ)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.USER_GROUPS_READ)
     @GetMapping("/{id}/groups")
     public ApiResponse<?> groups(@PathVariable UUID id) {
         return ApiResponse.ok(directory.groupsForUser(id));
     }
 
     /** 全量替换指定目录用户的用户组分配。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.USER_GROUPS_ASSIGN)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.USER_GROUPS_ASSIGN)
     @PostMapping("/{id}/groups")
     public ApiResponse<Void> assignGroups(@PathVariable UUID id, @RequestBody GroupIds in) {
         directory.replaceUserGroups(id, in.groupIds());

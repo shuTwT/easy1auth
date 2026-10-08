@@ -73,7 +73,7 @@ async function handleSubmit() {
             <span>管理入口</span>
           </h1>
           <p class="trust-copy">
-            创建首个系统管理员后，Easy1Auth 将启用系统租户和平台级管理权限。
+            创建首个系统管理员后，Easy1Auth 将启用系统用户池和平台级管理权限。
           </p>
         </div>
 
@@ -82,7 +82,7 @@ async function handleSubmit() {
             <span class="summary-icon"><UserRoundCog :size="20" /></span>
             <span>
               <strong>系统管理员</strong>
-              <small>拥有平台配置与租户管理权限</small>
+              <small>拥有平台配置与用户池管理权限</small>
             </span>
           </div>
           <div class="summary-item">
@@ -173,7 +173,7 @@ async function handleSubmit() {
         </a-form>
 
         <p class="form-footnote">
-          提交即表示创建系统租户并授予此账号平台最高管理权限。
+          提交即表示创建系统用户池并授予此账号平台最高管理权限。
         </p>
       </div>
     </section>

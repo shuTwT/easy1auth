@@ -3,7 +3,7 @@ export type AuditLogStatus = 'success' | 'failed'
 
 export interface AuditLog {
   id: string
-  tenantId: string
+  userPoolId: string
   userId: string | null
   username: string | null
   type: string

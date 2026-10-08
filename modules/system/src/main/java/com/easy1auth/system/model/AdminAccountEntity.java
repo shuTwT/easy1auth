@@ -10,7 +10,7 @@ import java.util.UUID;
  * 管理后台账号实体（对应 admin_account 表）。
  *
  * <p>表示平台管理端（admin_user）的登录账号，区别于面向第三方接入的 pool_user。
- * 一个管理员可拥有多个租户，账号本身与租户解耦。</p>
+ * 一个管理员可拥有多个用户池，账号本身与用户池解耦。</p>
  */
 @Entity
 @Table(name = "admin_account")
@@ -31,9 +31,9 @@ public interface AdminAccountEntity {
     /** 账号状态：active（正常）/ disabled（禁用） */
     String status();
 
-    /** 最近一次切换使用的租户 ID */
+    /** 最近一次切换使用的用户池 ID */
     @Column(name = "last_tenant_id")
-    @Nullable UUID lastTenantId();
+    @Nullable UUID lastUserPoolId();
 
     /** 安全版本号：密码/邮箱/MFA/状态等敏感信息变更时递增，用于使旧会话失效 */
     @Column(name = "security_version")

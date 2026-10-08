@@ -1,6 +1,6 @@
 export interface User {
   id: string
-  tenantId: string
+  userPoolId: string
   username: string
   email: string | null
   phone?: string

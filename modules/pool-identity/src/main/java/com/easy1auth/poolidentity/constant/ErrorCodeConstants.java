@@ -37,6 +37,6 @@ public interface ErrorCodeConstants {
     ErrorCode POOL_USER_INVALID = new ErrorCode(14012, "用户名、姓名以及邮箱或手机号为必填项");
     ErrorCode POOL_USER_NOT_FOUND = new ErrorCode(14013, "用户不存在");
     ErrorCode POSITION_INVALID = new ErrorCode(14014, "岗位名称和编码不能为空");
-    ErrorCode TENANT_USER_LIMIT = new ErrorCode(14015, "已达到用户数量上限");
+    ErrorCode USER_POOL_USER_LIMIT = new ErrorCode(14015, "已达到用户数量上限");
     ErrorCode USER_STATUS_INVALID = new ErrorCode(14016, "用户状态无效");
 }

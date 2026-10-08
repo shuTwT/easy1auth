@@ -1,7 +1,7 @@
 package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.web.dto.DirectoryUserIds;
-import com.easy1auth.admin.annotation.TenantManagementPermission;
+import com.easy1auth.admin.annotation.UserPoolManagementPermission;
 import com.easy1auth.system.constant.ManagementPermissionCode;
 import com.easy1auth.poolidentity.service.DirectoryCatalogService;
 import com.easy1auth.poolidentity.dto.GroupInput;
@@ -16,7 +16,7 @@ import java.util.*;
  *
  * <p>管理端 REST 入口，提供用户组（{@code /api/groups}）与岗位（{@code /api/positions}）
  * 的分页查询、统计、增删改以及成员管理能力。所有操作均通过
- * {@link TenantManagementPermission} 做租户级权限控制，并以 {@link ApiResponse}
+ * {@link UserPoolManagementPermission} 做用户池级权限控制，并以 {@link ApiResponse}
  * 统一包装返回。</p>
  */
 @RestController
@@ -29,7 +29,7 @@ public class DirectoryCatalogController {
     }
 
     /** 分页查询用户组列表，支持按名称与类型过滤。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.GROUP_LIST)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.GROUP_LIST)
     @GetMapping("/api/groups")
     ApiResponse<?> groups(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,
                           @RequestParam(required = false) String name, @RequestParam(required = false) String type) {
@@ -38,35 +38,35 @@ public class DirectoryCatalogController {
     }
 
     /** 查询用户组的统计信息。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.GROUP_STATS)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.GROUP_STATS)
     @GetMapping("/api/groups/stats")
     ApiResponse<?> groupStats() {
         return ApiResponse.ok(catalog.groupStats());
     }
 
     /** 查询指定用户组的详情。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.GROUP_READ)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.GROUP_READ)
     @GetMapping("/api/groups/{id}")
     ApiResponse<?> group(@PathVariable UUID id) {
         return ApiResponse.ok(catalog.group(id));
     }
 
     /** 创建用户组。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.GROUP_CREATE)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.GROUP_CREATE)
     @PostMapping("/api/groups")
     ApiResponse<?> createGroup(@RequestBody GroupInput in) {
         return ApiResponse.ok(catalog.createGroup(in), "用户组创建成功");
     }
 
     /** 更新指定用户组的信息。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.GROUP_UPDATE)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.GROUP_UPDATE)
     @PutMapping("/api/groups/{id}")
     ApiResponse<?> updateGroup(@PathVariable UUID id, @RequestBody GroupInput in) {
         return ApiResponse.ok(catalog.updateGroup(id, in), "用户组更新成功");
     }
 
     /** 删除指定用户组。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.GROUP_DELETE)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.GROUP_DELETE)
     @DeleteMapping("/api/groups/{id}")
     ApiResponse<Void> deleteGroup(@PathVariable UUID id) {
         catalog.deleteGroup(id);
@@ -74,14 +74,14 @@ public class DirectoryCatalogController {
     }
 
     /** 查询指定用户组的成员列表。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.GROUP_MEMBERS_READ)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.GROUP_MEMBERS_READ)
     @GetMapping("/api/groups/{id}/members")
     ApiResponse<?> groupMembers(@PathVariable UUID id) {
         return ApiResponse.ok(catalog.groupMembers(id));
     }
 
     /** 向指定用户组批量添加成员。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.GROUP_MEMBERS_ADD)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.GROUP_MEMBERS_ADD)
     @PostMapping("/api/groups/{id}/members")
     ApiResponse<Void> addMembers(@PathVariable UUID id, @RequestBody DirectoryUserIds in) {
         catalog.addMembers(id, in.userIds());
@@ -89,7 +89,7 @@ public class DirectoryCatalogController {
     }
 
     /** 从指定用户组批量移除成员。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.GROUP_MEMBERS_REMOVE)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.GROUP_MEMBERS_REMOVE)
     @DeleteMapping("/api/groups/{id}/members")
     ApiResponse<Void> removeMembers(@PathVariable UUID id, @RequestBody DirectoryUserIds in) {
         catalog.removeMembers(id, in.userIds());
@@ -97,7 +97,7 @@ public class DirectoryCatalogController {
     }
 
     /** 分页查询岗位列表，支持按名称、编码、部门与层级过滤。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.POSITION_LIST)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.POSITION_LIST)
     @GetMapping("/api/positions")
     ApiResponse<?> positions(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize,
                              @RequestParam(required = false) String name, @RequestParam(required = false) String code,
@@ -107,35 +107,35 @@ public class DirectoryCatalogController {
     }
 
     /** 查询岗位的统计信息。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.POSITION_STATS)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.POSITION_STATS)
     @GetMapping("/api/positions/stats")
     ApiResponse<?> positionStats() {
         return ApiResponse.ok(catalog.positionStats());
     }
 
     /** 查询指定岗位的详情。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.POSITION_READ)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.POSITION_READ)
     @GetMapping("/api/positions/{id}")
     ApiResponse<?> position(@PathVariable UUID id) {
         return ApiResponse.ok(catalog.position(id));
     }
 
     /** 创建岗位。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.POSITION_CREATE)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.POSITION_CREATE)
     @PostMapping("/api/positions")
     ApiResponse<?> createPosition(@RequestBody PositionInput in) {
         return ApiResponse.ok(catalog.createPosition(in), "岗位创建成功");
     }
 
     /** 更新指定岗位的信息。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.POSITION_UPDATE)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.POSITION_UPDATE)
     @PutMapping("/api/positions/{id}")
     ApiResponse<?> updatePosition(@PathVariable UUID id, @RequestBody PositionInput in) {
         return ApiResponse.ok(catalog.updatePosition(id, in), "岗位更新成功");
     }
 
     /** 删除指定岗位。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.POSITION_DELETE)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.POSITION_DELETE)
     @DeleteMapping("/api/positions/{id}")
     ApiResponse<Void> deletePosition(@PathVariable UUID id) {
         catalog.deletePosition(id);

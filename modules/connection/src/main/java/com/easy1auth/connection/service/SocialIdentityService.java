@@ -11,7 +11,7 @@ import com.easy1auth.connection.constant.ErrorCodeConstants;
 import com.easy1auth.connection.dto.*;
 import com.easy1auth.connection.model.*;
 import com.easy1auth.connection.repository.SocialIdentityRepository;
-import com.easy1auth.framework.tenant.context.TenantContextHolder;
+import com.easy1auth.framework.tenant.context.UserPoolContextHolder;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -81,7 +81,7 @@ public class SocialIdentityService {
     return view(e, in.clientSecret());
   }
 
-  /** 分页查询租户下的身份源，支持按名称模糊搜索与状态过滤。 */
+  /** 分页查询用户池下的身份源，支持按名称模糊搜索与状态过滤。 */
   @Transactional(readOnly = true)
   public PageData<SourceView> list(UUID tenant, int page, int size, String search, String status) {
     return list(tenant, page, size, search, status, null, true);
@@ -96,7 +96,7 @@ public class SocialIdentityService {
         result.items().stream().map(e -> view(e, null)).toList(), p, s, result.total());
   }
 
-  /** 统计当前租户下指定类型的登录身份源；默认排除企业登录身份源。 */
+  /** 统计当前用户池下指定类型的登录身份源；默认排除企业登录身份源。 */
   @Transactional(readOnly = true)
   public IdentitySourceStats stats(UUID tenant, String type) {
     boolean excludeEnterprise = !"feishu_web".equals(type);
@@ -137,7 +137,7 @@ public class SocialIdentityService {
     return get(tenant, id);
   }
 
-  /** 删除身份源（物理删除，须属于指定租户）。 */
+  /** 删除身份源（物理删除，须属于指定用户池）。 */
   @Transactional
   public void delete(UUID tenant, UUID id) {
     if (repository.deleteSource(tenant, id) != 1) {
@@ -145,7 +145,7 @@ public class SocialIdentityService {
     }
   }
 
-  /** 查询租户下已启用的身份源（供登录页渲染按钮用）。 */
+  /** 查询用户池下已启用的身份源（供登录页渲染按钮用）。 */
   @Transactional(readOnly = true)
   public List<SourceView> listActive(UUID tenant) {
     return repository.findActiveSources(tenant).stream().map(e -> view(e, null)).toList();
@@ -193,7 +193,7 @@ public class SocialIdentityService {
         || !Objects.equals(tx.returnUri(), redirectUri)) {
       throw new DomainException(ErrorCodeConstants.SOCIAL_TRANSACTION_INVALID);
     }
-    UUID tenant = tx.tenantId();
+    UUID tenant = tx.userPoolId();
     UUID sourceId = tx.sourceId();
     var s = entity(tenant, sourceId);
     var adapter = adapter(s.type());
@@ -234,7 +234,7 @@ public class SocialIdentityService {
     String name = blank(identity.name()) ? identity.email() : identity.name();
     var user =
         users.create(
-            identity.tenantId(),
+            identity.userPoolId(),
             new PoolUserInput(
                 username,
                 identity.email(),
@@ -257,7 +257,7 @@ public class SocialIdentityService {
       throw new DomainException(ErrorCodeConstants.SOCIAL_TRANSACTION_INVALID);
     }
     var existing =
-        repository.findBinding(identity.tenantId(), identity.sourceId(), identity.subject());
+        repository.findBinding(identity.userPoolId(), identity.sourceId(), identity.subject());
     if (existing != null) {
       if (!existing.poolUserId().equals(poolUserId)) {
         throw new DomainException(ErrorCodeConstants.SOCIAL_BINDING_CONFLICT);
@@ -266,7 +266,7 @@ public class SocialIdentityService {
       return;
     }
     repository.createBinding(
-        identity.tenantId(),
+        identity.userPoolId(),
         identity.sourceId(),
         poolUserId,
         identity.sourceType(),
@@ -280,48 +280,48 @@ public class SocialIdentityService {
             Objects.toString(identity.username(), "")));
   }
 
-  // ==================== TenantContextHolder 便捷重载 ====================
+  // ==================== UserPoolContextHolder 便捷重载 ====================
 
-  /** 从租户上下文创建身份源。 */
+  /** 从用户池上下文创建身份源。 */
   @Transactional
   public SourceView create(SocialIdentityInput in) {
-    return create(TenantContextHolder.requireTenantId(), in);
+    return create(UserPoolContextHolder.requireUserPoolId(), in);
   }
 
-  /** 从租户上下文分页查询身份源。 */
+  /** 从用户池上下文分页查询身份源。 */
   @Transactional(readOnly = true)
   public PageData<SourceView> list(int page, int size, String search, String status) {
-    return list(TenantContextHolder.requireTenantId(), page, size, search, status);
+    return list(UserPoolContextHolder.requireUserPoolId(), page, size, search, status);
   }
 
-  /** 按登录身份源类别分页查询当前租户的数据。 */
+  /** 按登录身份源类别分页查询当前用户池的数据。 */
   @Transactional(readOnly = true)
   public PageData<SourceView> list(int page, int size, String search, String status, String type, boolean excludeFeishuWeb) {
-    return list(TenantContextHolder.requireTenantId(), page, size, search, status, type, excludeFeishuWeb);
+    return list(UserPoolContextHolder.requireUserPoolId(), page, size, search, status, type, excludeFeishuWeb);
   }
 
-  /** 从租户上下文查询单个身份源。 */
+  /** 从用户池上下文查询单个身份源。 */
   @Transactional(readOnly = true)
   public SourceView get(UUID id) {
-    return get(TenantContextHolder.requireTenantId(), id);
+    return get(UserPoolContextHolder.requireUserPoolId(), id);
   }
 
-  /** 从租户上下文更新身份源。 */
+  /** 从用户池上下文更新身份源。 */
   @Transactional
   public SourceView update(UUID id, SocialIdentityInput in) {
-    return update(TenantContextHolder.requireTenantId(), id, in);
+    return update(UserPoolContextHolder.requireUserPoolId(), id, in);
   }
 
-  /** 从租户上下文删除身份源。 */
+  /** 从用户池上下文删除身份源。 */
   @Transactional
   public void delete(UUID id) {
-    delete(TenantContextHolder.requireTenantId(), id);
+    delete(UserPoolContextHolder.requireUserPoolId(), id);
   }
 
-  /** 从租户上下文查询已启用身份源。 */
+  /** 从用户池上下文查询已启用身份源。 */
   @Transactional(readOnly = true)
   public List<SourceView> listActive() {
-    return listActive(TenantContextHolder.requireTenantId());
+    return listActive(UserPoolContextHolder.requireUserPoolId());
   }
 
   // ==================== 私有辅助 ====================
@@ -335,7 +335,7 @@ public class SocialIdentityService {
     return a;
   }
 
-  /** 查询租户下指定身份源，不存在时抛出异常。 */
+  /** 查询用户池下指定身份源，不存在时抛出异常。 */
   private SocialIdentitySourceEntity entity(UUID tenant, UUID id) {
     return repository.findSource(tenant, id).orElseThrow(this::missing);
   }
@@ -374,7 +374,7 @@ public class SocialIdentityService {
   private static SourceView view(SocialIdentitySourceEntity s, String secret) {
     return new SourceView(
         s.id(),
-        s.tenantId(),
+        s.userPoolId(),
         s.name(),
         s.type(),
         s.mode(),

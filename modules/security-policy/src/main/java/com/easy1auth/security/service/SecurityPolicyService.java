@@ -63,7 +63,7 @@ public class SecurityPolicyService {
         return view(policyEntity());
     }
 
-    /** 读取指定租户的安全策略，不存在时按默认值初始化。 */
+    /** 读取指定用户池的安全策略，不存在时按默认值初始化。 */
     @Transactional
     public PolicyView policy(UUID tenant) {
         return view(policyEntity(tenant));
@@ -125,7 +125,7 @@ public class SecurityPolicyService {
         String secret = totp.secret();
         UUID id = old == null ? UuidV7.randomUuid() : old.id();
         Instant now = Instant.now();
-        var entity = AuthenticationFactorEntityDraft.$.produce(d -> d.setId(id).setSubjectType(subjectType).setSubjectId(subject).setTenantId(tenant).setFactorType("totp").setEncryptedSecret(cipher.encrypt(aad(subjectType, subject, "totp"), secret)).setEnabled(false).setLastTotpStep(null).setCreatedAt(old == null ? now : old.createdAt()).setUpdatedAt(now));
+        var entity = AuthenticationFactorEntityDraft.$.produce(d -> d.setId(id).setSubjectType(subjectType).setSubjectId(subject).setUserPoolId(tenant).setFactorType("totp").setEncryptedSecret(cipher.encrypt(aad(subjectType, subject, "totp"), secret)).setEnabled(false).setLastTotpStep(null).setCreatedAt(old == null ? now : old.createdAt()).setUpdatedAt(now));
         sql.saveCommand(entity).setMode(SaveMode.UPSERT).execute();
         sql.createDelete(RECOVERY).where(RECOVERY.factorId().eq(id)).execute();
         List<String> recovery = new ArrayList<>();
@@ -196,7 +196,7 @@ public class SecurityPolicyService {
             throw new DomainException(ErrorCodeConstants.CODE_RATE_LIMITED);
         }
         String token = randomToken(32), code = String.format(Locale.ROOT, "%06d", random.nextInt(1_000_000));
-        var e = AuthenticationChallengeEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTokenHash(hash(token)).setSubjectType(subjectType).setSubjectId(subject).setTenantId(tenant).setPurpose(purpose).setDestination(destination).setFactorType("email").setCodeHash(hash(code)).setAttempts(0).setMaxAttempts(5).setExpiresAt(now.plusSeconds(600)).setConsumedAt(null).setCreatedAt(now).setLastSentAt(now));
+        var e = AuthenticationChallengeEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTokenHash(hash(token)).setSubjectType(subjectType).setSubjectId(subject).setUserPoolId(tenant).setPurpose(purpose).setDestination(destination).setFactorType("email").setCodeHash(hash(code)).setAttempts(0).setMaxAttempts(5).setExpiresAt(now.plusSeconds(600)).setConsumedAt(null).setCreatedAt(now).setLastSentAt(now));
         sql.saveCommand(e).setMode(SaveMode.INSERT_ONLY).execute();
         return new ChallengeView(token, code, 600);
     }
@@ -255,7 +255,7 @@ public class SecurityPolicyService {
         }
         String token = randomToken(32);
         Instant now = Instant.now();
-        var e = AuthenticationChallengeEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTokenHash(hash(token)).setSubjectType(subjectType).setSubjectId(subject).setTenantId(tenant).setPurpose(purpose).setFactorType("totp").setCodeHash(null).setAttempts(0).setMaxAttempts(5).setExpiresAt(now.plusSeconds(600)).setConsumedAt(null).setCreatedAt(now).setLastSentAt(null));
+        var e = AuthenticationChallengeEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTokenHash(hash(token)).setSubjectType(subjectType).setSubjectId(subject).setUserPoolId(tenant).setPurpose(purpose).setFactorType("totp").setCodeHash(null).setAttempts(0).setMaxAttempts(5).setExpiresAt(now.plusSeconds(600)).setConsumedAt(null).setCreatedAt(now).setLastSentAt(null));
         sql.saveCommand(e).setMode(SaveMode.INSERT_ONLY).execute();
         return new ChallengeView(token, null, 600);
     }
@@ -310,11 +310,11 @@ public class SecurityPolicyService {
         return found;
     }
 
-    /** 读取指定租户的安全策略，不存在时按默认值初始化一条。 */
+    /** 读取指定用户池的安全策略，不存在时按默认值初始化一条。 */
     private SecurityPolicyEntity policyEntity(UUID tenant) {
-        var found = sql.createQuery(POLICY).where(POLICY.tenantId().eq(tenant)).select(POLICY).fetchOneOrNull();
+        var found = sql.createQuery(POLICY).where(POLICY.userPoolId().eq(tenant)).select(POLICY).fetchOneOrNull();
         if (found == null) {
-            found = SecurityPolicyEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTenantId(tenant).setPasswordMinLength(8).setPasswordRequireUpper(true).setPasswordRequireLower(true).setPasswordRequireNumber(true).setPasswordRequireSpecial(true).setPasswordMaxAgeDays(90).setPasswordHistoryCount(5).setMfaRequired(false).setLoginAttemptLimit(5).setLockoutDurationSeconds(1800).setUpdatedAt(Instant.now()));
+            found = SecurityPolicyEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setUserPoolId(tenant).setPasswordMinLength(8).setPasswordRequireUpper(true).setPasswordRequireLower(true).setPasswordRequireNumber(true).setPasswordRequireSpecial(true).setPasswordMaxAgeDays(90).setPasswordHistoryCount(5).setMfaRequired(false).setLoginAttemptLimit(5).setLockoutDurationSeconds(1800).setUpdatedAt(Instant.now()));
             sql.saveCommand(found).setMode(SaveMode.INSERT_IF_ABSENT).execute();
         }
         return found;

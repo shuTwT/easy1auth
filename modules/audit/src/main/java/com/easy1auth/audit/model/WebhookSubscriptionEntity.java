@@ -1,7 +1,7 @@
 package com.easy1auth.audit.model;
 
 import com.easy1auth.framework.persistence.model.BaseEntity;
-import com.easy1auth.framework.tenant.persistence.model.BaseTenantEntity;
+import com.easy1auth.framework.tenant.persistence.model.BaseUserPoolEntity;
 
 import org.babyfish.jimmer.sql.*;
 
@@ -11,13 +11,13 @@ import java.util.*;
 /**
  * Webhook 订阅实体（对应 webhook_subscription 表）。
  *
- * <p>记录租户订阅的审计事件回调：订阅了哪些事件（含 "*" 表示全部事件）、
+ * <p>记录用户池订阅的审计事件回调：订阅了哪些事件（含 "*" 表示全部事件）、
  * 回调地址与最大重试次数。密钥不落明文，仅保存 SHA-256 摘要与对称加密
  * 密文，用于投递时的签名校验与解密。</p>
  */
 @Entity
 @Table(name = "webhook_subscription")
-public interface WebhookSubscriptionEntity extends BaseEntity, BaseTenantEntity {
+public interface WebhookSubscriptionEntity extends BaseEntity, BaseUserPoolEntity {
 
     /** 订阅名称 */
     String name();

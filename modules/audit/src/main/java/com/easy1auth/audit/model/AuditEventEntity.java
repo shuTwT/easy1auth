@@ -20,10 +20,10 @@ public interface AuditEventEntity {
     @Id
     UUID id();
 
-    /** 所属租户 ID（可为 null） */
+    /** 所属用户池 ID（可为 null） */
     @Nullable
     @Column(name = "tenant_id")
-    UUID tenantId();
+    UUID userPoolId();
 
     /** 操作者类型：admin / user / system 等 */
     @Column(name = "actor_type")

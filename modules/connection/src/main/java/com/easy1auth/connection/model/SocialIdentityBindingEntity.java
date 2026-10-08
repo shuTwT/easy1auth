@@ -1,7 +1,7 @@
 package com.easy1auth.connection.model;
 
 import com.easy1auth.framework.persistence.model.BaseEntity;
-import com.easy1auth.framework.tenant.persistence.model.BaseTenantEntity;
+import com.easy1auth.framework.tenant.persistence.model.BaseUserPoolEntity;
 import org.babyfish.jimmer.sql.*;
 import org.jspecify.annotations.Nullable;
 
@@ -12,12 +12,12 @@ import java.util.UUID;
 /**
  * 社会化身份绑定：pool_user 与外部社交账号（source_type + subject）的关联。
  *
- * <p>一个 pool_user 可绑定多个社交账号；同一外部账号在租户内的某身份源下
+ * <p>一个 pool_user 可绑定多个社交账号；同一外部账号在用户池内的某身份源下
  * 只能绑定一个用户，重复绑定会触发冲突校验。</p>
  */
 @Entity
 @Table(name = "social_identity_binding")
-public interface SocialIdentityBindingEntity extends BaseEntity, BaseTenantEntity {
+public interface SocialIdentityBindingEntity extends BaseEntity, BaseUserPoolEntity {
     /** 身份源 ID（social_identity_source） */
     @Column(name = "source_id")
     UUID sourceId();

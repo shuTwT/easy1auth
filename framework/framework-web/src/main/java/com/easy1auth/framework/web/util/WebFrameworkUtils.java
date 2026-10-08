@@ -11,24 +11,29 @@ import java.util.UUID;
 /**
  * Web 框架工具类。
  *
- * <p>提供从 {@link HttpServletRequest} 中提取租户标识（tenant-id 请求头）、
- * 用户代理（User-Agent），以及读写租户上下文的静态方法，
- * 供过滤器与控制器在请求链路中透传多租户信息。</p>
+ * <p>提供从 {@link HttpServletRequest} 中提取用户池标识（user-pool-id 请求头）、
+ * 用户代理（User-Agent），以及读写用户池上下文的静态方法，
+ * 供过滤器与控制器在请求链路中透传多用户池信息。</p>
  */
 public final class WebFrameworkUtils {
 
     public static final String REQUEST_ATTRIBUTE_LOGIN_USER_ID = "login_user_id";
-    /** 租户标识请求头名：请求通过该请求头声明所属租户 */
-    public static final String TENANT_ID_HEADER = "tenant-id";
+    /** 用户池标识请求头名：请求通过该请求头声明所属用户池 */
+    public static final String USER_POOL_ID_HEADER = "user-pool-id";
+    /** 历史客户端请求头；其值仍然是用户池 ID，不是业务租户 ID。 */
+    public static final String LEGACY_USER_POOL_ID_HEADER = "tenant-id";
     /** 用户代理请求头名 */
     public static final String USER_AGENT_HEADER = "User-Agent";
     private WebFrameworkUtils() {
     }
 
-    /** 从请求头解析租户 ID；请求头缺失或空白时返回 null。 */
-    public static UUID getTenantId(HttpServletRequest request) {
-        String tenantId = request(request).getHeader(TENANT_ID_HEADER);
-        return tenantId == null || tenantId.isBlank() ? null : UUID.fromString(tenantId);
+    /** 从请求头解析用户池 ID；请求头缺失或空白时返回 null。 */
+    public static UUID getUserPoolId(HttpServletRequest request) {
+        String userPoolId = request(request).getHeader(USER_POOL_ID_HEADER);
+        if (userPoolId == null || userPoolId.isBlank()) {
+            userPoolId = request.getHeader(LEGACY_USER_POOL_ID_HEADER);
+        }
+        return userPoolId == null || userPoolId.isBlank() ? null : UUID.fromString(userPoolId);
     }
 
     public static void setLoginUserId(HttpServletRequest request, UUID userId) {

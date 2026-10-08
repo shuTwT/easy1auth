@@ -1,15 +1,24 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { TenantInfo } from '@/types/auth'
+import type { UserPoolInfo } from '@/types/auth'
 
 export const useUserStore = defineStore('user', () => {
   const accessToken = ref<string>(localStorage.getItem('accessToken') || '')
   const refreshToken = ref<string>(localStorage.getItem('refreshToken') || '')
   const userInfo = ref<any>(null)
-  const tenants = ref<TenantInfo[]>([])
+  const userPools = ref<UserPoolInfo[]>([])
   
-  const savedTenant = localStorage.getItem('currentTenant')
-  const currentTenant = ref<TenantInfo | null>(savedTenant ? JSON.parse(savedTenant) : null)
+  // Preserve the selected pool for sessions saved before tenant was renamed to user pool.
+  const savedUserPool = localStorage.getItem('currentUserPool') || localStorage.getItem('currentTenant')
+  const currentUserPool = ref<UserPoolInfo | null>(savedUserPool ? JSON.parse(savedUserPool) : null)
+  if (currentUserPool.value) {
+    const legacyPackage = (currentUserPool.value as UserPoolInfo & { tenantPackage?: UserPoolInfo['userPoolPackage'] }).tenantPackage
+    currentUserPool.value.userPoolPackage ??= legacyPackage
+    localStorage.setItem('currentUserPool', JSON.stringify(currentUserPool.value))
+    localStorage.setItem('currentUserPoolId', currentUserPool.value.id)
+  }
+  localStorage.removeItem('currentTenant')
+  localStorage.removeItem('currentTenantId')
 
   const setSession = (newAccessToken: string, newRefreshToken: string) => {
     accessToken.value = newAccessToken
@@ -23,18 +32,18 @@ export const useUserStore = defineStore('user', () => {
     userInfo.value = info
   }
 
-  const setTenants = (tenantList: TenantInfo[]) => {
-    tenants.value = tenantList
+  const setUserPools = (tenantList: UserPoolInfo[]) => {
+    userPools.value = tenantList
   }
 
-  const setCurrentTenant = (tenant: TenantInfo | null) => {
-    currentTenant.value = tenant
+  const setCurrentUserPool = (tenant: UserPoolInfo | null) => {
+    currentUserPool.value = tenant
     if (tenant) {
-      localStorage.setItem('currentTenant', JSON.stringify(tenant))
-      localStorage.setItem('currentTenantId', tenant.id)
+      localStorage.setItem('currentUserPool', JSON.stringify(tenant))
+      localStorage.setItem('currentUserPoolId', tenant.id)
     } else {
-      localStorage.removeItem('currentTenant')
-      localStorage.removeItem('currentTenantId')
+      localStorage.removeItem('currentUserPool')
+      localStorage.removeItem('currentUserPoolId')
     }
   }
 
@@ -42,25 +51,25 @@ export const useUserStore = defineStore('user', () => {
     accessToken.value = ''
     refreshToken.value = ''
     userInfo.value = null
-    tenants.value = []
-    currentTenant.value = null
+    userPools.value = []
+    currentUserPool.value = null
     localStorage.removeItem('accessToken')
     localStorage.removeItem('refreshToken')
     localStorage.removeItem('token')
-    localStorage.removeItem('currentTenant')
-    localStorage.removeItem('currentTenantId')
+    localStorage.removeItem('currentUserPool')
+    localStorage.removeItem('currentUserPoolId')
   }
 
   return {
     accessToken,
     refreshToken,
     userInfo,
-    tenants,
-    currentTenant,
+    userPools,
+    currentUserPool,
     setSession,
     setUserInfo,
-    setTenants,
-    setCurrentTenant,
+    setUserPools,
+    setCurrentUserPool,
     logout
   }
 })

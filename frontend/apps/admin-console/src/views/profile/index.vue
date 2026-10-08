@@ -52,7 +52,7 @@ const rules = {
 
 const displayName = computed(() => profile.value?.username || '管理员')
 const avatarLetter = computed(() => displayName.value.charAt(0).toUpperCase())
-const currentTenantName = computed(() => userStore.currentTenant?.name || '暂未选择租户')
+const currentUserPoolName = computed(() => userStore.currentUserPool?.name || '暂未选择用户池')
 const mfaLabel = computed(() => {
   if (!mfaStatus.value.enabled) return '未启用'
   return mfaStatus.value.type === 'totp' ? '身份验证器' : '已启用'
@@ -228,8 +228,8 @@ onBeforeUnmount(() => {
 
             <dl class="mt-6 space-y-4 border-t border-border pt-5 text-left">
               <div class="profile-meta-row">
-                <dt><Building2 class="size-4" />当前租户</dt>
-                <dd>{{ currentTenantName }}</dd>
+                <dt><Building2 class="size-4" />当前用户池</dt>
+                <dd>{{ currentUserPoolName }}</dd>
               </div>
               <div class="profile-meta-row">
                 <dt><Clock3 class="size-4" />最近登录</dt>

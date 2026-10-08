@@ -3,7 +3,7 @@ export const ENTERPRISE_SOURCE_TYPES = ['feishu_web'] as const
 export type LoginSourceType = (typeof SOCIAL_SOURCE_TYPES)[number] | (typeof ENTERPRISE_SOURCE_TYPES)[number]
 
 export interface LoginIdentitySource {
-  id: string; tenantId: string; name: string; type: LoginSourceType; mode: string | null
+  id: string; userPoolId: string; name: string; type: LoginSourceType; mode: string | null
   clientId: string; clientSecret?: string | null
   status: 'active' | 'disabled'; createdAt: string; updatedAt: string
 }

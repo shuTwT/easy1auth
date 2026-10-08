@@ -1,7 +1,7 @@
 package com.easy1auth.customization.model;
 
 import com.easy1auth.framework.persistence.model.BaseEntity;
-import com.easy1auth.framework.tenant.persistence.model.BaseTenantEntity;
+import com.easy1auth.framework.tenant.persistence.model.BaseUserPoolEntity;
 import org.babyfish.jimmer.sql.Column;
 import org.babyfish.jimmer.sql.Entity;
 import org.babyfish.jimmer.sql.Table;
@@ -17,7 +17,7 @@ import java.time.Instant;
  */
 @Entity
 @Table(name = "legal_document_setting")
-public interface LegalDocumentSettingEntity extends BaseEntity, BaseTenantEntity {
+public interface LegalDocumentSettingEntity extends BaseEntity, BaseUserPoolEntity {
 
     /** 服务条款（历史生效值，未发布草稿时的兜底内容） */
     @Nullable

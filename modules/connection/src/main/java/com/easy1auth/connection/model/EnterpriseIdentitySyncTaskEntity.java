@@ -1,7 +1,7 @@
 package com.easy1auth.connection.model;
 
 import com.easy1auth.framework.persistence.model.BaseEntity;
-import com.easy1auth.framework.tenant.persistence.model.BaseTenantEntity;
+import com.easy1auth.framework.tenant.persistence.model.BaseUserPoolEntity;
 import org.babyfish.jimmer.sql.*;
 import org.jspecify.annotations.Nullable;
 
@@ -17,7 +17,7 @@ import java.util.Map;
  */
 @Entity
 @Table(name = "enterprise_identity_sync_task")
-public interface EnterpriseIdentitySyncTaskEntity extends BaseEntity, BaseTenantEntity {
+public interface EnterpriseIdentitySyncTaskEntity extends BaseEntity, BaseUserPoolEntity {
     /** 所属企业身份源 ID */
     @Column(name = "source_id") java.util.UUID sourceId();
     /** 任务类型：full（全量同步）/ event（事件增量） */

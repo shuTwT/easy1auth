@@ -1,6 +1,6 @@
 # AGENTS.md — Easy1Auth
 
-企业级多租户身份与访问管理平台（SaaS），管理端界面使用中文。
+企业级多用户池身份与访问管理平台（SaaS），管理端界面使用中文。
 
 ## Monorepo 目录结构
 
@@ -45,21 +45,21 @@ Vite 将 `/api` 代理到 `http://localhost:18848`，配置见 `frontend/vite.co
 
 ## 关键架构决策
 
-### 认证与多租户
+### 认证与多用户池
 
 - JWT Token 存储在 `localStorage` 中，不使用 httpOnly Cookie。
 - 所有需要认证的请求必须携带 `Authorization: Bearer <token>` 请求头。
-- 通过 `tenant-id` 请求头实现租户隔离；该请求头由
-  `frontend/src/utils/request.ts` 中的 Axios 拦截器设置。
-- 管理 API 通过 `TenantContextFilter` 解析租户上下文，并在领域服务中执行权限校验。
+- 通过 `user-pool-id` 请求头实现用户池隔离；该请求头由
+  `frontend/apps/admin-console/src/utils/request.ts` 中的 Axios 拦截器设置。
+- 管理 API 通过 `UserPoolContextFilter` 解析用户池上下文，并在领域服务中执行权限校验。
 
 ### 前端约定
 
 - [antdv-next组件库文档](https://antdv-next.com/llms.txt)
 - 在处理前端antdv-next相关问题时必需调用`antdv-next`skill，禁止猜测
-- `@/*` 别名指向 `frontend/src/`，同时配置于 `tsconfig.json` 和 `vite.config.ts`。
+- `@/*` 别名指向 `frontend/apps/admin-console/src/`，同时配置于 `tsconfig.json` 和 `vite.config.ts`。
   基础色为 `neutral`。
-- 自定义共享组件放在 `frontend/src/components/common/`。
+- 自定义共享组件放在 `frontend/apps/admin-console/src/components/common/`。
 - Pinia Store 使用组合式 API 风格，目前统一放在 `user.ts`。
 
 ### 前端编码规范
@@ -69,13 +69,13 @@ Vite 将 `/api` 代理到 `http://localhost:18848`，配置见 `frontend/vite.co
 ### 配色方案
 
 
-`frontend/src/styles/theme.css`：主色为蓝色 `#0369A1`，侧边栏使用深色渐变。
+`frontend/apps/admin-console/src/styles/theme.css`：主色为蓝色 `#0369A1`，侧边栏使用深色渐变。
    这是应用实际加载的主题，由 `main.ts` 引入。
 
 
 ### 路由
 
-前端路由配置位于 `frontend/src/router/index.ts`：
+前端路由配置位于 `frontend/apps/admin-console/src/router/index.ts`：
 
 - 所有需要认证的页面都是 `/` 的子路由，并使用 `MainLayout`。
 - 登录页位于 `/login`，不使用主布局，是独立页面。
@@ -99,19 +99,24 @@ Vite 将 `/api` 代理到 `http://localhost:18848`，配置见 `frontend/vite.co
 
 1. `design-system/easy1auth-admin/MASTER.md`：全局设计规则、颜色、字体和组件规范。
 2. `design-system/easy1auth-admin/pages/`：页面级设计覆盖，优先级高于 `MASTER.md`。
-3. `frontend/src/styles/theme.css`：应用当前实际加载的 CSS 变量。
+3. `frontend/apps/admin-console/src/styles/theme.css`：应用当前实际加载的 CSS 变量。
 4. `frontend/components.json`：shadcn-vue 配置。
 
 ## 文件命名约定
 
-- 前端 API 模块：`frontend/src/api/*.ts`，每个资源一个文件并导出对象字面量。
-- 前端视图：`frontend/src/views/<resource>/index.vue`。
+- 前端 API 模块：`frontend/apps/admin-console/src/api/*.ts`，每个资源一个文件并导出对象字面量。
+- 前端视图：`frontend/apps/admin-console/src/views/<resource>/index.vue`。
 - Vue 单文件组件：使用 `<script setup lang="ts">` 和组合式 API。
 
 ## 概念
 
+- 用户池（`UserPool`）是原有“租户”的正式名称，继续作为后台切换、套餐、配额、资源隔离和授权登录的边界。
+- 租户（`Tenant`）属于一个用户池，一个用户池可拥有多个租户。目前只维护基础资料，使用方式待定；不得将业务租户接入后台切换、管理员成员关系、权限、配额、Token 或授权登录上下文。
+- 历史物理表 `tenant` / `tenant_membership` / `tenant_package` 及各表的 `tenant_id` 仍表示用户池；新租户存储在 `pool_tenant`，通过 `user_pool_id` 关联用户池。
+- 管理端请求头使用 `user-pool-id`，历史 `tenant-id` 作为用户池 ID 的兼容别名。授权 issuer `/t/{id}` 和旧 Token 的 `tenant_id` 同样表示用户池，不能解释为新租户 ID。
+
 - `pool_user`是用来给第三方介入的用户体系，给第三方授权登录。不应在系统后台登录，token也不得混用。
-- 租户：一个管理员`admin_user`拥有多个租户，可切换。租户绑定租户套餐，租户套餐有权限和套餐内容(用户数等)
+- 用户池：一个管理员`admin_user`拥有多个用户池，可切换。用户池绑定用户池套餐，用户池套餐有权限和套餐内容(用户数等)
 - 角色：不要混淆`pool_user`的角色和`admin_user`的角色。两者不是同一个角色管理，两者对应的权限列表也是不同的。
 - 品牌管理：登录样式指的是`pool_user`对应的登录页的样式，而不是`admin_user`登录页的样式。
 

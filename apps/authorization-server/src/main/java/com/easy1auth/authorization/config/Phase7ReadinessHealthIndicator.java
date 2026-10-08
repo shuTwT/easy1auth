@@ -46,7 +46,7 @@ public final class Phase7ReadinessHealthIndicator implements HealthIndicator {
                     || keyEncryptionSecret.getBytes(java.nio.charset.StandardCharsets.UTF_8).length < 32) {
                 return Health.down().withDetail("schema", "Flyway V1, issuer, or required configuration unavailable").build();
             }
-            // Deliberately do not call TenantSigningKeyService: readiness must not create tenant keys.
+            // Deliberately do not call UserPoolSigningKeyService: readiness must not create tenant keys.
             return Health.up().withDetail("schema", "V1").withDetail("issuerBase", issuerBase).build();
         } catch (RuntimeException ex) {
             return Health.down(ex).build();

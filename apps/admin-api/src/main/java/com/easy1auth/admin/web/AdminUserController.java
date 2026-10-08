@@ -65,12 +65,12 @@ public class AdminUserController {
         return ApiResponse.ok(access.member(id));
     }
 
-    /** 创建管理员账号（创建后尚未分配租户）。 */
+    /** 创建管理员账号（创建后尚未分配用户池）。 */
     @PlatformManagementPermission(value = ManagementPermissionCode.ADMIN_USER_CREATE)
     @PostMapping
     public ApiResponse<?> create(@AuthenticationPrincipal Jwt actor, @RequestBody CreateInput in) {
         require(actor, ManagementPermissionCode.ADMIN_USER_CREATE);
-        return ApiResponse.ok(identities.createAdministrator(in.username(), in.email(), in.password()), "管理员账号创建成功，尚未分配租户");
+        return ApiResponse.ok(identities.createAdministrator(in.username(), in.email(), in.password()), "管理员账号创建成功，尚未分配用户池");
     }
 
     /** 更新指定管理员账号的资料（用户名、邮箱、手机号）。 */
@@ -113,12 +113,12 @@ public class AdminUserController {
         return ApiResponse.ok(access.member(id), "管理员 MFA 重置成功");
     }
 
-    /** 为指定管理员账号在指定租户内分配角色（当前仅保存为元数据，不影响实时授权）。 */
+    /** 为指定管理员账号在指定用户池内分配角色（当前仅保存为元数据，不影响实时授权）。 */
     @PlatformManagementPermission(value = ManagementPermissionCode.ADMIN_USER_ASSIGN_ROLE)
     @PutMapping("/{id}/roles")
     public ApiResponse<?> roles(@AuthenticationPrincipal Jwt actor, @PathVariable UUID id, @RequestBody RolesInput in) {
         require(actor, ManagementPermissionCode.ADMIN_USER_ASSIGN_ROLE);
-        return ApiResponse.ok(access.assignRoles(in.tenantId(), id, in.roleIds()), "管理员角色已作为未来元数据保存，当前不影响授权或租户管理员关系");
+        return ApiResponse.ok(access.assignRoles(in.userPoolId(), id, in.roleIds()), "管理员角色已作为未来元数据保存，当前不影响授权或用户池管理员关系");
     }
 
     /** 校验当前账号是否具备指定平台权限，不具备时抛出授权异常。 */
@@ -169,7 +169,7 @@ public class AdminUserController {
     /**
      * 角色分配输入。
      *
-     * @param tenantId 目标租户 ID
+     * @param userPoolId 目标用户池 ID
      * @param roleIds  待分配的角色 ID 列表
      */
 }

@@ -16,8 +16,8 @@ public enum ManagementRouteKind {
     AUTHENTICATION,
     /** 已认证用户操作自身账号的路由（自助服务） */
     AUTHENTICATED_SELF,
-    /** 需要租户上下文的路由（授权上下文控制器） */
+    /** 需要用户池上下文的路由（授权上下文控制器） */
     AUTHORIZATION_CONTEXT,
-    /** 预留的待办路由分类（第 7 期租户控制面） */
+    /** 预留的待办路由分类（第 7 期用户池控制面） */
     DEFERRED_TODO_7
 }

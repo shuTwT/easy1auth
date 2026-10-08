@@ -1,7 +1,7 @@
 package com.easy1auth.poolidentity.model;
 
 import com.easy1auth.framework.persistence.model.BaseEntity;
-import com.easy1auth.framework.tenant.persistence.model.BaseTenantEntity;
+import com.easy1auth.framework.tenant.persistence.model.BaseUserPoolEntity;
 import org.babyfish.jimmer.sql.*;
 import org.jspecify.annotations.Nullable;
 
@@ -11,18 +11,18 @@ import java.util.*;
 /**
  * 角色实体（对应 pool_role 表）。
  *
- * <p>描述 pool_user 访问控制中的角色，按租户隔离。角色分两类：
+ * <p>描述 pool_user 访问控制中的角色，按用户池隔离。角色分两类：
  * system（内置角色，仅系统初始化、不可修改删除）/ custom（自定义角色）。
  * 角色可配置数据范围（dataScope）与权限集合（permissions），
  * 并可通过 {@code parentId} 组成层级。</p>
  */
 @Entity
 @Table(name = "pool_role")
-public interface PoolRoleEntity extends BaseEntity, BaseTenantEntity {
+public interface PoolRoleEntity extends BaseEntity, BaseUserPoolEntity {
     /** 角色名称（中文展示名） */
     String name();
 
-    /** 角色编码（租户内唯一，用于程序识别） */
+    /** 角色编码（用户池内唯一，用于程序识别） */
     String code();
 
     /** 角色描述（可为 null） */

@@ -1,6 +1,6 @@
 # Easy1Auth
 
-Easy1Auth 是面向企业与 SaaS 场景的多租户身份认证与访问管理平台，提供管理员后台、
+Easy1Auth 是面向企业与 SaaS 场景的多用户池身份认证与访问管理平台，提供管理员后台、
 OAuth 2.0 / OpenID Connect 授权服务、用户与组织管理、RBAC、安全策略和审计能力。
 
 ## 技术栈

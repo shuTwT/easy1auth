@@ -1,7 +1,7 @@
 package com.easy1auth.poolidentity.model;
 
 import com.easy1auth.framework.persistence.model.BaseEntity;
-import com.easy1auth.framework.tenant.persistence.model.BaseTenantEntity;
+import com.easy1auth.framework.tenant.persistence.model.BaseUserPoolEntity;
 import org.babyfish.jimmer.sql.Column;
 import org.babyfish.jimmer.sql.Entity;
 import org.babyfish.jimmer.sql.Table;
@@ -11,7 +11,7 @@ import java.time.Instant;
 
 @Entity
 @Table(name = "pool_permission_space")
-public interface PoolPermissionSpaceEntity extends BaseEntity, BaseTenantEntity {
+public interface PoolPermissionSpaceEntity extends BaseEntity, BaseUserPoolEntity {
     String name();
     String code();
     @Nullable String description();

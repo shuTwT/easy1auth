@@ -12,9 +12,9 @@ import type {
 
 // Admin-user API module. Calls /admin-users/* endpoints exclusively.
 // These endpoints require the Authorization header (added by the request
-// interceptor) but are account-level: they do NOT depend on the tenant-id
+// interceptor) but are account-level: they do NOT depend on the user-pool-id
 // header for reads or account-level mutations. Membership mutations (assign
-// roles, remove from tenant) take an explicit tenantId in the body / query.
+// roles, remove from tenant) take an explicit userPoolId in the body / query.
 
 export const adminUserApi = {
   getStats(): Promise<AdminUserStats> {
@@ -49,7 +49,7 @@ export const adminUserApi = {
     return request.put(`/admin-users/${id}/roles`, data)
   },
 
-  removeFromTenant(id: string, tenantId: string): Promise<void> {
-    return request.delete(`/admin-users/${id}/tenant`, { params: { tenantId } })
+  removeFromUserPool(id: string, userPoolId: string): Promise<void> {
+    return request.delete(`/admin-users/${id}/tenant`, { params: { userPoolId } })
   }
 }

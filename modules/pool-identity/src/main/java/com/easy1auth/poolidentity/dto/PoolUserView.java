@@ -9,10 +9,10 @@ import java.util.*;
  * pool_user 用户视图（面向接口层的只读 DTO）。
  *
  * <p>用于目录列表、详情等展示场景，描述一个第三方接入用户的完整档案信息。
- * pool_user 属于租户隔离的用户体系，供第三方授权登录使用，不在系统后台登录。</p>
+ * pool_user 属于用户池隔离的用户体系，供第三方授权登录使用，不在系统后台登录。</p>
  *
  * @param id               用户 ID
- * @param tenantId         所属租户 ID
+ * @param userPoolId         所属用户池 ID
  * @param username         登录用户名（唯一，用于授权登录）
  * @param email            邮箱（可为 null）
  * @param phone            手机号
@@ -28,7 +28,7 @@ import java.util.*;
  * @param createdAt        创建时间
  * @param updatedAt        最后更新时间
  */
-public record PoolUserView(UUID id, UUID tenantId, String username, @Nullable String email, String phone, String name,
+public record PoolUserView(UUID id, UUID userPoolId, String username, @Nullable String email, String phone, String name,
                            String avatar, String status, boolean emailVerified, boolean phoneVerified,
                            String department, String position, Map<String, Object> customAttributes,
                            Instant lastLoginAt, Instant createdAt, Instant updatedAt) {

@@ -1,14 +1,14 @@
 package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.web.dto.SocialSourceStatsResponse;
-import com.easy1auth.admin.annotation.TenantManagementPermission;
+import com.easy1auth.admin.annotation.UserPoolManagementPermission;
 import com.easy1auth.system.constant.ManagementPermissionCode;
 import com.easy1auth.framework.web.response.ApiResponse;
 import com.easy1auth.connection.service.SocialIdentityService;
 import com.easy1auth.connection.dto.SocialIdentityInput;
 import com.easy1auth.connection.constant.ErrorCodeConstants;
 import com.easy1auth.framework.common.error.DomainException;
-import com.easy1auth.framework.tenant.context.TenantContextHolder;
+import com.easy1auth.framework.tenant.context.UserPoolContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -18,7 +18,7 @@ import java.util.*;
  *
  * <p>管理端 REST 入口，基路径 {@code /api/social-identity-sources}，提供社会化
  * 登录身份源（如微信、GitHub 等）的分页查询、统计、详情、创建、更新与删除能力。
- * 所有操作均通过 {@link TenantManagementPermission} 做租户级权限控制，并以
+ * 所有操作均通过 {@link UserPoolManagementPermission} 做用户池级权限控制，并以
  * {@link ApiResponse} 统一包装返回。</p>
  */
 @RestController
@@ -32,7 +32,7 @@ public class SocialIdentitySourceController {
     }
 
     /** 分页查询社会化身份源列表；飞书网页授权归属于企业身份源，不在此列表展示。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.SOCIAL_IDENTITY_SOURCE_LIST)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.SOCIAL_IDENTITY_SOURCE_LIST)
     @GetMapping
     ApiResponse<?> list(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, @RequestParam(required = false) String search, @RequestParam(required = false) String status, @RequestParam(required = false) String type, @RequestParam(required = false) String category) {
         validateCategory(type, category);
@@ -42,11 +42,11 @@ public class SocialIdentitySourceController {
     }
 
     /** 查询登录身份源的统计信息；显式指定 feishu_web 时仅统计企业登录身份源。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.SOCIAL_IDENTITY_SOURCE_STATS)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.SOCIAL_IDENTITY_SOURCE_STATS)
     @GetMapping("/stats")
     ApiResponse<?> stats(@RequestParam(required = false) String type, @RequestParam(required = false) String category) {
         validateCategory(type, category);
-        var stats = service.stats(TenantContextHolder.requireTenantId(), type);
+        var stats = service.stats(UserPoolContextHolder.requireUserPoolId(), type);
         return ApiResponse.ok(new SocialSourceStatsResponse(
                 stats.totalSources(),
                 stats.activeSources(),
@@ -56,7 +56,7 @@ public class SocialIdentitySourceController {
     }
 
     /** 查询指定社会化身份源的详情。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.SOCIAL_IDENTITY_SOURCE_READ)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.SOCIAL_IDENTITY_SOURCE_READ)
     @GetMapping("/{id}")
     ApiResponse<?> get(@PathVariable UUID id, @RequestParam(required = false) String category) {
         var source = service.get(id);
@@ -65,7 +65,7 @@ public class SocialIdentitySourceController {
     }
 
     /** 创建社会化身份源；返回的 Client Secret 仅显示一次，请及时保存。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.SOCIAL_IDENTITY_SOURCE_CREATE)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.SOCIAL_IDENTITY_SOURCE_CREATE)
     @PostMapping
     ApiResponse<?> create(@RequestBody SocialIdentityInput in, @RequestParam(required = false) String category) {
         validateCategory(in.type(), category);
@@ -73,7 +73,7 @@ public class SocialIdentitySourceController {
     }
 
     /** 更新指定社会化身份源的配置。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.SOCIAL_IDENTITY_SOURCE_UPDATE)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.SOCIAL_IDENTITY_SOURCE_UPDATE)
     @PutMapping("/{id}")
     ApiResponse<?> update(@PathVariable UUID id, @RequestBody SocialIdentityInput in, @RequestParam(required = false) String category) {
         if (category != null) {
@@ -86,7 +86,7 @@ public class SocialIdentitySourceController {
     }
 
     /** 删除指定社会化身份源。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.SOCIAL_IDENTITY_SOURCE_DELETE)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.SOCIAL_IDENTITY_SOURCE_DELETE)
     @DeleteMapping("/{id}")
     ApiResponse<Void> delete(@PathVariable UUID id, @RequestParam(required = false) String category) {
         if (category != null) {

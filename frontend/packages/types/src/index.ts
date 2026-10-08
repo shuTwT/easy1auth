@@ -73,7 +73,7 @@ export interface PublicLoginStyle {
 
 export interface AuthInteractionContext {
   status: 'login' | 'mfa' | 'consent' | 'error' | 'expired'
-  tenantId?: string
+  userPoolId?: string
   csrfToken?: string
   style?: PublicLoginStyle
   clientName?: string

@@ -27,10 +27,10 @@ public interface AuthenticationFactorEntity {
     @Column(name = "subject_id")
     UUID subjectId();
 
-    /** 所属租户 ID（可为 null） */
+    /** 所属用户池 ID（可为 null） */
     @Nullable
     @Column(name = "tenant_id")
-    UUID tenantId();
+    UUID userPoolId();
 
     /** 因子类型（当前仅 totp） */
     @Column(name = "factor_type")

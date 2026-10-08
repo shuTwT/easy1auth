@@ -2,7 +2,7 @@ package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.constant.ErrorCodeConstants;
 import com.easy1auth.admin.web.dto.*;
-import com.easy1auth.admin.annotation.TenantManagementPermission;
+import com.easy1auth.admin.annotation.UserPoolManagementPermission;
 import com.easy1auth.system.constant.ManagementPermissionCode;
 import com.easy1auth.poolidentity.service.PoolUserService;
 import com.easy1auth.poolidentity.dto.PoolUserInput;
@@ -22,7 +22,7 @@ import java.util.*;
  *
  * <p>管理端 REST 入口，基路径 {@code /api/users/import}，提供 Excel 导入模板下载
  * 与批量导入目录用户（pool_user）的能力。导入时逐行校验，返回成功与失败的明细。
- * 操作通过 {@link TenantManagementPermission} 做租户级权限控制，并以 {@link ApiResponse}
+ * 操作通过 {@link UserPoolManagementPermission} 做用户池级权限控制，并以 {@link ApiResponse}
  * 统一包装返回。</p>
  */
 @RestController
@@ -38,7 +38,7 @@ public class PoolUserImportController {
     }
 
     /** 下载用户导入用的 Excel 模板文件。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.USER_IMPORT_TEMPLATE)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.USER_IMPORT_TEMPLATE)
     @GetMapping("/template")
     ResponseEntity<byte[]> template() throws IOException {
         try (var workbook = new XSSFWorkbook(); var output = new ByteArrayOutputStream()) {
@@ -56,7 +56,7 @@ public class PoolUserImportController {
     }
 
     /** 上传 Excel 文件批量导入目录用户，返回成功与失败的行级明细。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.USER_IMPORT)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.USER_IMPORT)
     @PostMapping
     ApiResponse<?> upload(@RequestParam("file") MultipartFile file) throws IOException {
         if (file.isEmpty() || file.getSize() > MAX_FILE_SIZE) {

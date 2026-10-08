@@ -40,8 +40,8 @@ const loadTemplates = async (type?: TemplateType): Promise<void> => {
     return
   }
   const version = ++requestVersions[type]
-  const tenantId = userStore.currentTenant?.id
-  const isCurrent = () => mounted && requestVersions[type] === version && userStore.currentTenant?.id === tenantId
+  const userPoolId = userStore.currentUserPool?.id
+  const isCurrent = () => mounted && requestVersions[type] === version && userStore.currentUserPool?.id === userPoolId
   templatesLoading[type] = true
   try {
     const response = await messageTemplateApi.list(type, { ...templateQueries[type] })
@@ -61,7 +61,7 @@ const handleTemplateSearch = (type: TemplateType, query: MessageTemplateSearch) 
   loadTemplates(type)
 }
 
-watch(() => userStore.currentTenant?.id, () => {
+watch(() => userStore.currentUserPool?.id, () => {
   templates.email = []
   templates.sms = []
   loadTemplates()

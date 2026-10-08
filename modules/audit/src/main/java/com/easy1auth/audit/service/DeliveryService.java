@@ -9,7 +9,7 @@ import com.easy1auth.audit.repository.DeliveryRepository;
 import com.easy1auth.framework.common.error.DomainException;
 import com.easy1auth.framework.common.id.UuidV7;
 import com.easy1auth.security.SecurityDataCipher;
-import com.easy1auth.framework.tenant.context.TenantContextHolder;
+import com.easy1auth.framework.tenant.context.UserPoolContextHolder;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
@@ -43,7 +43,7 @@ public class DeliveryService {
   /** 创建 Webhook 订阅，生成并加密存储订阅密钥，返回含密钥的订阅视图。 */
   @Transactional
   public AuditSubscriptionView create(AuditSubscriptionInput in) {
-    UUID tenant = TenantContextHolder.requireTenantId();
+    UUID tenant = UserPoolContextHolder.requireUserPoolId();
     validate(in);
     UUID id = UuidV7.randomUuid();
     String secret = token(32);
@@ -65,7 +65,7 @@ public class DeliveryService {
     return view(e, secret);
   }
 
-  /** 查询当前租户全部 Webhook 订阅（按创建时间倒序，不返回密钥）。 */
+  /** 查询当前用户池全部 Webhook 订阅（按创建时间倒序，不返回密钥）。 */
   @Transactional(readOnly = true)
   public List<AuditSubscriptionView> list() {
     return repository.listSubscriptions().stream().map(e -> view(e, null)).toList();
@@ -77,7 +77,7 @@ public class DeliveryService {
     var old = entity(id);
     validate(in);
     repository.updateSubscription(
-        old.tenantId(),
+        old.userPoolId(),
         id,
         in.name(),
         in.url(),
@@ -93,28 +93,28 @@ public class DeliveryService {
     var old = entity(id);
     String secret = token(32);
     repository.rotateSubscriptionSecret(
-        old.tenantId(),
+        old.userPoolId(),
         id,
         hash(secret),
-        cipher.encrypt("webhook:" + old.tenantId() + ":" + id, secret));
+        cipher.encrypt("webhook:" + old.userPoolId() + ":" + id, secret));
     return view(entity(id), secret);
   }
 
-  /** 删除 Webhook 订阅（限当前租户）。 */
+  /** 删除 Webhook 订阅（限当前用户池）。 */
   @Transactional
   public void delete(UUID id) {
     var old = entity(id);
-    if (repository.deleteSubscription(old.tenantId(), id) != 1) {
+    if (repository.deleteSubscription(old.userPoolId(), id) != 1) {
       throw missing();
     }
   }
 
-  /** 按租户与 ID 查询订阅实体，不存在时抛出领域异常。 */
+  /** 按用户池与 ID 查询订阅实体，不存在时抛出领域异常。 */
   private WebhookSubscriptionEntity entity(UUID tenant, UUID id) {
     return repository.findSubscription(tenant, id).orElseThrow(this::missing);
   }
 
-  /** 按 ID 查询订阅实体（不限租户），不存在时抛出领域异常。 */
+  /** 按 ID 查询订阅实体（不限用户池），不存在时抛出领域异常。 */
   private WebhookSubscriptionEntity entity(UUID id) {
     return repository.findSubscription(id).orElseThrow(this::missing);
   }
@@ -184,7 +184,7 @@ public class DeliveryService {
   private static AuditSubscriptionView view(WebhookSubscriptionEntity e, String secret) {
     return new AuditSubscriptionView(
         e.id(),
-        e.tenantId(),
+        e.userPoolId(),
         e.name(),
         e.url(),
         e.events(),

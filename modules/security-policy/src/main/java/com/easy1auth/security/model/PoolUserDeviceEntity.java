@@ -1,7 +1,7 @@
 package com.easy1auth.security.model;
 
 import com.easy1auth.framework.persistence.model.BaseEntity;
-import com.easy1auth.framework.tenant.persistence.model.BaseTenantEntity;
+import com.easy1auth.framework.tenant.persistence.model.BaseUserPoolEntity;
 import org.babyfish.jimmer.sql.*;
 import org.jspecify.annotations.Nullable;
 
@@ -16,7 +16,7 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "pool_user_device")
-public interface PoolUserDeviceEntity extends BaseEntity, BaseTenantEntity {
+public interface PoolUserDeviceEntity extends BaseEntity, BaseUserPoolEntity {
     /** 终端用户 ID（pool_user） */
     @Column(name = "user_id")
     UUID userId();

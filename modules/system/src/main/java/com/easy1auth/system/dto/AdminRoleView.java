@@ -7,11 +7,11 @@ import java.util.UUID;
 /**
  * 管理员角色视图（面向接口层的只读 DTO）。
  *
- * <p>描述租户内一个管理角色（admin_role）的基本信息、所拥有的管理端权限码，
+ * <p>描述用户池内一个管理角色（admin_role）的基本信息、所拥有的管理端权限码，
  * 以及当前关联的管理员数量。</p>
  *
  * @param id          角色 ID
- * @param tenantId    所属租户 ID
+ * @param userPoolId    所属用户池 ID
  * @param name        角色名称
  * @param code        角色编码
  * @param description 角色描述（可为 null）
@@ -21,6 +21,6 @@ import java.util.UUID;
  * @param createdAt   创建时间
  * @param updatedAt   最后更新时间
  */
-public record AdminRoleView(UUID id, UUID tenantId, String name, String code, String description, List<String> permissions,
+public record AdminRoleView(UUID id, UUID userPoolId, String name, String code, String description, List<String> permissions,
                             boolean isSystem, long adminCount, Instant createdAt, Instant updatedAt) {
 }

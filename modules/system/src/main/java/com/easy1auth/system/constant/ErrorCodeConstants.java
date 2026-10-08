@@ -31,9 +31,9 @@ public interface ErrorCodeConstants {
     ErrorCode VERIFICATION_CODE_INVALID = new ErrorCode(12018, "验证码无效或已过期");
     ErrorCode SYSTEM_ALREADY_INITIALIZED = new ErrorCode(12019, "系统已完成初始化，请直接登录");
 
-    ErrorCode ADMINISTRATOR_TRANSFER_REQUIRED = new ErrorCode(13000, "账号仍是租户唯一管理员，请先完成租户管理员转移");
+    ErrorCode ADMINISTRATOR_TRANSFER_REQUIRED = new ErrorCode(13000, "账号仍是用户池唯一管理员，请先完成用户池管理员转移");
     ErrorCode ADMIN_ACCOUNT_NOT_FOUND = new ErrorCode(13001, "管理员账号不存在");
-    ErrorCode ADMIN_MEMBER_NOT_FOUND = new ErrorCode(13002, "管理员不属于当前租户");
+    ErrorCode ADMIN_MEMBER_NOT_FOUND = new ErrorCode(13002, "管理员不属于当前用户池");
     ErrorCode ADMIN_ROLE_NOT_FOUND = new ErrorCode(13003, "管理员角色不存在");
     ErrorCode MANAGEMENT_PERMISSION_INACTIVE = new ErrorCode(13004, "权限已停用");
     ErrorCode MANAGEMENT_PERMISSION_INVALID = new ErrorCode(13005, "包含未知或非管理端权限");
@@ -45,11 +45,11 @@ public interface ErrorCodeConstants {
     ErrorCode PLATFORM_PERMISSION_SCOPE_INVALID = new ErrorCode(13011, "权限不属于平台作用域");
     ErrorCode ROLE_NAME_INVALID = new ErrorCode(13012, "角色名称无效");
     ErrorCode SYSTEM_ROLE_IMMUTABLE = new ErrorCode(13013, "系统角色不能修改或删除");
-    ErrorCode SYSTEM_TENANT_CONTEXT_INVALID = new ErrorCode(13014, "系统租户上下文无效");
-    ErrorCode SYSTEM_TENANT_INVALID = new ErrorCode(13015, "系统租户状态无效");
-    ErrorCode TENANT_MEMBERSHIP_ROLE_INVALID = new ErrorCode(13016, "成员角色与租户类型不匹配");
-    ErrorCode TENANT_PACKAGE_MISSING = new ErrorCode(13017, "普通租户缺少有效套餐");
+    ErrorCode SYSTEM_USER_POOL_CONTEXT_INVALID = new ErrorCode(13014, "系统用户池上下文无效");
+    ErrorCode SYSTEM_USER_POOL_INVALID = new ErrorCode(13015, "系统用户池状态无效");
+    ErrorCode USER_POOL_MEMBERSHIP_ROLE_INVALID = new ErrorCode(13016, "成员角色与用户池类型不匹配");
+    ErrorCode USER_POOL_PACKAGE_MISSING = new ErrorCode(13017, "普通用户池缺少有效套餐");
     ErrorCode ROLE_CODE_INVALID = new ErrorCode(13018, "角色编码须为2至100位小写字母、数字或下划线，且以字母开头");
-    ErrorCode ROLE_CODE_EXISTS = new ErrorCode(13019, "当前租户已存在相同角色编码");
+    ErrorCode ROLE_CODE_EXISTS = new ErrorCode(13019, "当前用户池已存在相同角色编码");
     ErrorCode ROLE_CODE_IMMUTABLE = new ErrorCode(13020, "角色编码创建后不可修改");
 }

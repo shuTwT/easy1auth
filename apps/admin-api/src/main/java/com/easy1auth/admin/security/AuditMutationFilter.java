@@ -17,7 +17,7 @@ import java.util.*;
  * 变更操作审计过滤器。
  *
  * <p>对写请求（POST / PUT / PATCH / DELETE）在请求结束后记录一条管理端操作审计事件，
- * 携带租户、操作账号、资源路径、结果与错误原因等信息，用于审计追踪。审计记录自身
+ * 携带用户池、操作账号、资源路径、结果与错误原因等信息，用于审计追踪。审计记录自身
  * 的异常会被吞掉，避免影响业务请求。</p>
  */
 @Component
@@ -48,13 +48,13 @@ public final class AuditMutationFilter extends OncePerRequestFilter {
             chain.doFilter(request, response);
         } finally {
             try {
-                var tenantId = WebFrameworkUtils.getTenantId(request);
+                var userPoolId = WebFrameworkUtils.getUserPoolId(request);
                 var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
                 Jwt jwt = auth != null && auth.getPrincipal() instanceof Jwt j ? j : null;
                 String[] path = request.getRequestURI().split("/");
                 String resource = path.length > 2 ? path[2] : "api";
                 boolean businessError = Boolean.TRUE.equals(request.getAttribute("easy1auth.business.error"));
-                audit.record(new AuditEvent(tenantId, "admin", jwt == null ? null : UUID.fromString(jwt.getSubject()), null, "admin_api", request.getMethod().toLowerCase(Locale.ROOT), resource, path.length > 3 ? path[3] : null, response.getHeader(TraceIdFilter.HEADER), request.getMethod(), request.getRemoteAddr(), WebFrameworkUtils.getUserAgent(request), !businessError && response.getStatus() < 400 ? "success" : "failure", businessError ? "BUSINESS_ERROR" : (response.getStatus() < 400 ? null : "HTTP_" + response.getStatus()), Map.of("path", request.getRequestURI())));
+                audit.record(new AuditEvent(userPoolId, "admin", jwt == null ? null : UUID.fromString(jwt.getSubject()), null, "admin_api", request.getMethod().toLowerCase(Locale.ROOT), resource, path.length > 3 ? path[3] : null, response.getHeader(TraceIdFilter.HEADER), request.getMethod(), request.getRemoteAddr(), WebFrameworkUtils.getUserAgent(request), !businessError && response.getStatus() < 400 ? "success" : "failure", businessError ? "BUSINESS_ERROR" : (response.getStatus() < 400 ? null : "HTTP_" + response.getStatus()), Map.of("path", request.getRequestURI())));
             } catch (RuntimeException ignored) {
             }
         }

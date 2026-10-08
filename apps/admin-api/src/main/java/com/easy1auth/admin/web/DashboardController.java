@@ -1,12 +1,12 @@
 package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.web.dto.*;
-import com.easy1auth.admin.annotation.TenantManagementPermission;
+import com.easy1auth.admin.annotation.UserPoolManagementPermission;
 import com.easy1auth.system.constant.ManagementPermissionCode;
 import com.easy1auth.application.service.ApplicationService;
 import com.easy1auth.poolidentity.service.PoolUserService;
 import com.easy1auth.framework.web.response.ApiResponse;
-import com.easy1auth.tenant.service.TenantService;
+import com.easy1auth.tenant.service.UserPoolService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,29 +22,29 @@ import java.util.UUID;
 /**
  * 管理端首页看板接口。
  *
- * <p>管理端 REST 入口，基路径 {@code /api/dashboard}，汇总当前账号的租户数、
+ * <p>管理端 REST 入口，基路径 {@code /api/dashboard}，汇总当前账号的用户池数、
  * 用户数、应用数与今日登录数等统计信息，并返回最近登录动态。通过
- * {@link TenantManagementPermission} 做租户级权限控制，以 {@link ApiResponse}
+ * {@link UserPoolManagementPermission} 做用户池级权限控制，以 {@link ApiResponse}
  * 统一包装返回。</p>
  */
 @RestController
 @RequestMapping("/api/dashboard")
 public class DashboardController {
-    /** 租户服务 */
-    private final TenantService tenants;
+    /** 用户池服务 */
+    private final UserPoolService userPools;
     /** 目录用户（pool_user）服务 */
     private final PoolUserService users;
     /** 应用服务 */
     private final ApplicationService applications;
 
-    DashboardController(TenantService tenants, PoolUserService users, ApplicationService applications) {
-        this.tenants = tenants;
+    DashboardController(UserPoolService userPools, PoolUserService users, ApplicationService applications) {
+        this.userPools = userPools;
         this.users = users;
         this.applications = applications;
     }
 
     /** 查询首页看板统计信息与最近登录动态。 */
-    @TenantManagementPermission(ManagementPermissionCode.MENU_DASHBOARD)
+    @UserPoolManagementPermission(ManagementPermissionCode.MENU_DASHBOARD)
     @GetMapping("/stats")
     ApiResponse<DashboardData> stats(@AuthenticationPrincipal Jwt actor) {
         var userStats = users.stats();
@@ -57,7 +57,7 @@ public class DashboardController {
                 .toList();
         return ApiResponse.ok(new DashboardData(
                 new DashboardStats(
-                        tenants.list(UUID.fromString(actor.getSubject())).size(),
+                        userPools.list(UUID.fromString(actor.getSubject())).size(),
                         userStats.totalUsers(),
                         applicationStats.totalApplications(),
                         users.successfulLoginCountSince(today)),
@@ -74,7 +74,7 @@ public class DashboardController {
     /**
      * 看板统计信息。
      *
-     * @param tenantCount      当前账号可访问的租户数量
+     * @param userPoolCount      当前账号可访问的用户池数量
      * @param userCount        目录用户总数
      * @param applicationCount 应用总数
      * @param todayLoginCount  今日成功登录次数

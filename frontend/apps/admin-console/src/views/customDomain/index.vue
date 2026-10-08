@@ -127,7 +127,7 @@ onMounted(loadDomains)
   <div class="p-6 min-h-[calc(100vh-64px)]">
     <div class="mb-6">
       <h1 class="text-2xl font-bold text-foreground mb-2">自定义域名</h1>
-      <p class="text-sm text-muted-foreground">登记租户使用的登录域名并查看其状态</p>
+      <p class="text-sm text-muted-foreground">登记用户池使用的登录域名并查看其状态</p>
     </div>
 
     <a-card>

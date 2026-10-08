@@ -141,11 +141,10 @@ const permissionCatalog = ref<PermissionCatalogItem[]>([])
 const roleDialogVisible = ref(false)
 const roleDialogIsEdit = ref(false)
 const roleDialogSubmitting = ref(false)
-const roleForm = reactive<CreateAdminRoleDto & { id?: string }>({
+const roleForm = reactive<Omit<CreateAdminRoleDto, 'permissions'> & { id?: string }>({
   name: '',
   code: '',
   description: '',
-  permissions: [],
 })
 const roleFormRules = {
   name: [{ required: true, message: '请输入角色名称' }],
@@ -155,6 +154,12 @@ const roleFormRules = {
   ],
 }
 const roleDialogTitle = computed(() => (roleDialogIsEdit.value ? '编辑管理员角色' : '创建管理员角色'))
+
+// configure role permissions dialog
+const rolePermissionDialogVisible = ref(false)
+const rolePermissionTarget = ref<AdminRole | null>(null)
+const rolePermissionCodes = ref<string[]>([])
+const rolePermissionSubmitting = ref(false)
 
 // delete role confirmation
 const deleteRoleDialogVisible = ref(false)
@@ -200,14 +205,14 @@ const adminStatsCards = computed(() => [
   { label: '活跃管理员', value: adminStats.value.activeAdmins, icon: ShieldCheck, tone: 'success' },
   { label: '已禁用', value: adminStats.value.disabledAdmins, icon: ShieldAlert, tone: 'danger' },
   { label: 'MFA 已启用', value: adminStats.value.mfaEnabledAdmins, icon: KeyRound, tone: 'info' },
-  { label: '租户所有者', value: adminStats.value.ownerCount || 0, icon: Shield, tone: 'warning' },
+  { label: '用户池所有者', value: adminStats.value.ownerCount || 0, icon: Shield, tone: 'warning' },
 ])
 
 const adminColumns = [
   { title: '用户名', key: 'username', width: 190 },
   { title: '邮箱', key: 'email', width: 210 },
   { title: '手机号', key: 'phone', width: 140 },
-  { title: '当前租户角色', key: 'tenantRole', width: 140 },
+  { title: '当前用户池角色', key: 'tenantRole', width: 140 },
   { title: '状态', key: 'status', width: 90 },
   { title: 'MFA', key: 'mfa', width: 100 },
   { title: '最后登录', key: 'lastLoginAt', width: 180 },
@@ -221,18 +226,18 @@ function isSelf(row: AdminUser): boolean {
 
 /** The account owns at least one tenant (anywhere). Guards account-level actions. */
 function isAccountOwner(row: AdminUser): boolean {
-  return row.tenants.some((m) => m.tenantRole === 'owner')
+  return row.userPools.some((m) => m.tenantRole === 'owner')
 }
 
 /** Membership of this account within the currently selected tenant, if any. */
 function currentMembership(row: AdminUser): AdminMembership | undefined {
-  const tid = userStore.currentTenant?.id
+  const tid = userStore.currentUserPool?.id
   if (!tid) return undefined
-  return row.tenants.find((m) => m.tenantId === tid)
+  return row.userPools.find((m) => m.userPoolId === tid)
 }
 
 /** Role of the current-tenant membership, or null when the account is not a member. */
-function currentTenantRole(row: AdminUser): string | null {
+function currentUserPoolRole(row: AdminUser): string | null {
   return currentMembership(row)?.tenantRole ?? null
 }
 
@@ -252,7 +257,7 @@ function adminStatusText(status: AdminStatus): string {
 function tenantRoleText(role: string | null): string {
   if (!role) return '-'
   const map: Record<string, string> = {
-    owner: '租户所有者',
+    owner: '用户池所有者',
     admin: '管理员',
   }
   return map[role] || role
@@ -454,7 +459,7 @@ const handleAssignRolesSubmit = async () => {
   assignRolesSubmitting.value = true
   try {
     await adminUserApi.assignRoles(target.id, {
-      tenantId: membership.tenantId,
+      userPoolId: membership.userPoolId,
       roleIds: assignRolesSelected.value,
     })
     message.success('角色分配成功')
@@ -479,13 +484,13 @@ const handleRemoveConfirm = async () => {
   if (!target || !membership) return
   removeSubmitting.value = true
   try {
-    await adminUserApi.removeFromTenant(target.id, membership.tenantId)
-    message.success('已将管理员移出租户')
+    await adminUserApi.removeFromUserPool(target.id, membership.userPoolId)
+    message.success('已将管理员移出用户池')
     removeDialogVisible.value = false
     loadAdmins()
     loadAdminStats()
   } catch (error: unknown) {
-    message.error(getApiErrorMessage(error, '移出租户失败'))
+    message.error(getApiErrorMessage(error, '移出用户池失败'))
   } finally {
     removeSubmitting.value = false
   }
@@ -508,7 +513,7 @@ const roleColumns = [
   { title: '管理员数', key: 'adminCount', width: 110, align: 'center' as const },
   { title: '类型', key: 'type', width: 110 },
   { title: '创建时间', key: 'createdAt', width: 180 },
-  { title: '操作', key: 'actions', width: 150, fixed: 'end' as const },
+  { title: '操作', key: 'actions', width: 230, fixed: 'end' as const },
 ]
 
 const loadRoleStats = async () => {
@@ -571,7 +576,6 @@ const openCreateRoleDialog = () => {
   roleForm.name = ''
   roleForm.code = ''
   roleForm.description = ''
-  roleForm.permissions = []
   roleDialogVisible.value = true
 }
 
@@ -581,16 +585,38 @@ const openEditRoleDialog = (row: AdminRole) => {
   roleForm.name = row.name
   roleForm.code = row.code
   roleForm.description = row.description || ''
-  roleForm.permissions = [...row.permissions]
   roleDialogVisible.value = true
 }
 
 const toggleRolePermission = (code: string) => {
-  const idx = roleForm.permissions.indexOf(code)
+  const idx = rolePermissionCodes.value.indexOf(code)
   if (idx > -1) {
-    roleForm.permissions.splice(idx, 1)
+    rolePermissionCodes.value.splice(idx, 1)
   } else {
-    roleForm.permissions.push(code)
+    rolePermissionCodes.value.push(code)
+  }
+}
+
+const openRolePermissionDialog = (row: AdminRole) => {
+  rolePermissionTarget.value = row
+  rolePermissionCodes.value = [...row.permissions]
+  rolePermissionDialogVisible.value = true
+}
+
+const handleRolePermissionSubmit = async () => {
+  if (!rolePermissionTarget.value) return
+  rolePermissionSubmitting.value = true
+  try {
+    await adminRoleApi.update(rolePermissionTarget.value.id, {
+      permissions: rolePermissionCodes.value,
+    })
+    message.success('角色权限配置成功')
+    rolePermissionDialogVisible.value = false
+    await loadRoles()
+  } catch (error: unknown) {
+    message.error(getApiErrorMessage(error, '角色权限配置失败'))
+  } finally {
+    rolePermissionSubmitting.value = false
   }
 }
 
@@ -609,7 +635,6 @@ const handleRoleSubmit = async () => {
       const payload: UpdateAdminRoleDto = {
         name: roleForm.name,
         description: roleForm.description || undefined,
-        permissions: roleForm.permissions,
       }
       await adminRoleApi.update(roleForm.id, payload)
       message.success('角色更新成功')
@@ -618,10 +643,10 @@ const handleRoleSubmit = async () => {
         name: roleForm.name,
         code: roleForm.code.trim(),
         description: roleForm.description || undefined,
-        permissions: roleForm.permissions,
+        permissions: [],
       }
       await adminRoleApi.create(payload)
-      message.success('角色创建成功')
+      message.success('角色创建成功，请在角色列表中配置权限')
     }
     roleDialogVisible.value = false
     loadRoles()
@@ -679,7 +704,7 @@ onMounted(() => {
   <div class="p-6 min-h-[calc(100vh-64px)]">
     <div class="mb-6">
       <h1 class="text-2xl font-bold text-foreground mb-2">管理员管理</h1>
-      <p class="text-sm text-muted-foreground">管理员账号为全局账号；管理员角色归属于当前选中的租户</p>
+      <p class="text-sm text-muted-foreground">管理员账号为全局账号；管理员角色归属于当前选中的用户池</p>
     </div>
 
     <a-tabs v-model:active-key="activeTab" :items="adminTabs">
@@ -777,8 +802,8 @@ onMounted(() => {
                   <template v-else-if="column.key === 'email'">{{ row.email }}</template>
                   <template v-else-if="column.key === 'phone'">{{ row.phone || '-' }}</template>
                   <template v-else-if="column.key === 'tenantRole'">
-                      <a-tag v-if="currentTenantRole(row)" :color="tenantRoleVariant(currentTenantRole(row))" class="text-xs">
-                        {{ tenantRoleText(currentTenantRole(row)) }}
+                      <a-tag v-if="currentUserPoolRole(row)" :color="tenantRoleVariant(currentUserPoolRole(row))" class="text-xs">
+                        {{ tenantRoleText(currentUserPoolRole(row)) }}
                       </a-tag>
                       <span v-else class="text-muted-foreground">-</span>
                   </template>
@@ -848,7 +873,7 @@ onMounted(() => {
                           :disabled="isSelf(row) || !currentMembership(row) || isCurrentMembershipOwner(row)"
                           @click="openRemoveDialog(row)"
                         >
-                          移出租户
+                          移出用户池
                         </a-button>
                       </div>
                   </template>
@@ -955,6 +980,15 @@ onMounted(() => {
                   <span v-else-if="column.key === 'createdAt'" class="text-muted-foreground">{{ formatDate(row.createdAt) }}</span>
                   <template v-else-if="column.key === 'actions'">
                       <div class="flex gap-2">
+                        <a-button
+                          type="link"
+                          size="small"
+                          class="h-auto p-0"
+                          :disabled="row.isSystem"
+                          @click="openRolePermissionDialog(row)"
+                        >
+                          配置权限
+                        </a-button>
                         <a-button
                           type="link"
                           size="small"
@@ -1125,9 +1159,9 @@ onMounted(() => {
     <a-modal v-model:open="removeDialogVisible" :footer="null">
       <div>
         <div>
-          <h3>移出租户</h3>
+          <h3>移出用户池</h3>
           <p>
-            确定要将管理员 <span class="font-medium">{{ removeTarget?.username }}</span> 移出当前租户吗？此操作只解除该管理员与当前租户的关联，不会删除管理员账号。
+            确定要将管理员 <span class="font-medium">{{ removeTarget?.username }}</span> 移出当前用户池吗？此操作只解除该管理员与当前用户池的关联，不会删除管理员账号。
           </p>
         </div>
         <div>
@@ -1147,7 +1181,7 @@ onMounted(() => {
 
     <!-- ===================== Create / edit role dialog ===================== -->
     <a-modal v-model:open="roleDialogVisible" :footer="null">
-      <div class="max-w-xl">
+      <div class="max-w-lg">
         <div>
           <h3>{{ roleDialogTitle }}</h3>
         </div>
@@ -1167,31 +1201,6 @@ onMounted(() => {
             <a-form-item label="描述" name="description">
               <a-textarea v-model:value="roleForm.description" :rows="2" placeholder="请输入角色描述" />
             </a-form-item>
-            <a-form-item label="权限配置">
-              <div class="border rounded-lg p-3 max-h-80 overflow-y-auto">
-                <div
-                  v-for="category in permissionCategories"
-                  :key="category.code"
-                  class="mb-3 last:mb-0"
-                >
-                  <div class="text-sm font-medium mb-2">{{ category.name }}</div>
-                  <div class="flex flex-col gap-2 pl-1">
-                    <label
-                      v-for="item in category.items"
-                      :key="item.code"
-                      class="flex items-center gap-2 cursor-pointer"
-                    >
-                      <a-checkbox
-                        :checked="roleForm.permissions.includes(item.code)"
-                        @update:checked="toggleRolePermission(item.code)"
-                      />
-                      <span class="text-sm">{{ item.name }}</span>
-                      <code class="text-xs text-muted-foreground font-mono">{{ item.code }}</code>
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </a-form-item>
           </div>
           <div class="flex justify-end gap-2 pt-2">
             <a-button html-type="button" @click="roleDialogVisible = false">取消</a-button>
@@ -1200,6 +1209,54 @@ onMounted(() => {
             </a-button>
           </div>
         </a-form>
+      </div>
+    </a-modal>
+
+    <!-- ===================== Configure role permissions dialog ===================== -->
+    <a-modal
+      v-model:open="rolePermissionDialogVisible"
+      title="配置管理员角色权限"
+      :footer="null"
+      width="640"
+    >
+      <div class="max-w-xl">
+        <p class="mb-4 text-sm text-muted-foreground">
+          为角色“{{ rolePermissionTarget?.name }}”配置可使用的管理端权限。
+        </p>
+        <div class="border rounded-lg p-3 max-h-96 overflow-y-auto">
+          <div
+            v-for="category in permissionCategories"
+            :key="category.code"
+            class="mb-4 last:mb-0"
+          >
+            <div class="text-sm font-medium mb-2">{{ category.name }}</div>
+            <div class="flex flex-col gap-2 pl-1">
+              <label
+                v-for="item in category.items"
+                :key="item.code"
+                class="flex items-center gap-2 cursor-pointer"
+              >
+                <a-checkbox
+                  :checked="rolePermissionCodes.includes(item.code)"
+                  @update:checked="toggleRolePermission(item.code)"
+                />
+                <span class="text-sm">{{ item.name }}</span>
+                <code class="text-xs text-muted-foreground font-mono">{{ item.code }}</code>
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 pt-4">
+          <a-button html-type="button" @click="rolePermissionDialogVisible = false">取消</a-button>
+          <a-button
+            type="primary"
+            :loading="rolePermissionSubmitting"
+            :disabled="rolePermissionSubmitting"
+            @click="handleRolePermissionSubmit"
+          >
+            {{ rolePermissionSubmitting ? '保存中...' : '保存权限' }}
+          </a-button>
+        </div>
       </div>
     </a-modal>
 

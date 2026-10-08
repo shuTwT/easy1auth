@@ -1,7 +1,7 @@
 package com.easy1auth.poolidentity.model;
 
 import com.easy1auth.framework.persistence.model.BaseEntity;
-import com.easy1auth.framework.tenant.persistence.model.BaseTenantEntity;
+import com.easy1auth.framework.tenant.persistence.model.BaseUserPoolEntity;
 import org.babyfish.jimmer.sql.*;
 import org.jspecify.annotations.Nullable;
 
@@ -11,14 +11,14 @@ import java.util.UUID;
 /**
  * 用户组实体（对应 user_group 表）。
  *
- * <p>描述 pool_user 的组织架构中的用户组，按租户隔离。用户组支持多种类型
+ * <p>描述 pool_user 的组织架构中的用户组，按用户池隔离。用户组支持多种类型
  * （team / department / project / organization），各组独立存在；
  * 由企业身份源（enterpriseIdentitySourceId）托管的组
  * 不可在本系统内修改。</p>
  */
 @Entity
 @Table(name = "user_group")
-public interface UserGroupEntity extends BaseEntity, BaseTenantEntity {
+public interface UserGroupEntity extends BaseEntity, BaseUserPoolEntity {
     /** 用户组名称（中文展示名） */
     String name();
 

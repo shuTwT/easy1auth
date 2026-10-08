@@ -10,8 +10,8 @@ import com.easy1auth.application.repository.ApplicationRepository;
 import com.easy1auth.framework.common.error.DomainException;
 import com.easy1auth.framework.common.id.UuidV7;
 import com.easy1auth.framework.common.pagination.PageData;
-import com.easy1auth.tenant.service.TenantService;
-import com.easy1auth.framework.tenant.context.TenantContextHolder;
+import com.easy1auth.tenant.service.UserPoolService;
+import com.easy1auth.framework.tenant.context.UserPoolContextHolder;
 import java.net.URI;
 import java.security.SecureRandom;
 import java.time.Instant;
@@ -21,10 +21,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * OAuth2 应用服务：租户下 OAuth 客户端应用的生命周期管理。
+ * OAuth2 应用服务：用户池下 OAuth 客户端应用的生命周期管理。
  *
  * <p>负责应用的创建、分页查询、详情、更新、删除、启停、密钥重新生成与统计， 并对类型、授权类型、重定向 URI、令牌有效期等做归一化与合规校验；创建与更新
- * 会校验租户应用配额与应用名称的唯一性。
+ * 会校验用户池应用配额与应用名称的唯一性。
  */
 @Service
 public class ApplicationService {
@@ -41,28 +41,28 @@ public class ApplicationService {
   /** jimmer SQL 客户端 */
   private final ApplicationRepository repository;
 
-  /** 租户服务（应用配额校验等） */
-  private final TenantService tenants;
+  /** 用户池服务（应用配额校验等） */
+  private final UserPoolService userPools;
 
   /** 密码编码器（编码客户端密钥哈希） */
   private final PasswordEncoder passwords;
 
   public ApplicationService(
-      ApplicationRepository repository, TenantService tenants, PasswordEncoder passwords) {
+      ApplicationRepository repository, UserPoolService userPools, PasswordEncoder passwords) {
     this.repository = repository;
-    this.tenants = tenants;
+    this.userPools = userPools;
     this.passwords = passwords;
   }
 
   /** 创建 OAuth 应用：校验配额与名称唯一性，生成 client_id 与客户端密钥（公共客户端不生成），返回视图。 */
   @Transactional
   public ApplicationView create(ApplicationInput input) {
-    UUID tenant = TenantContextHolder.requireTenantId();
+    UUID tenant = UserPoolContextHolder.requireUserPoolId();
     var normalized = normalize(input, true);
-    int limit = tenants.lockForAppQuota(tenant);
+    int limit = userPools.lockForAppQuota(tenant);
     long count = repository.count();
     if (count >= limit) {
-      throw new DomainException(ErrorCodeConstants.TENANT_APP_LIMIT);
+      throw new DomainException(ErrorCodeConstants.USER_POOL_APP_LIMIT);
     }
     if (repository.nameExists(normalized.name(), null)) {
       throw new DomainException(ErrorCodeConstants.APPLICATION_NAME_EXISTS);
@@ -75,7 +75,7 @@ public class ApplicationService {
         OAuthApplicationEntityDraft.$.produce(
             d ->
                 d.setId(id)
-                    .setTenantId(tenant)
+                    .setUserPoolId(tenant)
                     .setName(normalized.name())
                     .setLogo(normalized.logo())
                     .setDescription(normalized.description())
@@ -122,7 +122,7 @@ public class ApplicationService {
     return repository.findActiveByClientId(clientId).orElse(null);
   }
 
-  /** 按 ID 查询指定租户下 active 状态的应用（供授权服务器使用）。 */
+  /** 按 ID 查询指定用户池下 active 状态的应用（供授权服务器使用）。 */
   @Transactional(readOnly = true)
   public OAuthApplicationEntity findActive(UUID tenant, UUID id) {
     return repository.findActive(tenant, id).orElse(null);
@@ -131,7 +131,7 @@ public class ApplicationService {
   /** 更新应用配置（未传字段沿用旧值），并在公开/机密客户端类型切换时生成或清空密钥。 */
   @Transactional
   public ApplicationView update(UUID id, ApplicationInput input) {
-    UUID tenant = TenantContextHolder.requireTenantId();
+    UUID tenant = UserPoolContextHolder.requireUserPoolId();
     var old = entity(id);
     var normalized = normalizeForUpdate(old, input);
     if (!old.name().equals(normalized.name()) && repository.nameExists(normalized.name(), id)) {
@@ -167,17 +167,17 @@ public class ApplicationService {
     return view(entity(id), oneTimeSecret);
   }
 
-  /** 删除应用（物理删除，仅限当前租户内）。 */
+  /** 删除应用（物理删除，仅限当前用户池内）。 */
   @Transactional
   public void delete(UUID id) {
-    UUID tenant = TenantContextHolder.requireTenantId();
+    UUID tenant = UserPoolContextHolder.requireUserPoolId();
     repository.delete(tenant, id);
   }
 
   /** 启停应用：更新状态为 active/disabled。 */
   @Transactional
   public ApplicationView status(UUID id, String status) {
-    UUID tenant = TenantContextHolder.requireTenantId();
+    UUID tenant = UserPoolContextHolder.requireUserPoolId();
     if (!Set.of("active", "disabled").contains(status)) {
       throw new DomainException(ErrorCodeConstants.APPLICATION_STATUS_INVALID);
     }
@@ -189,7 +189,7 @@ public class ApplicationService {
   /** 重新生成客户端密钥（公共客户端不允许），返回一次性明文密钥。 */
   @Transactional
   public SecretView regenerateSecret(UUID id) {
-    UUID tenant = TenantContextHolder.requireTenantId();
+    UUID tenant = UserPoolContextHolder.requireUserPoolId();
     var app = entity(id);
     if (isPublic(app.type())) {
       throw new DomainException(ErrorCodeConstants.PUBLIC_CLIENT_HAS_NO_SECRET);
@@ -199,7 +199,7 @@ public class ApplicationService {
     return new SecretView(secret);
   }
 
-  /** 统计应用总量及 active/disabled 数量（租户维度）。 */
+  /** 统计应用总量及 active/disabled 数量（用户池维度）。 */
   @Transactional(readOnly = true)
   public ApplicationStats stats() {
     var rows = repository.statuses();
@@ -361,7 +361,7 @@ public class ApplicationService {
   private static ApplicationView view(OAuthApplicationEntity e, String secret) {
     return new ApplicationView(
         e.id(),
-        e.tenantId(),
+        e.userPoolId(),
         e.name(),
         e.logo(),
         e.description(),

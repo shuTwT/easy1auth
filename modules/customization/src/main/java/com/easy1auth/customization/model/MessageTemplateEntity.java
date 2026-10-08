@@ -1,7 +1,7 @@
 package com.easy1auth.customization.model;
 
 import com.easy1auth.framework.persistence.model.BaseEntity;
-import com.easy1auth.framework.tenant.persistence.model.BaseTenantEntity;
+import com.easy1auth.framework.tenant.persistence.model.BaseUserPoolEntity;
 
 import org.babyfish.jimmer.sql.*;
 import org.jspecify.annotations.Nullable;
@@ -17,7 +17,7 @@ import java.util.*;
  */
 @Entity
 @Table(name = "message_template")
-public interface MessageTemplateEntity extends BaseEntity, BaseTenantEntity {
+public interface MessageTemplateEntity extends BaseEntity, BaseUserPoolEntity {
 
     /** 模板类型：email（邮件）/ sms（短信） */
     String type();

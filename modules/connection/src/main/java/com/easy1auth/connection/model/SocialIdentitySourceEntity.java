@@ -1,7 +1,7 @@
 package com.easy1auth.connection.model;
 
 import com.easy1auth.framework.persistence.model.BaseEntity;
-import com.easy1auth.framework.tenant.persistence.model.BaseTenantEntity;
+import com.easy1auth.framework.tenant.persistence.model.BaseUserPoolEntity;
 import org.babyfish.jimmer.sql.*;
 import org.jspecify.annotations.Nullable;
 
@@ -13,7 +13,7 @@ import java.time.Instant;
  */
 @Entity
 @Table(name = "social_identity_source")
-public interface SocialIdentitySourceEntity extends BaseEntity, BaseTenantEntity {
+public interface SocialIdentitySourceEntity extends BaseEntity, BaseUserPoolEntity {
     /** 身份源显示名称 */
     String name();
 

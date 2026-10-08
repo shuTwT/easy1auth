@@ -23,7 +23,7 @@ public interface AuditEventRepository extends JRepository<AuditEventEntity, UUID
   default long deleteBefore(UUID tenant, Instant cutoff) {
     return sql()
         .createDelete(EVENT)
-        .where(EVENT.tenantId().eq(tenant), EVENT.createdAt().lt(cutoff))
+        .where(EVENT.userPoolId().eq(tenant), EVENT.createdAt().lt(cutoff))
         .execute();
   }
 
@@ -31,7 +31,7 @@ public interface AuditEventRepository extends JRepository<AuditEventEntity, UUID
     var query =
         sql()
             .createQuery(EVENT)
-            .where(EVENT.tenantId().eq(tenant))
+            .where(EVENT.userPoolId().eq(tenant))
             .whereIf(
                 queryInput != null
                     && queryInput.actorName() != null
@@ -68,7 +68,7 @@ public interface AuditEventRepository extends JRepository<AuditEventEntity, UUID
   default Optional<AuditEventEntity> find(UUID tenant, UUID id) {
     return sql()
         .createQuery(EVENT)
-        .where(EVENT.tenantId().eq(tenant), EVENT.id().eq(id))
+        .where(EVENT.userPoolId().eq(tenant), EVENT.id().eq(id))
         .select(EVENT)
         .fetchOptional();
   }
@@ -76,7 +76,7 @@ public interface AuditEventRepository extends JRepository<AuditEventEntity, UUID
   default List<Tuple2<String, Instant>> statsRows(UUID tenant) {
     return sql()
         .createQuery(EVENT)
-        .where(EVENT.tenantId().eq(tenant))
+        .where(EVENT.userPoolId().eq(tenant))
         .select(EVENT.outcome(), EVENT.createdAt())
         .execute();
   }

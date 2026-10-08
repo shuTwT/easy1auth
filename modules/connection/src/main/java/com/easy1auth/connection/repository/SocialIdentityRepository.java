@@ -42,7 +42,7 @@ public interface SocialIdentityRepository extends JRepository<SocialIdentitySour
             draft ->
                 draft
                     .setId(id)
-                    .setTenantId(tenant)
+                    .setUserPoolId(tenant)
                     .setName(name)
                     .setType(type)
                     .setMode(mode)
@@ -71,7 +71,7 @@ public interface SocialIdentityRepository extends JRepository<SocialIdentitySour
             draft ->
                 draft
                     .setId(id)
-                    .setTenantId(tenant)
+                    .setUserPoolId(tenant)
                     .setSourceId(source)
                     .setStateHash(stateHash)
                     .setNonceHash(nonceHash)
@@ -97,7 +97,7 @@ public interface SocialIdentityRepository extends JRepository<SocialIdentitySour
             draft ->
                 draft
                     .setId(UUID.randomUUID())
-                    .setTenantId(tenant)
+                    .setUserPoolId(tenant)
                     .setSourceId(source)
                     .setPoolUserId(user)
                     .setSourceType(sourceType)
@@ -118,7 +118,7 @@ public interface SocialIdentityRepository extends JRepository<SocialIdentitySour
     var query =
         sql()
             .createQuery(SOURCE)
-            .where(SOURCE.tenantId().eq(tenant))
+            .where(SOURCE.userPoolId().eq(tenant))
             .whereIf(type != null && !type.isBlank(), () -> SOURCE.type().eq(type))
             .whereIf(excludeFeishuWeb, () -> SOURCE.type().ne("feishu_web"))
             .whereIf(
@@ -139,7 +139,7 @@ public interface SocialIdentityRepository extends JRepository<SocialIdentitySour
       UUID tenant, String type, boolean excludeFeishuWeb) {
     return sql()
         .createQuery(SOURCE)
-        .where(SOURCE.tenantId().eq(tenant))
+        .where(SOURCE.userPoolId().eq(tenant))
         .whereIf(type != null && !type.isBlank(), () -> SOURCE.type().eq(type))
         .whereIf(excludeFeishuWeb, () -> SOURCE.type().ne("feishu_web"))
         .groupBy(SOURCE.type(), SOURCE.status())
@@ -150,7 +150,7 @@ public interface SocialIdentityRepository extends JRepository<SocialIdentitySour
   default Optional<SocialIdentitySourceEntity> findSource(UUID tenant, UUID id) {
     return sql()
         .createQuery(SOURCE)
-        .where(SOURCE.tenantId().eq(tenant), SOURCE.id().eq(id))
+        .where(SOURCE.userPoolId().eq(tenant), SOURCE.id().eq(id))
         .select(SOURCE)
         .fetchOptional();
   }
@@ -161,7 +161,7 @@ public interface SocialIdentityRepository extends JRepository<SocialIdentitySour
         sql()
             .createUpdate(SOURCE)
             .set(SOURCE.updatedAt(), Instant.now())
-            .where(SOURCE.tenantId().eq(tenant), SOURCE.id().eq(id));
+            .where(SOURCE.userPoolId().eq(tenant), SOURCE.id().eq(id));
     if (input.name() != null) {
       update.set(SOURCE.name(), input.name().strip());
     }
@@ -189,14 +189,14 @@ public interface SocialIdentityRepository extends JRepository<SocialIdentitySour
   default int deleteSource(UUID tenant, UUID id) {
     return sql()
         .createDelete(SOURCE)
-        .where(SOURCE.tenantId().eq(tenant), SOURCE.id().eq(id))
+        .where(SOURCE.userPoolId().eq(tenant), SOURCE.id().eq(id))
         .execute();
   }
 
   default List<SocialIdentitySourceEntity> findActiveSources(UUID tenant) {
     return sql()
         .createQuery(SOURCE)
-        .where(SOURCE.tenantId().eq(tenant), SOURCE.status().eq("active"))
+        .where(SOURCE.userPoolId().eq(tenant), SOURCE.status().eq("active"))
         .orderBy(SOURCE.createdAt().asc())
         .select(SOURCE)
         .execute();
@@ -215,7 +215,7 @@ public interface SocialIdentityRepository extends JRepository<SocialIdentitySour
     return sql()
         .createQuery(BINDING)
         .where(
-            BINDING.tenantId().eq(tenant),
+            BINDING.userPoolId().eq(tenant),
             BINDING.sourceId().eq(sourceId),
             BINDING.subject().eq(subject))
         .select(BINDING)

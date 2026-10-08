@@ -57,13 +57,13 @@ public class AdminAccessService {
     return view(findEntityFetched(id));
   }
 
-  /** 在租户下创建自定义管理角色并绑定权限（系统角色标记为 false）。 */
+  /** 在用户池下创建自定义管理角色并绑定权限（系统角色标记为 false）。 */
   @Transactional
   public AdminRoleView create(
-      UUID tenantId, Set<String> grantablePermissions, String name, String code, String description,
+      UUID userPoolId, Set<String> grantablePermissions, String name, String code, String description,
       List<String> permissions) {
     String normalizedCode = validateCode(code);
-    if (repository.roleCodeExists(tenantId, normalizedCode)) {
+    if (repository.roleCodeExists(userPoolId, normalizedCode)) {
       throw new DomainException(ErrorCodeConstants.ROLE_CODE_EXISTS);
     }
     var codes = validate(name, permissions);
@@ -74,7 +74,7 @@ public class AdminAccessService {
         AdminRoleEntityDraft.$.produce(
             d ->
                 d.setId(id)
-                    .setTenantId(tenantId)
+                    .setUserPoolId(userPoolId)
                     .setName(name.strip())
                     .setCode(normalizedCode)
                     .setDescription(description)
@@ -82,15 +82,15 @@ public class AdminAccessService {
                     .setCreatedAt(now)
                     .setUpdatedAt(now)));
     replacePermissions(id, codes);
-    return find(tenantId, id);
+    return find(userPoolId, id);
   }
 
   /** 更新管理角色名称、描述与权限（系统角色不可修改）。 */
   @Transactional
   public AdminRoleView update(
-      UUID tenantId, Set<String> grantablePermissions, UUID id, String name, String code, String description,
+      UUID userPoolId, Set<String> grantablePermissions, UUID id, String name, String code, String description,
       List<String> permissions) {
-    var old = findEntityFetched(tenantId, id);
+    var old = findEntityFetched(userPoolId, id);
     if (old.systemRole()) {
       throw immutable();
     }
@@ -106,9 +106,9 @@ public class AdminAccessService {
                 ManagementPermissionScope.PLATFORM)
             : catalog.validate(permissions, ManagementPermissionScope.PLATFORM);
     requireGrantable(grantablePermissions, codes);
-    repository.updateRole(tenantId, id, n.strip(), description);
+    repository.updateRole(userPoolId, id, n.strip(), description);
     replacePermissions(id, codes);
-    return find(tenantId, id);
+    return find(userPoolId, id);
   }
 
   /** 删除自定义管理角色（系统角色不可删除）。 */
@@ -128,14 +128,14 @@ public class AdminAccessService {
     var memberships = activeMemberships();
     var byAccount =
         memberships.stream()
-            .collect(java.util.stream.Collectors.groupingBy(TenantMembershipEntity::accountId));
+            .collect(java.util.stream.Collectors.groupingBy(UserPoolMembershipEntity::accountId));
     var roleMemberships = roleId == null ? null : membersForRole(roleId);
     var allowed =
         roleMemberships == null
             ? null
             : memberships.stream()
                 .filter(m -> roleMemberships.contains(m.id()))
-                .map(TenantMembershipEntity::accountId)
+                .map(UserPoolMembershipEntity::accountId)
                 .collect(java.util.stream.Collectors.toSet());
     var result = repository.pageAccounts(p, size, allowed, username, email, status);
     var rows =
@@ -145,13 +145,13 @@ public class AdminAccessService {
     return PageData.of(rows, p, size, result.total());
   }
 
-  /** 查询单个管理员成员详情（含名下各租户的成员关系与角色）。 */
+  /** 查询单个管理员成员详情（含名下各用户池的成员关系与角色）。 */
   @Transactional(readOnly = true)
   public AdminMemberView member(UUID account) {
     return memberView(findAccount(account), activeMemberships(account));
   }
 
-  /** 为账号在指定租户下重设角色分配（先清空已有分配再写入）。 */
+  /** 为账号在指定用户池下重设角色分配（先清空已有分配再写入）。 */
   @Transactional
   public AdminRoleAssignmentView assignRoles(UUID tenant, UUID account, List<UUID> roleIds) {
     findAccount(account);
@@ -177,7 +177,7 @@ public class AdminAccessService {
     identities.updateStatus(actor, account, status);
   }
 
-  /** 确保租户存在系统预置角色：超级管理员（全部权限）与只读管理员（仅查看权限）。 */
+  /** 确保用户池存在系统预置角色：超级管理员（全部权限）与只读管理员（仅查看权限）。 */
   @Transactional
   public void ensureDefaultRoles(UUID tenant) {
     var codes = catalog.activeCodes(ManagementPermissionScope.PLATFORM);
@@ -200,7 +200,7 @@ public class AdminAccessService {
         roles.stream().filter(r -> !r.systemRole()).count(),
         roles.stream()
             .flatMap(r -> r.memberships().stream())
-            .map(TenantMembershipEntity::id)
+            .map(UserPoolMembershipEntity::id)
             .distinct()
             .count());
   }
@@ -223,12 +223,12 @@ public class AdminAccessService {
         accounts.stream().filter(AdminAccountEntity::mfaEnabled).count(),
         memberships.stream()
             .filter(m -> "owner".equals(m.membershipRole()))
-            .map(TenantMembershipEntity::accountId)
+            .map(UserPoolMembershipEntity::accountId)
             .distinct()
             .count());
   }
 
-  /** 查询租户内角色并转换为视图。 */
+  /** 查询用户池内角色并转换为视图。 */
   private AdminRoleView find(UUID tenant, UUID id) {
     return view(findEntityFetched(tenant, id));
   }
@@ -247,14 +247,14 @@ public class AdminAccessService {
         .orElseThrow(() -> new DomainException(ErrorCodeConstants.ADMIN_ROLE_NOT_FOUND));
   }
 
-  /** 按租户与 ID 查询角色实体，不存在时抛出领域异常。 */
+  /** 按用户池与 ID 查询角色实体，不存在时抛出领域异常。 */
   private AdminRoleEntity findEntity(UUID tenant, UUID id) {
     return repository
         .findRole(tenant, id)
         .orElseThrow(() -> new DomainException(ErrorCodeConstants.ADMIN_ROLE_NOT_FOUND));
   }
 
-  /** 按租户与 ID 查询角色实体（含权限与成员关联），不存在时抛出领域异常。 */
+  /** 按用户池与 ID 查询角色实体（含权限与成员关联），不存在时抛出领域异常。 */
   private AdminRoleEntity findEntityFetched(UUID tenant, UUID id) {
     return repository
         .findRoleFetched(tenant, id)
@@ -268,7 +268,7 @@ public class AdminAccessService {
         .orElseThrow(() -> new DomainException(ErrorCodeConstants.ADMIN_ROLE_NOT_FOUND))
         .memberships()
         .stream()
-        .map(TenantMembershipEntity::id)
+        .map(UserPoolMembershipEntity::id)
         .collect(java.util.stream.Collectors.toSet());
   }
 
@@ -277,18 +277,18 @@ public class AdminAccessService {
     return repository.findRolesForMembership(membership);
   }
 
-  /** 查询账号在租户内的激活成员关系，不存在时抛出领域异常。 */
-  private TenantMembershipEntity findMembership(UUID tenant, UUID account) {
+  /** 查询账号在用户池内的激活成员关系，不存在时抛出领域异常。 */
+  private UserPoolMembershipEntity findMembership(UUID tenant, UUID account) {
     return repository.findActiveMembership(tenant, account).orElseThrow(this::memberMissing);
   }
 
-  /** 查询全部激活成员关系（按创建时间、租户、ID 稳定排序）。 */
-  private List<TenantMembershipEntity> activeMemberships() {
+  /** 查询全部激活成员关系（按创建时间、用户池、ID 稳定排序）。 */
+  private List<UserPoolMembershipEntity> activeMemberships() {
     return repository.findActiveMemberships();
   }
 
   /** 查询某账号名下全部激活成员关系。 */
-  private List<TenantMembershipEntity> activeMemberships(UUID account) {
+  private List<UserPoolMembershipEntity> activeMemberships(UUID account) {
     return repository.findActiveMemberships(account);
   }
 
@@ -299,17 +299,17 @@ public class AdminAccessService {
         .orElseThrow(() -> new DomainException(ErrorCodeConstants.ADMIN_ACCOUNT_NOT_FOUND));
   }
 
-  /** 组装管理员成员视图：选取当前选中租户（或首个租户）的角色信息。 */
+  /** 组装管理员成员视图：选取当前选中用户池（或首个用户池）的角色信息。 */
   private AdminMemberView memberView(
-      AdminAccountEntity account, List<TenantMembershipEntity> memberships) {
+      AdminAccountEntity account, List<UserPoolMembershipEntity> memberships) {
     var tenantViews = memberships.stream().map(this::membershipView).toList();
     var selected =
         memberships.stream()
-            .filter(m -> m.tenantId().equals(account.lastTenantId()))
+            .filter(m -> m.userPoolId().equals(account.lastUserPoolId()))
             .findFirst()
             .or(() -> memberships.stream().findFirst());
-    var tenantId = selected.map(TenantMembershipEntity::tenantId).orElse(null);
-    var tenantRole = selected.map(TenantMembershipEntity::membershipRole).orElse(null);
+    var userPoolId = selected.map(UserPoolMembershipEntity::userPoolId).orElse(null);
+    var tenantRole = selected.map(UserPoolMembershipEntity::membershipRole).orElse(null);
     var roles =
         selected
             .map(
@@ -317,9 +317,9 @@ public class AdminAccessService {
             .orElse(List.of());
     return new AdminMemberView(
         account.id(),
-        tenantId,
+        userPoolId,
         tenantRole,
-        account.lastTenantId(),
+        account.lastUserPoolId(),
         account.username(),
         account.email(),
         account.phone(),
@@ -335,10 +335,10 @@ public class AdminAccessService {
         "dormant");
   }
 
-  /** 组装单个成员关系视图（含该租户下被分配的角色）。 */
-  private AdminMembershipView membershipView(TenantMembershipEntity membership) {
+  /** 组装单个成员关系视图（含该用户池下被分配的角色）。 */
+  private AdminMembershipView membershipView(UserPoolMembershipEntity membership) {
     return new AdminMembershipView(
-        membership.tenantId(),
+        membership.userPoolId(),
         membership.membershipRole(),
         rolesForMembership(membership.id()).stream().map(this::viewWithoutMemberships).toList(),
         false,
@@ -359,7 +359,7 @@ public class AdminAccessService {
   private AdminRoleView view(AdminRoleEntity r) {
     return new AdminRoleView(
         r.id(),
-        r.tenantId(),
+        r.userPoolId(),
         r.name(),
         r.code(),
         r.description(),
@@ -374,7 +374,7 @@ public class AdminAccessService {
   private AdminRoleView viewWithoutMemberships(AdminRoleEntity r) {
     return new AdminRoleView(
         r.id(),
-        r.tenantId(),
+        r.userPoolId(),
         r.name(),
         r.code(),
         r.description(),
@@ -385,7 +385,7 @@ public class AdminAccessService {
         r.updatedAt());
   }
 
-  /** 确保租户存在指定系统预置角色，不存在则创建并绑定权限。 */
+  /** 确保用户池存在指定系统预置角色，不存在则创建并绑定权限。 */
   private void ensureSystemRole(
       UUID tenant, String code, String name, String description, List<ManagementPermissionCode> permissions) {
     boolean exists = repository.roleExists(tenant, name);
@@ -396,7 +396,7 @@ public class AdminAccessService {
           AdminRoleEntityDraft.$.produce(
               d ->
                   d.setId(id)
-                      .setTenantId(tenant)
+                      .setUserPoolId(tenant)
                       .setName(name)
                       .setCode(code)
                       .setDescription(description)
@@ -407,7 +407,7 @@ public class AdminAccessService {
     }
   }
 
-  /** 校验角色名称并校验权限码（租户作用域）。 */
+  /** 校验角色名称并校验权限码（用户池作用域）。 */
   private List<ManagementPermissionCode> validate(String name, List<String> permissions) {
     validateName(name);
     return catalog.validate(permissions, ManagementPermissionScope.PLATFORM);

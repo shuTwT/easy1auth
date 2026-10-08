@@ -4,12 +4,12 @@
 // are a distinct domain with their own endpoints (/admin-users/*).
 //
 // Backend AdminMemberView is account-level: one row per admin account, carrying
-// a `tenants` list of AdminMembershipView describing each tenant membership.
-// The top-level tenantId/tenantRole/roles are legacy compatibility fields
+// a `userPools` list of AdminMembershipView describing each tenant membership.
+// The top-level userPoolId/tenantRole/roles are legacy compatibility fields
 // derived from the account's selected membership and may be null when the
 // account has no memberships. Membership mutations (assign roles, remove from
-// tenant) require an explicit tenantId targeting the currently selected tenant;
-// do not use the legacy fields or the request interceptor's tenant-id header as
+// tenant) require an explicit userPoolId targeting the currently selected tenant;
+// do not use the legacy fields or the request interceptor's user-pool-id header as
 // mutation authority.
 
 export type AdminStatus = 'active' | 'disabled'
@@ -24,11 +24,11 @@ export interface AdminRoleSummary {
 
 /**
  * A single tenant membership of an admin account.
- * Mirrors backend AdminMembershipView: the tenantId, the membership role
+ * Mirrors backend AdminMembershipView: the userPoolId, the membership role
  * (e.g. 'owner'), and the admin roles assigned within that tenant.
  */
 export interface AdminMembership {
-  readonly tenantId: string
+  readonly userPoolId: string
   readonly tenantRole: string
   readonly roles: AdminRoleSummary[]
 }
@@ -36,18 +36,18 @@ export interface AdminMembership {
 /**
  * Admin user as returned by the admin-management API.
  * Mirrors backend AdminMemberView: an account-level projection (one row per
- * admin account) carrying a `tenants` list of memberships. The top-level
- * tenantId/tenantRole/roles are legacy compatibility fields derived from the
+ * admin account) carrying a `userPools` list of memberships. The top-level
+ * userPoolId/tenantRole/roles are legacy compatibility fields derived from the
  * account's selected membership and may be null when the account has no
- * memberships; prefer the `tenants` list for membership-specific logic.
+ * memberships; prefer the `userPools` list for membership-specific logic.
  */
 export interface AdminUser {
   id: string
-  /** Legacy compat: tenantId of the selected membership, null when no membership. */
-  tenantId: string | null
+  /** Legacy compat: userPoolId of the selected membership, null when no membership. */
+  userPoolId: string | null
   /** Legacy compat: role within the selected membership, null when no membership. */
   tenantRole: string | null
-  currentTenantId: string | null
+  currentUserPoolId: string | null
   username: string
   email: string
   phone: string | null
@@ -61,7 +61,7 @@ export interface AdminUser {
   /** Legacy compat: admin roles assigned within the selected membership. */
   roles: AdminRoleSummary[]
   /** All tenant memberships for this account. Source of truth for membership logic. */
-  tenants: AdminMembership[]
+  userPools: AdminMembership[]
 }
 
 /** Query parameters for GET /admin-users. */
@@ -112,6 +112,6 @@ export interface ResetPasswordDto {
 
 /** Body for PUT /admin-users/:id/roles. Mirrors backend RolesInput. */
 export interface AssignRolesDto {
-  tenantId: string
+  userPoolId: string
   roleIds: string[]
 }

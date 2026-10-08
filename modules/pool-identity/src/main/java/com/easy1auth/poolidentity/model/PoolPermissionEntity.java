@@ -1,7 +1,7 @@
 package com.easy1auth.poolidentity.model;
 
 import com.easy1auth.framework.persistence.model.BaseEntity;
-import com.easy1auth.framework.tenant.persistence.model.BaseTenantEntity;
+import com.easy1auth.framework.tenant.persistence.model.BaseUserPoolEntity;
 import org.babyfish.jimmer.sql.*;
 import org.jspecify.annotations.Nullable;
 
@@ -12,14 +12,14 @@ import java.util.List;
 /**
  * 权限实体（对应 pool_permission 表）。
  *
- * <p>描述 pool_user 访问控制中的权限点，按租户隔离。权限分三类：
+ * <p>描述 pool_user 访问控制中的权限点，按用户池隔离。权限分三类：
  * menu（菜单）/ operation（操作）/ data（数据），可组成树形结构
  * （通过 {@code parentId} 关联父权限）。</p>
  */
 @Entity
 @Table(name = "pool_permission")
-public interface PoolPermissionEntity extends BaseEntity, BaseTenantEntity {
-    /** 权限编码（如 user:read，租户内唯一） */
+public interface PoolPermissionEntity extends BaseEntity, BaseUserPoolEntity {
+    /** 权限编码（如 user:read，用户池内唯一） */
     String code();
 
     /** 权限名称（中文展示名） */

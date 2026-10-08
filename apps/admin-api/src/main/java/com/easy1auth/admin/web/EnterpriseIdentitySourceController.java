@@ -1,7 +1,7 @@
 package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.annotation.ManagementRouteClassification;
-import com.easy1auth.admin.annotation.TenantManagementPermission;
+import com.easy1auth.admin.annotation.UserPoolManagementPermission;
 import com.easy1auth.admin.constant.ManagementRouteKind;
 import com.easy1auth.system.constant.ManagementPermissionCode;
 import com.easy1auth.connection.service.EnterpriseIdentityService;
@@ -20,7 +20,7 @@ import java.util.*;
  *
  * <p>管理端 REST 入口，基路径 {@code /api/enterprise-identity-sources}，提供飞书
      * 同步身份源的查询、统计、创建、更新、删除与同步能力，并接收飞书平台回推的
- * 事件回调。除回调外的操作均通过 {@link TenantManagementPermission} 做租户级
+ * 事件回调。除回调外的操作均通过 {@link UserPoolManagementPermission} 做用户池级
  * 权限控制，并以 {@link ApiResponse} 统一包装返回。</p>
  */
 @RestController
@@ -37,7 +37,7 @@ public class EnterpriseIdentitySourceController {
     }
 
     /** 分页查询同步身份源列表，支持按名称搜索与状态过滤。 */
-    @TenantManagementPermission(ManagementPermissionCode.ENTERPRISE_IDENTITY_SOURCE_LIST)
+    @UserPoolManagementPermission(ManagementPermissionCode.ENTERPRISE_IDENTITY_SOURCE_LIST)
     @GetMapping
     public ApiResponse<?> list(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, @RequestParam(required = false) String search, @RequestParam(required = false) String status) {
         var result = service.list(page, pageSize, search, status);
@@ -45,35 +45,35 @@ public class EnterpriseIdentitySourceController {
     }
 
     /** 查询同步身份源的整体统计信息。 */
-    @TenantManagementPermission(ManagementPermissionCode.ENTERPRISE_IDENTITY_SOURCE_STATS)
+    @UserPoolManagementPermission(ManagementPermissionCode.ENTERPRISE_IDENTITY_SOURCE_STATS)
     @GetMapping("/stats")
     public ApiResponse<?> stats() {
         return ApiResponse.ok(service.stats());
     }
 
     /** 查询指定同步身份源的详情。 */
-    @TenantManagementPermission(ManagementPermissionCode.ENTERPRISE_IDENTITY_SOURCE_READ)
+    @UserPoolManagementPermission(ManagementPermissionCode.ENTERPRISE_IDENTITY_SOURCE_READ)
     @GetMapping("/{id}")
     public ApiResponse<?> get(@PathVariable UUID id) {
         return ApiResponse.ok(service.get(id));
     }
 
     /** 创建飞书同步身份源。 */
-    @TenantManagementPermission(ManagementPermissionCode.ENTERPRISE_IDENTITY_SOURCE_CREATE)
+    @UserPoolManagementPermission(ManagementPermissionCode.ENTERPRISE_IDENTITY_SOURCE_CREATE)
     @PostMapping
     public ApiResponse<?> create(@RequestBody EnterpriseIdentityInput input) {
         return ApiResponse.ok(service.create(input), "飞书同步身份源创建成功");
     }
 
     /** 更新指定飞书同步身份源的配置。 */
-    @TenantManagementPermission(ManagementPermissionCode.ENTERPRISE_IDENTITY_SOURCE_UPDATE)
+    @UserPoolManagementPermission(ManagementPermissionCode.ENTERPRISE_IDENTITY_SOURCE_UPDATE)
     @PutMapping("/{id}")
     public ApiResponse<?> update(@PathVariable UUID id, @RequestBody EnterpriseIdentityInput input) {
         return ApiResponse.ok(service.update(id, input), "飞书同步身份源更新成功");
     }
 
     /** 删除指定同步身份源；已导入的用户数据转为本地管理。 */
-    @TenantManagementPermission(ManagementPermissionCode.ENTERPRISE_IDENTITY_SOURCE_DELETE)
+    @UserPoolManagementPermission(ManagementPermissionCode.ENTERPRISE_IDENTITY_SOURCE_DELETE)
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable UUID id) {
         service.delete(id);
@@ -81,14 +81,14 @@ public class EnterpriseIdentitySourceController {
     }
 
     /** 提交一次同步身份源的同步任务。 */
-    @TenantManagementPermission(ManagementPermissionCode.ENTERPRISE_IDENTITY_SOURCE_SYNC)
+    @UserPoolManagementPermission(ManagementPermissionCode.ENTERPRISE_IDENTITY_SOURCE_SYNC)
     @PostMapping("/{id}/sync")
     public ApiResponse<?> sync(@PathVariable UUID id) {
         return ApiResponse.ok(service.sync(id), "同步任务已提交");
     }
 
     /** 查询指定同步身份源的同步任务历史。 */
-    @TenantManagementPermission(ManagementPermissionCode.ENTERPRISE_IDENTITY_SOURCE_READ)
+    @UserPoolManagementPermission(ManagementPermissionCode.ENTERPRISE_IDENTITY_SOURCE_READ)
     @GetMapping("/{id}/tasks")
     public ApiResponse<?> tasks(@PathVariable UUID id) {
         return ApiResponse.ok(service.tasks(id));

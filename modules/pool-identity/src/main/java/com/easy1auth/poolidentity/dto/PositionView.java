@@ -2,6 +2,6 @@ package com.easy1auth.poolidentity.dto;
 import java.time.Instant;
 import java.util.UUID;
 /** 岗位详情视图。 */
-public record PositionView(UUID id, UUID tenantId, String name, String code, String description, UUID departmentId,
+public record PositionView(UUID id, UUID userPoolId, String name, String code, String description, UUID departmentId,
                            int level, String sequence, long userCount, Integer maxCount, Instant createdAt,
                            Instant updatedAt) { }

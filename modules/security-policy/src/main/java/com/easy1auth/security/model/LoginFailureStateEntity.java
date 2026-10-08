@@ -9,7 +9,7 @@ import java.util.UUID;
 /**
  * 登录失败状态实体（对应 login_failure_state 表）。
  *
- * <p>以「主体类型 + 主体键 + 租户」为维度记录连续登录失败次数与锁定时间，
+ * <p>以「主体类型 + 主体键 + 用户池」为维度记录连续登录失败次数与锁定时间，
  * 供登录保护服务判断是否触发临时锁定。登录成功后记录会被清除。</p>
  */
 @Entity
@@ -27,10 +27,10 @@ public interface LoginFailureStateEntity {
     @Column(name = "subject_key")
     String subjectKey();
 
-    /** 所属租户 ID（可为 null，如平台级主体） */
+    /** 所属用户池 ID（可为 null，如平台级主体） */
     @Nullable
     @Column(name = "tenant_id")
-    UUID tenantId();
+    UUID userPoolId();
 
     /** 当前连续失败次数 */
     @Column(name = "failed_attempts")

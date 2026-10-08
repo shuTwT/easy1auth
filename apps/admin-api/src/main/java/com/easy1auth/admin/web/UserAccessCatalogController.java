@@ -2,14 +2,14 @@ package com.easy1auth.admin.web;
 
 import com.easy1auth.admin.web.dto.UserAccessRoleIds;
 import com.easy1auth.admin.web.dto.UserAccessUserIds;
-import com.easy1auth.admin.annotation.TenantManagementPermission;
+import com.easy1auth.admin.annotation.UserPoolManagementPermission;
 import com.easy1auth.system.constant.ManagementPermissionCode;
 import com.easy1auth.framework.web.response.ApiResponse;
 import com.easy1auth.poolidentity.dto.PermissionInput;
 import com.easy1auth.poolidentity.dto.PermissionSpaceInput;
 import com.easy1auth.poolidentity.dto.RoleInput;
 import com.easy1auth.poolidentity.service.UserAccessCatalogService;
-import com.easy1auth.framework.tenant.context.TenantContextHolder;
+import com.easy1auth.framework.tenant.context.UserPoolContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -19,7 +19,7 @@ import java.util.*;
  *
  * <p>管理端 REST 入口，提供目录用户角色（{@code /api/roles}）与数据权限
  * （{@code /api/permissions}）的分页查询、统计、树形结构、增删改以及用户与角色
- * 的关联管理能力。所有操作均通过 {@link TenantManagementPermission} 做租户级
+ * 的关联管理能力。所有操作均通过 {@link UserPoolManagementPermission} 做用户池级
  * 权限控制，并以 {@link ApiResponse} 统一包装返回。</p>
  */
 @RestController
@@ -32,82 +32,82 @@ public class UserAccessCatalogController {
     }
 
     /** 分页查询目录用户角色列表，支持按关键字搜索与类型过滤。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.USER_ROLE_LIST)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.USER_ROLE_LIST)
     @GetMapping("/api/roles")
     ApiResponse<?> roles(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int pageSize, @RequestParam(required = false) String search, @RequestParam(required = false) String type) {
-        UUID tenantId = TenantContextHolder.requireTenantId();
-        var p = service.roles(tenantId,page, pageSize, search, type);
+        UUID userPoolId = UserPoolContextHolder.requireUserPoolId();
+        var p = service.roles(userPoolId,page, pageSize, search, type);
         return ApiResponse.ok(p);
     }
 
     /** 查询目录用户角色的统计信息。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.USER_ROLE_STATS)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.USER_ROLE_STATS)
     @GetMapping("/api/roles/stats")
     ApiResponse<?> roleStats() {
-        UUID tenantId = TenantContextHolder.requireTenantId();
-        return ApiResponse.ok(service.roleStats(tenantId));
+        UUID userPoolId = UserPoolContextHolder.requireUserPoolId();
+        return ApiResponse.ok(service.roleStats(userPoolId));
     }
 
     /** 查询目录用户角色的树形结构。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.USER_ROLE_TREE)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.USER_ROLE_TREE)
     @GetMapping("/api/roles/tree")
     ApiResponse<?> roleTree() {
-        UUID tenantId = TenantContextHolder.requireTenantId();
-        return ApiResponse.ok(service.roleTree(tenantId));
+        UUID userPoolId = UserPoolContextHolder.requireUserPoolId();
+        return ApiResponse.ok(service.roleTree(userPoolId));
     }
 
     /** 查询指定目录用户角色的详情。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.USER_ROLE_READ)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.USER_ROLE_READ)
     @GetMapping("/api/roles/{id}")
     ApiResponse<?> role(@PathVariable UUID id) {
-        UUID tenantId = TenantContextHolder.requireTenantId();
-        return ApiResponse.ok(service.role(tenantId,id));
+        UUID userPoolId = UserPoolContextHolder.requireUserPoolId();
+        return ApiResponse.ok(service.role(userPoolId,id));
     }
 
     /** 创建目录用户角色。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.USER_ROLE_CREATE)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.USER_ROLE_CREATE)
     @PostMapping("/api/roles")
     ApiResponse<?> createRole(@RequestBody RoleInput in) {
-        UUID tenantId = TenantContextHolder.requireTenantId();
-        return ApiResponse.ok(service.createRole(tenantId,in), "角色创建成功");
+        UUID userPoolId = UserPoolContextHolder.requireUserPoolId();
+        return ApiResponse.ok(service.createRole(userPoolId,in), "角色创建成功");
     }
 
     /** 更新指定目录用户角色的信息。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.USER_ROLE_UPDATE)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.USER_ROLE_UPDATE)
     @PutMapping("/api/roles/{id}")
     ApiResponse<?> updateRole(@PathVariable UUID id, @RequestBody RoleInput in) {
-        UUID tenantId = TenantContextHolder.requireTenantId();
-        return ApiResponse.ok(service.updateRole(tenantId,id, in), "角色更新成功");
+        UUID userPoolId = UserPoolContextHolder.requireUserPoolId();
+        return ApiResponse.ok(service.updateRole(userPoolId,id, in), "角色更新成功");
     }
 
     /** 删除指定目录用户角色。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.USER_ROLE_DELETE)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.USER_ROLE_DELETE)
     @DeleteMapping("/api/roles/{id}")
     ApiResponse<Void> deleteRole(@PathVariable UUID id) {
-        UUID tenantId = TenantContextHolder.requireTenantId();
-        service.deleteRole(tenantId,id);
+        UUID userPoolId = UserPoolContextHolder.requireUserPoolId();
+        service.deleteRole(userPoolId,id);
         return ApiResponse.ok(null, "角色删除成功");
     }
 
     /** 查询指定角色下的用户列表。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.USER_ROLE_USERS_READ)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.USER_ROLE_USERS_READ)
     @GetMapping("/api/roles/{id}/users")
     ApiResponse<?> roleUsers(@PathVariable UUID id, @RequestParam(required = false) String search) {
-        UUID tenantId = TenantContextHolder.requireTenantId();
-        return ApiResponse.ok(service.roleUsers(tenantId,id, search));
+        UUID userPoolId = UserPoolContextHolder.requireUserPoolId();
+        return ApiResponse.ok(service.roleUsers(userPoolId,id, search));
     }
 
     /** 向指定角色批量分配用户。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.USER_ROLE_USERS_ASSIGN)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.USER_ROLE_USERS_ASSIGN)
     @PostMapping("/api/roles/{id}/users")
     ApiResponse<Void> assignUsers(@PathVariable UUID id, @RequestBody UserAccessUserIds in) {
-        UUID tenantId = TenantContextHolder.requireTenantId();
+        UUID userPoolId = UserPoolContextHolder.requireUserPoolId();
         service.assignUsers(id, in.userIds());
         return ApiResponse.ok(null, "分配用户成功");
     }
 
     /** 从指定角色批量移除用户。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.USER_ROLE_USERS_REMOVE)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.USER_ROLE_USERS_REMOVE)
     @DeleteMapping("/api/roles/{id}/users")
     ApiResponse<Void> removeUsers(@PathVariable UUID id, @RequestBody UserAccessUserIds in) {
         service.removeUsers(id, in.userIds());
@@ -115,14 +115,14 @@ public class UserAccessCatalogController {
     }
 
     /** 查询指定用户的全部角色。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.USER_ROLE_USER_ROLES_READ)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.USER_ROLE_USER_ROLES_READ)
     @GetMapping("/api/roles/user/{userId}")
     ApiResponse<?> userRoles(@PathVariable UUID userId) {
         return ApiResponse.ok(service.rolesForUser(userId));
     }
 
     /** 全量替换指定用户的角色分配。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.USER_ROLE_USER_ROLES_REPLACE)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.USER_ROLE_USER_ROLES_REPLACE)
     @PostMapping("/api/roles/user/{userId}")
     ApiResponse<Void> replaceRoles(@PathVariable UUID userId, @RequestBody UserAccessRoleIds in) {
         service.replaceUserRoles(userId, in.roleIds());
@@ -130,7 +130,7 @@ public class UserAccessCatalogController {
     }
 
     /** 分页查询数据权限列表，支持按关键字、类型与资源过滤。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_LIST)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_LIST)
     @GetMapping("/api/permissions")
     ApiResponse<?> permissions(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "50") int pageSize, @RequestParam(required = false) String search, @RequestParam(required = false) String type, @RequestParam(required = false) String resource) {
         var p = service.permissions(page, pageSize, search, type, resource);
@@ -138,67 +138,67 @@ public class UserAccessCatalogController {
     }
 
     @GetMapping("/api/permission-spaces")
-    @TenantManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_LIST)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_LIST)
     ApiResponse<?> permissionSpaces(@RequestParam(required = false) String search) {
-        return ApiResponse.ok(service.permissionSpaces(TenantContextHolder.requireTenantId(), search));
+        return ApiResponse.ok(service.permissionSpaces(UserPoolContextHolder.requireUserPoolId(), search));
     }
 
     @PostMapping("/api/permission-spaces")
-    @TenantManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_CREATE)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_CREATE)
     ApiResponse<?> createPermissionSpace(@RequestBody PermissionSpaceInput in) {
-        return ApiResponse.ok(service.createPermissionSpace(TenantContextHolder.requireTenantId(), in), "权限空间创建成功");
+        return ApiResponse.ok(service.createPermissionSpace(UserPoolContextHolder.requireUserPoolId(), in), "权限空间创建成功");
     }
 
     @PutMapping("/api/permission-spaces/{id}")
-    @TenantManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_UPDATE)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_UPDATE)
     ApiResponse<?> updatePermissionSpace(@PathVariable UUID id, @RequestBody PermissionSpaceInput in) {
-        return ApiResponse.ok(service.updatePermissionSpace(TenantContextHolder.requireTenantId(), id, in), "权限空间更新成功");
+        return ApiResponse.ok(service.updatePermissionSpace(UserPoolContextHolder.requireUserPoolId(), id, in), "权限空间更新成功");
     }
 
     @DeleteMapping("/api/permission-spaces/{id}")
-    @TenantManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_DELETE)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_DELETE)
     ApiResponse<Void> deletePermissionSpace(@PathVariable UUID id) {
-        service.deletePermissionSpace(TenantContextHolder.requireTenantId(), id);
+        service.deletePermissionSpace(UserPoolContextHolder.requireUserPoolId(), id);
         return ApiResponse.ok(null, "权限空间删除成功");
     }
 
     /** 查询数据权限的统计信息。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_STATS)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_STATS)
     @GetMapping("/api/permissions/stats")
     ApiResponse<?> permissionStats() {
         return ApiResponse.ok(service.permissionStats());
     }
 
     /** 查询数据权限的树形结构。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_TREE)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_TREE)
     @GetMapping("/api/permissions/tree")
     ApiResponse<?> permissionTree() {
         return ApiResponse.ok(service.permissionTree());
     }
 
     /** 查询指定数据权限的详情。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_READ)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_READ)
     @GetMapping("/api/permissions/{id}")
     ApiResponse<?> permission(@PathVariable UUID id) {
         return ApiResponse.ok(service.permission(id));
     }
 
     /** 创建数据权限。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_CREATE)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_CREATE)
     @PostMapping("/api/permissions")
     ApiResponse<?> createPermission(@RequestBody PermissionInput in) {
         return ApiResponse.ok(service.createPermission(in), "创建权限成功");
     }
 
     /** 更新指定数据权限。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_UPDATE)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_UPDATE)
     @PutMapping("/api/permissions/{id}")
     ApiResponse<?> updatePermission(@PathVariable UUID id, @RequestBody PermissionInput in) {
         return ApiResponse.ok(service.updatePermission(id, in), "更新权限成功");
     }
 
     /** 删除指定数据权限。 */
-    @TenantManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_DELETE)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_DELETE)
     @DeleteMapping("/api/permissions/{id}")
     ApiResponse<Void> deletePermission(@PathVariable UUID id) {
         service.deletePermission(id);

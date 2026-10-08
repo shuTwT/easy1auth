@@ -1,7 +1,7 @@
 package com.easy1auth.poolidentity.model;
 
 import com.easy1auth.framework.persistence.model.BaseEntity;
-import com.easy1auth.framework.tenant.persistence.model.BaseTenantEntity;
+import com.easy1auth.framework.tenant.persistence.model.BaseUserPoolEntity;
 import org.babyfish.jimmer.sql.*;
 import org.jspecify.annotations.Nullable;
 
@@ -11,16 +11,16 @@ import java.util.UUID;
 /**
  * 岗位实体（对应 position 表）。
  *
- * <p>描述 pool_user 组织架构中的岗位，按租户隔离。岗位记录编码、层级与
+ * <p>描述 pool_user 组织架构中的岗位，按用户池隔离。岗位记录编码、层级与
  * 所属部门，用于组织架构与人员归属管理。</p>
  */
 @Entity
 @Table(name = "position")
-public interface PositionEntity extends BaseEntity, BaseTenantEntity {
+public interface PositionEntity extends BaseEntity, BaseUserPoolEntity {
     /** 岗位名称（中文展示名） */
     String name();
 
-    /** 岗位编码（租户内唯一） */
+    /** 岗位编码（用户池内唯一） */
     String code();
 
     /** 岗位描述（可为 null） */

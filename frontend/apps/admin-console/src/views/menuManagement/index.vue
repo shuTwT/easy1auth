@@ -81,7 +81,7 @@ const menuColumns = [
 ]
 
 function scopeLabel(scope: string) {
-  return scope.toUpperCase() === 'PLATFORM' ? '平台' : '租户'
+  return scope.toUpperCase() === 'PLATFORM' ? '平台' : '用户池'
 }
 
 async function loadCatalog() {
@@ -106,7 +106,7 @@ onMounted(loadCatalog)
     <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
       <div>
         <div class="flex items-center gap-2"><FolderTree class="size-5 text-primary" /><h1 class="text-2xl font-bold">菜单管理</h1></div>
-        <p class="mt-1 text-sm text-muted-foreground">查看管理端菜单权限、层级和关联操作；菜单的可见范围由租户套餐授权决定。</p>
+        <p class="mt-1 text-sm text-muted-foreground">查看管理端菜单权限、层级和关联操作；菜单的可见范围由用户池套餐授权决定。</p>
       </div>
       <div class="flex gap-2">
         <a-button  :disabled="loading" @click="loadCatalog"><RefreshCw class="size-4 mr-2" :class="loading ? 'animate-spin' : ''" />刷新</a-button>

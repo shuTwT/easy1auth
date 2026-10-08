@@ -81,7 +81,7 @@ public interface AdminIdentityRepository extends JRepository<AdminAccountEntity,
     default AdminAccount create(String username, String email, String hash) {
         UUID id = UuidV7.randomUuid();
         Instant now = Instant.now();
-        var entity = AdminAccountEntityDraft.$.produce(d -> d.setId(id).setUsername(username).setEmail(email).setPhone(null).setStatus("active").setLastTenantId(null).setSecurityVersion(1).setMfaEnabled(false).setMfaType(null).setLastLoginAt(null).setCreatedAt(now).setUpdatedAt(now));
+        var entity = AdminAccountEntityDraft.$.produce(d -> d.setId(id).setUsername(username).setEmail(email).setPhone(null).setStatus("active").setLastUserPoolId(null).setSecurityVersion(1).setMfaEnabled(false).setMfaType(null).setLastLoginAt(null).setCreatedAt(now).setUpdatedAt(now));
         sql().saveCommand(entity).setMode(SaveMode.INSERT_ONLY).execute();
         sql().saveCommand(AdminCredentialEntityDraft.$.produce(d -> d.setAccountId(id).setPasswordHash(hash).setPasswordChangedAt(now).setCreatedAt(now).setUpdatedAt(now))).setMode(SaveMode.INSERT_ONLY).execute();
         return toDomain(entity);
@@ -257,7 +257,7 @@ public interface AdminIdentityRepository extends JRepository<AdminAccountEntity,
      * 将账号实体转换为领域模型。
      */
     static AdminAccount toDomain(AdminAccountEntity a) {
-        return new AdminAccount(a.id(), a.username(), a.email(), a.phone(), a.status(), a.securityVersion(), a.lastTenantId(), a.mfaEnabled(), a.mfaType(), a.lastLoginAt(), a.createdAt(), a.updatedAt());
+        return new AdminAccount(a.id(), a.username(), a.email(), a.phone(), a.status(), a.securityVersion(), a.lastUserPoolId(), a.mfaEnabled(), a.mfaType(), a.lastLoginAt(), a.createdAt(), a.updatedAt());
     }
 
     /**

@@ -32,7 +32,7 @@ public interface EnterpriseIdentityRepository
     var q =
         sql()
             .createQuery(SOURCE)
-            .where(SOURCE.tenantId().eq(tenant))
+            .where(SOURCE.userPoolId().eq(tenant))
             .whereIf(
                 search != null && !search.isBlank(),
                 () -> SOURCE.name().ilike(search, LikeMode.ANYWHERE))
@@ -59,7 +59,7 @@ public interface EnterpriseIdentityRepository
         sql()
             .createUpdate(SOURCE)
             .set(SOURCE.updatedAt(), Instant.now())
-            .where(SOURCE.id().eq(id), SOURCE.tenantId().eq(tenant));
+            .where(SOURCE.id().eq(id), SOURCE.userPoolId().eq(tenant));
     if (input.name() != null) {
       update.set(SOURCE.name(), input.name().strip());
     }
@@ -86,21 +86,21 @@ public interface EnterpriseIdentityRepository
         .createUpdate(USER)
         .set(USER.enterpriseIdentitySourceId(), (UUID) null)
         .set(USER.enterpriseIdentityExternalId(), (String) null)
-        .where(USER.tenantId().eq(tenant), USER.enterpriseIdentitySourceId().eq(id))
+        .where(USER.userPoolId().eq(tenant), USER.enterpriseIdentitySourceId().eq(id))
         .execute();
     sql()
         .createUpdate(GROUP)
         .set(GROUP.enterpriseIdentitySourceId(), (UUID) null)
         .set(GROUP.enterpriseIdentityExternalId(), (String) null)
-        .where(GROUP.tenantId().eq(tenant), GROUP.enterpriseIdentitySourceId().eq(id))
+        .where(GROUP.userPoolId().eq(tenant), GROUP.enterpriseIdentitySourceId().eq(id))
         .execute();
-    sql().createDelete(SOURCE).where(SOURCE.id().eq(id), SOURCE.tenantId().eq(tenant)).execute();
+    sql().createDelete(SOURCE).where(SOURCE.id().eq(id), SOURCE.userPoolId().eq(tenant)).execute();
   }
 
   default List<EnterpriseIdentitySyncTaskEntity> findRecentTasks(UUID tenant, UUID source) {
     return sql()
         .createQuery(TASK)
-        .where(TASK.tenantId().eq(tenant), TASK.sourceId().eq(source))
+        .where(TASK.userPoolId().eq(tenant), TASK.sourceId().eq(source))
         .orderBy(TASK.createdAt().desc())
         .select(TASK)
         .limit(30)
@@ -110,7 +110,7 @@ public interface EnterpriseIdentityRepository
   default List<String> findSourceStatuses(UUID tenant) {
     return sql()
         .createQuery(SOURCE)
-        .where(SOURCE.tenantId().eq(tenant))
+        .where(SOURCE.userPoolId().eq(tenant))
         .select(SOURCE.status())
         .execute();
   }
@@ -148,7 +148,7 @@ public interface EnterpriseIdentityRepository
         sql()
             .createQuery(GROUP)
             .where(
-                GROUP.tenantId().eq(tenant),
+                GROUP.userPoolId().eq(tenant),
                 GROUP.enterpriseIdentitySourceId().eq(source),
                 GROUP.enterpriseIdentityExternalId().eq(externalId))
             .select(GROUP)
@@ -173,7 +173,7 @@ public interface EnterpriseIdentityRepository
         sql()
             .createQuery(USER)
             .where(
-                USER.tenantId().eq(tenant),
+                USER.userPoolId().eq(tenant),
                 USER.enterpriseIdentitySourceId().eq(source),
                 USER.enterpriseIdentityExternalId().eq(externalId))
             .select(USER)
@@ -183,7 +183,7 @@ public interface EnterpriseIdentityRepository
   default boolean userEmailExists(UUID tenant, String email) {
     return sql()
         .createQuery(USER)
-        .where(USER.tenantId().eq(tenant), USER.email().eq(email))
+        .where(USER.userPoolId().eq(tenant), USER.email().eq(email))
         .select(USER.id())
         .exists();
   }
@@ -191,7 +191,7 @@ public interface EnterpriseIdentityRepository
   default boolean userPhoneExists(UUID tenant, String phone) {
     return sql()
         .createQuery(USER)
-        .where(USER.tenantId().eq(tenant), USER.phone().eq(phone))
+        .where(USER.userPoolId().eq(tenant), USER.phone().eq(phone))
         .select(USER.id())
         .exists();
   }
@@ -263,7 +263,7 @@ public interface EnterpriseIdentityRepository
       sql()
           .createDelete(MEMBERSHIP)
           .where(
-              MEMBERSHIP.id().tenantId().eq(tenant),
+              MEMBERSHIP.id().userPoolId().eq(tenant),
               MEMBERSHIP.id().userId().eq(user),
               MEMBERSHIP.id().groupId().in(sourceGroups))
           .execute();
@@ -277,7 +277,7 @@ public interface EnterpriseIdentityRepository
                             d.setId(
                                 UserGroupAssignmentIdDraft.$.produce(
                                     k ->
-                                        k.setTenantId(tenant)
+                                        k.setUserPoolId(tenant)
                                             .setUserId(user)
                                             .setGroupId(groupId)))))
                 .setMode(SaveMode.INSERT_IF_ABSENT)
@@ -324,7 +324,7 @@ public interface EnterpriseIdentityRepository
   default Optional<EnterpriseIdentitySourceEntity> findSource(UUID tenant, UUID id) {
     return sql()
         .createQuery(SOURCE)
-        .where(SOURCE.tenantId().eq(tenant), SOURCE.id().eq(id))
+        .where(SOURCE.userPoolId().eq(tenant), SOURCE.id().eq(id))
         .select(SOURCE)
         .fetchOptional();
   }
@@ -332,7 +332,7 @@ public interface EnterpriseIdentityRepository
   default boolean groupNameExists(UUID tenant, UUID self, String name) {
     return sql()
         .createQuery(GROUP)
-        .where(GROUP.tenantId().eq(tenant), GROUP.name().eq(name))
+        .where(GROUP.userPoolId().eq(tenant), GROUP.name().eq(name))
         .whereIf(self != null, () -> GROUP.id().ne(self))
         .select(GROUP.id())
         .exists();

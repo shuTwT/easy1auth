@@ -9,7 +9,7 @@ import com.easy1auth.audit.repository.AuditEventRepository;
 import com.easy1auth.framework.common.error.DomainException;
 import com.easy1auth.framework.common.id.UuidV7;
 import com.easy1auth.framework.common.pagination.PageData;
-import com.easy1auth.framework.tenant.context.TenantContextHolder;
+import com.easy1auth.framework.tenant.context.UserPoolContextHolder;
 import java.time.*;
 import java.util.*;
 import org.springframework.stereotype.Service;
@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 审计服务：审计事件的记录、查询与清理。
  *
- * <p>负责写入审计事件（自动脱敏敏感字段、规范化枚举取值），并支持按条件分页 查询、详情查看、超期清理与基础统计。查询与清理均以当前租户隔离，保证租户 只能访问自己的审计数据。
+ * <p>负责写入审计事件（自动脱敏敏感字段、规范化枚举取值），并支持按条件分页 查询、详情查看、超期清理与基础统计。查询与清理均以当前用户池隔离，保证用户池 只能访问自己的审计数据。
  */
 @Service
 public class AuditService {
@@ -49,7 +49,7 @@ public class AuditService {
         AuditEventEntityDraft.$.produce(
             d ->
                 d.setId(id)
-                    .setTenantId(input.tenantId())
+                    .setUserPoolId(input.userPoolId())
                     .setActorType(clean(input.actorType(), 24, "system"))
                     .setActorId(input.actorId())
                     .setActorName(trim(input.actorName(), 320))
@@ -69,37 +69,37 @@ public class AuditService {
     return id;
   }
 
-  /** 分页查询当前租户的审计事件（支持按操作者、事件类型、动作、结果与时间范围过滤）。 */
+  /** 分页查询当前用户池的审计事件（支持按操作者、事件类型、动作、结果与时间范围过滤）。 */
   @Transactional(readOnly = true)
   public PageData<AuditEventEntity> list(int page, int size, AuditQuery q) {
-    UUID tenant = TenantContextHolder.requireTenantId();
+    UUID tenant = UserPoolContextHolder.requireUserPoolId();
     int p = Math.max(1, page), s = Math.min(200, Math.max(1, size));
     return repository.page(tenant, p, s, q);
   }
 
-  /** 查询单条审计事件详情（限当前租户）。 */
+  /** 查询单条审计事件详情（限当前用户池）。 */
   @Transactional(readOnly = true)
   public AuditEventEntity get(UUID id) {
-    UUID tenant = TenantContextHolder.requireTenantId();
+    UUID tenant = UserPoolContextHolder.requireUserPoolId();
     return repository
         .find(tenant, id)
         .orElseThrow(() -> new DomainException(ErrorCodeConstants.AUDIT_EVENT_NOT_FOUND));
   }
 
-  /** 清理当前租户早于保留期（不少于 30 天）的审计事件，返回删除条数。 */
+  /** 清理当前用户池早于保留期（不少于 30 天）的审计事件，返回删除条数。 */
   @Transactional
   public int cleanup(int days) {
-    UUID tenant = TenantContextHolder.requireTenantId();
+    UUID tenant = UserPoolContextHolder.requireUserPoolId();
     if (days < 30) {
       throw new DomainException(ErrorCodeConstants.AUDIT_RETENTION_INVALID);
     }
     return (int) repository.deleteBefore(tenant, Instant.now().minus(Duration.ofDays(days)));
   }
 
-  /** 统计当前租户审计事件总量、成功/失败数与今日发生数。 */
+  /** 统计当前用户池审计事件总量、成功/失败数与今日发生数。 */
   @Transactional(readOnly = true)
   public AuditStats stats() {
-    UUID tenant = TenantContextHolder.requireTenantId();
+    UUID tenant = UserPoolContextHolder.requireUserPoolId();
     var rows = repository.statsRows(tenant);
     Instant day = LocalDate.now(ZoneOffset.UTC).atStartOfDay().toInstant(ZoneOffset.UTC);
     return new AuditStats(

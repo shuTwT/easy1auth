@@ -33,10 +33,10 @@ public class PoolUserDeviceService {
     @Transactional
     public void seen(UUID tenant, UUID user, String userAgent, String ip) {
         String hash = hash(Objects.toString(userAgent, "unknown"));
-        var old = sql.createQuery(DEVICE).where(DEVICE.tenantId().eq(tenant), DEVICE.userId().eq(user), DEVICE.deviceTokenHash().eq(hash)).select(DEVICE).fetchOneOrNull();
+        var old = sql.createQuery(DEVICE).where(DEVICE.userPoolId().eq(tenant), DEVICE.userId().eq(user), DEVICE.deviceTokenHash().eq(hash)).select(DEVICE).fetchOneOrNull();
         if (old == null) {
             Instant now = Instant.now();
-            var e = PoolUserDeviceEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTenantId(tenant).setUserId(user).setDeviceTokenHash(hash).setUserAgent(trim(userAgent, 512)).setIpAddress(trim(ip, 64)).setFirstSeenAt(now).setLastSeenAt(now).setRevokedAt(null));
+            var e = PoolUserDeviceEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setUserPoolId(tenant).setUserId(user).setDeviceTokenHash(hash).setUserAgent(trim(userAgent, 512)).setIpAddress(trim(ip, 64)).setFirstSeenAt(now).setLastSeenAt(now).setRevokedAt(null));
             sql.saveCommand(e).setMode(SaveMode.INSERT_IF_ABSENT).execute();
         } else {
             sql.createUpdate(DEVICE).set(DEVICE.lastSeenAt(), Instant.now()).set(DEVICE.ipAddress(), trim(ip, 64)).where(DEVICE.id().eq(old.id())).execute();
@@ -46,13 +46,13 @@ public class PoolUserDeviceService {
     /** 查询某用户名下的设备列表，按最后活跃时间倒序。 */
     @Transactional(readOnly = true)
     public List<PoolUserDeviceEntity> list(UUID tenant, UUID user) {
-        return sql.createQuery(DEVICE).where(DEVICE.tenantId().eq(tenant), DEVICE.userId().eq(user)).orderBy(DEVICE.lastSeenAt().desc()).select(DEVICE).execute();
+        return sql.createQuery(DEVICE).where(DEVICE.userPoolId().eq(tenant), DEVICE.userId().eq(user)).orderBy(DEVICE.lastSeenAt().desc()).select(DEVICE).execute();
     }
 
     /** 撤销指定设备：置为已撤销时间，使其不再受信任。 */
     @Transactional
     public void revoke(UUID tenant, UUID user, UUID id) {
-        sql.createUpdate(DEVICE).set(DEVICE.revokedAt(), Instant.now()).where(DEVICE.tenantId().eq(tenant), DEVICE.userId().eq(user), DEVICE.id().eq(id)).execute();
+        sql.createUpdate(DEVICE).set(DEVICE.revokedAt(), Instant.now()).where(DEVICE.userPoolId().eq(tenant), DEVICE.userId().eq(user), DEVICE.id().eq(id)).execute();
     }
 
     /** 对设备指纹做 SHA-256 十六进制哈希，避免明文存储用户代理。 */

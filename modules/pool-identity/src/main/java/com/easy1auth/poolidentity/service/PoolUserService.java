@@ -8,12 +8,12 @@ import com.easy1auth.poolidentity.dto.UserStats;
 import com.easy1auth.poolidentity.model.PoolUserEntity;
 import com.easy1auth.poolidentity.model.PoolUserEntityDraft;
 import com.easy1auth.poolidentity.model.PoolUserEntityTable;
-import com.easy1auth.framework.tenant.context.TenantContextHolder;
+import com.easy1auth.framework.tenant.context.UserPoolContextHolder;
 import com.easy1auth.security.service.SecurityPolicyService;
 import com.easy1auth.framework.common.error.DomainException;
 import com.easy1auth.framework.common.id.UuidV7;
 import com.easy1auth.framework.common.pagination.PageData;
-import com.easy1auth.tenant.service.TenantService;
+import com.easy1auth.tenant.service.UserPoolService;
 import org.babyfish.jimmer.sql.JSqlClient;
 import org.babyfish.jimmer.sql.ast.LikeMode;
 import org.babyfish.jimmer.sql.ast.mutation.SaveMode;
@@ -28,7 +28,7 @@ import java.util.*;
  * pool_user 目录服务：管理第三方接入用户的生命周期与档案信息。
  *
  * <p>覆盖用户的创建、查询、更新、删除、状态变更与密码管理，并结合
- * {@link TenantService} 做用户配额校验、{@link SecurityPolicyService}
+ * {@link UserPoolService} 做用户配额校验、{@link SecurityPolicyService}
  * 做密码强度与历史复用校验。pool_user 供第三方授权登录使用，
  * 不属于管理端（admin_user）账号体系。</p>
  */
@@ -38,37 +38,37 @@ public class PoolUserService {
     private static final PoolUserEntityTable USER = PoolUserEntityTable.$;
     /** jimmer SQL 客户端 */
     private final JSqlClient sql;
-    /** 租户服务（用于锁定租户并校验用户配额上限） */
-    private final TenantService tenants;
+    /** 用户池服务（用于锁定用户池并校验用户配额上限） */
+    private final UserPoolService userPools;
     /** 密码编码器（用于密码加密与比对） */
     private final PasswordEncoder passwords;
     /** 安全策略服务（密码强度、历史复用校验） */
     private final SecurityPolicyService security;
 
-    public PoolUserService(JSqlClient sql, TenantService tenants, PasswordEncoder passwords, SecurityPolicyService security) {
+    public PoolUserService(JSqlClient sql, UserPoolService userPools, PasswordEncoder passwords, SecurityPolicyService security) {
         this.sql = sql;
-        this.tenants = tenants;
+        this.userPools = userPools;
         this.passwords = passwords;
         this.security = security;
     }
 
-    /** 分页查询租户下的用户，可按用户名/邮箱/手机号/姓名/状态/部门过滤，按创建时间倒序。 */
+    /** 分页查询用户池下的用户，可按用户名/邮箱/手机号/姓名/状态/部门过滤，按创建时间倒序。 */
     @Transactional(readOnly = true)
     public PageData<PoolUserView> list(UUID tenant, int page, int pageSize, String username, String email, String phone, String name, String status, String department) {
         int p = Math.max(1, page), size = Math.min(100, Math.max(1, pageSize));
-        var q = sql.createQuery(USER).where(USER.tenantId().eq(tenant)).whereIf(username != null, () -> USER.username().ilike(username, LikeMode.ANYWHERE)).whereIf(email != null, () -> USER.email().ilike(email, LikeMode.ANYWHERE)).whereIf(phone != null, () -> USER.phone().ilike(phone, LikeMode.ANYWHERE)).whereIf(name != null, () -> USER.name().ilike(name, LikeMode.ANYWHERE)).whereIf(status != null, () -> USER.status().eq(status)).whereIf(department != null, () -> USER.department().eq(department)).orderBy(USER.createdAt().desc()).select(USER);
+        var q = sql.createQuery(USER).where(USER.userPoolId().eq(tenant)).whereIf(username != null, () -> USER.username().ilike(username, LikeMode.ANYWHERE)).whereIf(email != null, () -> USER.email().ilike(email, LikeMode.ANYWHERE)).whereIf(phone != null, () -> USER.phone().ilike(phone, LikeMode.ANYWHERE)).whereIf(name != null, () -> USER.name().ilike(name, LikeMode.ANYWHERE)).whereIf(status != null, () -> USER.status().eq(status)).whereIf(department != null, () -> USER.department().eq(department)).orderBy(USER.createdAt().desc()).select(USER);
         long total = q.fetchUnlimitedCount();
         return PageData.of(q.limit(size, (long) (p - 1) * size).execute().stream().map(this::view).toList(), p, size, total);
     }
 
-    /** 查询指定租户下单个用户的详情视图。 */
+    /** 查询指定用户池下单个用户的详情视图。 */
     @Transactional(readOnly = true)
     public PoolUserView get(UUID tenant, UUID id) {
         return view(entity(tenant, id));
     }
 
     /**
-     * 创建 pool_user 用户：校验必填字段与密码强度，并锁定租户校验用户配额上限。
+     * 创建 pool_user 用户：校验必填字段与密码强度，并锁定用户池校验用户配额上限。
      *
      * <p>默认状态为 active，邮箱、手机号验证标记初始为 false；密码非空时以
      * BCrypt 加密存储，为空则允许无密码（后续由第三方认证）。</p>
@@ -79,14 +79,14 @@ public class PoolUserService {
         if (in.password() != null) {
             security.validatePassword(in.password(), security.policy(tenant));
         }
-        int limit = tenants.lockForUserQuota(tenant);
-        long count = sql.createQuery(USER).where(USER.tenantId().eq(tenant)).select(USER.id()).fetchUnlimitedCount();
+        int limit = userPools.lockForUserQuota(tenant);
+        long count = sql.createQuery(USER).where(USER.userPoolId().eq(tenant)).select(USER.id()).fetchUnlimitedCount();
         if (count >= limit) {
-            throw new DomainException(ErrorCodeConstants.TENANT_USER_LIMIT);
+            throw new DomainException(ErrorCodeConstants.USER_POOL_USER_LIMIT);
         }
         Instant now = Instant.now();
         String email = normalizeEmail(in.email());
-        var e = PoolUserEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setTenantId(tenant).setUsername(in.username().strip()).setEmail(email).setPhone(in.phone()).setPasswordHash(in.password() == null ? null : passwords.encode(in.password())).setName(in.name().strip()).setAvatar(in.avatar()).setStatus("active").setEmailVerified(false).setPhoneVerified(false).setDepartment(in.department()).setPosition(in.position()).setCustomAttributes(in.customAttributes()).setLastLoginAt(null).setCreatedAt(now).setUpdatedAt(now));
+        var e = PoolUserEntityDraft.$.produce(d -> d.setId(UuidV7.randomUuid()).setUserPoolId(tenant).setUsername(in.username().strip()).setEmail(email).setPhone(in.phone()).setPasswordHash(in.password() == null ? null : passwords.encode(in.password())).setName(in.name().strip()).setAvatar(in.avatar()).setStatus("active").setEmailVerified(false).setPhoneVerified(false).setDepartment(in.department()).setPosition(in.position()).setCustomAttributes(in.customAttributes()).setLastLoginAt(null).setCreatedAt(now).setUpdatedAt(now));
         sql.saveCommand(e).setMode(SaveMode.INSERT_ONLY).execute();
         return view(e);
     }
@@ -96,7 +96,7 @@ public class PoolUserService {
     public PoolUserView update(UUID tenant, UUID id, PoolUserInput in) {
         var existing = entity(tenant, id);
         rejectEnterpriseManaged(existing);
-        var u = sql.createUpdate(USER).set(USER.updatedAt(), Instant.now()).where(USER.id().eq(id), USER.tenantId().eq(tenant));
+        var u = sql.createUpdate(USER).set(USER.updatedAt(), Instant.now()).where(USER.id().eq(id), USER.userPoolId().eq(tenant));
         if (in.username() != null) {
             u.set(USER.username(), in.username());
         }
@@ -132,7 +132,7 @@ public class PoolUserService {
     @Transactional
     public void delete(UUID tenant, UUID id) {
         rejectEnterpriseManaged(entity(tenant, id));
-        int changed = sql.createDelete(USER).where(USER.id().eq(id), USER.tenantId().eq(tenant)).execute();
+        int changed = sql.createDelete(USER).where(USER.id().eq(id), USER.userPoolId().eq(tenant)).execute();
         if (changed != 1) {
             throw missing();
         }
@@ -145,7 +145,7 @@ public class PoolUserService {
             throw new DomainException(ErrorCodeConstants.USER_STATUS_INVALID);
         }
         rejectEnterpriseManaged(entity(tenant, id));
-        sql.createUpdate(USER).set(USER.status(), status).set(USER.updatedAt(), Instant.now()).where(USER.id().eq(id), USER.tenantId().eq(tenant)).execute();
+        sql.createUpdate(USER).set(USER.status(), status).set(USER.updatedAt(), Instant.now()).where(USER.id().eq(id), USER.userPoolId().eq(tenant)).execute();
         return get(tenant, id);
     }
 
@@ -156,7 +156,7 @@ public class PoolUserService {
         var policy = security.policy(tenant);
         security.validatePassword(password, policy);
         security.rejectReusedPassword("pool_user", id, password, user.passwordHash(), passwords, policy.historyCount());
-        sql.createUpdate(USER).set(USER.passwordHash(), passwords.encode(password)).set(USER.updatedAt(), Instant.now()).where(USER.id().eq(id), USER.tenantId().eq(tenant)).execute();
+        sql.createUpdate(USER).set(USER.passwordHash(), passwords.encode(password)).set(USER.updatedAt(), Instant.now()).where(USER.id().eq(id), USER.userPoolId().eq(tenant)).execute();
         security.rememberPassword("pool_user", id, user.passwordHash(), policy.historyCount());
     }
 
@@ -170,19 +170,19 @@ public class PoolUserService {
         var policy = security.policy(tenant);
         security.validatePassword(newPassword, policy);
         security.rejectReusedPassword("pool_user", id, newPassword, user.passwordHash(), passwords, policy.historyCount());
-        sql.createUpdate(USER).set(USER.passwordHash(), passwords.encode(newPassword)).set(USER.updatedAt(), Instant.now()).where(USER.id().eq(id), USER.tenantId().eq(tenant)).execute();
+        sql.createUpdate(USER).set(USER.passwordHash(), passwords.encode(newPassword)).set(USER.updatedAt(), Instant.now()).where(USER.id().eq(id), USER.userPoolId().eq(tenant)).execute();
         security.rememberPassword("pool_user", id, user.passwordHash(), policy.historyCount());
     }
 
-    /** 统计租户下的用户总数及各状态（active / disabled / locked）数量。 */
+    /** 统计用户池下的用户总数及各状态（active / disabled / locked）数量。 */
     @Transactional(readOnly = true)
     public UserStats stats(UUID tenant) {
-        var rows = sql.createQuery(USER).where(USER.tenantId().eq(tenant)).select(USER.status()).execute();
+        var rows = sql.createQuery(USER).where(USER.userPoolId().eq(tenant)).select(USER.status()).execute();
         return new UserStats(rows.size(), rows.stream().filter("active"::equals).count(), rows.stream().filter("disabled"::equals).count(), rows.stream().filter("locked"::equals).count());
     }
 
     private PoolUserEntity entity(UUID tenant, UUID id) {
-        return sql.createQuery(USER).where(USER.id().eq(id), USER.tenantId().eq(tenant)).select(USER).fetchOptional().orElseThrow(this::missing);
+        return sql.createQuery(USER).where(USER.id().eq(id), USER.userPoolId().eq(tenant)).select(USER).fetchOptional().orElseThrow(this::missing);
     }
 
     private DomainException missing() {
@@ -211,61 +211,61 @@ public class PoolUserService {
     }
 
     private PoolUserView view(PoolUserEntity e) {
-        return new PoolUserView(e.id(), e.tenantId(), e.username(), e.email(), e.phone(), e.name(), e.avatar(), e.status(), e.emailVerified(), e.phoneVerified(), e.department(), e.position(), e.customAttributes(), e.lastLoginAt(), e.createdAt(), e.updatedAt());
+        return new PoolUserView(e.id(), e.userPoolId(), e.username(), e.email(), e.phone(), e.name(), e.avatar(), e.status(), e.emailVerified(), e.phoneVerified(), e.department(), e.position(), e.customAttributes(), e.lastLoginAt(), e.createdAt(), e.updatedAt());
     }
 
-    /** 从当前租户上下文取租户 ID 后分页查询用户列表。 */
+    /** 从当前用户池上下文取用户池 ID 后分页查询用户列表。 */
     @Transactional(readOnly = true)
     public PageData<PoolUserView> list(int page, int pageSize, String username, String email, String phone, String name, String status, String department) {
-        return list(TenantContextHolder.requireTenantId(), page, pageSize, username, email, phone, name, status, department);
+        return list(UserPoolContextHolder.requireUserPoolId(), page, pageSize, username, email, phone, name, status, department);
     }
 
-    /** 从当前租户上下文取租户 ID 后查询用户详情。 */
+    /** 从当前用户池上下文取用户池 ID 后查询用户详情。 */
     @Transactional(readOnly = true)
     public PoolUserView get(UUID id) {
-        return get(TenantContextHolder.requireTenantId(), id);
+        return get(UserPoolContextHolder.requireUserPoolId(), id);
     }
 
-    /** 从当前租户上下文取租户 ID 后创建用户。 */
+    /** 从当前用户池上下文取用户池 ID 后创建用户。 */
     @Transactional
     public PoolUserView create(PoolUserInput in) {
-        return create(TenantContextHolder.requireTenantId(), in);
+        return create(UserPoolContextHolder.requireUserPoolId(), in);
     }
 
-    /** 从当前租户上下文取租户 ID 后更新用户。 */
+    /** 从当前用户池上下文取用户池 ID 后更新用户。 */
     @Transactional
     public PoolUserView update(UUID id, PoolUserInput in) {
-        return update(TenantContextHolder.requireTenantId(), id, in);
+        return update(UserPoolContextHolder.requireUserPoolId(), id, in);
     }
 
-    /** 从当前租户上下文取租户 ID 后删除用户。 */
+    /** 从当前用户池上下文取用户池 ID 后删除用户。 */
     @Transactional
     public void delete(UUID id) {
-        delete(TenantContextHolder.requireTenantId(), id);
+        delete(UserPoolContextHolder.requireUserPoolId(), id);
     }
 
-    /** 从当前租户上下文取租户 ID 后更新用户状态。 */
+    /** 从当前用户池上下文取用户池 ID 后更新用户状态。 */
     @Transactional
     public PoolUserView status(UUID id, String status) {
-        return status(TenantContextHolder.requireTenantId(), id, status);
+        return status(UserPoolContextHolder.requireUserPoolId(), id, status);
     }
 
-    /** 从当前租户上下文取租户 ID 后重置用户密码。 */
+    /** 从当前用户池上下文取用户池 ID 后重置用户密码。 */
     @Transactional
     public void resetPassword(UUID id, String password) {
-        resetPassword(TenantContextHolder.requireTenantId(), id, password);
+        resetPassword(UserPoolContextHolder.requireUserPoolId(), id, password);
     }
 
-    /** 从当前租户上下文取租户 ID 后修改用户密码。 */
+    /** 从当前用户池上下文取用户池 ID 后修改用户密码。 */
     @Transactional
     public void changePassword(UUID id, String oldPassword, String newPassword) {
-        changePassword(TenantContextHolder.requireTenantId(), id, oldPassword, newPassword);
+        changePassword(UserPoolContextHolder.requireUserPoolId(), id, oldPassword, newPassword);
     }
 
-    /** 从当前租户上下文取租户 ID 后统计用户状态。 */
+    /** 从当前用户池上下文取用户池 ID 后统计用户状态。 */
     @Transactional(readOnly = true)
     public UserStats stats() {
-        return stats(TenantContextHolder.requireTenantId());
+        return stats(UserPoolContextHolder.requireUserPoolId());
     }
 
     

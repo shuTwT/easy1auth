@@ -13,7 +13,7 @@ import com.easy1auth.system.service.RegistrationCodeService;
 import com.easy1auth.framework.common.error.DomainException;
 import com.easy1auth.framework.web.response.ApiResponse;
 import com.easy1auth.framework.web.util.WebFrameworkUtils;
-import com.easy1auth.tenant.service.TenantService;
+import com.easy1auth.tenant.service.UserPoolService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
@@ -39,8 +39,8 @@ public class AuthController {
     private final AdminIdentityService identities;
     /** 管理端访问令牌签发服务 */
     private final AdminTokenService tokens;
-    /** 租户服务（登录后解析账号的租户列表） */
-    private final TenantService tenants;
+    /** 用户池服务（登录后解析账号的用户池列表） */
+    private final UserPoolService userPools;
     /** 管理端 JWT 配置 */
     private final AdminJwtProperties jwt;
     /** 公共注册服务 */
@@ -54,10 +54,10 @@ public class AuthController {
     /** Redis Stream 消息生产者（发送验证码邮件） */
     private final MailSendProducer mailSendProducer;
 
-    AuthController(AdminIdentityService identities, AdminTokenService tokens, TenantService tenants, AdminJwtProperties jwt, PublicRegistrationService registrations, RegistrationCodeService registrationCodes, RegistrationProperties registration, SecurityPolicyService security, MailSendProducer mailSendProducer) {
+    AuthController(AdminIdentityService identities, AdminTokenService tokens, UserPoolService userPools, AdminJwtProperties jwt, PublicRegistrationService registrations, RegistrationCodeService registrationCodes, RegistrationProperties registration, SecurityPolicyService security, MailSendProducer mailSendProducer) {
         this.identities = identities;
         this.tokens = tokens;
-        this.tenants = tenants;
+        this.userPools = userPools;
         this.jwt = jwt;
         this.registrations = registrations;
         this.registrationCodes = registrationCodes;
@@ -94,7 +94,7 @@ public class AuthController {
         return ApiResponse.ok(response(result.account(), result.refreshToken()));
     }
 
-    /** 管理账号注册：创建账号并自动创建默认租户，注册成功后直接登录。 */
+    /** 管理账号注册：创建账号并自动创建默认用户池，注册成功后直接登录。 */
     @ManagementRouteClassification(ManagementRouteKind.AUTHENTICATION)
     @PostMapping("/register")
     public ApiResponse<LoginResponse> register(@RequestBody RegisterRequest request, HttpServletRequest http) {
@@ -168,10 +168,10 @@ public class AuthController {
         return ApiResponse.ok(response(result.account(), result.refreshToken()));
     }
 
-    /** 组装登录成功响应：签发访问令牌并附带账号可访问的租户列表与当前租户。 */
+    /** 组装登录成功响应：签发访问令牌并附带账号可访问的用户池列表与当前用户池。 */
     private LoginResponse response(AdminAccount account, String refresh) {
-        var memberships = tenants.list(account.id());
-        UUID current = account.lastTenantId();
+        var memberships = userPools.list(account.id());
+        UUID current = account.lastUserPoolId();
         boolean currentAccessible = current != null && memberships.stream().map(t -> t.id()).anyMatch(current::equals);
         if (!currentAccessible) {
             current = memberships.isEmpty() ? null : memberships.getFirst().id();
@@ -245,7 +245,7 @@ public class AuthController {
      * @param username        用户名
      * @param email           邮箱
      * @param avatar          头像地址（可为 null）
-     * @param currentTenantId 当前选中的租户 ID（可为 null）
+     * @param currentUserPoolId 当前选中的用户池 ID（可为 null）
      */
 
     /**
@@ -255,7 +255,7 @@ public class AuthController {
      * @param token          访问令牌（登录成功时返回）
      * @param refreshToken   刷新令牌（登录成功时返回）
      * @param user           登录用户信息（登录成功时返回）
-     * @param tenants        账号可访问的租户列表
+     * @param userPools        账号可访问的用户池列表
      * @param challengeToken MFA 挑战凭证（需要 MFA 时返回）
      * @param methods        可用的 MFA 方式（需要 MFA 时返回）
      * @param expiresIn      MFA 挑战有效秒数（需要 MFA 时返回）

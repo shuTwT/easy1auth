@@ -1,6 +1,6 @@
 export interface Permission {
   id: string
-  tenantId: string
+  userPoolId: string
   code: string
   name: string
   description: string | null
@@ -17,7 +17,7 @@ export interface Permission {
 
 export interface PermissionSpace {
   id: string
-  tenantId: string
+  userPoolId: string
   name: string
   code: string
   description: string | null

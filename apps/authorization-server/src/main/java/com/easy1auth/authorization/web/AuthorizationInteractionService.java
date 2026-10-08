@@ -21,14 +21,14 @@ import java.util.*;
 /**
  * 管理授权门户中的登录与 OAuth 授权交互状态。
  *
- * <p>原始 OAuth 请求和租户上下文始终保存在服务端 Session 中，浏览器只拿到短期、
+ * <p>原始 OAuth 请求和用户池上下文始终保存在服务端 Session 中，浏览器只拿到短期、
  * 不透明的交互 ID。这样可以避免用户通过修改前端参数替换 {@code redirect_uri}、
- * {@code scope} 或 {@code state}，并保证登录、MFA 和授权确认始终绑定到同一租户。</p>
+ * {@code scope} 或 {@code state}，并保证登录、MFA 和授权确认始终绑定到同一用户池。</p>
  */
 @Service
 public class AuthorizationInteractionService {
-    /** Session 中当前授权交互所属租户的属性名。 */
-    public static final String TENANT = "EASY1AUTH_INTERACTION_TENANT";
+    /** Session 中当前授权交互所属用户池的属性名。 */
+    public static final String USER_POOL = "EASY1AUTH_INTERACTION_TENANT";
     /** Session 中保存的原始 OAuth 授权参数。 */
     public static final String AUTH_REQUEST = "EASY1AUTH_INTERACTION_AUTH_REQUEST";
     /** 发起授权请求时的原始 URI。 */
@@ -48,9 +48,9 @@ public class AuthorizationInteractionService {
 
     /** 保存 Spring Security 识别到的原始请求，登录完成后用于继续跳转。 */
     private final HttpSessionRequestCache requestCache = new HttpSessionRequestCache();
-    /** 查询租户公开的登录页样式。 */
+    /** 查询用户池公开的登录页样式。 */
     private final CustomizationService customization;
-    /** 查询 OAuth 客户端所属租户和展示名称。 */
+    /** 查询 OAuth 客户端所属用户池和展示名称。 */
     private final JdbcClient db;
     /** 查询社会化身份源详情，供登录页渲染按钮。 */
     private final SocialIdentityService socialIdentity;
@@ -65,7 +65,7 @@ public class AuthorizationInteractionService {
     /**
      * 捕获一次新的 OAuth 授权请求。
      *
-     * <p>除了交给 Spring Security 保存原始请求外，还会把租户、请求 URI 和参数复制到
+     * <p>除了交给 Spring Security 保存原始请求外，还会把用户池、请求 URI 和参数复制到
      * Session，并清理上一次交互残留的 consent 状态，防止不同授权请求相互串联。</p>
      */
     public void captureAuthorizationRequest(HttpServletRequest request, HttpServletResponse response) {
@@ -75,7 +75,7 @@ public class AuthorizationInteractionService {
             return;
         }
         HttpSession session = request.getSession(true);
-        session.setAttribute(TENANT, tenant.toString());
+        session.setAttribute(USER_POOL, tenant.toString());
         session.setAttribute(AUTH_URI, request.getRequestURI());
         session.setAttribute(AUTH_REQUEST, copy(request.getParameterMap()));
         session.setAttribute(EXPIRES_AT, Instant.now().plusSeconds(INTERACTION_TTL_SECONDS).toEpochMilli());
@@ -87,17 +87,17 @@ public class AuthorizationInteractionService {
     /**
      * 生成登录门户上下文。
      *
-     * <p>正常情况下租户从 Session 读取；直接打开登录页时也允许从 {@code tenant}
-     * 查询参数初始化租户。交互不存在或已过期时返回 expired 状态，不创建新的认证上下文。</p>
+     * <p>正常情况下用户池从 Session 读取；直接打开登录页时也允许从 {@code tenant}
+     * 查询参数初始化用户池。交互不存在或已过期时返回 expired 状态，不创建新的认证上下文。</p>
      */
     public Context loginContext(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
-        UUID tenant = sessionTenant(session);
+        UUID tenant = sessionUserPool(session);
         if (tenant == null && request.getParameter("tenant") != null) {
-            tenant = parseTenant(request.getParameter("tenant"));
+            tenant = parseUserPool(request.getParameter("tenant"));
             if (tenant != null) {
                 session = request.getSession(true);
-                session.setAttribute(TENANT, tenant.toString());
+                session.setAttribute(USER_POOL, tenant.toString());
                 session.setAttribute(EXPIRES_AT, Instant.now().plusSeconds(INTERACTION_TTL_SECONDS).toEpochMilli());
             }
         }
@@ -111,13 +111,13 @@ public class AuthorizationInteractionService {
     }
 
     /**
-     * 获取当前交互租户，并确保登录请求仍在有效期内。
+     * 获取当前交互用户池，并确保登录请求仍在有效期内。
      *
-     * @throws DomainException 租户缺失或交互已过期时抛出 410 异常
+     * @throws DomainException 用户池缺失或交互已过期时抛出 410 异常
      */
-    public UUID requireTenant(HttpServletRequest request) {
+    public UUID requireUserPool(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
-        UUID tenant = sessionTenant(session);
+        UUID tenant = sessionUserPool(session);
         if (tenant == null || expired(session)) {
             throw new DomainException(ErrorCodeConstants.AUTH_INTERACTION_EXPIRED_LOGIN);
         }
@@ -132,7 +132,7 @@ public class AuthorizationInteractionService {
      * 仍与首次保存的请求一致。</p>
      */
     public ConsentStart captureConsent(HttpServletRequest request, HttpServletResponse response) {
-        UUID tenant = requireTenant(request);
+        UUID tenant = requireUserPool(request);
         Map<String, String[]> initial = sessionMap(request.getSession(false), AUTH_REQUEST);
         Map<String, String[]> received = copy(request.getParameterMap());
         if (initial == null) {
@@ -156,9 +156,9 @@ public class AuthorizationInteractionService {
             throw new DomainException(ErrorCodeConstants.AUTH_INTERACTION_EXPIRED_REQUEST);
         }
         LoginStyleEntity style = customization.publicStyle(tenant);
-        UUID clientTenant = clientTenant(clientId);
-        if (!tenant.equals(clientTenant)) {
-            throw new DomainException(ErrorCodeConstants.AUTH_INTERACTION_MISMATCH_CLIENT_TENANT);
+        UUID clientUserPool = clientUserPool(clientId);
+        if (!tenant.equals(clientUserPool)) {
+            throw new DomainException(ErrorCodeConstants.AUTH_INTERACTION_MISMATCH_CLIENT_USER_POOL);
         }
         HttpSession session = request.getSession(false);
         String interactionId = UUID.randomUUID().toString();
@@ -178,7 +178,7 @@ public class AuthorizationInteractionService {
      */
     public ConsentContext consentContext(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
-        UUID tenant = sessionTenant(session);
+        UUID tenant = sessionUserPool(session);
         Map<String, String[]> consent = sessionMap(session, CONSENT_REQUEST);
         if (tenant == null || consent == null || expired(session)) {
             return ConsentContext.expired();
@@ -205,7 +205,7 @@ public class AuthorizationInteractionService {
             throw new DomainException(ErrorCodeConstants.AUTH_ACTION_INVALID);
         }
         HttpSession session = request.getSession(false);
-        UUID tenant = sessionTenant(session);
+        UUID tenant = sessionUserPool(session);
         Map<String, String[]> consent = sessionMap(session, CONSENT_REQUEST);
         String id = session == null ? null : (String) session.getAttribute(CONSENT_ID);
         String state = session == null ? null : (String) session.getAttribute(CONSENT_STATE);
@@ -233,8 +233,8 @@ public class AuthorizationInteractionService {
         request.getSession(true).setAttribute(LOGIN_ERROR, "用户名或密码错误");
     }
 
-    /** 查询启用中的 OAuth 客户端所属租户，用于租户边界校验。 */
-    private UUID clientTenant(String clientId) {
+    /** 查询启用中的 OAuth 客户端所属用户池，用于用户池边界校验。 */
+    private UUID clientUserPool(String clientId) {
         return db.sql("select tenant_id from oauth_application where client_id=:clientId and status='active'")
                 .param("clientId", clientId).query(UUID.class).optional().orElse(null);
     }
@@ -245,12 +245,12 @@ public class AuthorizationInteractionService {
                 .param("clientId", clientId).query(String.class).optional().orElse(clientId);
     }
 
-    /** 从 Session 读取并解析租户 ID。 */
-    private static UUID sessionTenant(HttpSession session) {
+    /** 从 Session 读取并解析用户池 ID。 */
+    private static UUID sessionUserPool(HttpSession session) {
         if (session == null) {
             return null;
         }
-        return parseTenant((String) session.getAttribute(TENANT));
+        return parseUserPool((String) session.getAttribute(USER_POOL));
     }
 
     /** 判断 Session 中的交互是否缺失过期时间或已经超过有效期。 */
@@ -262,15 +262,15 @@ public class AuthorizationInteractionService {
         return !(value instanceof Number n) || n.longValue() < System.currentTimeMillis();
     }
 
-    /** 安全解析租户 UUID；格式非法时返回 null。 */
-    private static UUID parseTenant(String value) {
+    /** 安全解析用户池 UUID；格式非法时返回 null。 */
+    private static UUID parseUserPool(String value) {
         try { return UUID.fromString(value); } catch (RuntimeException ex) { return null; }
     }
 
-    /** 从形如 /t/{tenant}/... 的请求 URI 中提取租户 UUID。 */
+    /** 从形如 /t/{tenant}/... 的请求 URI 中提取用户池 UUID。 */
     private static UUID tenantFromPath(String uri) {
         String[] parts = uri.split("/");
-        return parts.length > 2 && "t".equals(parts[1]) ? parseTenant(parts[2]) : null;
+        return parts.length > 2 && "t".equals(parts[1]) ? parseUserPool(parts[2]) : null;
     }
 
     /**
@@ -374,7 +374,7 @@ public class AuthorizationInteractionService {
      * @param socialProviders   启用的社会化身份源 ID 列表
      * @param socialSources     可渲染的社会化登录按钮详情
      * @param registrationEnabled 是否开放自助注册
-     * @param config            租户公开的自定义配置
+     * @param config            用户池公开的自定义配置
      * @param termsOfService    服务条款文档地址（可为 null）
      * @param privacyPolicy     隐私政策文档地址（可为 null）
      */
@@ -390,10 +390,10 @@ public class AuthorizationInteractionService {
     
 
     /**
-     * 登录页上下文，包含当前状态、租户、样式、错误提示和 CSRF Token。
+     * 登录页上下文，包含当前状态、用户池、样式、错误提示和 CSRF Token。
      *
      * @param status    当前状态：login / mfa / expired
-     * @param tenantId  租户 ID
+     * @param userPoolId  用户池 ID
      * @param style     登录页品牌样式
      * @param message   需要展示的提示信息（如登录错误）
      * @param csrfToken 页面表单所需的 CSRF Token
@@ -404,7 +404,7 @@ public class AuthorizationInteractionService {
      * 授权确认页初始化结果。
      *
      * @param interactionId 服务端生成的不透明交互 ID
-     * @param tenantId      租户 ID
+     * @param userPoolId      用户池 ID
      * @param style         登录页品牌样式
      * @param clientId      OAuth 客户端 ID
      * @param clientName    客户端展示名称
@@ -416,7 +416,7 @@ public class AuthorizationInteractionService {
      * 授权确认页上下文，包含客户端信息、权限范围、样式和 CSRF Token。
      *
      * @param status    当前状态：consent / expired
-     * @param tenantId  租户 ID
+     * @param userPoolId  用户池 ID
      * @param style     登录页品牌样式
      * @param clientId  OAuth 客户端 ID
      * @param clientName 客户端展示名称

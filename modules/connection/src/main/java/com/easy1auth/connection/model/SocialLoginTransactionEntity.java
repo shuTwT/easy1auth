@@ -1,7 +1,7 @@
 package com.easy1auth.connection.model;
 
 import com.easy1auth.framework.persistence.model.BaseEntity;
-import com.easy1auth.framework.tenant.persistence.model.BaseTenantEntity;
+import com.easy1auth.framework.tenant.persistence.model.BaseUserPoolEntity;
 import org.babyfish.jimmer.sql.*;
 import org.jspecify.annotations.Nullable;
 
@@ -16,7 +16,7 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "social_login_transaction")
-public interface SocialLoginTransactionEntity extends BaseEntity, BaseTenantEntity {
+public interface SocialLoginTransactionEntity extends BaseEntity, BaseUserPoolEntity {
     /** 身份源 ID（social_identity_source） */
     @Column(name = "source_id")
     UUID sourceId();

@@ -1,7 +1,7 @@
 package com.easy1auth.oauth2.model;
 
 import com.easy1auth.framework.persistence.model.BaseEntity;
-import com.easy1auth.framework.tenant.persistence.model.BaseTenantEntity;
+import com.easy1auth.framework.tenant.persistence.model.BaseUserPoolEntity;
 import org.babyfish.jimmer.sql.*;
 import org.jspecify.annotations.Nullable;
 
@@ -11,12 +11,12 @@ import java.util.Map;
 /**
  * OAuth2 签名密钥实体（对应 oauth2_signing_key 表）。
  *
- * <p>保存每个租户用于 OIDC/JWT 签名的 RSA 密钥：公钥以 JSON 明文存储，
- * 私钥以 AES-GCM 加密后的密文存储。同一租户同一时间只有一把激活密钥。</p>
+ * <p>保存每个用户池用于 OIDC/JWT 签名的 RSA 密钥：公钥以 JSON 明文存储，
+ * 私钥以 AES-GCM 加密后的密文存储。同一用户池同一时间只有一把激活密钥。</p>
  */
 @Entity
 @Table(name = "oauth2_signing_key")
-public interface OAuthSigningKeyEntity extends BaseEntity, BaseTenantEntity {
+public interface OAuthSigningKeyEntity extends BaseEntity, BaseUserPoolEntity {
     /** 密钥 ID（即 JWK 的 kid 字段，用于标识当前使用的签名密钥） */
     @Column(name = "key_id")
     String keyId();

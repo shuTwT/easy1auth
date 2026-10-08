@@ -21,7 +21,7 @@ import java.util.UUID;
  * 平台权限目录接口。
  *
  * <p>管理端 REST 入口，基路径 {@code /api/platform/permissions}，返回启用中的完整
- * 管理权限目录，供租户套餐权限配置等场景使用。操作通过
+ * 管理权限目录，供用户池套餐权限配置等场景使用。操作通过
  * {@link PlatformManagementPermission} 做平台级权限控制，并以 {@link ApiResponse}
  * 统一包装返回。</p>
  */
@@ -39,10 +39,10 @@ public class PlatformPermissionController {
     }
 
     /** 查询启用中的全部管理权限目录。 */
-    @PlatformManagementPermission(value = ManagementPermissionCode.TENANT_PACKAGE_PERMISSION_CATALOG)
+    @PlatformManagementPermission(value = ManagementPermissionCode.USER_POOL_PACKAGE_PERMISSION_CATALOG)
     @GetMapping
     public ApiResponse<List<ManagementPermissionView>> list(@AuthenticationPrincipal Jwt actor) {
-        require(actor, ManagementPermissionCode.TENANT_PACKAGE_PERMISSION_CATALOG);
+        require(actor, ManagementPermissionCode.USER_POOL_PACKAGE_PERMISSION_CATALOG);
         return ApiResponse.ok(catalog.activeViews());
     }
 

@@ -34,7 +34,7 @@ public interface CustomizationRepository extends JRepository<LoginStyleEntity, U
 
     default Optional<LegalDocumentSettingEntity> legalDocuments(UUID tenant) {
         return sql().createQuery(LEGAL)
-                .where(LEGAL.tenantId().eq(tenant))
+                .where(LEGAL.userPoolId().eq(tenant))
                 .select(LEGAL)
                 .fetchOptional();
     }
@@ -59,7 +59,7 @@ public interface CustomizationRepository extends JRepository<LoginStyleEntity, U
 
     default Optional<LoginStyleEntity> style(UUID tenant) {
         return sql().createQuery(STYLE)
-                .where(STYLE.tenantId().eq(tenant))
+                .where(STYLE.userPoolId().eq(tenant))
                 .select(STYLE)
                 .fetchOptional();
     }

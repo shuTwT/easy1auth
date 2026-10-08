@@ -6,8 +6,8 @@ import com.easy1auth.framework.common.error.ErrorCode;
 public interface ErrorCodeConstants {
     /** OAuth issuer 格式无效（路径结构不符合约定） */
     ErrorCode OAUTH_ISSUER_INVALID_FORMAT = new ErrorCode(22000, "OAuth issuer 格式无效");
-    /** OAuth issuer 中的租户标识不是合法 UUID */
-    ErrorCode OAUTH_ISSUER_INVALID_TENANT = new ErrorCode(22001, "OAuth issuer 租户标识无效");
-    /** OAuth issuer 中缺少租户标识 */
-    ErrorCode OAUTH_TENANT_REQUIRED = new ErrorCode(22002, "OAuth issuer 中缺少租户");
+    /** OAuth issuer 中的用户池标识不是合法 UUID */
+    ErrorCode OAUTH_ISSUER_INVALID_USER_POOL = new ErrorCode(22001, "OAuth issuer 用户池标识无效");
+    /** OAuth issuer 中缺少用户池标识 */
+    ErrorCode OAUTH_USER_POOL_REQUIRED = new ErrorCode(22002, "OAuth issuer 中缺少用户池");
 }
