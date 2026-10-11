@@ -10,6 +10,8 @@ import {
   Bell,
   Building2,
   ChevronDown,
+  Database,
+  FolderTree,
   Globe2,
   LayoutDashboard,
   Link2,
@@ -63,7 +65,9 @@ const menuIcons: Record<string, Component> = {
   'user-group': Users,
   position: BriefcaseBusiness,
   role: ShieldCheck,
-  permission: LockKeyhole,
+  'permission-management': LockKeyhole,
+  'permission-management/permission-space': FolderTree,
+  'permission-management/permission-data-resource': Database,
   'admin-user': UserCog,
   application: Monitor,
   'social-identity-source': Link2,
@@ -87,6 +91,8 @@ const menuResourceRoutes: Record<string, string> = {
   tenant: 'user-pool',
   'tenant-package': 'user-pool-package',
   'pool-tenant': 'pool-tenants',
+  'permission-space': 'permission-management/permission-space',
+  'permission-data-resource': 'permission-management/permission-data-resource',
 }
 
 const menuTree = computed(() => {

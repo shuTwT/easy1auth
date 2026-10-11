@@ -110,7 +110,7 @@ onMounted(() => loadTemplates())
 
     <a-card>
       <div class="px-2">
-        <div class="flex flex-wrap justify-between items-center gap-3 mb-5">
+        <div class="flex flex-wrap justify-between items-center gap-3">
           <h3 class="text-base font-semibold">模板管理</h3>
           <div class="flex flex-wrap gap-3">
             <a-button type="primary" @click="handleCreateTemplate">

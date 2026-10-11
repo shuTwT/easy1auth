@@ -137,11 +137,19 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '安全设置', requiresAuth: true }
       },
       {
-        path: 'permission',
-        name: 'Permission',
-        component: () => import('@/views/permission/index.vue'),
-        meta: { title: '权限管理', requiresAuth: true }
+        path: 'permission-management/permission-space',
+        name: 'PermissionSpace',
+        component: () => import('@/views/permission-management/permission-space/index.vue'),
+        meta: { title: '权限空间管理', requiresAuth: true }
       },
+      {
+        path: 'permission-management/permission-data-resource',
+        name: 'PermissionDataResource',
+        component: () => import('@/views/permission-management/permission-data-resource/index.vue'),
+        meta: { title: '数据资源管理', requiresAuth: true }
+      },
+      // Keep the retired combined permission page URL working.
+      { path: 'permission', redirect: '/permission-management/permission-data-resource' },
       {
         path: 'admin-user',
         name: 'AdminUser',

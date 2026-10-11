@@ -138,25 +138,25 @@ public class UserAccessCatalogController {
     }
 
     @GetMapping("/api/permission-spaces")
-    @UserPoolManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_LIST)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.PERMISSION_SPACE_LIST)
     ApiResponse<?> permissionSpaces(@RequestParam(required = false) String search) {
         return ApiResponse.ok(service.permissionSpaces(UserPoolContextHolder.requireUserPoolId(), search));
     }
 
     @PostMapping("/api/permission-spaces")
-    @UserPoolManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_CREATE)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.PERMISSION_SPACE_CREATE)
     ApiResponse<?> createPermissionSpace(@RequestBody PermissionSpaceInput in) {
         return ApiResponse.ok(service.createPermissionSpace(UserPoolContextHolder.requireUserPoolId(), in), "权限空间创建成功");
     }
 
     @PutMapping("/api/permission-spaces/{id}")
-    @UserPoolManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_UPDATE)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.PERMISSION_SPACE_UPDATE)
     ApiResponse<?> updatePermissionSpace(@PathVariable UUID id, @RequestBody PermissionSpaceInput in) {
         return ApiResponse.ok(service.updatePermissionSpace(UserPoolContextHolder.requireUserPoolId(), id, in), "权限空间更新成功");
     }
 
     @DeleteMapping("/api/permission-spaces/{id}")
-    @UserPoolManagementPermission(value = ManagementPermissionCode.DATA_PERMISSION_DELETE)
+    @UserPoolManagementPermission(value = ManagementPermissionCode.PERMISSION_SPACE_DELETE)
     ApiResponse<Void> deletePermissionSpace(@PathVariable UUID id) {
         service.deletePermissionSpace(UserPoolContextHolder.requireUserPoolId(), id);
         return ApiResponse.ok(null, "权限空间删除成功");

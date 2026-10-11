@@ -147,7 +147,7 @@ watch(() => userStore.currentUserPool?.id, () => {
         @finish="search"
       >
         <a-form-item name="name">
-          <a-input v-model:value="query.name" placeholder="搜索租户名称" aria-label="租户名称" allow-clear>
+          <a-input v-model:value="query.name" placeholder="搜索租户名称" aria-label="租户名称" allow-clear style="width:230px;">
             <template #prefix><Search :size="16" class="text-[#7890A5]" /></template>
           </a-input>
         </a-form-item>
@@ -196,47 +196,6 @@ watch(() => userStore.currentUserPool?.id, () => {
 </template>
 
 <style scoped>
-.tenant-card {
-  border: 1px solid #D7E2EC;
-  border-radius: 14px;
-  box-shadow: 0 1px 2px rgba(16, 42, 67, 0.06);
-}
 
-.tenant-filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-}
-
-.tenant-filters :deep(.ant-form-item) {
-  margin-bottom: 0;
-  margin-inline-end: 0;
-}
-
-.tenant-filters :deep(.ant-form-item:first-child) {
-  min-width: 220px;
-  flex: 1 1 280px;
-}
-
-.tenant-filters :deep(.ant-form-item:nth-child(2)) {
-  flex: 0 1 144px;
-}
-
-.tenant-filters :deep(.ant-form-item:first-child .ant-input-affix-wrapper),
-.tenant-filters :deep(.ant-form-item:nth-child(2) .ant-select) {
-  width: 100%;
-}
-
-.tenant-table :deep(.ant-table-thead > tr > th) {
-  background: #F4F8FB;
-  color: #52677D;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.tenant-table :deep(.ant-table-tbody > tr:hover > td) {
-  background: color-mix(in srgb, #E0F2FE 55%, white);
-}
 
 </style>

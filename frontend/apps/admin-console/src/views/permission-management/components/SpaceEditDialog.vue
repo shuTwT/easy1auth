@@ -56,7 +56,7 @@ const handleSubmit = async () => {
     dialogVisible.value = false
     emit('success', saved, !editingId)
   } catch (error: unknown) {
-    message.error(error instanceof Error ? error.message : '保存权限空间失败')
+    message.error(error instanceof Error && error.message ? error.message : '保存权限空间失败')
   } finally {
     submitting.value = false
   }
