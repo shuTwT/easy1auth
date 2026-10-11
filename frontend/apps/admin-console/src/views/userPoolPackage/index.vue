@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { message } from 'antdv-next'
+import type { TableProps } from 'antdv-next'
 import {
   AppWindow,
   Check,
@@ -18,148 +19,63 @@ import { userPoolPackageApi } from '@/api/userPoolPackage'
 import type {
   ManagementPermission,
   UserPoolPackage,
-  UserPoolPackageMutation,
   UserPoolPackageStatus,
 } from '@/types/userPoolPackage'
-type TreeNodeData = Record<string, unknown>
-
-interface PermissionTreeNode extends TreeNodeData {
-  id: string
-  label: string
-  code?: string
-  type: 'group' | 'directory' | 'menu' | 'action'
-  children: PermissionTreeNode[]
-  ancestorCodes: string[]
-}
+import PackageEditDialog from './components/PackageEditDialog.vue'
+import PackagePermissionDialog from './components/PackagePermissionDialog.vue'
+import PackageDeleteDialog from './components/PackageDeleteDialog.vue'
+import { useUserPoolPackageDict } from './utils/hooks'
+import type {
+  PackageDeleteDialogExpose,
+  PackageEditDialogExpose,
+  PackagePermissionDialogExpose,
+} from './utils/types'
 
 const packages = ref<UserPoolPackage[]>([])
 const permissionCatalog = ref<ManagementPermission[]>([])
 const loading = ref(false)
-const submitting = ref(false)
-const permissionSubmitting = ref(false)
-const permissionReturnsToPackageForm = ref(false)
 const search = ref('')
-const packageDialogVisible = ref(false)
-const permissionDialogVisible = ref(false)
-const deleteDialogVisible = ref(false)
-const editingPackage = ref<UserPoolPackage | null>(null)
-const deletingPackage = ref<UserPoolPackage | null>(null)
-const permissionTarget = ref<UserPoolPackage | null>(null)
 
-const packageForm = reactive<UserPoolPackageMutation>({
-  code: '',
-  name: '',
-  maxUsers: 100,
-  maxApps: 10,
-  permissionCodes: [],
-})
-const packageFormRules = {
-  code: [{ required: true, message: '请输入套餐编码' }],
-  name: [{ required: true, message: '请输入套餐名称' }],
-}
-const selectedPermissions = ref<string[]>([])
+const packageEditDialogRef = ref<PackageEditDialogExpose>()
+const packagePermissionDialogRef = ref<PackagePermissionDialogExpose>()
+const packageDeleteDialogRef = ref<PackageDeleteDialogExpose>()
 
-const userPoolPermissions = computed(() => permissionCatalog.value
-  .filter((permission) => permission.active && permission.scope.toUpperCase() === 'USER_POOL')
-  .sort((a, b) => a.sortOrder - b.sortOrder || a.code.localeCompare(b.code)))
+const { statusVariant, formatDate, formatLimit } = useUserPoolPackageDict()
 
-const permissionTree = computed<PermissionTreeNode[]>(() => {
-  const menuNodes = new Map<string, PermissionTreeNode>()
-  const rootMenus: PermissionTreeNode[] = []
-  const otherActions: PermissionTreeNode[] = []
-
-  userPoolPermissions.value
-    .filter((permission) => ['DIRECTORY', 'MENU'].includes(permission.type.toUpperCase()))
-    .forEach((permission) => menuNodes.set(permission.code, {
-      id: permission.code,
-      label: permission.name,
-      code: permission.code,
-      type: permission.type.toUpperCase() === 'DIRECTORY' ? 'directory' : 'menu',
-      children: [],
-      ancestorCodes: [],
-    }))
-
-  userPoolPermissions.value
-    .filter((permission) => ['DIRECTORY', 'MENU'].includes(permission.type.toUpperCase()))
-    .forEach((permission) => {
-      const node = menuNodes.get(permission.code)!
-      const parent = permission.parentCode ? menuNodes.get(permission.parentCode) : undefined
-      if (parent) {
-        node.ancestorCodes = [...parent.ancestorCodes, parent.code!]
-        parent.children.push(node)
-      } else {
-        rootMenus.push(node)
-      }
-    })
-
-  userPoolPermissions.value
-    .filter((permission) => permission.type.toUpperCase() === 'ACTION')
-    .forEach((permission) => {
-      const parent = permission.parentCode ? menuNodes.get(permission.parentCode) : undefined
-      const node: PermissionTreeNode = {
-        id: permission.code,
-        label: permission.name,
-        code: permission.code,
-        type: 'action',
-        children: [],
-        ancestorCodes: parent ? [...parent.ancestorCodes, parent.code!] : [],
-      }
-      if (parent) parent.children.push(node)
-      else otherActions.push(node)
-    })
-
-  const groups: PermissionTreeNode[] = []
-  if (rootMenus.length > 0) groups.push({ id: 'group:menus', label: '菜单权限', type: 'group', children: rootMenus, ancestorCodes: [] })
-  if (otherActions.length > 0) groups.push({ id: 'group:actions', label: '其他操作权限', type: 'group', children: otherActions, ancestorCodes: [] })
-  return groups
+const activeCount = computed(() => {
+  return packages.value.filter((item) => {
+    return item.status === 'active'
+  }).length
 })
 
-const activeCount = computed(() => packages.value.filter((item) => item.status === 'active').length)
-const defaultPackage = computed(() => packages.value.find((item) => item.defaultPackage))
-const totalPermissionCount = computed(() => new Set(packages.value.flatMap((item) => item.permissionCodes)).size)
-const packageDialogTitle = computed(() => editingPackage.value ? '编辑用户池套餐' : '创建用户池套餐')
-const filteredPackages = computed(() => packages.value.filter((item) => !search.value
-  || `${item.name} ${item.code}`.toLowerCase().includes(search.value.toLowerCase())))
-const packageColumns = [
+const defaultPackage = computed(() => {
+  return packages.value.find((item) => {
+    return item.defaultPackage
+  })
+})
+
+const totalPermissionCount = computed(() => {
+  return new Set(packages.value.flatMap((item) => {
+    return item.permissionCodes
+  })).size
+})
+
+const filteredPackages = computed(() => {
+  return packages.value.filter((item) => {
+    return !search.value || `${item.name} ${item.code}`.toLowerCase().includes(search.value.toLowerCase())
+  })
+})
+
+const packageColumns: TableProps<UserPoolPackage>['columns'] = [
   { title: '套餐', key: 'package', width: 250 },
   { title: '状态', key: 'status', width: 110 },
   { title: '资源配额', key: 'quota', width: 280 },
   { title: '权限', key: 'permissions', width: 120 },
   { title: '更新时间', key: 'updatedAt', width: 190 },
-  { title: '操作', key: 'actions', width: 300, fixed: 'end' as const },
+  { title: '操作', key: 'actions', width: 300, fixed: 'end' },
 ]
 
-function resetPackageForm() {
-  Object.assign(packageForm, {
-    code: '',
-    name: '',
-    maxUsers: 100,
-    maxApps: 10,
-    permissionCodes: [],
-  })
-}
-
-function permissionTypeLabel(type: string) {
-  return ({ DIRECTORY: '目录', MENU: '菜单', ACTION: '按钮' } as Record<string, string>)[type.toUpperCase()] || type
-}
-
-function permissionTypeVariant(type: string): string {
-  return type.toUpperCase() === 'MENU' ? 'blue' : 'green'
-}
-
-function statusVariant(status: UserPoolPackageStatus): string {
-  return status === 'active' ? 'green' : 'red'
-}
-
-function formatDate(value: string | null) {
-  return value ? new Date(value).toLocaleString() : '-'
-}
-
-function formatLimit(value: number) {
-  return value >= 2147483647 ? '不限' : value.toLocaleString()
-}
-
-async function loadData() {
+const loadData = async () => {
   loading.value = true
   try {
     const [packageRows, permissions] = await Promise.all([
@@ -176,100 +92,36 @@ async function loadData() {
   }
 }
 
-function openCreateDialog() {
-  editingPackage.value = null
-  resetPackageForm()
-  packageDialogVisible.value = true
+const openCreateDialog = () => {
+  packageEditDialogRef.value?.open()
 }
 
-function openEditDialog(item: UserPoolPackage) {
-  editingPackage.value = item
-  Object.assign(packageForm, {
-    code: item.code,
-    name: item.name,
-    maxUsers: item.maxUsers,
-    maxApps: item.maxApps,
-    permissionCodes: [...item.permissionCodes],
-  })
-  packageDialogVisible.value = true
+const openEditDialog = (item: UserPoolPackage) => {
+  packageEditDialogRef.value?.open(item)
 }
 
-async function submitPackage() {
-  submitting.value = true
-  try {
-    if (editingPackage.value) {
-      await userPoolPackageApi.update(editingPackage.value.id, packageForm)
-      message.success('套餐更新成功')
-    } else {
-      await userPoolPackageApi.create(packageForm)
-      message.success('套餐创建成功')
-    }
-    packageDialogVisible.value = false
-    await loadData()
-  } catch (error) {
-    console.error('保存用户池套餐失败:', error)
-    message.error('保存用户池套餐失败')
-  } finally {
-    submitting.value = false
-  }
+const openPermissionDialog = (item: UserPoolPackage) => {
+  packagePermissionDialogRef.value?.open(item)
 }
 
-function openPermissionDialog(item: UserPoolPackage) {
-  permissionTarget.value = item
-  permissionReturnsToPackageForm.value = false
-  selectedPermissions.value = [...item.permissionCodes]
-  permissionDialogVisible.value = true
+const openDeleteDialog = (item: UserPoolPackage) => {
+  packageDeleteDialogRef.value?.open(item)
 }
 
-function descendantCodes(node: PermissionTreeNode): string[] {
-  return [node.code, ...node.children.flatMap(descendantCodes)].filter((code): code is string => !!code)
+const handlePickPermissions = (codes: string[]) => {
+  packagePermissionDialogRef.value?.openForSelect(codes)
 }
 
-function toggleTreePermission(node: PermissionTreeNode) {
-  if (!node.code) return
-  if (selectedPermissions.value.includes(node.code)) {
-    const removals = ['directory', 'menu'].includes(node.type) ? descendantCodes(node) : [node.code]
-    selectedPermissions.value = selectedPermissions.value.filter((code) => !removals.includes(code))
-    return
-  }
-  selectedPermissions.value = [...new Set([...selectedPermissions.value, ...node.ancestorCodes, node.code])]
+const handlePermissionSelect = (codes: string[]) => {
+  packageEditDialogRef.value?.setPermissionCodes(codes)
+  packageEditDialogRef.value?.reopen()
 }
 
-async function submitPermissions() {
-  if (selectedPermissions.value.length === 0) {
-    message.error('请至少选择一项用户池权限')
-    return
-  }
-  if (permissionReturnsToPackageForm.value) {
-    packageForm.permissionCodes = [...selectedPermissions.value]
-    permissionDialogVisible.value = false
-    packageDialogVisible.value = true
-    return
-  }
-  if (!permissionTarget.value) return
-  permissionSubmitting.value = true
-  try {
-    await userPoolPackageApi.replacePermissions(permissionTarget.value.id, selectedPermissions.value)
-    message.success('套餐权限更新成功')
-    permissionDialogVisible.value = false
-    await loadData()
-  } catch (error) {
-    console.error('更新套餐权限失败:', error)
-    message.error('更新套餐权限失败')
-  } finally {
-    permissionSubmitting.value = false
-  }
+const handlePermissionCancelSelect = () => {
+  packageEditDialogRef.value?.reopen()
 }
 
-function closePermissionDialog() {
-  permissionDialogVisible.value = false
-  if (permissionReturnsToPackageForm.value) {
-    permissionReturnsToPackageForm.value = false
-    packageDialogVisible.value = true
-  }
-}
-
-async function toggleStatus(item: UserPoolPackage) {
+const toggleStatus = async (item: UserPoolPackage) => {
   const nextStatus: UserPoolPackageStatus = item.status === 'active' ? 'inactive' : 'active'
   try {
     await userPoolPackageApi.updateStatus(item.id, nextStatus)
@@ -281,25 +133,9 @@ async function toggleStatus(item: UserPoolPackage) {
   }
 }
 
-function openDeleteDialog(item: UserPoolPackage) {
-  deletingPackage.value = item
-  deleteDialogVisible.value = true
-}
-
-async function confirmDelete() {
-  if (!deletingPackage.value) return
-  try {
-    await userPoolPackageApi.remove(deletingPackage.value.id)
-    message.success('套餐已删除')
-    deleteDialogVisible.value = false
-    await loadData()
-  } catch (error) {
-    console.error('删除用户池套餐失败:', error)
-    message.error('删除用户池套餐失败')
-  }
-}
-
-onMounted(loadData)
+onMounted(() => {
+  loadData()
+})
 </script>
 
 <template>
@@ -408,86 +244,16 @@ onMounted(loadData)
       </div>
     </a-card>
 
-    <a-modal v-model:open="packageDialogVisible" :footer="null">
-      <div class="max-w-xl">
-        <div>
-          <h3>{{ packageDialogTitle }}</h3>
-          <p>设置套餐标识、资源上限和初始权限。</p>
-        </div>
-        <a-form :model="packageForm" :rules="packageFormRules" layout="vertical" class="py-4" @finish="submitPackage">
-          <div class="grid gap-4">
-            <div class="grid gap-4 sm:grid-cols-2">
-              <a-form-item label="套餐编码" name="code">
-                <a-input v-model:value="packageForm.code" :disabled="!!editingPackage" placeholder="例如 professional" />
-              </a-form-item>
-              <a-form-item label="套餐名称" name="name">
-                <a-input v-model:value="packageForm.name" placeholder="例如 专业版" />
-              </a-form-item>
-            </div>
-            <div class="grid gap-4 sm:grid-cols-2">
-              <a-form-item label="用户上限" name="maxUsers">
-                <a-input-number v-model:value="packageForm.maxUsers" :min="1" :max="2147483647" />
-              </a-form-item>
-              <a-form-item label="应用上限" name="maxApps">
-                <a-input-number v-model:value="packageForm.maxApps" :min="1" :max="2147483647" />
-              </a-form-item>
-            </div>
-            <a-form-item label="套餐权限">
-              <a-button html-type="button" class="w-full justify-between" @click="permissionReturnsToPackageForm = true; permissionTarget = null; selectedPermissions = [...packageForm.permissionCodes]; packageDialogVisible = false; permissionDialogVisible = true">
-                <span>{{ packageForm.permissionCodes.length }} 项权限已选择</span><ShieldCheck class="size-4" />
-              </a-button>
-            </a-form-item>
-          </div>
-          <div class="flex justify-end gap-2">
-            <a-button @click="packageDialogVisible = false">取消</a-button>
-            <a-button type="primary" html-type="submit" :loading="submitting">保存套餐</a-button>
-          </div>
-        </a-form>
-      </div>
-    </a-modal>
+    <PackageEditDialog ref="packageEditDialogRef" @success="loadData" @pick-permissions="handlePickPermissions" />
 
-    <a-modal v-model:open="permissionDialogVisible">
-      <div class="max-w-3xl">
-        <div>
-          <h3>配置套餐权限{{ permissionTarget ? ` · ${permissionTarget.name}` : '' }}</h3>
-        <p>按菜单层级选择权限；选择操作时会自动保留其父菜单，取消菜单会同时取消子菜单和关联操作。</p>
-        </div>
-        <div class="h-[min(60vh,520px)] overflow-y-auto rounded-md border p-4">
-          <a-empty v-if="permissionTree.length === 0" class="py-12" description="暂无可用权限" />
-          <a-tree
-            v-else
-            :tree-data="permissionTree"
-            :field-names="{ key: 'id', title: 'label', children: 'children' }"
-            :default-expand-all="true"
-            :selectable="false"
-          >
-            <template #titleRender="data">
-              <div class="flex min-w-0 items-center gap-2 py-1">
-                <a-checkbox v-if="data.code" :checked="selectedPermissions.includes(data.code)" @update:checked="toggleTreePermission(data as unknown as PermissionTreeNode)" />
-                <span :class="data.type === 'group' ? 'font-medium' : 'text-sm'">{{ data.label }}</span>
-                <a-tag v-if="data.type !== 'group'" :color="permissionTypeVariant(data.type)">{{ permissionTypeLabel(data.type) }}</a-tag>
-                <code v-if="data.code" class="ml-auto hidden truncate text-xs text-[#52677D] md:block">{{ data.code }}</code>
-              </div>
-            </template>
-          </a-tree>
-        </div>
-      </div>
-      <template #footer>
-        <div class="flex items-center">
-          <span class="mr-auto text-sm text-[#52677D]">已选择 {{ selectedPermissions.length }} 项</span>
-          <div class="flex gap-2">
-            <a-button @click="closePermissionDialog">取消</a-button>
-            <a-button type="primary" :disabled="permissionSubmitting" @click="submitPermissions">{{ permissionSubmitting ? '保存中...' : '保存权限' }}</a-button>
-          </div>
-        </div>
-      </template>
-    </a-modal>
+    <PackagePermissionDialog
+      ref="packagePermissionDialogRef"
+      :permissions="permissionCatalog"
+      @success="loadData"
+      @select="handlePermissionSelect"
+      @cancel-select="handlePermissionCancelSelect"
+    />
 
-    <a-modal v-model:open="deleteDialogVisible" :footer="null">
-      <div>
-        <div><h3>删除用户池套餐</h3><p>确定删除“{{ deletingPackage?.name }}”吗？已分配给用户池的套餐不能删除。</p></div>
-        <div><a-button @click="deleteDialogVisible = false">取消</a-button><a-button danger @click="confirmDelete">确认删除</a-button></div>
-      </div>
-    </a-modal>
+    <PackageDeleteDialog ref="packageDeleteDialogRef" @success="loadData" />
   </div>
 </template>

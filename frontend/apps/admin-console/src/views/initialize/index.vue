@@ -5,35 +5,19 @@ import { message } from 'antdv-next'
 import type { FormInstance } from 'antdv-next'
 import { Check, KeyRound, LockKeyhole, Mail, ShieldCheck, UserRoundCog } from '@lucide/vue'
 import { systemInitializationApi } from '@/api/systemInitialization'
+import { accountRules, createConfirmPasswordRules, passwordRules } from './utils/rules'
+import type { InitializeForm } from './utils/types'
 
 const router = useRouter()
 const formRef = ref<FormInstance>()
 const submitting = ref(false)
-const model = reactive({
+const model = reactive<InitializeForm>({
   account: '',
   password: '',
   confirmPassword: '',
 })
 
-const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,128}$/
-const passwordRules = [
-  { required: true, message: '请输入管理员密码' },
-  {
-    pattern: passwordPattern,
-    message: '密码需为 8–128 位，并包含大写字母、小写字母和数字',
-  },
-]
-const confirmPasswordRules = [
-  { required: true, message: '请再次输入密码' },
-  {
-    validator: async (_rule: unknown, value: string) => {
-      if (value === model.password) {
-        return Promise.resolve()
-      }
-      return Promise.reject(new Error('两次输入的密码不一致'))
-    },
-  },
-]
+const confirmPasswordRules = createConfirmPasswordRules(model)
 
 async function handleSubmit() {
   submitting.value = true
@@ -120,11 +104,7 @@ async function handleSubmit() {
           <a-form-item
             label="系统管理员账号"
             name="account"
-            :rules="[
-              { required: true, message: '请输入系统管理员账号' },
-              { type: 'email', message: '请输入有效的邮箱地址' },
-              { max: 320, message: '邮箱地址不能超过 320 个字符' },
-            ]"
+            :rules="accountRules"
           >
             <a-input
               v-model:value="model.account"

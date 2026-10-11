@@ -5,8 +5,7 @@ import PasswordLoginForm from '@/components/login/PasswordLoginForm.vue'
 import EmailCodeLoginForm from '@/components/login/EmailCodeLoginForm.vue'
 import PasskeyLogin from '@/components/login/PasskeyLogin.vue'
 import RegisterForm from '@/components/login/RegisterForm.vue'
-
-type LoginMode = 'password' | 'email' | 'passkey' | 'register'
+import type { LoginMode } from './utils/types'
 
 const currentMode = shallowRef<LoginMode>('password')
 const loginTabs = [

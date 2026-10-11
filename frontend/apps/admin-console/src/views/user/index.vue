@@ -1,34 +1,34 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, reactive, watch } from 'vue'
+import { ref, onMounted, reactive } from 'vue'
 import { Modal, message } from 'antdv-next'
-import type { UploadProps } from 'antdv-next'
-import { Plus, Upload, Download, Search, RefreshCw } from '@lucide/vue'
+import type { TableProps } from 'antdv-next'
+import { Plus, Upload, Search, RefreshCw } from '@lucide/vue'
 import { userApi } from '@/api/user'
-import { roleApi } from '@/api/role'
-import request from '@/utils/request'
-import type { User, CreateUserDto, UpdateUserDto, UserQueryDto } from '@/types/user'
-import type { Role } from '@/types/role'
+import type { User, UserQueryDto } from '@/types/user'
+import UserEditDialog from './components/UserEditDialog.vue'
+import ResetPasswordDialog from './components/ResetPasswordDialog.vue'
+import AssignRoleDialog from './components/AssignRoleDialog.vue'
+import ImportDialog from './components/ImportDialog.vue'
+import { getApiErrorMessage, useUserDict } from './utils/hooks'
+import type {
+  AssignRoleDialogExpose,
+  ImportDialogExpose,
+  ResetPasswordDialogExpose,
+  UserEditDialogExpose
+} from './utils/types'
 
 const loading = ref(false)
 const users = ref<User[]>([])
 const total = ref(0)
-const dialogVisible = ref(false)
-const dialogTitle = ref('新增用户')
-const currentUser = ref<Partial<User>>({})
-const resetPasswordDialogVisible = ref(false)
-const resetPasswordUserId = ref('')
-const assignRoleDialogVisible = ref(false)
-const assignRoleUserId = ref('')
-const userRoles = ref<Role[]>([])
-const allRoles = ref<Role[]>([])
-const selectedRoleIds = ref<string[]>([])
-const assignRoleLoading = ref(false)
-const importDialogVisible = ref(false)
-const importLoading = ref(false)
-const importResult = ref<any>(null)
-const userStatusOptions = [{ value: 'active', label: '正常' }, { value: 'disabled', label: '禁用' }, { value: 'locked', label: '锁定' }]
+
+const userEditDialogRef = ref<UserEditDialogExpose>()
+const resetPasswordDialogRef = ref<ResetPasswordDialogExpose>()
+const assignRoleDialogRef = ref<AssignRoleDialogExpose>()
+const importDialogRef = ref<ImportDialogExpose>()
 
 const [modal, contextHolder] = Modal.useModal()
+
+const { userStatusOptions, getStatusText, getStatusVariant, formatDate } = useUserDict()
 
 const queryForm = reactive<UserQueryDto>({
   page: 1,
@@ -41,93 +41,16 @@ const queryForm = reactive<UserQueryDto>({
   department: ''
 })
 
-const userForm = reactive<CreateUserDto & UpdateUserDto>({
-  username: '',
-  email: '',
-  password: '',
-  phone: '',
-  name: '',
-  avatar: '',
-  department: '',
-  position: ''
-})
-
-const avatarLoading = ref(false)
-let avatarReader: FileReader | null = null
-
-function cancelAvatarRead() {
-  const reader = avatarReader
-  avatarReader = null
-  reader?.abort()
-  avatarLoading.value = false
-}
-
-const beforeAvatarUpload: UploadProps['beforeUpload'] = (file) => {
-  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-    message.error('请选择 JPG、PNG 或 WebP 格式的图片')
-    return false
-  }
-  if (file.size > 2 * 1024 * 1024) {
-    message.error('头像图片不能超过 2 MB')
-    return false
-  }
-
-  cancelAvatarRead()
-  const reader = new FileReader()
-  avatarReader = reader
-  avatarLoading.value = true
-  reader.onload = () => {
-    if (avatarReader === reader && typeof reader.result === 'string') {
-      userForm.avatar = reader.result
-    }
-  }
-  reader.onerror = () => {
-    if (avatarReader === reader) {
-      message.error('头像图片读取失败，请重新选择')
-    }
-  }
-  reader.onloadend = () => {
-    if (avatarReader === reader) {
-      avatarReader = null
-      avatarLoading.value = false
-    }
-  }
-  reader.readAsDataURL(file)
-  return false
-}
-
-watch(dialogVisible, (open) => {
-  if (!open) {
-    cancelAvatarRead()
-  }
-}, { flush: 'sync' })
-onBeforeUnmount(cancelAvatarRead)
-
-const resetPasswordForm = reactive({
-  newPassword: '',
-  confirmPassword: ''
-})
-
-const userFormRules = {
-  username: [{ required: true, message: '请输入用户名' }],
-  email: [{ required: true, message: '请输入邮箱' }],
-  name: [{ required: true, message: '请输入姓名' }],
-}
-
-const resetPasswordFormRules = {
-  newPassword: [{ required: true, message: '请输入新密码' }],
-  confirmPassword: [
-    { required: true, message: '请确认新密码' },
-    {
-      validator: (_rule: unknown, value: string) => {
-        if (value !== resetPasswordForm.newPassword) {
-          return Promise.reject('两次输入的密码不一致')
-        }
-        return Promise.resolve()
-      },
-    },
-  ],
-}
+const columns: TableProps<User>['columns'] = [
+  { title: '用户名', key: 'username', width: 160 },
+  { title: '邮箱', dataIndex: 'email', width: 192 },
+  { title: '手机号', key: 'phone', width: 128 },
+  { title: '部门', key: 'department', width: 112 },
+  { title: '状态', key: 'status', width: 96 },
+  { title: '最后登录', key: 'lastLoginAt', width: 160 },
+  { title: '创建时间', key: 'createdAt', width: 160 },
+  { title: '操作', key: 'actions', width: 256 }
+]
 
 const loadUsers = async () => {
   loading.value = true
@@ -135,7 +58,7 @@ const loadUsers = async () => {
     const res = await userApi.getList(queryForm)
     users.value = res.items
     total.value = res.total
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('加载用户列表失败:', error)
     message.error('加载用户列表失败')
   } finally {
@@ -160,36 +83,23 @@ const handleReset = () => {
 }
 
 const handleAdd = () => {
-  cancelAvatarRead()
-  dialogTitle.value = '新增用户'
-  Object.assign(userForm, {
-    username: '',
-    email: '',
-    password: '',
-    phone: '',
-    name: '',
-    avatar: '',
-    department: '',
-    position: ''
-  })
-  currentUser.value = {}
-  dialogVisible.value = true
+  userEditDialogRef.value?.open()
 }
 
 const handleEdit = (row: User) => {
-  cancelAvatarRead()
-  dialogTitle.value = '编辑用户'
-  Object.assign(userForm, {
-    username: row.username,
-    email: row.email || '',
-    phone: row.phone || '',
-    name: row.name,
-    avatar: row.avatar || '',
-    department: row.department || '',
-    position: row.position || ''
-  })
-  currentUser.value = row
-  dialogVisible.value = true
+  userEditDialogRef.value?.open(row)
+}
+
+const handleImport = () => {
+  importDialogRef.value?.open()
+}
+
+const handleResetPassword = (row: User) => {
+  resetPasswordDialogRef.value?.open(row.id)
+}
+
+const handleAssignRole = (row: User) => {
+  assignRoleDialogRef.value?.open(row)
 }
 
 const handleDelete = async (row: User) => {
@@ -198,7 +108,7 @@ const handleDelete = async (row: User) => {
     content: '确定要删除该用户吗？删除后无法恢复！',
     okText: '删除',
     cancelText: '取消',
-    okButtonProps: { danger: true },
+    okButtonProps: { danger: true }
   })
   if (!confirmed) return
 
@@ -206,9 +116,9 @@ const handleDelete = async (row: User) => {
     await userApi.delete(row.id)
     message.success('删除成功')
     loadUsers()
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('删除用户失败:', error)
-    message.error('删除用户失败')
+    message.error(getApiErrorMessage(error, '删除用户失败'))
   }
 }
 
@@ -217,82 +127,9 @@ const handleStatusChange = async (row: User, status: string) => {
     await userApi.updateStatus(row.id, status)
     message.success('状态更新成功')
     loadUsers()
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('更新状态失败:', error)
-    message.error('更新状态失败')
-  }
-}
-
-const handleResetPassword = (row: User) => {
-  resetPasswordUserId.value = row.id
-  resetPasswordForm.newPassword = ''
-  resetPasswordForm.confirmPassword = ''
-  resetPasswordDialogVisible.value = true
-}
-
-const handleSubmit = async () => {
-  if (avatarLoading.value) {
-    return
-  }
-  try {
-    if (currentUser.value.id) {
-      await userApi.update(currentUser.value.id, userForm)
-      message.success('更新成功')
-    } else {
-      await userApi.create(userForm as CreateUserDto)
-      message.success('创建成功')
-    }
-    dialogVisible.value = false
-    loadUsers()
-  } catch (error: any) {
-    console.error('保存用户失败:', error)
-    message.error(error.response?.data?.msg || '保存用户失败')
-  }
-}
-
-const handleResetPasswordSubmit = async () => {
-  try {
-    await userApi.resetPassword(resetPasswordUserId.value, resetPasswordForm.newPassword)
-    message.success('密码重置成功')
-    resetPasswordDialogVisible.value = false
-  } catch (error: any) {
-    console.error('重置密码失败:', error)
-    message.error(error.response?.data?.msg || '重置密码失败')
-  }
-}
-
-const handleAssignRole = async (row: User) => {
-  assignRoleUserId.value = row.id
-  assignRoleLoading.value = true
-  try {
-    const [userRolesData, allRolesData] = await Promise.all([
-      roleApi.getUserRoles(row.id),
-      roleApi.getList(),
-    ])
-    userRoles.value = userRolesData
-    allRoles.value = allRolesData.items
-    selectedRoleIds.value = userRolesData.map((role: Role) => role.id)
-    assignRoleDialogVisible.value = true
-  } catch (error) {
-    console.error('加载角色数据失败:', error)
-    message.error('加载角色数据失败')
-  } finally {
-    assignRoleLoading.value = false
-  }
-}
-
-const handleAssignRoleSubmit = async () => {
-  assignRoleLoading.value = true
-  try {
-    await roleApi.assignRolesToUser(assignRoleUserId.value, selectedRoleIds.value)
-    message.success('分配角色成功')
-    assignRoleDialogVisible.value = false
-    loadUsers()
-  } catch (error: any) {
-    console.error('分配角色失败:', error)
-    message.error(error.response?.data?.msg || '分配角色失败')
-  } finally {
-    assignRoleLoading.value = false
+    message.error(getApiErrorMessage(error, '更新状态失败'))
   }
 }
 
@@ -308,78 +145,9 @@ const handleSizeChange = (_current: number, size: number) => {
   loadUsers()
 }
 
-const getStatusVariant = (status: string) => {
-  switch (status) {
-    case 'active':
-      return 'green'
-    case 'disabled':
-      return 'orange'
-    case 'locked':
-      return 'red'
-    default:
-      return 'default'
-  }
-}
-
-const getStatusText = (status: string) => {
-  switch (status) {
-    case 'active':
-      return '正常'
-    case 'disabled':
-      return '禁用'
-    case 'locked':
-      return '锁定'
-    default:
-      return '未知'
-  }
-}
-
 onMounted(() => {
   loadUsers()
 })
-
-const handleDownloadTemplate = () => {
-  const link = document.createElement('a')
-  link.href = '/api/users/import/template'
-  link.download = 'user_import_template.xlsx'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-}
-
-const handleImport = () => {
-  importDialogVisible.value = true
-  importResult.value = null
-}
-
-const handleFileChange = async (file: any) => {
-  importLoading.value = true
-
-  try {
-    const formData = new FormData()
-    formData.append('file', file.raw)
-
-    importResult.value = await request.post('/users/import', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
-    message.success('导入完成')
-    loadUsers()
-  } catch (error) {
-    console.error('导入用户失败:', error)
-    message.error('导入用户失败')
-  } finally {
-    importLoading.value = false
-  }
-}
-
-const toggleRole = (roleId: string) => {
-  const index = selectedRoleIds.value.indexOf(roleId)
-  if (index > -1) {
-    selectedRoleIds.value.splice(index, 1)
-  } else {
-    selectedRoleIds.value.push(roleId)
-  }
-}
 </script>
 
 <template>
@@ -390,7 +158,7 @@ const toggleRole = (roleId: string) => {
         <p class="text-sm text-[#52677D]">管理系统用户，包括添加、编辑、删除和分配角色</p>
       </div>
       <div class="flex gap-3">
-        <a-button  @click="handleImport">
+        <a-button @click="handleImport">
           <Upload class="size-4 mr-2" />
           导入用户
         </a-button>
@@ -402,91 +170,87 @@ const toggleRole = (roleId: string) => {
     </div>
 
     <a-card class="mb-4!">
-      <div class="pt-6">
-        <div class="flex flex-wrap gap-4 items-end">
-          <div class="grid gap-2">
-            <label class="text-sm font-medium">用户名</label>
-            <a-input v-model:value="queryForm.username" placeholder="请输入用户名" class="w-40" />
-          </div>
-          <div class="grid gap-2">
-            <label class="text-sm font-medium">邮箱</label>
-            <a-input v-model:value="queryForm.email" placeholder="请输入邮箱" class="w-40" />
-          </div>
-          <div class="grid gap-2">
-            <label class="text-sm font-medium">姓名</label>
-            <a-input v-model:value="queryForm.name" placeholder="请输入姓名" class="w-40" />
-          </div>
-          <div class="grid gap-2">
-            <label class="text-sm font-medium">状态</label>
-            <a-select v-model:value="queryForm.status" placeholder="请选择状态" class="w-42" allow-clear :options="userStatusOptions" />
-          </div>
+      <a-form class="flex flex-wrap gap-4">
+        <a-form-item name="username" label="用户名">
+          <a-input v-model:value="queryForm.username" placeholder="请输入用户名" class="w-40" />
+        </a-form-item>
+        <a-form-item name="email" label="邮箱">
+          <a-input v-model:value="queryForm.email" placeholder="请输入邮箱" class="w-40" />
+        </a-form-item>
+        <a-form-item name="name" label="姓名">
+          <a-input v-model:value="queryForm.name" placeholder="请输入姓名" class="w-40" />
+        </a-form-item>
+        <a-form-item name="status" label="状态">
+          <a-select
+              v-model:value="queryForm.status"
+              placeholder="请选择状态"
+              class="w-42"
+              allow-clear
+              :options="userStatusOptions"
+          />
+        </a-form-item>
+        <a-form-item>
           <div class="flex gap-2">
             <a-button @click="handleSearch">
               <Search class="size-4 mr-2" />
               搜索
             </a-button>
-            <a-button  @click="handleReset">
+            <a-button @click="handleReset">
               <RefreshCw class="size-4 mr-2" />
               重置
             </a-button>
           </div>
-        </div>
-      </div>
+        </a-form-item>
+      </a-form>
     </a-card>
 
     <a-card>
-      <div class="pt-6">
-        <a-table :columns="[
-          { title: '用户名', key: 'username', width: 160 }, { title: '邮箱', dataIndex: 'email', width: 192 },
-          { title: '手机号', key: 'phone', width: 128 }, { title: '部门', key: 'department', width: 112 },
-          { title: '状态', key: 'status', width: 96 }, { title: '最后登录', key: 'lastLoginAt', width: 160 },
-          { title: '创建时间', key: 'createdAt', width: 160 }, { title: '操作', key: 'actions', width: 256 }
-        ]" :data-source="users" :loading="loading" row-key="id" :pagination="false" :scroll="{ x: 1264 }">
-          <template #bodyCell="{ column, record: row }">
-            <template v-if="column.key === 'username'">
-                <div class="flex items-center gap-3">
-                  <a-avatar class="size-8 bg-gradient-to-br from-blue-500 to-purple-600">
-                    <span class="bg-transparent text-white text-sm font-semibold">
-                      {{ row.name?.charAt(0) || row.username.charAt(0).toUpperCase() }}
-                    </span>
-                  </a-avatar>
-                  <div class="flex flex-col">
-                    <span class="font-medium">{{ row.username }}</span>
-                    <span class="text-xs text-[#52677D]">{{ row.name }}</span>
-                  </div>
-                </div>
-            </template>
-            <template v-else-if="column.key === 'phone'">{{ row.phone || '-' }}</template>
-            <template v-else-if="column.key === 'department'">{{ row.department || '-' }}</template>
-            <template v-else-if="column.key === 'status'">
-                <a-tag :color="getStatusVariant(row.status)">
-                  {{ getStatusText(row.status) }}
-                </a-tag>
-            </template>
-            <template v-else-if="column.key === 'lastLoginAt'">{{ row.lastLoginAt ? new Date(row.lastLoginAt).toLocaleString() : '-' }}</template>
-            <template v-else-if="column.key === 'createdAt'">{{ new Date(row.createdAt).toLocaleString() }}</template>
-            <template v-else-if="column.key === 'actions'">
-                <div class="flex gap-1 flex-wrap">
-                  <a-button type="link" size="small" class="h-auto p-0" @click="handleEdit(row)">编辑</a-button>
-                  <a-button type="link" size="small" class="h-auto p-0" @click="handleAssignRole(row)">分配角色</a-button>
-                  <a-button type="link" size="small" class="h-auto p-0" @click="handleResetPassword(row)">重置密码</a-button>
-                  <a-button
-                    type="link"
-                    size="small"
-                    class="h-auto p-0"
-                    @click="handleStatusChange(row, row.status === 'active' ? 'disabled' : 'active')"
-                  >
-                    {{ row.status === 'active' ? '禁用' : '启用' }}
-                  </a-button>
-                  <a-button type="link" size="small" class="h-auto p-0 text-[#B91C1C]" @click="handleDelete(row)">删除</a-button>
-                </div>
-            </template>
+      <a-table :columns="columns" :data-source="users" :loading="loading" row-key="id" :pagination="false" :scroll="{ x: 1264 }">
+        <template #bodyCell="{ column, record: row }">
+          <template v-if="column.key === 'username'">
+            <div class="flex items-center gap-3">
+              <a-avatar class="size-8 bg-gradient-to-br from-blue-500 to-purple-600">
+                <span class="bg-transparent text-white text-sm font-semibold">
+                  {{ row.name?.charAt(0) || row.username.charAt(0).toUpperCase() }}
+                </span>
+              </a-avatar>
+              <div class="flex flex-col">
+                <span class="font-medium">{{ row.username }}</span>
+                <span class="text-xs text-[#52677D]">{{ row.name }}</span>
+              </div>
+            </div>
           </template>
-        </a-table>
+          <template v-else-if="column.key === 'phone'">{{ row.phone || '-' }}</template>
+          <template v-else-if="column.key === 'department'">{{ row.department || '-' }}</template>
+          <template v-else-if="column.key === 'status'">
+            <a-tag :color="getStatusVariant(row.status)">
+              {{ getStatusText(row.status) }}
+            </a-tag>
+          </template>
+          <template v-else-if="column.key === 'lastLoginAt'">{{ formatDate(row.lastLoginAt) }}</template>
+          <template v-else-if="column.key === 'createdAt'">{{ formatDate(row.createdAt) }}</template>
+          <template v-else-if="column.key === 'actions'">
+            <div class="flex gap-1 flex-wrap">
+              <a-button type="link" size="small" class="h-auto p-0" @click="handleEdit(row)">编辑</a-button>
+              <a-button type="link" size="small" class="h-auto p-0" @click="handleAssignRole(row)">分配角色</a-button>
+              <a-button type="link" size="small" class="h-auto p-0" @click="handleResetPassword(row)">重置密码</a-button>
+              <a-button
+                  type="link"
+                  size="small"
+                  class="h-auto p-0"
+                  @click="handleStatusChange(row, row.status === 'active' ? 'disabled' : 'active')"
+              >
+                {{ row.status === 'active' ? '禁用' : '启用' }}
+              </a-button>
+              <a-button type="link" size="small" danger class="h-auto p-0" @click="handleDelete(row)">删除</a-button>
+            </div>
+          </template>
+        </template>
+      </a-table>
 
-        <div class="flex items-center justify-between mt-4 pt-4 border-t">
-          <span class="text-sm text-[#52677D]">共 {{ total }} 条</span>
-          <a-pagination
+      <div class="flex items-center justify-between mt-4 pt-4">
+        <span class="text-sm text-[#52677D]">共 {{ total }} 条</span>
+        <a-pagination
             :current="queryForm.page"
             :page-size="queryForm.pageSize"
             :total="total"
@@ -495,223 +259,15 @@ const toggleRole = (roleId: string) => {
             size="small"
             @change="handlePageChange"
             @show-size-change="handleSizeChange"
-          />
-        </div>
+        />
       </div>
     </a-card>
 
-    <a-modal v-model:open="dialogVisible" :title="dialogTitle" :width="720" :footer="null">
-      <div>
-        <a-form :model="userForm" :rules="userFormRules" layout="vertical" class="py-4" @finish="handleSubmit">
-          <div class="grid grid-cols-1 gap-x-6 md:grid-cols-2">
-            <a-form-item label="用户名" name="username">
-              <a-input v-model:value="userForm.username" placeholder="请输入用户名" :disabled="!!currentUser.id" />
-            </a-form-item>
-            <a-form-item label="邮箱" name="email">
-              <a-input v-model:value="userForm.email" placeholder="请输入邮箱" />
-            </a-form-item>
-            <a-form-item v-if="!currentUser.id" label="密码" name="password" :rules="[{ required: true, message: '请输入密码' }]">
-              <a-input v-model:value="userForm.password" type="password" placeholder="请输入密码" />
-            </a-form-item>
-            <a-form-item label="姓名" name="name">
-              <a-input v-model:value="userForm.name" placeholder="请输入姓名" />
-            </a-form-item>
-            <a-form-item label="手机号" name="phone">
-              <a-input v-model:value="userForm.phone" placeholder="请输入手机号" />
-            </a-form-item>
-            <a-form-item label="部门" name="department">
-              <a-input v-model:value="userForm.department" placeholder="请输入部门" />
-            </a-form-item>
-            <a-form-item label="岗位" name="position">
-              <a-input v-model:value="userForm.position" placeholder="请输入岗位" />
-            </a-form-item>
-            <a-form-item label="头像" name="avatar">
-              <div class="flex items-start gap-3">
-                <a-upload
-                  accept="image/jpeg,image/png,image/webp"
-                  list-type="picture-card"
-                  :file-list="[]"
-                  :show-upload-list="false"
-                  :multiple="false"
-                  :disabled="avatarLoading"
-                  :before-upload="beforeAvatarUpload"
-                >
-                  <button
-                    type="button"
-                    class="flex h-full w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-lg border-0 bg-transparent p-0"
-                    :disabled="avatarLoading"
-                    :aria-label="userForm.avatar ? '更换头像' : '上传头像'"
-                  >
-                    <a-spin v-if="avatarLoading" size="small" />
-                    <img v-else-if="userForm.avatar" :src="userForm.avatar" alt="用户头像预览" class="h-full w-full object-cover" />
-                    <template v-else>
-                      <Plus :size="20" />
-                      <span class="text-sm">上传头像</span>
-                    </template>
-                  </button>
-                </a-upload>
-                <div class="pt-1">
-                  <p class="text-xs text-[#52677D]">支持 JPG、PNG、WebP，最大 2 MB</p>
-                  <a-button v-if="userForm.avatar" type="link" size="small" :disabled="avatarLoading" @click="userForm.avatar = ''">移除头像</a-button>
-                </div>
-              </div>
-            </a-form-item>
-          </div>
-          <div class="flex justify-end gap-2">
-            <a-button @click="dialogVisible = false">取消</a-button>
-            <a-button type="primary" html-type="submit" :disabled="avatarLoading">确定</a-button>
-          </div>
-        </a-form>
-      </div>
-    </a-modal>
+    <UserEditDialog ref="userEditDialogRef" @success="loadUsers" />
+    <ResetPasswordDialog ref="resetPasswordDialogRef" />
+    <AssignRoleDialog ref="assignRoleDialogRef" @success="loadUsers" />
+    <ImportDialog ref="importDialogRef" @success="loadUsers" />
 
-    <a-modal v-model:open="resetPasswordDialogVisible" :footer="null">
-      <div class="max-w-md">
-        <div>
-          <h3>重置密码</h3>
-        </div>
-        <a-form :model="resetPasswordForm" :rules="resetPasswordFormRules" layout="vertical" class="py-4" @finish="handleResetPasswordSubmit">
-          <div class="grid gap-4">
-            <a-form-item label="新密码" name="newPassword">
-              <a-input v-model:value="resetPasswordForm.newPassword" type="password" placeholder="请输入新密码" />
-            </a-form-item>
-            <a-form-item label="确认密码" name="confirmPassword">
-              <a-input v-model:value="resetPasswordForm.confirmPassword" type="password" placeholder="请确认新密码" />
-            </a-form-item>
-          </div>
-          <div class="flex justify-end gap-2">
-            <a-button @click="resetPasswordDialogVisible = false">取消</a-button>
-            <a-button type="primary" html-type="submit">确定</a-button>
-          </div>
-        </a-form>
-      </div>
-    </a-modal>
-
-    <a-modal v-model:open="assignRoleDialogVisible" :footer="null">
-      <div class="max-w-lg">
-        <div>
-          <h3>分配角色</h3>
-        </div>
-        <form>
-          <div class="grid gap-4 py-4">
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">当前角色</label>
-              <div v-if="userRoles.length > 0" class="flex flex-wrap gap-2">
-                <a-tag
-                  v-for="role in userRoles"
-                  :key="role.id"
-                  :color="role.type === 'system' ? 'purple' : 'blue'"
-                >
-                  {{ role.name }}
-                </a-tag>
-              </div>
-              <div v-else class="text-[#52677D] text-sm">暂未分配角色</div>
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">选择角色</label>
-              <div class="flex flex-col gap-3">
-                <div
-                  v-for="role in allRoles"
-                  :key="role.id"
-                  class="flex items-center gap-2"
-                >
-                  <a-checkbox
-                    :checked="selectedRoleIds.includes(role.id)"
-                    @update:checked="toggleRole(role.id)"
-                  />
-                  <a-tag
-                    :color="role.type === 'system' ? 'purple' : 'blue'"
-                    class="text-xs"
-                  >
-                    {{ role.type === 'system' ? '系统' : '自定义' }}
-                  </a-tag>
-                  <span class="font-medium">{{ role.name }}</span>
-                  <span class="text-xs text-[#52677D]">({{ role.code }})</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </form>
-        <div>
-          <a-button  @click="assignRoleDialogVisible = false">取消</a-button>
-          <a-button @click="handleAssignRoleSubmit" :disabled="assignRoleLoading">确定</a-button>
-        </div>
-      </div>
-    </a-modal>
-
-    <a-modal v-model:open="importDialogVisible" :footer="null">
-      <div class="max-w-2xl">
-        <div>
-          <h3>导入用户</h3>
-        </div>
-        <div class="py-4">
-          <a-alert class="mb-6!" type="info" show-icon title="导入说明">
-            <template #description>
-              <div class="space-y-1">
-                <div>1. 请先下载导入模板，按照模板格式填写用户信息</div>
-                <div>2. 必填字段：用户名、邮箱、姓名</div>
-                <div>3. 如果不填写密码，系统将使用默认密码：Password123</div>
-                <div>4. 文件格式：.xlsx 或 .xls</div>
-              </div>
-            </template>
-          </a-alert>
-
-          <div class="text-center mb-6">
-            <a-button @click="handleDownloadTemplate">
-              <Download class="size-4 mr-2" />
-              下载导入模板
-            </a-button>
-          </div>
-
-          <a-divider class="my-4" />
-
-          <a-upload
-            drag
-            accept=".xlsx,.xls"
-            :auto-upload="false"
-            :show-file-list="false"
-            @change="handleFileChange"
-          >
-            <template #default>
-              <p class="text-sm font-medium">将文件拖到此处，或<em class="text-[#0369A1] not-italic">点击上传</em></p>
-              <p class="text-xs text-[#52677D] mt-1">仅支持 xlsx/xls 文件</p>
-            </template>
-          </a-upload>
-
-          <div v-if="importResult" class="mt-6">
-            <a-divider class="my-4" />
-            <h4 class="font-semibold mb-4">导入结果</h4>
-            <div class="grid grid-cols-3 gap-4 mb-4">
-              <div class="border rounded-lg p-3">
-                <div class="text-sm text-[#52677D]">总数</div>
-                <div class="text-xl font-bold">{{ importResult.total }}</div>
-              </div>
-              <div class="border rounded-lg p-3">
-                <div class="text-sm text-[#52677D]">成功</div>
-                <div class="text-xl font-bold text-emerald-600">{{ importResult.success }}</div>
-              </div>
-              <div class="border rounded-lg p-3">
-                <div class="text-sm text-[#52677D]">失败</div>
-                <div class="text-xl font-bold text-[#B91C1C]">{{ importResult.failed }}</div>
-              </div>
-            </div>
-
-            <div v-if="importResult.errors && importResult.errors.length > 0" class="mt-4">
-              <h4 class="font-semibold mb-2">错误详情</h4>
-              <a-table :columns="[{ title: '行号', dataIndex: 'row', width: 80 }, { title: '用户名', dataIndex: 'username', width: 144 }, { title: '错误信息', dataIndex: 'error' }]" :data-source="importResult.errors" :pagination="false" row-key="row" size="small" />
-            </div>
-
-            <div v-if="importResult.importedUsers && importResult.importedUsers.length > 0" class="mt-4">
-              <h4 class="font-semibold mb-2">成功导入的用户</h4>
-              <a-table :columns="[{ title: '用户名', dataIndex: 'username', width: 144 }, { title: '邮箱', dataIndex: 'email', width: 192 }, { title: '姓名', dataIndex: 'name' }]" :data-source="importResult.importedUsers" :pagination="false" row-key="username" size="small" />
-            </div>
-          </div>
-        </div>
-        <div>
-          <a-button  @click="importDialogVisible = false">关闭</a-button>
-        </div>
-      </div>
-    </a-modal>
     <contextHolder />
   </div>
 </template>

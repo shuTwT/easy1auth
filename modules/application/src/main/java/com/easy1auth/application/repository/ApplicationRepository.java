@@ -104,7 +104,7 @@ public interface ApplicationRepository extends JRepository<OAuthApplicationEntit
             boolean consent,
             int access,
             int refresh,
-            String secretHash) {
+            String secret) {
         var u =
                 sql()
                         .createUpdate(APP)
@@ -122,8 +122,8 @@ public interface ApplicationRepository extends JRepository<OAuthApplicationEntit
                         .set(APP.refreshTokenLifetime(), refresh)
                         .set(APP.updatedAt(), Instant.now())
                         .where(APP.id().eq(id), APP.userPoolId().eq(tenant));
-        if (secretHash != null) {
-            u.set(APP.clientSecretHash(), secretHash);
+        if (secret != null) {
+            u.set(APP.clientSecret(), secret);
         }
         return u.execute();
     }
@@ -143,7 +143,7 @@ public interface ApplicationRepository extends JRepository<OAuthApplicationEntit
             boolean consent,
             int access,
             int refresh,
-            String secretHash,
+            String secret,
             boolean updateSecret) {
         var u =
                 sql()
@@ -163,7 +163,7 @@ public interface ApplicationRepository extends JRepository<OAuthApplicationEntit
                         .set(APP.updatedAt(), Instant.now())
                         .where(APP.id().eq(id), APP.userPoolId().eq(tenant));
         if (updateSecret) {
-            u.set(APP.clientSecretHash(), secretHash);
+            u.set(APP.clientSecret(), secret);
         }
         return u.execute();
     }
@@ -177,10 +177,10 @@ public interface ApplicationRepository extends JRepository<OAuthApplicationEntit
                 .execute();
     }
 
-    default int updateSecret(UUID tenant, UUID id, String hash) {
+    default int updateSecret(UUID tenant, UUID id, String secret) {
         return sql()
                 .createUpdate(APP)
-                .set(APP.clientSecretHash(), hash)
+                .set(APP.clientSecret(), secret)
                 .set(APP.updatedAt(), Instant.now())
                 .where(APP.id().eq(id), APP.userPoolId().eq(tenant))
                 .execute();

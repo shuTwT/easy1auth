@@ -36,9 +36,9 @@ public interface OAuthApplicationEntity extends BaseEntity, BaseUserPoolEntity {
     @Column(name = "client_id")
     String clientId();
 
-    /** 客户端密钥的哈希（公共客户端不保存密钥，可为空） */
-    @Column(name = "client_secret_hash")
-    @Nullable String clientSecretHash();
+    /** 客户端明文密钥（公共客户端不保存密钥，可为空） */
+    @Column(name = "client_secret")
+    @Nullable String clientSecret();
 
     /** 授权码回调地址列表（序列化存储） */
     @Serialized

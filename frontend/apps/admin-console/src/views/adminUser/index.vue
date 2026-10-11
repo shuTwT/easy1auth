@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import axios from 'axios'
-import { message, type TabsProps } from 'antdv-next'
+import { message } from 'antdv-next'
+import type { TableProps, TabsProps } from 'antdv-next'
 import {
   Search,
   RefreshCw,
@@ -15,41 +15,66 @@ import {
   Settings2,
   Shield,
 } from '@lucide/vue'
-import { useUserStore } from '@/stores/user'
 import { adminUserApi } from '@/api/adminUser'
 import { adminRoleApi } from '@/api/adminRole'
+import type { AdminUser, AdminUserStats, AdminStatus } from '@/types/adminUser'
+import type { AdminRole, AdminRoleStats, PermissionCatalogItem } from '@/types/adminRole'
+import AdminEditDialog from './components/AdminEditDialog.vue'
+import ResetPasswordDialog from './components/ResetPasswordDialog.vue'
+import ResetMfaDialog from './components/ResetMfaDialog.vue'
+import AssignRolesDialog from './components/AssignRolesDialog.vue'
+import RemoveFromPoolDialog from './components/RemoveFromPoolDialog.vue'
+import RoleEditDialog from './components/RoleEditDialog.vue'
+import RolePermissionDialog from './components/RolePermissionDialog.vue'
+import DeleteRoleDialog from './components/DeleteRoleDialog.vue'
+import { getApiErrorMessage, useAdminDict, useAdminMembership } from './utils/hooks'
 import type {
-  AdminUser,
-  AdminMembership,
-  AdminUserQueryDto,
-  AdminUserStats,
-  AdminStatus,
-  UpdateAdminDto,
-} from '@/types/adminUser'
-import type {
-  AdminRole,
-  AdminRoleStats,
-  CreateAdminRoleDto,
-  UpdateAdminRoleDto,
-  PermissionCatalogItem,
-} from '@/types/adminRole'
-type ApiErrorResponse = {
-  readonly msg?: string
-}
+  AdminEditDialogExpose,
+  AdminQueryForm,
+  AdminTabKey,
+  AssignRolesDialogExpose,
+  DeleteRoleDialogExpose,
+  RemoveFromPoolDialogExpose,
+  ResetMfaDialogExpose,
+  ResetPasswordDialogExpose,
+  RoleEditDialogExpose,
+  RolePermissionDialogExpose,
+} from './utils/types'
 
-const getApiErrorMessage = (error: unknown, fallback: string): string => {
-  if (!axios.isAxiosError<ApiErrorResponse>(error)) return fallback
-  return error.response?.data?.msg ?? fallback
-}
+const {
+  adminStatusOptions,
+  adminStatusVariant,
+  adminStatusText,
+  tenantRoleText,
+  tenantRoleVariant,
+  roleTypeVariant,
+  permissionsSummary,
+  formatDate,
+} = useAdminDict()
 
-const userStore = useUserStore()
-const currentAdminId = computed<string>(() => userStore.userInfo?.id || '')
+const {
+  isSelf,
+  isAccountOwner,
+  currentMembership,
+  currentUserPoolRole,
+  isCurrentMembershipOwner,
+} = useAdminMembership()
 
-const activeTab = ref<'admins' | 'roles'>('admins')
+const activeTab = ref<AdminTabKey>('admins')
 const adminTabs: TabsProps['items'] = [
   { key: 'admins', label: '管理员', forceRender: true },
   { key: 'roles', label: '管理员角色', forceRender: true },
 ]
+
+// dialog refs
+const adminEditDialogRef = ref<AdminEditDialogExpose>()
+const resetPasswordDialogRef = ref<ResetPasswordDialogExpose>()
+const resetMfaDialogRef = ref<ResetMfaDialogExpose>()
+const assignRolesDialogRef = ref<AssignRolesDialogExpose>()
+const removeFromPoolDialogRef = ref<RemoveFromPoolDialogExpose>()
+const roleEditDialogRef = ref<RoleEditDialogExpose>()
+const rolePermissionDialogRef = ref<RolePermissionDialogExpose>()
+const deleteRoleDialogRef = ref<DeleteRoleDialogExpose>()
 
 // ---------------------------------------------------------------------------
 // Admin tab state
@@ -65,7 +90,7 @@ const adminStats = ref<AdminUserStats>({
   ownerCount: 0,
 })
 
-const adminQuery = reactive<Required<Pick<AdminUserQueryDto, 'page' | 'pageSize'>> & AdminUserQueryDto>({
+const adminQuery = reactive<AdminQueryForm>({
   page: 1,
   pageSize: 10,
   username: '',
@@ -77,47 +102,11 @@ const adminQuery = reactive<Required<Pick<AdminUserQueryDto, 'page' | 'pageSize'
 
 // roles available for the search filter + assignment dialog
 const adminRolesForFilter = ref<AdminRole[]>([])
-const adminStatusOptions = [
-  { value: 'active', label: '正常' },
-  { value: 'disabled', label: '禁用' },
-]
-const adminRoleOptions = computed(() => adminRolesForFilter.value.map((role) => ({ value: role.id, label: role.name })))
-
-// edit admin dialog
-const editDialogVisible = ref(false)
-const editTarget = ref<AdminUser | null>(null)
-const editForm = reactive<UpdateAdminDto>({ username: '', email: '', phone: '' })
-const editSubmitting = ref(false)
-
-// reset password dialog
-const resetPwdDialogVisible = ref(false)
-const resetPwdTarget = ref<AdminUser | null>(null)
-const resetPwdForm = reactive({ newPassword: '', confirmPassword: '' })
-const resetPwdFormRules = {
-  newPassword: [{ required: true, message: '请输入新密码' }],
-  confirmPassword: [{ required: true, message: '请确认密码' }, { validator: (_rule: any, value: string) => value === resetPwdForm.newPassword ? Promise.resolve() : Promise.reject('两次输入的密码不一致') }],
-}
-const resetPwdSubmitting = ref(false)
-
-// reset MFA confirmation
-const resetMfaDialogVisible = ref(false)
-const resetMfaTarget = ref<AdminUser | null>(null)
-const resetMfaSubmitting = ref(false)
-
-// assign roles dialog
-const assignRolesDialogVisible = ref(false)
-const assignRolesTarget = ref<AdminUser | null>(null)
-const assignRolesSelected = ref<string[]>([])
-const assignRolesSubmitting = ref(false)
-const assignRolesMembership = computed<AdminMembership | undefined>(() => {
-  const target = assignRolesTarget.value
-  return target ? currentMembership(target) : undefined
+const adminRoleOptions = computed(() => {
+  return adminRolesForFilter.value.map((role) => {
+    return { value: role.id, label: role.name }
+  })
 })
-
-// remove from tenant confirmation
-const removeDialogVisible = ref(false)
-const removeTarget = ref<AdminUser | null>(null)
-const removeSubmitting = ref(false)
 
 // ---------------------------------------------------------------------------
 // Admin role tab state
@@ -137,78 +126,20 @@ const roleSearch = ref('')
 
 const permissionCatalog = ref<PermissionCatalogItem[]>([])
 
-// create/edit role dialog
-const roleDialogVisible = ref(false)
-const roleDialogIsEdit = ref(false)
-const roleDialogSubmitting = ref(false)
-const roleForm = reactive<Omit<CreateAdminRoleDto, 'permissions'> & { id?: string }>({
-  name: '',
-  code: '',
-  description: '',
-})
-const roleFormRules = {
-  name: [{ required: true, message: '请输入角色名称' }],
-  code: [
-    { required: true, message: '请输入角色编码' },
-    { pattern: /^[a-z][a-z0-9_]{1,99}$/, message: '请输入2至100位小写字母、数字或下划线，且以字母开头' },
-  ],
-}
-const roleDialogTitle = computed(() => (roleDialogIsEdit.value ? '编辑管理员角色' : '创建管理员角色'))
-
-// configure role permissions dialog
-const rolePermissionDialogVisible = ref(false)
-const rolePermissionTarget = ref<AdminRole | null>(null)
-const rolePermissionCodes = ref<string[]>([])
-const rolePermissionSubmitting = ref(false)
-
-// delete role confirmation
-const deleteRoleDialogVisible = ref(false)
-const deleteRoleTarget = ref<AdminRole | null>(null)
-const deleteRoleSubmitting = ref(false)
-
-// ---------------------------------------------------------------------------
-// Permission catalog grouping
-// ---------------------------------------------------------------------------
-const CATEGORY_LABELS: Record<string, string> = {
-  'admin-user': '管理员用户管理',
-  'admin-role': '管理员角色管理',
-}
-
-interface PermissionCategory {
-  code: string
-  name: string
-  items: { code: string; name: string }[]
-}
-
-const permissionCategories = computed<PermissionCategory[]>(() => {
-  const groups: Record<string, { code: string; name: string }[]> = {}
-  const menuNames = new Map(permissionCatalog.value
-    .filter(permission => permission.type.toLowerCase() === 'menu')
-    .map(permission => [permission.resource, permission.name]))
-  for (const permission of permissionCatalog.value) {
-    const prefix = permission.resource || permission.code.split(':')[0] || permission.code
-    if (!groups[prefix]) groups[prefix] = []
-    groups[prefix].push({ code: permission.code, name: permission.name || permission.code })
-  }
-  return Object.entries(groups).map(([prefix, items]) => ({
-    code: prefix,
-    name: CATEGORY_LABELS[prefix] || menuNames.get(prefix) || prefix,
-    items,
-  }))
-})
-
 // ---------------------------------------------------------------------------
 // Admin tab helpers
 // ---------------------------------------------------------------------------
-const adminStatsCards = computed(() => [
-  { label: '管理员总数', value: adminStats.value.totalAdmins, icon: Users, tone: 'primary' },
-  { label: '活跃管理员', value: adminStats.value.activeAdmins, icon: ShieldCheck, tone: 'success' },
-  { label: '已禁用', value: adminStats.value.disabledAdmins, icon: ShieldAlert, tone: 'danger' },
-  { label: 'MFA 已启用', value: adminStats.value.mfaEnabledAdmins, icon: KeyRound, tone: 'info' },
-  { label: '用户池所有者', value: adminStats.value.ownerCount || 0, icon: Shield, tone: 'warning' },
-])
+const adminStatsCards = computed(() => {
+  return [
+    { label: '管理员总数', value: adminStats.value.totalAdmins, icon: Users, tone: 'primary' },
+    { label: '活跃管理员', value: adminStats.value.activeAdmins, icon: ShieldCheck, tone: 'success' },
+    { label: '已禁用', value: adminStats.value.disabledAdmins, icon: ShieldAlert, tone: 'danger' },
+    { label: 'MFA 已启用', value: adminStats.value.mfaEnabledAdmins, icon: KeyRound, tone: 'info' },
+    { label: '用户池所有者', value: adminStats.value.ownerCount || 0, icon: Shield, tone: 'warning' },
+  ]
+})
 
-const adminColumns = [
+const adminColumns: TableProps<AdminUser>['columns'] = [
   { title: '用户名', key: 'username', width: 190 },
   { title: '邮箱', key: 'email', width: 210 },
   { title: '手机号', key: 'phone', width: 140 },
@@ -217,61 +148,8 @@ const adminColumns = [
   { title: 'MFA', key: 'mfa', width: 100 },
   { title: '最后登录', key: 'lastLoginAt', width: 180 },
   { title: '创建时间', key: 'createdAt', width: 180 },
-  { title: '操作', key: 'actions', width: 310, fixed: 'end' as const },
+  { title: '操作', key: 'actions', width: 310, fixed: 'end' },
 ]
-
-function isSelf(row: AdminUser): boolean {
-  return !!currentAdminId.value && row.id === currentAdminId.value
-}
-
-/** The account owns at least one tenant (anywhere). Guards account-level actions. */
-function isAccountOwner(row: AdminUser): boolean {
-  return row.userPools.some((m) => m.tenantRole === 'owner')
-}
-
-/** Membership of this account within the currently selected tenant, if any. */
-function currentMembership(row: AdminUser): AdminMembership | undefined {
-  const tid = userStore.currentUserPool?.id
-  if (!tid) return undefined
-  return row.userPools.find((m) => m.userPoolId === tid)
-}
-
-/** Role of the current-tenant membership, or null when the account is not a member. */
-function currentUserPoolRole(row: AdminUser): string | null {
-  return currentMembership(row)?.tenantRole ?? null
-}
-
-/** The current membership's role is the immutable 'owner' role. */
-function isCurrentMembershipOwner(row: AdminUser): boolean {
-  return currentMembership(row)?.tenantRole === 'owner'
-}
-
-function adminStatusVariant(status: AdminStatus): string {
-  return status === 'active' ? 'green' : 'red'
-}
-
-function adminStatusText(status: AdminStatus): string {
-  return status === 'active' ? '正常' : '禁用'
-}
-
-function tenantRoleText(role: string | null): string {
-  if (!role) return '-'
-  const map: Record<string, string> = {
-    owner: '用户池所有者',
-    admin: '管理员',
-  }
-  return map[role] || role
-}
-
-function tenantRoleVariant(role: string | null): string {
-  if (role === 'owner') return 'purple'
-  return 'blue'
-}
-
-function formatDate(date: string | null): string {
-  if (!date) return '-'
-  return new Date(date).toLocaleString('zh-CN')
-}
 
 const loadAdminStats = async () => {
   try {
@@ -315,6 +193,11 @@ const loadAdminRolesForFilter = async () => {
   }
 }
 
+const reloadAdminsAndStats = () => {
+  loadAdmins()
+  loadAdminStats()
+}
+
 const handleAdminSearch = () => {
   adminQuery.page = 1
   loadAdmins()
@@ -341,35 +224,6 @@ const handleAdminPageSizeChange = (_current: number, size: number) => {
   loadAdmins()
 }
 
-// edit admin
-const openEditDialog = (row: AdminUser) => {
-  editTarget.value = row
-  editForm.username = row.username
-  editForm.email = row.email
-  editForm.phone = row.phone || ''
-  editDialogVisible.value = true
-}
-
-const handleEditSubmit = async () => {
-  if (!editTarget.value) return
-  editSubmitting.value = true
-  try {
-    await adminUserApi.update(editTarget.value.id, {
-      username: editForm.username,
-      email: editForm.email,
-      phone: editForm.phone || undefined,
-    })
-    message.success('管理员信息更新成功')
-    editDialogVisible.value = false
-    loadAdmins()
-  } catch (error: unknown) {
-    message.error(getApiErrorMessage(error, '更新管理员失败'))
-  } finally {
-    editSubmitting.value = false
-  }
-}
-
-// status change
 const handleStatusToggle = async (row: AdminUser) => {
   const next: AdminStatus = row.status === 'active' ? 'disabled' : 'active'
   try {
@@ -382,138 +236,46 @@ const handleStatusToggle = async (row: AdminUser) => {
   }
 }
 
-// reset password
+const openEditDialog = (row: AdminUser) => {
+  adminEditDialogRef.value?.open(row)
+}
+
 const openResetPwdDialog = (row: AdminUser) => {
-  resetPwdTarget.value = row
-  resetPwdForm.newPassword = ''
-  resetPwdForm.confirmPassword = ''
-  resetPwdDialogVisible.value = true
+  resetPasswordDialogRef.value?.open(row)
 }
 
-const handleResetPwdSubmit = async () => {
-  if (!resetPwdTarget.value) return
-  if (!resetPwdForm.newPassword) {
-    message.warning('请输入新密码')
-    return
-  }
-  if (resetPwdForm.newPassword !== resetPwdForm.confirmPassword) {
-    message.error('两次输入的密码不一致')
-    return
-  }
-  resetPwdSubmitting.value = true
-  try {
-    await adminUserApi.resetPassword(resetPwdTarget.value.id, { newPassword: resetPwdForm.newPassword })
-    message.success('密码重置成功')
-    resetPwdDialogVisible.value = false
-  } catch (error: unknown) {
-    message.error(getApiErrorMessage(error, '重置密码失败'))
-  } finally {
-    resetPwdSubmitting.value = false
-  }
-}
-
-// reset MFA
 const openResetMfaDialog = (row: AdminUser) => {
-  resetMfaTarget.value = row
-  resetMfaDialogVisible.value = true
+  resetMfaDialogRef.value?.open(row)
 }
 
-const handleResetMfaConfirm = async () => {
-  if (!resetMfaTarget.value) return
-  resetMfaSubmitting.value = true
-  try {
-    await adminUserApi.resetMfa(resetMfaTarget.value.id)
-    message.success('MFA 已重置')
-    resetMfaDialogVisible.value = false
-    loadAdmins()
-    loadAdminStats()
-  } catch (error: unknown) {
-    message.error(getApiErrorMessage(error, '重置 MFA 失败'))
-  } finally {
-    resetMfaSubmitting.value = false
-  }
-}
-
-// assign roles
 const openAssignRolesDialog = (row: AdminUser) => {
-  const membership = currentMembership(row)
-  if (!membership) return
-  assignRolesTarget.value = row
-  assignRolesSelected.value = membership.roles.map((r) => r.id)
-  assignRolesDialogVisible.value = true
+  assignRolesDialogRef.value?.open(row)
 }
 
-const toggleRoleSelection = (roleId: string) => {
-  const idx = assignRolesSelected.value.indexOf(roleId)
-  if (idx > -1) {
-    assignRolesSelected.value.splice(idx, 1)
-  } else {
-    assignRolesSelected.value.push(roleId)
-  }
-}
-
-const handleAssignRolesSubmit = async () => {
-  const target = assignRolesTarget.value
-  const membership = target ? currentMembership(target) : undefined
-  if (!target || !membership) return
-  assignRolesSubmitting.value = true
-  try {
-    await adminUserApi.assignRoles(target.id, {
-      userPoolId: membership.userPoolId,
-      roleIds: assignRolesSelected.value,
-    })
-    message.success('角色分配成功')
-    assignRolesDialogVisible.value = false
-    loadAdmins()
-  } catch (error: unknown) {
-    message.error(getApiErrorMessage(error, '分配角色失败'))
-  } finally {
-    assignRolesSubmitting.value = false
-  }
-}
-
-// remove from tenant
 const openRemoveDialog = (row: AdminUser) => {
-  removeTarget.value = row
-  removeDialogVisible.value = true
-}
-
-const handleRemoveConfirm = async () => {
-  const target = removeTarget.value
-  const membership = target ? currentMembership(target) : undefined
-  if (!target || !membership) return
-  removeSubmitting.value = true
-  try {
-    await adminUserApi.removeFromUserPool(target.id, membership.userPoolId)
-    message.success('已将管理员移出用户池')
-    removeDialogVisible.value = false
-    loadAdmins()
-    loadAdminStats()
-  } catch (error: unknown) {
-    message.error(getApiErrorMessage(error, '移出用户池失败'))
-  } finally {
-    removeSubmitting.value = false
-  }
+  removeFromPoolDialogRef.value?.open(row)
 }
 
 // ---------------------------------------------------------------------------
 // Admin role tab helpers
 // ---------------------------------------------------------------------------
-const roleStatsCards = computed(() => [
-  { label: '角色总数', value: roleStats.value.totalRoles, icon: Settings2, tone: 'primary' },
-  { label: '系统角色', value: roleStats.value.systemRoles, icon: Lock, tone: 'danger' },
-  { label: '自定义角色', value: roleStats.value.customRoles, icon: UserCog, tone: 'success' },
-])
+const roleStatsCards = computed(() => {
+  return [
+    { label: '角色总数', value: roleStats.value.totalRoles, icon: Settings2, tone: 'primary' },
+    { label: '系统角色', value: roleStats.value.systemRoles, icon: Lock, tone: 'danger' },
+    { label: '自定义角色', value: roleStats.value.customRoles, icon: UserCog, tone: 'success' },
+  ]
+})
 
-const roleColumns = [
+const roleColumns: TableProps<AdminRole>['columns'] = [
   { title: '角色名称', key: 'name', width: 220 },
   { title: '角色编码', dataIndex: 'code', key: 'code', width: 200 },
   { title: '描述', key: 'description', minWidth: 220 },
   { title: '权限', key: 'permissions', width: 140 },
-  { title: '管理员数', key: 'adminCount', width: 110, align: 'center' as const },
+  { title: '管理员数', key: 'adminCount', width: 110, align: 'center' },
   { title: '类型', key: 'type', width: 110 },
   { title: '创建时间', key: 'createdAt', width: 180 },
-  { title: '操作', key: 'actions', width: 230, fixed: 'end' as const },
+  { title: '操作', key: 'actions', width: 230, fixed: 'end' },
 ]
 
 const loadRoleStats = async () => {
@@ -554,6 +316,11 @@ const loadPermissionCatalog = async () => {
   }
 }
 
+const reloadRolesAndStats = () => {
+  loadRoles()
+  loadRoleStats()
+}
+
 const handleRoleSearch = () => {
   rolePage.value = 1
   loadRoles()
@@ -571,120 +338,19 @@ const handleRolePageChange = (page: number, _pageSize?: number) => {
 }
 
 const openCreateRoleDialog = () => {
-  roleDialogIsEdit.value = false
-  roleForm.id = undefined
-  roleForm.name = ''
-  roleForm.code = ''
-  roleForm.description = ''
-  roleDialogVisible.value = true
+  roleEditDialogRef.value?.open('create')
 }
 
 const openEditRoleDialog = (row: AdminRole) => {
-  roleDialogIsEdit.value = true
-  roleForm.id = row.id
-  roleForm.name = row.name
-  roleForm.code = row.code
-  roleForm.description = row.description || ''
-  roleDialogVisible.value = true
-}
-
-const toggleRolePermission = (code: string) => {
-  const idx = rolePermissionCodes.value.indexOf(code)
-  if (idx > -1) {
-    rolePermissionCodes.value.splice(idx, 1)
-  } else {
-    rolePermissionCodes.value.push(code)
-  }
+  roleEditDialogRef.value?.open('edit', row)
 }
 
 const openRolePermissionDialog = (row: AdminRole) => {
-  rolePermissionTarget.value = row
-  rolePermissionCodes.value = [...row.permissions]
-  rolePermissionDialogVisible.value = true
-}
-
-const handleRolePermissionSubmit = async () => {
-  if (!rolePermissionTarget.value) return
-  rolePermissionSubmitting.value = true
-  try {
-    await adminRoleApi.update(rolePermissionTarget.value.id, {
-      permissions: rolePermissionCodes.value,
-    })
-    message.success('角色权限配置成功')
-    rolePermissionDialogVisible.value = false
-    await loadRoles()
-  } catch (error: unknown) {
-    message.error(getApiErrorMessage(error, '角色权限配置失败'))
-  } finally {
-    rolePermissionSubmitting.value = false
-  }
-}
-
-const handleRoleSubmit = async () => {
-  if (!roleForm.name.trim()) {
-    message.warning('请填写角色名称')
-    return
-  }
-  if (!/^[a-z][a-z0-9_]{1,99}$/.test(roleForm.code.trim())) {
-    message.warning('请填写有效的角色编码')
-    return
-  }
-  roleDialogSubmitting.value = true
-  try {
-    if (roleDialogIsEdit.value && roleForm.id) {
-      const payload: UpdateAdminRoleDto = {
-        name: roleForm.name,
-        description: roleForm.description || undefined,
-      }
-      await adminRoleApi.update(roleForm.id, payload)
-      message.success('角色更新成功')
-    } else {
-      const payload: CreateAdminRoleDto = {
-        name: roleForm.name,
-        code: roleForm.code.trim(),
-        description: roleForm.description || undefined,
-        permissions: [],
-      }
-      await adminRoleApi.create(payload)
-      message.success('角色创建成功，请在角色列表中配置权限')
-    }
-    roleDialogVisible.value = false
-    loadRoles()
-    loadRoleStats()
-  } catch (error: unknown) {
-    message.error(getApiErrorMessage(error, '操作失败'))
-  } finally {
-    roleDialogSubmitting.value = false
-  }
+  rolePermissionDialogRef.value?.open(row)
 }
 
 const openDeleteRoleDialog = (row: AdminRole) => {
-  deleteRoleTarget.value = row
-  deleteRoleDialogVisible.value = true
-}
-
-const handleDeleteRoleConfirm = async () => {
-  if (!deleteRoleTarget.value) return
-  deleteRoleSubmitting.value = true
-  try {
-    await adminRoleApi.delete(deleteRoleTarget.value.id)
-    message.success('角色删除成功')
-    deleteRoleDialogVisible.value = false
-    loadRoles()
-    loadRoleStats()
-  } catch (error: unknown) {
-    message.error(getApiErrorMessage(error, '删除角色失败'))
-  } finally {
-    deleteRoleSubmitting.value = false
-  }
-}
-
-const roleTypeVariant = (isSystem: boolean): string => (isSystem ? 'purple' : 'blue')
-
-const permissionsSummary = (permissions: string[]): string => {
-  if (permissions.includes('*')) return '全部权限'
-  if (permissions.length === 0) return '无权限'
-  return `${permissions.length} 项权限`
+  deleteRoleDialogRef.value?.open(row)
 }
 
 // ---------------------------------------------------------------------------
@@ -1029,259 +695,13 @@ onMounted(() => {
       </template>
     </a-tabs>
 
-    <!-- ===================== Edit admin dialog ===================== -->
-    <a-modal v-model:open="editDialogVisible" :footer="null">
-      <div class="max-w-lg">
-        <div>
-          <h3>编辑管理员</h3>
-        </div>
-        <a-form :model="editForm" layout="vertical" class="py-4" @finish="handleEditSubmit">
-          <div class="grid gap-4">
-            <a-form-item label="用户名" name="username">
-              <a-input v-model:value="editForm.username" placeholder="请输入用户名" />
-            </a-form-item>
-            <a-form-item label="邮箱" name="email">
-              <a-input v-model:value="editForm.email" placeholder="请输入邮箱" />
-            </a-form-item>
-            <a-form-item label="手机号" name="phone">
-              <a-input v-model:value="editForm.phone" placeholder="请输入手机号" />
-            </a-form-item>
-          </div>
-          <div class="flex justify-end gap-2 pt-2">
-            <a-button html-type="button" @click="editDialogVisible = false">取消</a-button>
-            <a-button type="primary" html-type="submit" :loading="editSubmitting" :disabled="editSubmitting">
-              {{ editSubmitting ? '提交中...' : '确定' }}
-            </a-button>
-          </div>
-        </a-form>
-      </div>
-    </a-modal>
-
-    <!-- ===================== Reset password dialog ===================== -->
-    <a-modal v-model:open="resetPwdDialogVisible" :footer="null">
-      <div class="max-w-md">
-        <div>
-          <h3>重置管理员密码</h3>
-        </div>
-        <a-form :model="resetPwdForm" :rules="resetPwdFormRules" layout="vertical" class="py-4" @finish="handleResetPwdSubmit">
-          <div class="grid gap-4">
-            <a-form-item label="新密码" name="newPassword">
-              <a-input v-model:value="resetPwdForm.newPassword" type="password" placeholder="请输入新密码" />
-            </a-form-item>
-            <a-form-item label="确认密码" name="confirmPassword">
-              <a-input v-model:value="resetPwdForm.confirmPassword" type="password" placeholder="请确认新密码" />
-            </a-form-item>
-          </div>
-          <div class="flex justify-end gap-2 pt-2">
-            <a-button html-type="button" @click="resetPwdDialogVisible = false">取消</a-button>
-            <a-button type="primary" html-type="submit" :loading="resetPwdSubmitting" :disabled="resetPwdSubmitting">
-              {{ resetPwdSubmitting ? '提交中...' : '确定' }}
-            </a-button>
-          </div>
-        </a-form>
-      </div>
-    </a-modal>
-
-    <!-- ===================== Reset MFA confirmation ===================== -->
-    <a-modal v-model:open="resetMfaDialogVisible" :footer="null">
-      <div>
-        <div>
-          <h3>重置管理员 MFA</h3>
-          <p>
-            确定要重置管理员 <span class="font-medium">{{ resetMfaTarget?.username }}</span> 的多因素认证配置吗？重置后该管理员需要重新配置 MFA。
-          </p>
-        </div>
-        <div>
-          <a-button :disabled="resetMfaSubmitting">取消</a-button>
-          <a-button type="primary" :loading="resetMfaSubmitting" :disabled="resetMfaSubmitting" @click="handleResetMfaConfirm">
-            {{ resetMfaSubmitting ? '处理中...' : '确认重置' }}
-          </a-button>
-        </div>
-      </div>
-    </a-modal>
-
-    <!-- ===================== Assign roles dialog ===================== -->
-    <a-modal v-model:open="assignRolesDialogVisible" :footer="null">
-      <div class="max-w-lg">
-        <div>
-          <h3>分配管理员角色</h3>
-        </div>
-        <div class="py-4">
-          <div class="grid gap-2 mb-4">
-            <label>当前角色</label>
-            <div v-if="assignRolesMembership && assignRolesMembership.roles.length > 0" class="flex flex-wrap gap-2">
-              <a-tag
-                v-for="role in assignRolesMembership.roles"
-                :key="role.id"
-                color="blue"
-                class="text-xs"
-              >
-                {{ role.name }}
-              </a-tag>
-            </div>
-            <div v-else class="text-[#52677D] text-sm">暂未分配角色</div>
-          </div>
-          <a-divider class="my-2" />
-          <div class="grid gap-2">
-            <label>选择角色</label>
-            <div class="border rounded-lg p-3 max-h-72 overflow-y-auto">
-              <div v-if="adminRolesForFilter.length === 0" class="text-[#52677D] text-sm text-center py-4">
-                暂无可分配角色
-              </div>
-              <div
-                v-for="role in adminRolesForFilter"
-                :key="role.id"
-                class="flex items-center gap-2 py-1.5"
-              >
-                <a-checkbox
-                  :checked="assignRolesSelected.includes(role.id)"
-                  @update:checked="toggleRoleSelection(role.id)"
-                />
-                <a-tag :color="roleTypeVariant(role.isSystem)" class="text-xs">
-                  {{ role.isSystem ? '系统' : '自定义' }}
-                </a-tag>
-                <span class="font-medium text-sm">{{ role.name }}</span>
-                <span class="text-xs text-[#52677D]">{{ permissionsSummary(role.permissions) }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div>
-          <a-button  @click="assignRolesDialogVisible = false">取消</a-button>
-          <a-button type="primary" :loading="assignRolesSubmitting" :disabled="assignRolesSubmitting" @click="handleAssignRolesSubmit">
-            {{ assignRolesSubmitting ? '提交中...' : '确定' }}
-          </a-button>
-        </div>
-      </div>
-    </a-modal>
-
-    <!-- ===================== Remove from tenant confirmation ===================== -->
-    <a-modal v-model:open="removeDialogVisible" :footer="null">
-      <div>
-        <div>
-          <h3>移出用户池</h3>
-          <p>
-            确定要将管理员 <span class="font-medium">{{ removeTarget?.username }}</span> 移出当前用户池吗？此操作只解除该管理员与当前用户池的关联，不会删除管理员账号。
-          </p>
-        </div>
-        <div>
-          <a-button :disabled="removeSubmitting">取消</a-button>
-          <a-button
-            type="primary"
-            danger
-            :loading="removeSubmitting"
-            :disabled="removeSubmitting"
-            @click="handleRemoveConfirm"
-          >
-            {{ removeSubmitting ? '处理中...' : '确认移除' }}
-          </a-button>
-        </div>
-      </div>
-    </a-modal>
-
-    <!-- ===================== Create / edit role dialog ===================== -->
-    <a-modal v-model:open="roleDialogVisible" :footer="null">
-      <div class="max-w-lg">
-        <div>
-          <h3>{{ roleDialogTitle }}</h3>
-        </div>
-        <a-form :model="roleForm" :rules="roleFormRules" layout="vertical" class="py-4" @finish="handleRoleSubmit">
-          <div class="grid gap-4">
-            <a-form-item label="角色名称" name="name">
-              <a-input v-model:value="roleForm.name" placeholder="请输入角色名称" />
-            </a-form-item>
-            <a-form-item label="角色编码" name="code" extra="创建后不可修改">
-              <a-input
-                v-model:value="roleForm.code"
-                placeholder="例如：operations_admin"
-                :maxlength="100"
-                :disabled="roleDialogIsEdit"
-              />
-            </a-form-item>
-            <a-form-item label="描述" name="description">
-              <a-textarea v-model:value="roleForm.description" :rows="2" placeholder="请输入角色描述" />
-            </a-form-item>
-          </div>
-          <div class="flex justify-end gap-2 pt-2">
-            <a-button html-type="button" @click="roleDialogVisible = false">取消</a-button>
-            <a-button type="primary" html-type="submit" :loading="roleDialogSubmitting" :disabled="roleDialogSubmitting">
-              {{ roleDialogSubmitting ? '提交中...' : '确定' }}
-            </a-button>
-          </div>
-        </a-form>
-      </div>
-    </a-modal>
-
-    <!-- ===================== Configure role permissions dialog ===================== -->
-    <a-modal
-      v-model:open="rolePermissionDialogVisible"
-      title="配置管理员角色权限"
-      :footer="null"
-      width="640"
-    >
-      <div class="max-w-xl">
-        <p class="mb-4 text-sm text-[#52677D]">
-          为角色“{{ rolePermissionTarget?.name }}”配置可使用的管理端权限。
-        </p>
-        <div class="border rounded-lg p-3 max-h-96 overflow-y-auto">
-          <div
-            v-for="category in permissionCategories"
-            :key="category.code"
-            class="mb-4 last:mb-0"
-          >
-            <div class="text-sm font-medium mb-2">{{ category.name }}</div>
-            <div class="flex flex-col gap-2 pl-1">
-              <label
-                v-for="item in category.items"
-                :key="item.code"
-                class="flex items-center gap-2 cursor-pointer"
-              >
-                <a-checkbox
-                  :checked="rolePermissionCodes.includes(item.code)"
-                  @update:checked="toggleRolePermission(item.code)"
-                />
-                <span class="text-sm">{{ item.name }}</span>
-                <code class="text-xs text-[#52677D] font-mono">{{ item.code }}</code>
-              </label>
-            </div>
-          </div>
-        </div>
-        <div class="flex justify-end gap-2 pt-4">
-          <a-button html-type="button" @click="rolePermissionDialogVisible = false">取消</a-button>
-          <a-button
-            type="primary"
-            :loading="rolePermissionSubmitting"
-            :disabled="rolePermissionSubmitting"
-            @click="handleRolePermissionSubmit"
-          >
-            {{ rolePermissionSubmitting ? '保存中...' : '保存权限' }}
-          </a-button>
-        </div>
-      </div>
-    </a-modal>
-
-    <!-- ===================== Delete role confirmation ===================== -->
-    <a-modal v-model:open="deleteRoleDialogVisible" :footer="null">
-      <div>
-        <div>
-          <h3>删除管理员角色</h3>
-          <p>
-            确定要删除角色 <span class="font-medium">{{ deleteRoleTarget?.name }}</span> 吗？已分配该角色的管理员将失去对应权限。此操作不可恢复。
-          </p>
-        </div>
-        <div>
-          <a-button :disabled="deleteRoleSubmitting">取消</a-button>
-          <a-button
-            type="primary"
-            danger
-            :loading="deleteRoleSubmitting"
-            :disabled="deleteRoleSubmitting"
-            @click="handleDeleteRoleConfirm"
-          >
-            {{ deleteRoleSubmitting ? '处理中...' : '确认删除' }}
-          </a-button>
-        </div>
-      </div>
-    </a-modal>
+    <AdminEditDialog ref="adminEditDialogRef" @success="loadAdmins" />
+    <ResetPasswordDialog ref="resetPasswordDialogRef" />
+    <ResetMfaDialog ref="resetMfaDialogRef" @success="reloadAdminsAndStats" />
+    <AssignRolesDialog ref="assignRolesDialogRef" :roles="adminRolesForFilter" @success="loadAdmins" />
+    <RemoveFromPoolDialog ref="removeFromPoolDialogRef" @success="reloadAdminsAndStats" />
+    <RoleEditDialog ref="roleEditDialogRef" @success="reloadRolesAndStats" />
+    <RolePermissionDialog ref="rolePermissionDialogRef" :permission-catalog="permissionCatalog" @success="loadRoles" />
+    <DeleteRoleDialog ref="deleteRoleDialogRef" @success="reloadRolesAndStats" />
   </div>
 </template>

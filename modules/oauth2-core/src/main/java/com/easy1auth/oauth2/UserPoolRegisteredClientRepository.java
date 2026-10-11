@@ -60,7 +60,8 @@ public class UserPoolRegisteredClientRepository implements RegisteredClientRepos
         if (publicClient) {
             builder.clientAuthenticationMethod(ClientAuthenticationMethod.NONE);
         } else {
-            builder.clientSecret(app.clientSecretHash()).clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC).clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_POST);
+            String clientSecret = app.clientSecret();
+            builder.clientSecret(clientSecret == null ? null : "{noop}" + clientSecret).clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC).clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_POST);
         }
         app.allowedGrantTypes().forEach(value -> builder.authorizationGrantType(new AuthorizationGrantType(value)));
         app.redirectUris().forEach(builder::redirectUri);

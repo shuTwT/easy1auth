@@ -1,38 +1,31 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, reactive, watch } from 'vue'
-import { messageTemplateApi, type MessageTemplate, type CreateTemplateDto, type MessageTemplateSearch } from '@/api/messageTemplate'
+import { messageTemplateApi, type MessageTemplate, type MessageTemplateSearch } from '@/api/messageTemplate'
 import { Modal, message, type TabsProps } from 'antdv-next'
-import EmailTemplates from './EmailTemplates.vue'
-import SmsTemplates from './SmsTemplates.vue'
+import EmailTemplates from './components/EmailTemplates.vue'
+import SmsTemplates from './components/SmsTemplates.vue'
+import TemplateEditDialog from './components/TemplateEditDialog.vue'
 import { Plus } from '@lucide/vue'
 import { useUserStore } from '@/stores/user'
+import { getApiErrorMessage } from './utils/hooks'
+import type { TemplateEditDialogExpose, TemplateType } from './utils/types'
 
 const [modal, contextHolder] = Modal.useModal()
 
-const templateType = ref('email')
+const templateType = ref<TemplateType>('email')
 const templateTabs: TabsProps['items'] = [
   { key: 'email', label: '邮件模板', forceRender: true },
   { key: 'sms', label: '短信模板', forceRender: true },
 ]
 
-type TemplateType = MessageTemplate['type']
 const userStore = useUserStore()
 const templates = reactive<Record<TemplateType, MessageTemplate[]>>({ email: [], sms: [] })
 const templatesLoading = reactive<Record<TemplateType, boolean>>({ email: false, sms: false })
 const templateQueries = reactive<Record<TemplateType, MessageTemplateSearch>>({ email: {}, sms: {} })
 const requestVersions = { email: 0, sms: 0 }
 let mounted = true
-const showTemplateDialog = ref(false)
-const savingTemplate = ref(false)
-const editingTemplate = ref<MessageTemplate | null>(null)
-const templateForm = reactive<CreateTemplateDto>({
-  type: 'email',
-  code: '',
-  name: '',
-  subject: '',
-  content: '',
-  isDefault: false,
-})
+
+const templateEditDialogRef = ref<TemplateEditDialogExpose>()
 
 const loadTemplates = async (type?: TemplateType): Promise<void> => {
   if (!type) {
@@ -45,14 +38,18 @@ const loadTemplates = async (type?: TemplateType): Promise<void> => {
   templatesLoading[type] = true
   try {
     const response = await messageTemplateApi.list(type, { ...templateQueries[type] })
-    if (isCurrent()) templates[type] = response
-  } catch (error) {
+    if (isCurrent()) {
+      templates[type] = response
+    }
+  } catch (error: unknown) {
     if (isCurrent()) {
       console.error('加载模板列表失败:', error)
       message.error('加载消息模板失败')
     }
   } finally {
-    if (isCurrent()) templatesLoading[type] = false
+    if (isCurrent()) {
+      templatesLoading[type] = false
+    }
   }
 }
 
@@ -72,63 +69,11 @@ onUnmounted(() => {
 })
 
 const handleCreateTemplate = () => {
-  editingTemplate.value = null
-  Object.assign(templateForm, {
-    type: templateType.value === 'sms' ? 'sms' : 'email',
-    code: '',
-    name: '',
-    subject: '',
-    content: '',
-    isDefault: false,
-  })
-  showTemplateDialog.value = true
+  templateEditDialogRef.value?.open(templateType.value)
 }
 
 const handleEditTemplate = (template: MessageTemplate) => {
-  editingTemplate.value = template
-  templateForm.type = template.type
-  templateForm.code = template.code
-  templateForm.name = template.name
-  templateForm.subject = template.subject || ''
-  templateForm.content = template.content
-  templateForm.isDefault = template.isDefault
-  showTemplateDialog.value = true
-}
-
-const handleSaveTemplate = async () => {
-  if (!templateForm.code || !templateForm.name || !templateForm.content) {
-    message.warning('请填写完整信息')
-    return
-  }
-
-  savingTemplate.value = true
-  try {
-    if (editingTemplate.value) {
-      await messageTemplateApi.update(editingTemplate.value.id, {
-        name: templateForm.name,
-        subject: templateForm.subject,
-        content: templateForm.content,
-        isDefault: templateForm.isDefault,
-      })
-      message.success('模板更新成功')
-    } else {
-      await messageTemplateApi.create(templateForm)
-      message.success('模板创建成功')
-    }
-    showTemplateDialog.value = false
-    editingTemplate.value = null
-    templateForm.type = 'email'
-    templateForm.code = ''
-    templateForm.name = ''
-    templateForm.subject = ''
-    templateForm.content = ''
-    templateForm.isDefault = false
-    loadTemplates()
-  } catch (error: any) {
-    message.error(error.response?.data?.msg || '保存模板失败')
-  } finally {
-    savingTemplate.value = false
-  }
+  templateEditDialogRef.value?.open(template.type, template)
 }
 
 const handleDeleteTemplate = async (template: MessageTemplate) => {
@@ -139,14 +84,17 @@ const handleDeleteTemplate = async (template: MessageTemplate) => {
     cancelText: '取消',
     okButtonProps: { danger: true },
   })
-  if (!confirmed) return
+  if (!confirmed) {
+    return
+  }
 
   try {
     await messageTemplateApi.delete(template.id)
     message.success('模板删除成功')
     loadTemplates()
-  } catch (error: any) {
-    message.error(error.response?.data?.msg || '删除模板失败')
+  } catch (error: unknown) {
+    console.error('删除模板失败:', error)
+    message.error(getApiErrorMessage(error, '删除模板失败'))
   }
 }
 
@@ -195,45 +143,7 @@ onMounted(() => loadTemplates())
       </div>
     </a-card>
 
-    <a-modal v-model:open="showTemplateDialog" :title="editingTemplate ? '编辑模板' : '新建模板'">
-        <a-form>
-            <a-form-item name="type" label="模板类型">
-              <a-radio-group
-                  v-model:value="templateForm.type"
-                  :disabled="!!editingTemplate"
-                  :options="[
-                      {value:'email',label:'邮件'},
-                      {value:'sms',label:'短信'}
-                  ]"
-              >
-              </a-radio-group>
-            </a-form-item>
-            <a-form-item name="code" label="模板代码">
-              <a-input v-model:value="templateForm.code" placeholder="例如：verification_code" :disabled="!!editingTemplate" />
-            </a-form-item>
-            <a-form-item name="name" label="模板名称">
-              <a-input v-model:value="templateForm.name" placeholder="请输入模板名称" />
-            </a-form-item>
-            <a-form-item name="subject" label="邮件主题">
-              <a-input v-model:value="templateForm.subject" placeholder="请输入邮件主题，支持变量如 {{appName}}" />
-            </a-form-item>
-            <a-form-item name="content" label="模板内容">
-              <a-textarea v-model:value="templateForm.content"
-                :rows="10"
-                placeholder="请输入模板内容，支持变量如 {{code}}, {{username}} 等"
-              />
-            </a-form-item>
-            <a-form-item name="isDefault" label="设为默认">
-              <a-switch v-model:checked="templateForm.isDefault" />
-            </a-form-item>
-        </a-form>
-      <template #footer>
-        <div class="flex justify-end gap-2">
-          <a-button @click="showTemplateDialog = false">取消</a-button>
-          <a-button type="primary" :loading="savingTemplate" :disabled="savingTemplate" @click="handleSaveTemplate">保存</a-button>
-        </div>
-      </template>
-    </a-modal>
+    <TemplateEditDialog ref="templateEditDialogRef" @success="loadTemplates()" />
 
     <contextHolder />
   </div>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'antdv-next'
 import {
@@ -18,37 +18,24 @@ import {
 import { profileApi, type AdminProfile } from '@/api/profile'
 import { securityApi, type MfaStatus } from '@/api/security'
 import { useUserStore } from '@/stores/user'
+import EmailChangeDialog from './components/EmailChangeDialog.vue'
+import { useProfileFormat } from './utils/hooks'
+import { profileFormRules } from './utils/rules'
+import type { EmailChangeDialogExpose, ProfileForm } from './utils/types'
 
 const router = useRouter()
 const userStore = useUserStore()
+const { formatDate } = useProfileFormat()
 const loading = ref(true)
 const saving = ref(false)
 const profile = ref<AdminProfile | null>(null)
 const mfaStatus = ref<MfaStatus>({ enabled: false, type: null })
-const emailModalOpen = ref(false)
-const emailStep = ref<'email' | 'code'>('email')
-const emailSending = ref(false)
-const emailVerifying = ref(false)
-const emailCountdown = ref(0)
-const emailChallengeToken = ref('')
-let emailCountdownTimer: ReturnType<typeof setInterval> | null = null
+const emailChangeDialogRef = ref<EmailChangeDialogExpose>()
 
-const form = reactive({
+const form = reactive<ProfileForm>({
   username: '',
   phone: '',
 })
-
-const emailForm = reactive({ email: '', code: '' })
-
-const rules = {
-  username: [
-    { required: true, message: '请输入用户名' },
-    { max: 100, message: '用户名不能超过 100 个字符' },
-  ],
-  phone: [
-    { pattern: /^\+?[0-9][0-9 -]{5,31}$/, message: '请输入有效的手机号' },
-  ],
-}
 
 const displayName = computed(() => profile.value?.username || '管理员')
 const avatarLetter = computed(() => displayName.value.charAt(0).toUpperCase())
@@ -62,18 +49,6 @@ const isDirty = computed(() => {
   return form.username.trim() !== profile.value.username
     || form.phone.trim() !== (profile.value.phone || '')
 })
-
-function formatDate(value: string | null | undefined) {
-  if (!value) return '暂无记录'
-  return new Intl.DateTimeFormat('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).format(new Date(value))
-}
 
 function hydrateForm(value: AdminProfile) {
   form.username = value.username
@@ -129,70 +104,10 @@ async function saveProfile() {
 }
 
 function openEmailChange() {
-  emailStep.value = 'email'
-  emailForm.email = ''
-  emailForm.code = ''
-  emailChallengeToken.value = ''
-  emailModalOpen.value = true
-}
-
-function startEmailCountdown() {
-  if (emailCountdownTimer) clearInterval(emailCountdownTimer)
-  emailCountdown.value = 60
-  emailCountdownTimer = setInterval(() => {
-    emailCountdown.value--
-    if (emailCountdown.value <= 0 && emailCountdownTimer) {
-      clearInterval(emailCountdownTimer)
-      emailCountdownTimer = null
-    }
-  }, 1000)
-}
-
-async function sendEmailChangeCode() {
-  const email = emailForm.email.trim().toLowerCase()
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    message.warning('请输入正确的新邮箱地址')
-    return
-  }
-  emailSending.value = true
-  try {
-    const result = await profileApi.sendEmailChangeCode(email)
-    emailChallengeToken.value = result.challengeToken
-    emailStep.value = 'code'
-    emailForm.code = ''
-    startEmailCountdown()
-    message.success('验证码已发送到新邮箱')
-  } catch (error) {
-    console.error('发送邮箱换绑验证码失败:', error)
-    message.error('发送邮箱换绑验证码失败')
-  } finally {
-    emailSending.value = false
-  }
-}
-
-async function verifyEmailChange() {
-  if (!/^\d{6}$/.test(emailForm.code)) {
-    message.warning('请输入 6 位邮箱验证码')
-    return
-  }
-  emailVerifying.value = true
-  try {
-    await profileApi.verifyEmailChange(emailChallengeToken.value, emailForm.code)
-    message.success('邮箱换绑成功，请使用新邮箱重新登录')
-    userStore.logout()
-    await router.replace('/login')
-  } catch (error) {
-    console.error('验证邮箱换绑验证码失败:', error)
-    message.error('验证邮箱换绑验证码失败')
-  } finally {
-    emailVerifying.value = false
-  }
+  emailChangeDialogRef.value?.open()
 }
 
 onMounted(loadProfile)
-onBeforeUnmount(() => {
-  if (emailCountdownTimer) clearInterval(emailCountdownTimer)
-})
 </script>
 
 <template>
@@ -257,7 +172,7 @@ onBeforeUnmount(() => {
             </div>
           </template>
 
-          <a-form :model="form" :rules="rules" layout="vertical" class="max-w-2xl" @finish="saveProfile">
+          <a-form :model="form" :rules="profileFormRules" layout="vertical" class="max-w-2xl" @finish="saveProfile">
             <div class="grid gap-x-5 md:grid-cols-2">
               <a-form-item label="用户名" name="username">
                 <a-input v-model:value="form.username" autocomplete="username" :maxlength="100" placeholder="请输入用户名">
@@ -333,38 +248,8 @@ onBeforeUnmount(() => {
         </a-card>
       </section>
     </div>
-  <a-modal v-model:open="emailModalOpen" title="换绑邮箱" :footer="null" :mask-closable="!emailSending && !emailVerifying">
-    <div v-if="emailStep === 'email'" class="space-y-5 pt-2">
-      <div class="rounded-lg border border-sky-100 bg-sky-50 p-4 text-sm text-sky-900">
-        当前邮箱：<span class="font-medium">{{ profile?.email }}</span>
-      </div>
-      <div class="grid gap-2">
-        <label for="new-admin-email" class="text-sm font-medium text-[#102A43]">新邮箱地址</label>
-        <a-input id="new-admin-email" v-model:value="emailForm.email" autocomplete="email" :maxlength="320" placeholder="name@company.com">
-          <template #prefix><Mail class="size-4 text-[#52677D]" /></template>
-        </a-input>
-      </div>
-      <a-button type="primary" block :loading="emailSending" @click="sendEmailChangeCode">发送验证码</a-button>
-    </div>
-
-    <div v-else class="space-y-5 pt-2">
-      <div>
-        <p class="text-sm text-[#52677D]">验证码已发送至</p>
-        <p class="mt-1 break-all font-medium text-[#102A43]">{{ emailForm.email }}</p>
-      </div>
-      <div class="grid gap-2">
-        <label for="admin-email-code" class="text-sm font-medium text-[#102A43]">邮箱验证码</label>
-        <a-input id="admin-email-code" v-model:value="emailForm.code" inputmode="numeric" autocomplete="one-time-code" :maxlength="6" placeholder="请输入6位验证码" @press-enter="verifyEmailChange" />
-      </div>
-      <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-        <a-button :disabled="emailCountdown > 0" :loading="emailSending" @click="sendEmailChangeCode">
-          {{ emailCountdown > 0 ? `${emailCountdown}s 后可重新发送` : '重新发送' }}
-        </a-button>
-        <a-button type="primary" :loading="emailVerifying" @click="verifyEmailChange">验证并换绑</a-button>
-      </div>
-    </div>
-  </a-modal>
-</main>
+    <EmailChangeDialog ref="emailChangeDialogRef" :current-email="profile?.email ?? ''" />
+  </main>
 </template>
 
 <style scoped>

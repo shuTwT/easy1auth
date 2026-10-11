@@ -16,7 +16,6 @@ import java.net.URI;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.*;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,13 +44,10 @@ public class ApplicationService {
   private final UserPoolService userPools;
 
   /** 密码编码器（编码客户端密钥哈希） */
-  private final PasswordEncoder passwords;
-
   public ApplicationService(
-      ApplicationRepository repository, UserPoolService userPools, PasswordEncoder passwords) {
+      ApplicationRepository repository, UserPoolService userPools) {
     this.repository = repository;
     this.userPools = userPools;
-    this.passwords = passwords;
   }
 
   /** 创建 OAuth 应用：校验配额与名称唯一性，生成 client_id 与客户端密钥（公共客户端不生成），返回视图。 */
@@ -81,7 +77,7 @@ public class ApplicationService {
                     .setDescription(normalized.description())
                     .setType(normalized.type())
                     .setClientId(clientId)
-                    .setClientSecretHash(secret == null ? null : passwords.encode(secret))
+                    .setClientSecret(secret)
                     .setRedirectUris(normalized.redirectUris())
                     .setPostLogoutRedirectUris(normalized.postLogoutRedirectUris())
                     .setAllowedGrantTypes(normalized.allowedGrantTypes())
@@ -110,10 +106,11 @@ public class ApplicationService {
         total);
   }
 
-  /** 按 ID 查询应用详情（不含客户端密钥明文）。 */
+  /** 按 ID 查询应用详情（包含客户端明文密钥）。 */
   @Transactional(readOnly = true)
   public ApplicationView get(UUID id) {
-    return view(entity(id), null);
+    var app = entity(id);
+    return view(app, app.clientSecret());
   }
 
   /** 按客户端 ID 查询 active 状态的应用（供授权服务器使用）。 */
@@ -138,11 +135,11 @@ public class ApplicationService {
       throw new DomainException(ErrorCodeConstants.APPLICATION_NAME_EXISTS);
     }
     String oneTimeSecret = null;
-    String secretHash = null;
+    String secretValue = null;
     boolean updateSecret = false;
     if (isPublic(old.type()) && !isPublic(normalized.type())) {
       oneTimeSecret = secret();
-      secretHash = passwords.encode(oneTimeSecret);
+      secretValue = oneTimeSecret;
       updateSecret = true;
     } else if (!isPublic(old.type()) && isPublic(normalized.type())) {
       updateSecret = true;
@@ -162,7 +159,7 @@ public class ApplicationService {
         normalized.requireConsent(),
         normalized.accessTokenLifetime(),
         normalized.refreshTokenLifetime(),
-        secretHash,
+        secretValue,
         updateSecret);
     return view(entity(id), oneTimeSecret);
   }
@@ -195,7 +192,7 @@ public class ApplicationService {
       throw new DomainException(ErrorCodeConstants.PUBLIC_CLIENT_HAS_NO_SECRET);
     }
     String secret = secret();
-    repository.updateSecret(tenant, id, passwords.encode(secret));
+    repository.updateSecret(tenant, id, secret);
     return new SecretView(secret);
   }
 

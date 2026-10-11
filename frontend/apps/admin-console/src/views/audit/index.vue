@@ -1,18 +1,32 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue'
 import { Modal, message } from 'antdv-next'
+import type { TableProps } from 'antdv-next'
 import { Search, RefreshCw, Download, Trash2 } from '@lucide/vue'
 import { auditApi } from '@/api/audit'
 import type { AuditLog, AuditLogQueryDto, AuditLogStats } from '@/types/audit'
-import DetailDialog from "./components/DetailDialog.vue";
+import DetailDialog from './components/DetailDialog.vue'
+import { useAuditDict } from './utils/hooks'
+import type { DetailDialogExpose } from './utils/types'
 
 const loading = ref(false)
 const logs = ref<AuditLog[]>([])
 const total = ref(0)
 const stats = ref<AuditLogStats | null>(null)
-const detailDialogRef = ref()
+const detailDialogRef = ref<DetailDialogExpose>()
 
 const [modal, contextHolder] = Modal.useModal()
+
+const {
+  auditTypeOptions,
+  auditStatusOptions,
+  getTypeText,
+  getTypeVariant,
+  getActionText,
+  getStatusText,
+  getStatusVariant,
+  formatDate
+} = useAuditDict()
 
 const queryForm = reactive<AuditLogQueryDto>({
   page: 1,
@@ -25,24 +39,21 @@ const queryForm = reactive<AuditLogQueryDto>({
   ip: ''
 })
 
-const auditTypeOptions = [
-  { value: 'auth', label: '认证' }, { value: 'user', label: '用户' }, { value: 'application', label: '应用' },
-  { value: 'tenant', label: '用户池' }, { value: 'role', label: '角色' }, { value: 'group', label: '用户组' }, { value: 'system', label: '系统' },
-]
-const auditStatusOptions = [{ value: 'success', label: '成功' }, { value: 'failed', label: '失败' }]
-
-const columns=[
-  { title: '时间', key: 'createdAt', width: 180 }, { title: '用户', key: 'username', width: 120 },
-  { title: '类型', key: 'type', width: 100 }, { title: '操作', key: 'action', width: 120 },
-  { title: '资源', dataIndex: 'resource', width: 120 }, { title: 'IP地址', dataIndex: 'ip', width: 140 },
-  { title: '状态', key: 'status', width: 80 }, { title: '错误信息', key: 'errorMessage', width: 200 },
+const columns: TableProps<AuditLog>['columns'] = [
+  { title: '时间', key: 'createdAt', width: 180 },
+  { title: '用户', key: 'username', width: 120 },
+  { title: '类型', key: 'type', width: 100 },
+  { title: '操作', key: 'action', width: 120 },
+  { title: '资源', dataIndex: 'resource', width: 120 },
+  { title: 'IP地址', dataIndex: 'ip', width: 140 },
+  { title: '状态', key: 'status', width: 80 },
+  { title: '错误信息', key: 'errorMessage', width: 200 },
   { title: '操作', key: 'actions', width: 100 }
 ]
 
 const loadLogs = async () => {
   loading.value = true
   try {
-
     const res = await auditApi.getList(queryForm)
     logs.value = res.items
     total.value = res.total
@@ -56,8 +67,7 @@ const loadLogs = async () => {
 
 const loadStats = async () => {
   try {
-    const res = await auditApi.getStats()
-    stats.value = res
+    stats.value = await auditApi.getStats()
   } catch (error) {
     console.error('加载统计数据失败:', error)
     message.error('加载审计统计数据失败')
@@ -75,7 +85,7 @@ const handleReset = () => {
   queryForm.action = ''
   queryForm.status = undefined
   queryForm.ip = ''
-  queryForm.createAt=undefined
+  queryForm.createAt = undefined
   queryForm.page = 1
   loadLogs()
 }
@@ -86,7 +96,7 @@ const handlePageChange = (page: number, _pageSize?: number) => {
 }
 
 const handleViewDetail = (row: AuditLog) => {
-  detailDialogRef.value.open(row)
+  detailDialogRef.value?.open(row)
 }
 
 const handleExport = async (format: 'csv' | 'json') => {
@@ -113,7 +123,9 @@ const handleCleanup = async () => {
     cancelText: '取消',
     okButtonProps: { danger: true },
   })
-  if (!confirmed) return
+  if (!confirmed) {
+    return
+  }
 
   try {
     await auditApi.cleanup(90)
@@ -126,68 +138,6 @@ const handleCleanup = async () => {
   }
 }
 
-const getTypeText = (type: string) => {
-  const typeMap: Record<string, string> = {
-    auth: '认证',
-    user: '用户',
-    application: '应用',
-    tenant: '用户池',
-    role: '角色',
-    group: '用户组',
-    system: '系统'
-  }
-  return typeMap[type] || type
-}
-
-const getTypeVariant = (type: string) => {
-  const typeVariantMap: Record<string, string> = {
-    auth: 'blue',
-    user: 'green',
-    application: 'purple',
-    tenant: 'red',
-    role: 'orange',
-    group: 'cyan',
-    system: 'default'
-  }
-  return typeVariantMap[type] || 'default'
-}
-
-const getActionText = (action: string) => {
-  const actionMap: Record<string, string> = {
-    login: '登录',
-    logout: '登出',
-    login_failed: '登录失败',
-    create: '创建',
-    update: '更新',
-    delete: '删除',
-    view: '查看',
-    enable: '启用',
-    disable: '禁用',
-    lock: '锁定',
-    unlock: '解锁',
-    assign: '分配',
-    revoke: '撤销',
-    password_change: '修改密码',
-    password_reset: '重置密码',
-    token_generate: '生成令牌',
-    token_revoke: '撤销令牌',
-    config_change: '配置变更'
-  }
-  return actionMap[action] || action
-}
-
-const getStatusText = (status: string) => {
-  return status === 'success' ? '成功' : '失败'
-}
-
-const getStatusVariant = (status: string) => {
-  return status === 'success' ? 'green' : 'red'
-}
-
-const formatDate = (date: string) => {
-  return new Date(date).toLocaleString()
-}
-
 onMounted(() => {
   loadLogs()
   loadStats()
@@ -197,48 +147,47 @@ onMounted(() => {
 <template>
   <div class="p-6 min-h-[calc(100vh-64px)]">
     <a-card>
-
-          <div class="flex flex-wrap items-end gap-4">
-            <a-form-item name="username" label="用户名">
-              <a-input v-model:value="queryForm.username" placeholder="请输入用户名" class="w-[150px]" />
-            </a-form-item>
-            <a-form-item name="type" label="日志类型">
-              <a-select v-model:value="queryForm.type" placeholder="请选择类型" class="w-[150px]" allow-clear :options="auditTypeOptions" />
-            </a-form-item>
-            <a-form-item name="action" label="操作">
-              <a-input v-model:value="queryForm.action" placeholder="请输入操作" class="w-[150px]" />
-            </a-form-item>
-            <a-form-item name="status" label="状态">
-              <a-select v-model:value="queryForm.status" placeholder="请选择状态" class="w-[120px]" allow-clear :options="auditStatusOptions" />
-            </a-form-item>
-            <a-form-item name="createAt" label="创建时间">
-              <a-range-picker v-model:value="queryForm.createAt"/>
-            </a-form-item>
-            <a-form-item >
-              <div class="flex gap-2">
-                <a-button @click="handleSearch">
-                  <Search class="size-4 mr-2" />
-                  搜索
-                </a-button>
-                <a-button @click="handleReset">
-                  <RefreshCw class="size-4 mr-2" />
-                  重置
-                </a-button>
-                <a-button @click="handleExport('json')">
-                  <Download class="size-4 mr-2" />
-                  导出JSON
-                </a-button>
-                <a-button  @click="handleExport('csv')">
-                  <Download class="size-4 mr-2" />
-                  导出CSV
-                </a-button>
-                <a-button danger @click="handleCleanup">
-                  <Trash2 class="size-4 mr-2" />
-                  清理日志
-                </a-button>
-              </div>
-            </a-form-item>
+      <div class="flex flex-wrap items-end gap-4">
+        <a-form-item name="username" label="用户名">
+          <a-input v-model:value="queryForm.username" placeholder="请输入用户名" class="w-[150px]" />
+        </a-form-item>
+        <a-form-item name="type" label="日志类型">
+          <a-select v-model:value="queryForm.type" placeholder="请选择类型" class="w-[150px]" allow-clear :options="auditTypeOptions" />
+        </a-form-item>
+        <a-form-item name="action" label="操作">
+          <a-input v-model:value="queryForm.action" placeholder="请输入操作" class="w-[150px]" />
+        </a-form-item>
+        <a-form-item name="status" label="状态">
+          <a-select v-model:value="queryForm.status" placeholder="请选择状态" class="w-[120px]" allow-clear :options="auditStatusOptions" />
+        </a-form-item>
+        <a-form-item name="createAt" label="创建时间">
+          <a-range-picker v-model:value="queryForm.createAt" />
+        </a-form-item>
+        <a-form-item>
+          <div class="flex gap-2">
+            <a-button @click="handleSearch">
+              <Search class="size-4 mr-2" />
+              搜索
+            </a-button>
+            <a-button @click="handleReset">
+              <RefreshCw class="size-4 mr-2" />
+              重置
+            </a-button>
+            <a-button @click="handleExport('json')">
+              <Download class="size-4 mr-2" />
+              导出JSON
+            </a-button>
+            <a-button @click="handleExport('csv')">
+              <Download class="size-4 mr-2" />
+              导出CSV
+            </a-button>
+            <a-button danger @click="handleCleanup">
+              <Trash2 class="size-4 mr-2" />
+              清理日志
+            </a-button>
           </div>
+        </a-form-item>
+      </div>
     </a-card>
 
     <a-card class="mt-3!">
@@ -267,17 +216,17 @@ onMounted(() => {
       <div class="flex items-center justify-between mt-4 pt-4">
         <span class="text-sm text-[#52677D]">共 {{ total }} 条</span>
         <a-pagination
-            :current="queryForm.page"
-            :page-size="queryForm.pageSize"
-            :total="total"
-            :show-size-changer="false"
-            size="small"
-            @change="handlePageChange"
+          :current="queryForm.page"
+          :page-size="queryForm.pageSize"
+          :total="total"
+          :show-size-changer="false"
+          size="small"
+          @change="handlePageChange"
         />
       </div>
     </a-card>
 
-    <DetailDialog ref="detailDialogRef"/>
+    <DetailDialog ref="detailDialogRef" />
     <contextHolder />
   </div>
 </template>

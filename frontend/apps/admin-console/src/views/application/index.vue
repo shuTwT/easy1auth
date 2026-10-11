@@ -2,24 +2,36 @@
 import { ref, onMounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { Modal, message } from 'antdv-next'
+import type { TableProps } from 'antdv-next'
 import { Plus, Search, Copy } from '@lucide/vue'
 import { applicationApi } from '@/api/application'
-import type { Application, CreateApplicationDto, UpdateApplicationDto, ApplicationQueryDto } from '@/types/application'
-import ApplicationEditDialog from "@/views/application/components/ApplicationEditDialog.vue";
-import SecretDialog from "@/views/application/components/SecretDialog.vue";
-import type {ColumnType} from "antdv-next/dist/table";
+import type { Application, ApplicationQueryDto } from '@/types/application'
+import ApplicationEditDialog from './components/ApplicationEditDialog.vue'
+import SecretDialog from './components/SecretDialog.vue'
+import { useApplicationDict, useClipboard } from './utils/hooks'
+import type { ApplicationEditDialogExpose, EditDialogMode, SecretDialogExpose } from './utils/types'
 
 const router = useRouter()
 
 const loading = ref(false)
 const applications = ref<Application[]>([])
 const total = ref(0)
-const dialogTitle = ref('新增应用')
 
-const ApplicationEditDialogRef = ref()
-const SecretDialogRef = ref()
+const applicationEditDialogRef = ref<ApplicationEditDialogExpose>()
+const secretDialogRef = ref<SecretDialogExpose>()
 
 const [modal, contextHolder] = Modal.useModal()
+
+const {
+  applicationTypeOptions,
+  applicationStatusOptions,
+  getTypeText,
+  getStatusText,
+  getStatusVariant,
+  formatLifetime,
+  formatDate
+} = useApplicationDict()
+const { copyToClipboard } = useClipboard()
 
 const queryForm = reactive<ApplicationQueryDto>({
   page: 1,
@@ -29,18 +41,7 @@ const queryForm = reactive<ApplicationQueryDto>({
   status: undefined
 })
 
-const applicationTypeOptions = [
-  { value: 'web', label: 'Web应用' },
-  { value: 'native', label: '原生应用' },
-  { value: 'spa', label: '单页应用' },
-  { value: 'machine', label: '机器对机器' },
-]
-const applicationStatusOptions = [
-  { value: 'active', label: '正常' },
-  { value: 'disabled', label: '禁用' },
-]
-
-const columns = [
+const columns: TableProps<Application>['columns'] = [
   { title: '应用名称', dataIndex: 'name', width: 176 },
   { title: '应用类型', key: 'type', width: 112 },
   { title: 'Client ID', key: 'clientId', width: 330 },
@@ -48,20 +49,8 @@ const columns = [
   { title: '访问令牌有效期', key: 'accessTokenLifetime', width: 128 },
   { title: '刷新令牌有效期', key: 'refreshTokenLifetime', width: 128 },
   { title: '创建时间', key: 'createdAt', width: 160 },
-  { title: '操作', key: 'actions',fixed:'right', width: 320 }
+  { title: '操作', key: 'actions', fixed: 'right', width: 320 }
 ]
-
-const appForm = reactive<CreateApplicationDto & UpdateApplicationDto>({
-  name: '',
-  logo: '',
-  description: '',
-  type: 'web',
-  redirectUris: [],
-  allowedGrantTypes: ['authorization_code'],
-  accessTokenLifetime: 3600,
-  refreshTokenLifetime: 2592000
-})
-
 
 const loadApplications = async () => {
   loading.value = true
@@ -91,18 +80,7 @@ const handleReset = () => {
 }
 
 const handleAdd = () => {
-  dialogTitle.value = '新增应用'
-  Object.assign(appForm, {
-    name: '',
-    logo: '',
-    description: '',
-    type: 'web',
-    redirectUris: [],
-    allowedGrantTypes: ['authorization_code'],
-    accessTokenLifetime: 3600,
-    refreshTokenLifetime: 2592000
-  })
-  ApplicationEditDialogRef.value.open('create')
+  applicationEditDialogRef.value?.open('create')
 }
 
 const handleDetail = (row: Application) => {
@@ -110,7 +88,7 @@ const handleDetail = (row: Application) => {
 }
 
 const handleEdit = (row: Application) => {
-  ApplicationEditDialogRef.value.open('edit',row)
+  applicationEditDialogRef.value?.open('edit', row)
 }
 
 const handleDelete = async (row: Application) => {
@@ -146,7 +124,9 @@ const handleStatusChange = async (row: Application, status: string) => {
 
 const handlePageChange = (page: number, pageSize?: number) => {
   queryForm.page = page
-  if (pageSize !== undefined) queryForm.pageSize = pageSize
+  if (pageSize !== undefined) {
+    queryForm.pageSize = pageSize
+  }
   loadApplications()
 }
 
@@ -156,69 +136,10 @@ const handleSizeChange = (_current: number, size: number) => {
   loadApplications()
 }
 
-const copyToClipboard = async (text: string) => {
-  try {
-    await navigator.clipboard.writeText(text)
-    message.success('已复制到剪贴板')
-  } catch (error) {
-    console.error('复制失败:', error)
-    message.error('复制失败')
-  }
-}
-
-const getStatusVariant = (status: string) => {
-  switch (status) {
-    case 'active':
-      return 'green'
-    case 'disabled':
-      return 'orange'
-    default:
-      return 'red'
-  }
-}
-
-const getStatusText = (status: string) => {
-  switch (status) {
-    case 'active':
-      return '正常'
-    case 'disabled':
-      return '禁用'
-    default:
-      return '未知'
-  }
-}
-
-const getTypeText = (type: string) => {
-  switch (type) {
-    case 'web':
-      return 'Web应用'
-    case 'native':
-      return '原生应用'
-    case 'spa':
-      return '单页应用'
-    case 'machine':
-      return '机器对机器'
-    default:
-      return '未知'
-  }
-}
-
-const formatLifetime = (seconds?: number) => {
-  if (!seconds) {
-    return 'N/A'
-  }
-  if (seconds < 3600) {
-    return `${Math.floor(seconds / 60)} 分钟`
-  } else if (seconds < 86400) {
-    return `${Math.floor(seconds / 3600)} 小时`
-  } else {
-    return `${Math.floor(seconds / 86400)} 天`
-  }
-}
-
-const handleSubmitApplicationEditDialog=(type:string,secret:string)=>{
-  if(type=='create'){
-    SecretDialogRef.value.open(secret)
+const handleEditDialogSubmit = (mode: EditDialogMode, secret: string) => {
+  loadApplications()
+  if (mode === 'create' && secret) {
+    secretDialogRef.value?.open(secret)
   }
 }
 
@@ -251,7 +172,7 @@ onMounted(() => {
           <a-form-item name="type" label="应用类型">
             <a-select v-model:value="queryForm.type" placeholder="选择应用类型" class="w-36" allow-clear :options="applicationTypeOptions" />
           </a-form-item>
-          <a-form-item name="type" label="状态">
+          <a-form-item name="status" label="状态">
             <a-select v-model:value="queryForm.status" placeholder="选择状态" class="w-28" allow-clear :options="applicationStatusOptions" />
           </a-form-item>
           <a-form-item>
@@ -260,7 +181,7 @@ onMounted(() => {
                 <Search class="size-4 mr-2" />
                 搜索
               </a-button>
-              <a-button  @click="handleReset">重置</a-button>
+              <a-button @click="handleReset">重置</a-button>
             </div>
           </a-form-item>
         </div>
@@ -269,35 +190,35 @@ onMounted(() => {
           <template #bodyCell="{ column, record: row }">
             <template v-if="column.key === 'type'">{{ getTypeText(row.type) }}</template>
             <template v-else-if="column.key === 'clientId'">
-                <div class="flex items-center gap-2">
-                  <span class="font-mono text-xs">{{ row.clientId }}</span>
-                  <a-button type="link" size="small" class="h-auto p-0" @click="copyToClipboard(row.clientId)">
-                    <Copy class="size-4" />
-                  </a-button>
-                </div>
+              <div class="flex items-center gap-2">
+                <span class="font-mono text-xs">{{ row.clientId }}</span>
+                <a-button type="link" size="small" class="h-auto p-0" @click="copyToClipboard(row.clientId)">
+                  <Copy class="size-4" />
+                </a-button>
+              </div>
             </template>
             <template v-else-if="column.key === 'status'">
-                <a-tag :color="getStatusVariant(row.status)">
-                  {{ getStatusText(row.status) }}
-                </a-tag>
+              <a-tag :color="getStatusVariant(row.status)">
+                {{ getStatusText(row.status) }}
+              </a-tag>
             </template>
             <template v-else-if="column.key === 'accessTokenLifetime'">{{ formatLifetime(row.accessTokenLifetime) }}</template>
             <template v-else-if="column.key === 'refreshTokenLifetime'">{{ formatLifetime(row.refreshTokenLifetime) }}</template>
-            <template v-else-if="column.key === 'createdAt'">{{ new Date(row.createdAt).toLocaleString() }}</template>
+            <template v-else-if="column.key === 'createdAt'">{{ formatDate(row.createdAt) }}</template>
             <template v-else-if="column.key === 'actions'">
-                <div class="flex gap-1 flex-wrap">
-                  <a-button type="link" size="small" class="h-auto p-0" @click="handleDetail(row)">详情</a-button>
-                  <a-button type="link" size="small" class="h-auto p-0" @click="handleEdit(row)">编辑</a-button>
-                  <a-button
-                    type="link"
-                    size="small"
-                    class="h-auto p-0"
-                    @click="handleStatusChange(row, row.status === 'active' ? 'disabled' : 'active')"
-                  >
-                    {{ row.status === 'active' ? '禁用' : '启用' }}
-                  </a-button>
-                  <a-button type="link" size="small" danger @click="handleDelete(row)">删除</a-button>
-                </div>
+              <div class="flex gap-1 flex-wrap">
+                <a-button type="link" size="small" class="h-auto p-0" @click="handleDetail(row)">详情</a-button>
+                <a-button type="link" size="small" class="h-auto p-0" @click="handleEdit(row)">编辑</a-button>
+                <a-button
+                  type="link"
+                  size="small"
+                  class="h-auto p-0"
+                  @click="handleStatusChange(row, row.status === 'active' ? 'disabled' : 'active')"
+                >
+                  {{ row.status === 'active' ? '禁用' : '启用' }}
+                </a-button>
+                <a-button type="link" size="small" danger @click="handleDelete(row)">删除</a-button>
+              </div>
             </template>
           </template>
         </a-table>
@@ -318,10 +239,10 @@ onMounted(() => {
       </div>
     </a-card>
 
-    <ApplicationEditDialog ref="ApplicationEditDialogRef" @submit="handleSubmitApplicationEditDialog"/>
+    <ApplicationEditDialog ref="applicationEditDialogRef" @submit="handleEditDialogSubmit" />
 
-    <SecretDialog ref="SecretDialogRef"/>
+    <SecretDialog ref="secretDialogRef" />
 
     <contextHolder />
-    </div>
+  </div>
 </template>

@@ -14,52 +14,22 @@ import {
   Trash2
 } from '@lucide/vue'
 import {applicationApi} from '@/api/application'
-import type {
-  Application,
-  ApplicationStatus,
-  ApplicationType,
-  UpdateApplicationDto
-} from '@/types/application'
+import type {Application, UpdateApplicationDto} from '@/types/application'
+import SecretDialog from './components/SecretDialog.vue'
+import {getApiErrorMessage, useApplicationDict, useClipboard} from './utils/hooks'
+import {configFormRules} from './utils/rules'
+import type {ConfigForm, LoginForm, SecretDialogExpose} from './utils/types'
 
-type ApiErrorResponse = {
-  msg?: string
-}
-
-type ConfigForm = {
-  name: string
-  logo: string
-  description: string
-  type: ApplicationType
-  status: ApplicationStatus
-}
-
-type LoginForm = {
-  redirectUris: string[]
-  allowedGrantTypes: string[]
-  accessTokenLifetime: number
-  refreshTokenLifetime: number
-}
-
-const typeLabels: Record<ApplicationType, string> = {
-  web: 'Web 应用',
-  native: '原生应用',
-  spa: '单页应用',
-  machine: '机器对机器'
-}
-
-const statusLabels: Record<ApplicationStatus, string> = {
-  active: '启用',
-  disabled: '禁用'
-}
-
-const grantTypeOptions = [
-  {value: 'authorization_code', label: '授权码模式', description: '适用于有用户交互的 Web 和原生应用'},
-  {value: 'client_credentials', label: '客户端凭证模式', description: '适用于机器对机器通信'},
-  {value: 'refresh_token', label: '刷新令牌', description: '允许应用续期已过期的访问令牌'}
-] as const
-
-const applicationTypeOptions = Object.entries(typeLabels).map(([value, label]) => ({value, label}))
-const applicationStatusOptions = Object.entries(statusLabels).map(([value, label]) => ({value, label}))
+const {
+  applicationTypeOptions,
+  applicationStatusOptions,
+  grantTypeOptions,
+  getTypeText,
+  getStatusText,
+  getStatusVariant
+} = useApplicationDict()
+const {copyToClipboard} = useClipboard()
+const secretDialogRef = ref<SecretDialogExpose>()
 
 const appTab = ref('config')
 const accessTab = ref('oauth2')
@@ -106,7 +76,7 @@ const tokenEndpoint = computed(() => `${issuerEndpoint.value}/oauth2/token`)
 const userinfoEndpoint = computed(() => `${issuerEndpoint.value}/userinfo`)
 
 const clientSecretDisplay = computed(() => {
-  if (secretVisible.value) return application.value?.clientSecret ?? ''
+  if (secretVisible.value && application.value?.clientSecret) return application.value.clientSecret
   return '•'.repeat(24)
 })
 
@@ -115,7 +85,6 @@ const hasRedirectUri = computed(() => Boolean(selectedRedirectUri.value))
 const codeClientId = computed(() => application.value?.clientId ?? 'YOUR_CLIENT_ID')
 const codeRedirectUri = computed(() => selectedRedirectUri.value || 'YOUR_REDIRECT_URI')
 const codeClientSecret = computed(() => {
-  if (secretVisible.value && application.value) return application.value.clientSecret ?? ''
   return 'YOUR_CLIENT_SECRET'
 })
 
@@ -169,13 +138,6 @@ const clientCredentialsExamples = computed(() => [
   }
 ])
 
-const getApiErrorMessage = (error: unknown, fallback: string) => {
-  if (axios.isAxiosError<ApiErrorResponse>(error)) {
-    return error.response?.data?.msg ?? fallback
-  }
-  return error instanceof Error ? error.message : fallback
-}
-
 const populateForms = (app: Application) => {
   Object.assign(configForm, {
     name: app.name,
@@ -224,14 +186,11 @@ const goBack = () => {
   router.push('/application')
 }
 
-const copyToClipboard = async (text: string) => {
-  try {
-    await navigator.clipboard.writeText(text)
-    message.success('已复制到剪贴板')
-  } catch (error: unknown) {
-    console.error('复制失败:', error)
-    message.error('复制失败')
+const showRevealedSecret = (secret: string | null | undefined) => {
+  if (!secret) {
+    return
   }
+  secretDialogRef.value?.open(secret)
 }
 
 const addRedirectUri = () => {
@@ -277,7 +236,7 @@ const saveConfig = async () => {
   try {
     const response = await applicationApi.update(applicationId.value, payload)
     application.value = response
-    if (response.clientSecret) secretVisible.value = true
+    showRevealedSecret(response.clientSecret)
     document.title = `${response.name} - 应用详情`
     message.success('应用配置已保存')
   } catch (error: unknown) {
@@ -336,8 +295,7 @@ const regenerateSecret = async () => {
 
   try {
     const response = await applicationApi.regenerateSecret(applicationId.value)
-    application.value = {...application.value, clientSecret: response.clientSecret}
-    secretVisible.value = true
+    showRevealedSecret(response.clientSecret)
     message.success('密钥重新生成成功，请立即复制并妥善保管')
   } catch (error: unknown) {
     console.error('重新生成密钥失败:', error)
@@ -418,10 +376,10 @@ onMounted(loadApplication)
             <div class="min-w-0">
               <div class="flex flex-wrap items-center gap-2">
                 <h1 class="truncate text-2xl font-semibold tracking-tight">{{ application.name }}</h1>
-                <a-tag :color="application.status === 'active' ? 'green' : 'orange'">
-                  {{ statusLabels[application.status] }}
+                <a-tag :color="getStatusVariant(application.status)">
+                  {{ getStatusText(application.status) }}
                 </a-tag>
-                <a-tag>{{ typeLabels[application.type] }}</a-tag>
+                <a-tag>{{ getTypeText(application.type) }}</a-tag>
               </div>
               <p class="mt-1 truncate font-mono text-xs text-[#52677D]">{{ application.clientId }}</p>
             </div>
@@ -434,8 +392,7 @@ onMounted(loadApplication)
           <a-tab-pane key="config" tab="应用配置">
             <a-card>
               <div>
-                <h3 class="text-xl font-bold">应用配置</h3>
-                <p>管理应用的基本信息和客户端凭证。</p>
+                <h3 class="text-xl font-bold">基本信息</h3>
               </div>
               <div class="flex flex-col gap-6">
                 <div class="grid gap-4 rounded-lg border bg-[#F4F8FB]/30 p-4 md:grid-cols-2">
@@ -450,7 +407,6 @@ onMounted(loadApplication)
                         <Copy data-icon="inline-start" class="w-[14px]!"/>
                         </span>
                     </div>
-                    <p class="min-h-4 text-xs text-transparent" aria-hidden="true">占位</p>
                   </div>
                   <div class="grid gap-2">
                     <label for="application-client-secret" class="text-sm font-medium">AppSecret / Client Secret</label>
@@ -472,33 +428,27 @@ onMounted(loadApplication)
                         <RefreshCw data-icon="inline-start"/>
                       </a-button>
                     </div>
-                    <p class="min-h-4 text-xs text-[#52677D]">重新生成后，旧密钥会立即失效。</p>
                   </div>
                 </div>
 
-                <form class="grid gap-6" @submit.prevent="saveConfig">
+                <a-form :model="configForm" :rules="configFormRules" @finish="saveConfig">
                   <div class="grid gap-4 md:grid-cols-2">
-                    <div class="grid gap-2">
-                      <label for="application-name" class="text-sm font-medium">应用名称</label>
-                      <a-input id="application-name" v-model:value="configForm.name" placeholder="请输入应用名称"/>
-                    </div>
-                    <div class="grid gap-2">
-                      <label class="text-sm font-medium">应用类型</label>
+                    <a-form-item name="name" label="应用名称">
+                      <a-input v-model:value="configForm.name" placeholder="请输入应用名称"/>
+                    </a-form-item>
+                    <a-form-item name="type" label="应用类型">
                       <a-select v-model:value="configForm.type" :options="applicationTypeOptions"/>
-                    </div>
-                    <div class="grid gap-2">
-                      <label for="application-logo" class="text-sm font-medium">应用 Logo</label>
-                      <a-input id="application-logo" v-model:value="configForm.logo" placeholder="请输入 Logo URL"/>
-                    </div>
-                    <div class="grid gap-2">
-                      <label class="text-sm font-medium">应用状态</label>
+                    </a-form-item>
+                    <a-form-item name="logo" label="应用logo">
+                      <a-input  v-model:value="configForm.logo" placeholder="请输入 Logo URL"/>
+                    </a-form-item>
+                    <a-form-item name="status" label="应用状态">
                       <a-select v-model:value="configForm.status" :options="applicationStatusOptions"/>
-                    </div>
-                  </div>
-                  <div class="grid gap-2">
-                    <label for="application-description" class="text-sm font-medium">应用描述</label>
-                    <a-textarea id="application-description" v-model:value="configForm.description" :rows="4"
-                                placeholder="请输入应用描述"/>
+                    </a-form-item>
+                    <a-form-item name="description" label="应用描述">
+                      <a-textarea id="application-description" v-model:value="configForm.description" :rows="4"
+                                  placeholder="请输入应用描述"/>
+                    </a-form-item>
                   </div>
                   <div class="flex justify-end">
                     <a-button type="primary" html-type="submit" :loading="configSaving">
@@ -506,7 +456,7 @@ onMounted(loadApplication)
                       {{ configSaving ? '保存中...' : '保存配置' }}
                     </a-button>
                   </div>
-                </form>
+                </a-form>
               </div>
             </a-card>
           </a-tab-pane>
@@ -698,6 +648,7 @@ onMounted(loadApplication)
         </a-tabs>
       </div>
     </div>
+    <SecretDialog ref="secretDialogRef"/>
     <contextHolder/>
   </div>
 </template>
