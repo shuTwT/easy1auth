@@ -1,21 +1,23 @@
 <script setup lang="ts">
-import { ref, onMounted, reactive, computed } from 'vue'
+import { ref, onMounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { Modal, message } from 'antdv-next'
-import { Plus, Search, Copy, Trash2 } from '@lucide/vue'
+import { Plus, Search, Copy } from '@lucide/vue'
 import { applicationApi } from '@/api/application'
 import type { Application, CreateApplicationDto, UpdateApplicationDto, ApplicationQueryDto } from '@/types/application'
+import ApplicationEditDialog from "@/views/application/components/ApplicationEditDialog.vue";
+import SecretDialog from "@/views/application/components/SecretDialog.vue";
+import type {ColumnType} from "antdv-next/dist/table";
 
 const router = useRouter()
 
 const loading = ref(false)
 const applications = ref<Application[]>([])
 const total = ref(0)
-const dialogVisible = ref(false)
 const dialogTitle = ref('新增应用')
-const currentApp = ref<Partial<Application>>({})
-const secretDialogVisible = ref(false)
-const newClientSecret = ref('')
+
+const ApplicationEditDialogRef = ref()
+const SecretDialogRef = ref()
 
 const [modal, contextHolder] = Modal.useModal()
 
@@ -38,6 +40,17 @@ const applicationStatusOptions = [
   { value: 'disabled', label: '禁用' },
 ]
 
+const columns = [
+  { title: '应用名称', dataIndex: 'name', width: 176 },
+  { title: '应用类型', key: 'type', width: 112 },
+  { title: 'Client ID', key: 'clientId', width: 330 },
+  { title: '状态', key: 'status', width: 96 },
+  { title: '访问令牌有效期', key: 'accessTokenLifetime', width: 128 },
+  { title: '刷新令牌有效期', key: 'refreshTokenLifetime', width: 128 },
+  { title: '创建时间', key: 'createdAt', width: 160 },
+  { title: '操作', key: 'actions',fixed:'right', width: 320 }
+]
+
 const appForm = reactive<CreateApplicationDto & UpdateApplicationDto>({
   name: '',
   logo: '',
@@ -49,14 +62,6 @@ const appForm = reactive<CreateApplicationDto & UpdateApplicationDto>({
   refreshTokenLifetime: 2592000
 })
 
-const appFormRules = {
-  name: [{ required: true, message: '请输入应用名称' }],
-  type: [{ required: true, message: '请选择应用类型' }],
-}
-
-const isEditing = computed(() => Boolean(currentApp.value.id))
-
-const redirectUriInput = ref('')
 
 const loadApplications = async () => {
   loading.value = true
@@ -97,9 +102,7 @@ const handleAdd = () => {
     accessTokenLifetime: 3600,
     refreshTokenLifetime: 2592000
   })
-  redirectUriInput.value = ''
-  currentApp.value = {}
-  dialogVisible.value = true
+  ApplicationEditDialogRef.value.open('create')
 }
 
 const handleDetail = (row: Application) => {
@@ -107,20 +110,7 @@ const handleDetail = (row: Application) => {
 }
 
 const handleEdit = (row: Application) => {
-  dialogTitle.value = '编辑应用'
-  Object.assign(appForm, {
-    name: row.name,
-    logo: row.logo || '',
-    description: row.description || '',
-    type: row.type,
-    redirectUris: row.redirectUris || [],
-    allowedGrantTypes: row.allowedGrantTypes || [],
-    accessTokenLifetime: row.accessTokenLifetime,
-    refreshTokenLifetime: row.refreshTokenLifetime
-  })
-  redirectUriInput.value = ''
-  currentApp.value = row
-  dialogVisible.value = true
+  ApplicationEditDialogRef.value.open('edit',row)
 }
 
 const handleDelete = async (row: Application) => {
@@ -151,47 +141,6 @@ const handleStatusChange = async (row: Application, status: string) => {
   } catch (error) {
     console.error('更新状态失败:', error)
     message.error('更新应用状态失败')
-  }
-}
-
-const handleAddRedirectUri = () => {
-  if (redirectUriInput.value) {
-    if (!appForm.redirectUris) {
-      appForm.redirectUris = []
-    }
-    appForm.redirectUris.push(redirectUriInput.value)
-    redirectUriInput.value = ''
-  }
-}
-
-const handleRemoveRedirectUri = (index: number) => {
-  appForm.redirectUris?.splice(index, 1)
-}
-
-const handleSubmit = async () => {
-  try {
-    if (isEditing.value && currentApp.value.id) {
-      const res = await applicationApi.update(currentApp.value.id, appForm)
-      if (res.clientSecret) {
-        newClientSecret.value = res.clientSecret
-        secretDialogVisible.value = true
-      }
-      message.success('更新成功')
-    } else {
-      const createPayload = {
-        name: appForm.name.trim(),
-        type: appForm.type
-      }
-      const res = await applicationApi.create(createPayload)
-      newClientSecret.value = res.clientSecret ?? ''
-      secretDialogVisible.value = true
-      message.success('创建成功')
-    }
-    dialogVisible.value = false
-    loadApplications()
-  } catch (error: unknown) {
-    console.error('保存应用失败:', error)
-    message.error('保存应用失败')
   }
 }
 
@@ -267,15 +216,9 @@ const formatLifetime = (seconds?: number) => {
   }
 }
 
-const toggleGrantType = (type: string) => {
-  const index = appForm.allowedGrantTypes?.indexOf(type) ?? -1
-  if (index > -1) {
-    appForm.allowedGrantTypes?.splice(index, 1)
-  } else {
-    if (!appForm.allowedGrantTypes) {
-      appForm.allowedGrantTypes = []
-    }
-    appForm.allowedGrantTypes.push(type)
+const handleSubmitApplicationEditDialog=(type:string,secret:string)=>{
+  if(type=='create'){
+    SecretDialogRef.value.open(secret)
   }
 }
 
@@ -300,39 +243,29 @@ onMounted(() => {
     </div>
 
     <a-card>
-      <div class="pt-6">
-        <div class="flex flex-wrap gap-4 items-end mb-5">
-          <div class="grid gap-2">
-            <label class="text-sm font-medium">应用名称</label>
+      <div>
+        <div class="flex flex-wrap gap-4 items-end">
+          <a-form-item name="name" label="应用名称">
             <a-input v-model:value="queryForm.name" placeholder="请输入应用名称" class="w-48" />
-          </div>
-          <div class="grid gap-2">
-            <label class="text-sm font-medium">应用类型</label>
+          </a-form-item>
+          <a-form-item name="type" label="应用类型">
             <a-select v-model:value="queryForm.type" placeholder="选择应用类型" class="w-36" allow-clear :options="applicationTypeOptions" />
-          </div>
-          <div class="grid gap-2">
-            <label class="text-sm font-medium">状态</label>
+          </a-form-item>
+          <a-form-item name="type" label="状态">
             <a-select v-model:value="queryForm.status" placeholder="选择状态" class="w-28" allow-clear :options="applicationStatusOptions" />
-          </div>
-          <div class="flex gap-2">
-            <a-button @click="handleSearch">
-              <Search class="size-4 mr-2" />
-              搜索
-            </a-button>
-            <a-button  @click="handleReset">重置</a-button>
-          </div>
+          </a-form-item>
+          <a-form-item>
+            <div class="flex gap-2">
+              <a-button @click="handleSearch">
+                <Search class="size-4 mr-2" />
+                搜索
+              </a-button>
+              <a-button  @click="handleReset">重置</a-button>
+            </div>
+          </a-form-item>
         </div>
 
-        <a-table :columns="[
-          { title: '应用名称', dataIndex: 'name', width: 176 },
-          { title: '应用类型', key: 'type', width: 112 },
-          { title: 'Client ID', key: 'clientId', width: 288 },
-          { title: '状态', key: 'status', width: 96 },
-          { title: '访问令牌有效期', key: 'accessTokenLifetime', width: 128 },
-          { title: '刷新令牌有效期', key: 'refreshTokenLifetime', width: 128 },
-          { title: '创建时间', key: 'createdAt', width: 160 },
-          { title: '操作', key: 'actions', width: 320 }
-        ]" :data-source="applications" :loading="loading" row-key="id" :pagination="false" :scroll="{ x: 1408 }">
+        <a-table :columns="columns" :data-source="applications" :loading="loading" row-key="id" :pagination="false" :scroll="{ x: 1408 }">
           <template #bodyCell="{ column, record: row }">
             <template v-if="column.key === 'type'">{{ getTypeText(row.type) }}</template>
             <template v-else-if="column.key === 'clientId'">
@@ -363,7 +296,7 @@ onMounted(() => {
                   >
                     {{ row.status === 'active' ? '禁用' : '启用' }}
                   </a-button>
-                  <a-button type="link" size="small" class="h-auto p-0 text-[#B91C1C]" @click="handleDelete(row)">删除</a-button>
+                  <a-button type="link" size="small" danger @click="handleDelete(row)">删除</a-button>
                 </div>
             </template>
           </template>
@@ -385,120 +318,9 @@ onMounted(() => {
       </div>
     </a-card>
 
-    <a-modal v-model:open="dialogVisible" :footer="null">
-      <div class="max-w-xl">
-        <div>
-          <h3>{{ dialogTitle }}</h3>
-        </div>
-        <a-form :model="appForm" :rules="appFormRules" layout="vertical" class="py-4" @finish="handleSubmit">
-          <div class="grid gap-4">
-            <a-form-item label="应用名称" name="name">
-              <a-input v-model:value="appForm.name" placeholder="请输入应用名称" />
-            </a-form-item>
-            <a-form-item label="应用类型" name="type">
-              <a-select v-model:value="appForm.type" :options="applicationTypeOptions" />
-            </a-form-item>
-            <template v-if="isEditing">
-              <a-form-item label="应用描述" name="description">
-                <a-textarea v-model:value="appForm.description" :rows="3" placeholder="请输入应用描述" />
-              </a-form-item>
-              <a-form-item label="应用Logo" name="logo">
-                <a-input v-model:value="appForm.logo" placeholder="请输入Logo URL" />
-              </a-form-item>
-              <a-form-item label="重定向URI">
-                <div class="flex gap-2 mb-2">
-                  <a-input v-model:value="redirectUriInput" placeholder="请输入重定向URI" class="flex-1" />
-                  <a-button html-type="button" @click="handleAddRedirectUri">添加</a-button>
-                </div>
-                <div v-if="appForm.redirectUris && appForm.redirectUris.length > 0" class="flex flex-wrap gap-2">
-                  <a-tag
-                    v-for="(uri, index) in appForm.redirectUris"
-                    :key="index"
-                    color="blue"
-                    class="cursor-pointer"
-                    @click="handleRemoveRedirectUri(index)"
-                  >
-                    {{ uri }}
-                    <Trash2 class="size-3 ml-1" />
-                  </a-tag>
-                </div>
-              </a-form-item>
-              <a-form-item label="授权类型">
-                <div class="flex flex-col gap-2">
-                  <div class="flex items-center gap-2">
-                    <a-checkbox
-                      :checked="appForm.allowedGrantTypes?.includes('authorization_code')"
-                      @update:checked="toggleGrantType('authorization_code')"
-                    />
-                    <span class="text-sm">授权码模式</span>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <a-checkbox
-                      :checked="appForm.allowedGrantTypes?.includes('client_credentials')"
-                      @update:checked="toggleGrantType('client_credentials')"
-                    />
-                    <span class="text-sm">客户端凭证模式</span>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <a-checkbox
-                      :checked="appForm.allowedGrantTypes?.includes('refresh_token')"
-                      @update:checked="toggleGrantType('refresh_token')"
-                    />
-                    <span class="text-sm">刷新令牌</span>
-                  </div>
-                </div>
-              </a-form-item>
-              <a-form-item label="访问令牌有效期" name="accessTokenLifetime">
-                <div class="flex items-center gap-2">
-                  <a-input-number
-                    v-model:value="appForm.accessTokenLifetime"
-                    :min="60"
-                    :max="86400"
-                  />
-                  <span class="text-sm text-[#52677D]">秒 ({{ formatLifetime(appForm.accessTokenLifetime) }})</span>
-                </div>
-              </a-form-item>
-              <a-form-item label="刷新令牌有效期" name="refreshTokenLifetime">
-                <div class="flex items-center gap-2">
-                  <a-input-number
-                    v-model:value="appForm.refreshTokenLifetime"
-                    :min="3600"
-                    :max="31536000"
-                  />
-                  <span class="text-sm text-[#52677D]">秒 ({{ formatLifetime(appForm.refreshTokenLifetime) }})</span>
-                </div>
-              </a-form-item>
-            </template>
-          </div>
-          <div class="flex justify-end gap-2">
-            <a-button @click="dialogVisible = false">取消</a-button>
-            <a-button type="primary" html-type="submit">确定</a-button>
-          </div>
-        </a-form>
-      </div>
-    </a-modal>
+    <ApplicationEditDialog ref="ApplicationEditDialogRef" @submit="handleSubmitApplicationEditDialog"/>
 
-    <a-modal v-model:open="secretDialogVisible" :footer="null">
-      <div class="max-w-md">
-        <div>
-          <h3>Client Secret</h3>
-        </div>
-        <a-alert
-          class="mb-5!"
-          type="warning"
-          show-icon
-          title="请妥善保管您的客户端密钥"
-          description="密钥只会在创建应用或重新生成时显示一次，请立即复制并妥善保管。"
-        />
-        <div class="bg-[#F4F8FB] p-3 rounded-md font-mono text-sm break-all">
-          {{ newClientSecret }}
-        </div>
-        <div>
-          <a-button @click="copyToClipboard(newClientSecret)">复制密钥</a-button>
-          <a-button  @click="secretDialogVisible = false">关闭</a-button>
-        </div>
-      </div>
-    </a-modal>
+    <SecretDialog ref="SecretDialogRef"/>
 
     <contextHolder />
     </div>

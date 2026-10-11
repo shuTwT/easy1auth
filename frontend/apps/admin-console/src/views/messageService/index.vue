@@ -195,56 +195,44 @@ onMounted(() => loadTemplates())
       </div>
     </a-card>
 
-    <a-modal v-model:open="showTemplateDialog" :footer="null">
-      <div class="sm:max-w-[700px]">
-        <div>
-          <h3>{{ editingTemplate ? '编辑模板' : '新建模板' }}</h3>
-        </div>
-        <form>
-          <div class="grid gap-4 py-4">
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">模板类型</label>
-              <a-radio-group v-model:value="templateForm.type" :disabled="!!editingTemplate">
-                <div class="flex items-center gap-2">
-                  <a-radio value="email" />
-                  <label class="text-sm cursor-pointer">邮件</label>
-                </div>
-                <div class="flex items-center gap-2">
-                  <a-radio value="sms" />
-                  <label class="text-sm cursor-pointer">短信</label>
-                </div>
+    <a-modal v-model:open="showTemplateDialog" :title="editingTemplate ? '编辑模板' : '新建模板'">
+        <a-form>
+            <a-form-item name="type" label="模板类型">
+              <a-radio-group
+                  v-model:value="templateForm.type"
+                  :disabled="!!editingTemplate"
+                  :options="[
+                      {value:'email',label:'邮件'},
+                      {value:'sms',label:'短信'}
+                  ]"
+              >
               </a-radio-group>
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">模板代码</label>
+            </a-form-item>
+            <a-form-item name="code" label="模板代码">
               <a-input v-model:value="templateForm.code" placeholder="例如：verification_code" :disabled="!!editingTemplate" />
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">模板名称</label>
+            </a-form-item>
+            <a-form-item name="name" label="模板名称">
               <a-input v-model:value="templateForm.name" placeholder="请输入模板名称" />
-            </div>
-            <div v-if="templateForm.type === 'email'" class="grid gap-2">
-              <label class="text-sm font-medium">邮件主题</label>
+            </a-form-item>
+            <a-form-item name="subject" label="邮件主题">
               <a-input v-model:value="templateForm.subject" placeholder="请输入邮件主题，支持变量如 {{appName}}" />
-            </div>
-            <div class="grid gap-2">
-              <label class="text-sm font-medium">模板内容</label>
+            </a-form-item>
+            <a-form-item name="content" label="模板内容">
               <a-textarea v-model:value="templateForm.content"
                 :rows="10"
                 placeholder="请输入模板内容，支持变量如 {{code}}, {{username}} 等"
               />
-            </div>
-            <div class="flex items-center gap-2">
-              <a-switch :checked="templateForm.isDefault" @update:checked="templateForm.isDefault = $event === true" />
-              <label class="text-sm cursor-pointer">设为默认</label>
-            </div>
-          </div>
-        </form>
-        <div>
-          <a-button  @click="showTemplateDialog = false">取消</a-button>
-            <a-button type="primary" :loading="savingTemplate" :disabled="savingTemplate" @click="handleSaveTemplate">保存</a-button>
+            </a-form-item>
+            <a-form-item name="isDefault" label="设为默认">
+              <a-switch v-model:checked="templateForm.isDefault" />
+            </a-form-item>
+        </a-form>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <a-button @click="showTemplateDialog = false">取消</a-button>
+          <a-button type="primary" :loading="savingTemplate" :disabled="savingTemplate" @click="handleSaveTemplate">保存</a-button>
         </div>
-      </div>
+      </template>
     </a-modal>
 
     <contextHolder />

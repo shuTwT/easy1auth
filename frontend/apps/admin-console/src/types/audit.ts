@@ -30,8 +30,7 @@ export interface AuditLogQueryDto {
   resource?: string
   resourceId?: string
   status?: AuditLogStatus
-  startDate?: string
-  endDate?: string
+  createAt?:[string,string]
   ip?: string
 }
 

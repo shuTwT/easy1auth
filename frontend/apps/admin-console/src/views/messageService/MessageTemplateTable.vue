@@ -66,25 +66,28 @@ watch(() => filteredTemplates.value.length, total => {
 <template>
   <div>
     <div class="mb-4 flex flex-wrap items-center gap-3">
-      <a-input-search
-        v-model:value="keyword"
-        allow-clear
-        enter-button="搜索"
-        placeholder="搜索模板名称、代码、主题或内容"
-        aria-label="搜索消息模板"
-        class="w-full! sm:w-80!"
-        @search="handleSearch"
-      />
-      <a-select
-        v-model:value="status"
-        allow-clear
-        placeholder="全部状态"
-        aria-label="筛选模板状态"
-        class="w-32!"
-        :options="[{ label: '启用', value: 'active' }, { label: '禁用', value: 'inactive' }]"
-        @change="handleSearch(keyword)"
-      />
-      <a-button @click="resetSearch">重置</a-button>
+      <a-form-item>
+        <a-input
+          v-model:value="keyword"
+          placeholder="搜索模板名称、代码、主题或内容"
+          class="w-[220px]!"
+        />
+      </a-form-item>
+      <a-form-item>
+        <a-select
+            v-model:value="status"
+            allow-clear
+            placeholder="全部状态"
+            aria-label="筛选模板状态"
+            class="w-32!"
+            :options="[{ label: '启用', value: 'active' }, { label: '禁用', value: 'inactive' }]"
+            @change="handleSearch(keyword)"
+        />
+      </a-form-item>
+      <a-form-item>
+        <a-button @click="resetSearch">重置</a-button>
+      </a-form-item>
+
     </div>
 
     <a-table

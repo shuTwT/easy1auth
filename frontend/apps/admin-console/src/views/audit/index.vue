@@ -4,12 +4,13 @@ import { Modal, message } from 'antdv-next'
 import { Search, RefreshCw, Download, Trash2 } from '@lucide/vue'
 import { auditApi } from '@/api/audit'
 import type { AuditLog, AuditLogQueryDto, AuditLogStats } from '@/types/audit'
+import DetailDialog from "./components/DetailDialog.vue";
+
 const loading = ref(false)
 const logs = ref<AuditLog[]>([])
 const total = ref(0)
 const stats = ref<AuditLogStats | null>(null)
-const detailDialogVisible = ref(false)
-const currentLog = ref<AuditLog | null>(null)
+const detailDialogRef = ref()
 
 const [modal, contextHolder] = Modal.useModal()
 
@@ -20,25 +21,27 @@ const queryForm = reactive<AuditLogQueryDto>({
   type: undefined,
   action: '',
   status: undefined,
-  startDate: '',
-  endDate: '',
+  createAt: undefined,
   ip: ''
 })
 
-const dateRange = ref<[string, string] | null>(null)
 const auditTypeOptions = [
   { value: 'auth', label: '认证' }, { value: 'user', label: '用户' }, { value: 'application', label: '应用' },
   { value: 'tenant', label: '用户池' }, { value: 'role', label: '角色' }, { value: 'group', label: '用户组' }, { value: 'system', label: '系统' },
 ]
 const auditStatusOptions = [{ value: 'success', label: '成功' }, { value: 'failed', label: '失败' }]
 
+const columns=[
+  { title: '时间', key: 'createdAt', width: 180 }, { title: '用户', key: 'username', width: 120 },
+  { title: '类型', key: 'type', width: 100 }, { title: '操作', key: 'action', width: 120 },
+  { title: '资源', dataIndex: 'resource', width: 120 }, { title: 'IP地址', dataIndex: 'ip', width: 140 },
+  { title: '状态', key: 'status', width: 80 }, { title: '错误信息', key: 'errorMessage', width: 200 },
+  { title: '操作', key: 'actions', width: 100 }
+]
+
 const loadLogs = async () => {
   loading.value = true
   try {
-    if (dateRange.value) {
-      queryForm.startDate = dateRange.value[0]
-      queryForm.endDate = dateRange.value[1]
-    }
 
     const res = await auditApi.getList(queryForm)
     logs.value = res.items
@@ -72,9 +75,7 @@ const handleReset = () => {
   queryForm.action = ''
   queryForm.status = undefined
   queryForm.ip = ''
-  dateRange.value = null
-  queryForm.startDate = ''
-  queryForm.endDate = ''
+  queryForm.createAt=undefined
   queryForm.page = 1
   loadLogs()
 }
@@ -85,8 +86,7 @@ const handlePageChange = (page: number, _pageSize?: number) => {
 }
 
 const handleViewDetail = (row: AuditLog) => {
-  currentLog.value = row
-  detailDialogVisible.value = true
+  detailDialogRef.value.open(row)
 }
 
 const handleExport = async (format: 'csv' | 'json') => {
@@ -196,190 +196,88 @@ onMounted(() => {
 
 <template>
   <div class="p-6 min-h-[calc(100vh-64px)]">
-    <div class="flex justify-between items-start mb-6">
-      <div class="flex-1">
-        <h1 class="text-2xl font-bold text-[#102A43] mb-2">审计日志</h1>
-        <p class="text-sm text-[#52677D]">查看系统操作记录和安全审计信息</p>
-      </div>
-    </div>
     <a-card>
-      <div class="flex flex-row items-center justify-between">
-        <div></div>
-        <div class="flex gap-2">
-          <a-button size="small" @click="handleExport('json')">
-            <Download class="size-4 mr-2" />
-            导出JSON
-          </a-button>
-          <a-button size="small"  @click="handleExport('csv')">
-            <Download class="size-4 mr-2" />
-            导出CSV
-          </a-button>
-            <a-button size="small" danger @click="handleCleanup">
-            <Trash2 class="size-4 mr-2" />
-            清理日志
-          </a-button>
-        </div>
-      </div>
-      <div>
-        <div class="flex flex-wrap items-end gap-4 mb-5">
-          <div class="grid gap-2">
-            <label>用户名</label>
-            <a-input v-model:value="queryForm.username" placeholder="请输入用户名" class="w-[150px]" />
-          </div>
-          <div class="grid gap-2">
-            <label>日志类型</label>
-            <a-select v-model:value="queryForm.type" placeholder="请选择类型" class="w-[150px]" allow-clear :options="auditTypeOptions" />
-          </div>
-          <div class="grid gap-2">
-            <label>操作</label>
-            <a-input v-model:value="queryForm.action" placeholder="请输入操作" class="w-[150px]" />
-          </div>
-          <div class="grid gap-2">
-            <label>状态</label>
-            <a-select v-model:value="queryForm.status" placeholder="请选择状态" class="w-[120px]" allow-clear :options="auditStatusOptions" />
-          </div>
-          <div class="grid gap-2">
-            <label>时间范围</label>
-            <div class="flex items-center gap-2">
-              <a-input v-model:value="queryForm.startDate" type="date" class="w-[140px]" />
-              <span class="text-[#52677D]">至</span>
-              <a-input v-model:value="queryForm.endDate" type="date" class="w-[140px]" />
-            </div>
-          </div>
-          <div class="flex gap-2">
-            <a-button @click="handleSearch">
-              <Search class="size-4 mr-2" />
-              搜索
-            </a-button>
-            <a-button @click="handleReset">
-              <RefreshCw class="size-4 mr-2" />
-              重置
-            </a-button>
-          </div>
-        </div>
 
-        <a-table :columns="[
-          { title: '时间', key: 'createdAt', width: 180 }, { title: '用户', key: 'username', width: 120 },
-          { title: '类型', key: 'type', width: 100 }, { title: '操作', key: 'action', width: 120 },
-          { title: '资源', dataIndex: 'resource', width: 120 }, { title: 'IP地址', dataIndex: 'ip', width: 140 },
-          { title: '状态', key: 'status', width: 80 }, { title: '错误信息', key: 'errorMessage', width: 200 },
-          { title: '操作', key: 'actions', width: 100 }
-        ]" :data-source="logs" :loading="loading" row-key="id" :pagination="false" :scroll="{ x: 1160 }">
-          <template #bodyCell="{ column, record: item }">
-            <template v-if="column.key === 'createdAt'">{{ formatDate(item.createdAt) }}</template>
-            <template v-else-if="column.key === 'username'">{{ item.username || '-' }}</template>
-            <template v-else-if="column.key === 'type'">
+          <div class="flex flex-wrap items-end gap-4">
+            <a-form-item name="username" label="用户名">
+              <a-input v-model:value="queryForm.username" placeholder="请输入用户名" class="w-[150px]" />
+            </a-form-item>
+            <a-form-item name="type" label="日志类型">
+              <a-select v-model:value="queryForm.type" placeholder="请选择类型" class="w-[150px]" allow-clear :options="auditTypeOptions" />
+            </a-form-item>
+            <a-form-item name="action" label="操作">
+              <a-input v-model:value="queryForm.action" placeholder="请输入操作" class="w-[150px]" />
+            </a-form-item>
+            <a-form-item name="status" label="状态">
+              <a-select v-model:value="queryForm.status" placeholder="请选择状态" class="w-[120px]" allow-clear :options="auditStatusOptions" />
+            </a-form-item>
+            <a-form-item name="createAt" label="创建时间">
+              <a-range-picker v-model:value="queryForm.createAt"/>
+            </a-form-item>
+            <a-form-item >
+              <div class="flex gap-2">
+                <a-button @click="handleSearch">
+                  <Search class="size-4 mr-2" />
+                  搜索
+                </a-button>
+                <a-button @click="handleReset">
+                  <RefreshCw class="size-4 mr-2" />
+                  重置
+                </a-button>
+                <a-button @click="handleExport('json')">
+                  <Download class="size-4 mr-2" />
+                  导出JSON
+                </a-button>
+                <a-button  @click="handleExport('csv')">
+                  <Download class="size-4 mr-2" />
+                  导出CSV
+                </a-button>
+                <a-button danger @click="handleCleanup">
+                  <Trash2 class="size-4 mr-2" />
+                  清理日志
+                </a-button>
+              </div>
+            </a-form-item>
+          </div>
+    </a-card>
+
+    <a-card class="mt-3!">
+      <a-table :columns="columns" :data-source="logs" :loading="loading" row-key="id" :pagination="false" :scroll="{ x: 1160 }">
+        <template #bodyCell="{ column, record: item }">
+          <template v-if="column.key === 'createdAt'">{{ formatDate(item.createdAt) }}</template>
+          <template v-else-if="column.key === 'username'">{{ item.username || '-' }}</template>
+          <template v-else-if="column.key === 'type'">
             <a-tag :color="getTypeVariant(item.type)">
-                  {{ getTypeText(item.type) }}
-                </a-tag>
-            </template>
-            <template v-else-if="column.key === 'action'">{{ getActionText(item.action) }}</template>
-            <template v-else-if="column.key === 'status'">
-            <a-tag :color="getStatusVariant(item.status)">
-                  {{ getStatusText(item.status) }}
-                </a-tag>
-            </template>
-            <template v-else-if="column.key === 'errorMessage'"><span class="text-[#52677D]">{{ item.errorMessage || '-' }}</span></template>
-            <template v-else-if="column.key === 'actions'">
-                <a-button type="link" size="small" class="h-auto p-0" @click="handleViewDetail(item)">详情</a-button>
-            </template>
+              {{ getTypeText(item.type) }}
+            </a-tag>
           </template>
-        </a-table>
+          <template v-else-if="column.key === 'action'">{{ getActionText(item.action) }}</template>
+          <template v-else-if="column.key === 'status'">
+            <a-tag :color="getStatusVariant(item.status)">
+              {{ getStatusText(item.status) }}
+            </a-tag>
+          </template>
+          <template v-else-if="column.key === 'errorMessage'"><span class="text-[#52677D]">{{ item.errorMessage || '-' }}</span></template>
+          <template v-else-if="column.key === 'actions'">
+            <a-button type="link" size="small" class="h-auto p-0" @click="handleViewDetail(item)">详情</a-button>
+          </template>
+        </template>
+      </a-table>
 
-        <div class="flex items-center justify-between mt-4 pt-4 border-t">
-          <span class="text-sm text-[#52677D]">共 {{ total }} 条</span>
-          <a-pagination
+      <div class="flex items-center justify-between mt-4 pt-4">
+        <span class="text-sm text-[#52677D]">共 {{ total }} 条</span>
+        <a-pagination
             :current="queryForm.page"
             :page-size="queryForm.pageSize"
             :total="total"
             :show-size-changer="false"
             size="small"
             @change="handlePageChange"
-          />
-        </div>
+        />
       </div>
     </a-card>
 
-    <a-modal v-model:open="detailDialogVisible" :footer="null">
-      <div class="sm:max-w-[700px]">
-        <div>
-          <h3>审计日志详情</h3>
-        </div>
-        <div v-if="currentLog" class="grid grid-cols-2 gap-4 py-4">
-          <div class="space-y-1">
-            <label class="text-[#52677D]">日志ID</label>
-            <div class="text-sm font-mono">{{ currentLog.id }}</div>
-          </div>
-          <div class="space-y-1">
-            <label class="text-[#52677D]">时间</label>
-            <div class="text-sm">{{ formatDate(currentLog.createdAt) }}</div>
-          </div>
-          <div class="space-y-1">
-            <label class="text-[#52677D]">用户ID</label>
-            <div class="text-sm">{{ currentLog.userId || '-' }}</div>
-          </div>
-          <div class="space-y-1">
-            <label class="text-[#52677D]">用户名</label>
-            <div class="text-sm">{{ currentLog.username || '-' }}</div>
-          </div>
-          <div class="space-y-1">
-            <label class="text-[#52677D]">类型</label>
-            <div class="text-sm">
-          <a-tag :color="getTypeVariant(currentLog.type)">
-                {{ getTypeText(currentLog.type) }}
-              </a-tag>
-            </div>
-          </div>
-          <div class="space-y-1">
-            <label class="text-[#52677D]">操作</label>
-            <div class="text-sm">{{ getActionText(currentLog.action) }}</div>
-          </div>
-          <div class="space-y-1">
-            <label class="text-[#52677D]">资源</label>
-            <div class="text-sm">{{ currentLog.resource }}</div>
-          </div>
-          <div class="space-y-1">
-            <label class="text-[#52677D]">资源ID</label>
-            <div class="text-sm">{{ currentLog.resourceId || '-' }}</div>
-          </div>
-          <div class="space-y-1">
-            <label class="text-[#52677D]">请求方法</label>
-            <div class="text-sm">{{ currentLog.method || '-' }}</div>
-          </div>
-          <div class="space-y-1">
-            <label class="text-[#52677D]">IP地址</label>
-            <div class="text-sm">{{ currentLog.ip }}</div>
-          </div>
-          <div class="col-span-2 space-y-1">
-            <label class="text-[#52677D]">User Agent</label>
-            <div class="text-sm text-[#52677D]">{{ currentLog.userAgent || '-' }}</div>
-          </div>
-          <div class="space-y-1">
-            <label class="text-[#52677D]">位置</label>
-            <div class="text-sm">{{ currentLog.location || '-' }}</div>
-          </div>
-          <div class="space-y-1">
-            <label class="text-[#52677D]">状态</label>
-            <div class="text-sm">
-          <a-tag :color="getStatusVariant(currentLog.status)">
-                {{ getStatusText(currentLog.status) }}
-              </a-tag>
-            </div>
-          </div>
-          <div v-if="currentLog.errorMessage" class="col-span-2 space-y-1">
-            <label class="text-[#52677D]">错误信息</label>
-            <div class="text-sm text-[#B91C1C]">{{ currentLog.errorMessage }}</div>
-          </div>
-          <div v-if="currentLog.changes" class="col-span-2 space-y-1">
-            <label class="text-[#52677D]">变更内容</label>
-            <pre class="text-sm bg-[#F4F8FB] p-3 rounded-md overflow-auto max-h-75">{{ JSON.stringify(currentLog.changes, null, 2) }}</pre>
-          </div>
-        </div>
-        <div>
-          <a-button  @click="detailDialogVisible = false">关闭</a-button>
-        </div>
-      </div>
-    </a-modal>
+    <DetailDialog ref="detailDialogRef"/>
     <contextHolder />
   </div>
 </template>
