@@ -95,27 +95,27 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '角色管理', requiresAuth: true }
       },
       {
-        path: 'identity-source-management/social-identity-source',
+        path: 'connection/social-identity-source',
         name: 'SocialIdentitySource',
-        component: () => import('@/views/identity-source-management/social-identity-source/index.vue'),
+        component: () => import('@/views/connection/social-identity-source/index.vue'),
         meta: { title: '社会化身份源', requiresAuth: true }
       },
       {
-        path: 'identity-source-management/enterprise-identity-source',
+        path: 'connection/enterprise-identity-source',
         name: 'EnterpriseIdentitySource',
-        component: () => import('@/views/identity-source-management/enterprise-identity-source/index.vue'),
+        component: () => import('@/views/connection/enterprise-identity-source/index.vue'),
         meta: { title: '企业身份源', requiresAuth: true }
       },
       {
-        path: 'identity-source-management/sync-identity-source',
+        path: 'connection/sync-identity-source',
         name: 'SyncIdentitySource',
-        component: () => import('@/views/identity-source-management/sync-identity-source/index.vue'),
+        component: () => import('@/views/connection/sync-identity-source/index.vue'),
         meta: { title: '同步身份源', requiresAuth: true }
       },
       // Keep the retired flat identity source URLs working.
-      { path: 'social-identity-source', redirect: '/identity-source-management/social-identity-source' },
-      { path: 'enterprise-identity-source', redirect: '/identity-source-management/enterprise-identity-source' },
-      { path: 'sync-identity-source', redirect: '/identity-source-management/sync-identity-source' },
+      { path: 'social-identity-source', redirect: '/connection/social-identity-source' },
+      { path: 'enterprise-identity-source', redirect: '/connection/enterprise-identity-source' },
+      { path: 'sync-identity-source', redirect: '/connection/sync-identity-source' },
       {
         path: 'brand-login-style',
         name: 'BrandLoginStyle',

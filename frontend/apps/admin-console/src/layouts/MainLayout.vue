@@ -70,10 +70,10 @@ const menuIcons: Record<string, Component> = {
   'permission-management/permission-data-resource': Database,
   'admin-user': UserCog,
   application: Monitor,
-  'identity-source-management': KeyRound,
-  'identity-source-management/social-identity-source': Link2,
-  'identity-source-management/enterprise-identity-source': Building2,
-  'identity-source-management/sync-identity-source': Building2,
+  connection: KeyRound,
+  'connection/social-identity-source': Link2,
+  'connection/enterprise-identity-source': Building2,
+  'connection/sync-identity-source': Building2,
   'user-pool': Users,
   'user-pool-package': Package,
   'pool-tenants': Building2,
@@ -93,9 +93,11 @@ const menuResourceRoutes: Record<string, string> = {
   'pool-tenant': 'pool-tenants',
   'permission-space': 'permission-management/permission-space',
   'permission-data-resource': 'permission-management/permission-data-resource',
-  'social-identity-source': 'identity-source-management/social-identity-source',
-  'enterprise-identity-source': 'identity-source-management/enterprise-identity-source',
-  'sync-identity-source': 'identity-source-management/sync-identity-source',
+  // 身份源目录在权限目录里的 resource 仍为 identity-source-management，路由前缀用 connection。
+  'identity-source-management': 'connection',
+  'social-identity-source': 'connection/social-identity-source',
+  'enterprise-identity-source': 'connection/enterprise-identity-source',
+  'sync-identity-source': 'connection/sync-identity-source',
 }
 
 const menuTree = computed(() => {
