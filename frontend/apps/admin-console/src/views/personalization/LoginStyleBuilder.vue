@@ -4,6 +4,7 @@ import { message, Modal } from 'antdv-next'
 import { Palette } from '@lucide/vue'
 import { socialIdentitySourceApi } from '@/api/socialIdentitySource'
 import { enterpriseIdentitySourceApi } from '@/api/enterpriseIdentitySource'
+import type { LoginIdentitySourceListApi } from '@/api/loginIdentitySource'
 import type { LoginIdentitySource } from '@/types/loginIdentitySource'
 import PreviewToolbar from './PreviewToolbar.vue'
 import LoginStylePreview from './LoginStylePreview.vue'
@@ -86,7 +87,7 @@ async function resetDraft() {
 async function loadLoginSources() {
   loginSourcesLoading.value = true
   try {
-    const loadCategory = async (api: typeof socialIdentitySourceApi) => {
+    const loadCategory = async (api: LoginIdentitySourceListApi) => {
       const sources: LoginIdentitySource[] = []
       let page = 1
       while (true) {

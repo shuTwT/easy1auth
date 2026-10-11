@@ -139,18 +139,25 @@ onMounted(loadSources)
 
     <a-card>
       <div class="mb-4 flex flex-wrap gap-3">
-        <a-input v-model:value="search" placeholder="搜索身份源名称" class="w-60" @press-enter="loadSources" />
-        <a-select
-          v-model:value="status"
-          allow-clear
-          class="w-40"
-          placeholder="请选择状态"
-          :options="statusOptions"
-        />
-        <a-button @click="loadSources">
-          <RefreshCw class="size-4 mr-2" />
-          查询
-        </a-button>
+        <a-form-item>
+          <a-input v-model:value="search" placeholder="搜索身份源名称" @press-enter="loadSources" />
+        </a-form-item>
+        <a-form-item>
+          <a-select
+              v-model:value="status"
+              allow-clear
+              class="w-40"
+              placeholder="请选择状态"
+              :options="statusOptions"
+          />
+        </a-form-item>
+        <a-form-item>
+          <a-button @click="loadSources">
+            <RefreshCw class="size-4 mr-2" />
+            查询
+          </a-button>
+        </a-form-item>
+
       </div>
 
       <a-table
