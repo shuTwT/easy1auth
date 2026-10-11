@@ -253,20 +253,20 @@ watch(() => userStore.currentUserPool?.id, loadAuthorizedMenus, { immediate: tru
       :trigger="null"
       theme="dark"
       :styles="{ body: { display: 'flex', flexDirection: 'column', minHeight: 0, height: '100%' } }"
-      class="!bg-slate-950/95"
+      class="!bg-white"
     >
-      <div class="flex h-14 shrink-0 items-center gap-2 px-4 text-white" :class="collapsed ? 'justify-center' : ''">
-        <div class="flex size-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-sky-700 to-sky-400 text-white">✓</div>
+      <div class="flex h-14 shrink-0 items-center gap-2 px-4" :class="collapsed ? 'justify-center' : ''">
+        <div class="flex size-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-sky-700 to-sky-400 ">✓</div>
         <span v-if="!collapsed" class="text-base font-semibold tracking-wide">Easy1Auth</span>
       </div>
       <div v-if="!collapsed" class="shrink-0 px-3 pb-3">
         <a-dropdown :menu="{ items: userPoolItems, onClick: onUserPoolClick }" :trigger="['click']">
-          <button class="flex w-full items-center gap-2 rounded-md bg-white/5 px-3 py-2 text-sm text-slate-300 hover:bg-white/10 hover:text-white">
+          <button class="flex w-full items-center gap-2 rounded-md bg-white/5 px-3 py-2 text-sm  hover:bg-white/10 ">
             <Building2 :size="16" /><span class="flex-1 truncate text-left">{{ userStore.currentUserPool?.name || '选择用户池' }}</span><ChevronDown :size="14" />
           </button>
         </a-dropdown>
       </div>
-      <div class="min-h-0 flex-1 overflow-y-auto">
+      <div class="sidebar-menu-scroll min-h-0 flex-1 overflow-y-auto">
         <div v-if="menuLoading" class="p-6 text-center text-slate-400"><a-spin size="small" /> <span class="ml-2 text-xs">正在加载菜单…</span></div>
         <a-menu
           v-else
@@ -274,20 +274,19 @@ watch(() => userStore.currentUserPool?.id, loadAuthorizedMenus, { immediate: tru
           :selected-keys="selectedKeys"
           :items="menuItems"
           mode="inline"
-          theme="dark"
           :inline-collapsed="collapsed"
-          class="!border-e-0 !bg-transparent"
+          class="!border-e-0"
           @click="onMenuClick"
         />
       </div>
       <div class="shrink-0 border-t border-white/10 p-3">
         <a-dropdown :menu="{ items: profileItems, onClick: onProfileClick }" :trigger="['click']" placement="top">
-          <button class="flex w-full items-center gap-3 rounded-md p-2 text-left hover:bg-white/5">
+          <button class="flex w-full items-center gap-3 rounded-md p-2 text-left">
             <a-avatar class="shrink-0 bg-sky-600">{{ (userStore.userInfo?.username || '管理员').charAt(0).toUpperCase() }}</a-avatar>
-            <span v-if="!collapsed" class="min-w-0 flex-1 truncate text-sm text-slate-200">{{ userStore.userInfo?.username || '管理员' }}</span>
+            <span v-if="!collapsed" class="min-w-0 flex-1 truncate text-sm">{{ userStore.userInfo?.username || '管理员' }}</span>
           </button>
         </a-dropdown>
-        <a-button type="text" class="!mt-2 !w-full !text-slate-400 hover:!text-white" @click="collapsed = !collapsed"><PanelLeftClose :size="16" /></a-button>
+        <a-button type="text" class="!mt-2 !w-full" @click="collapsed = !collapsed"><PanelLeftClose :size="16" /></a-button>
       </div>
     </a-layout-sider>
 
@@ -297,7 +296,7 @@ watch(() => userStore.currentUserPool?.id, loadAuthorizedMenus, { immediate: tru
     </a-drawer>
 
     <a-layout class="main-layout">
-      <a-layout-header class="!flex !h-14 !items-center !justify-between !border-b !border-slate-200 !px-4 !shadow-sm">
+      <a-layout-header class="!bg-white !flex !h-14 !items-center !justify-between !border-b !border-slate-200 !px-4 !shadow-sm">
         <div class="flex items-center gap-2 text-sm font-medium text-slate-700">
           <a-button v-if="mobile" type="text" @click="mobileOpen = true"><MenuIcon :size="18" /></a-button>
           <span>{{ currentTitle }}</span>
@@ -361,5 +360,30 @@ watch(() => userStore.currentUserPool?.id, loadAuthorizedMenus, { immediate: tru
 
 .main-layout {
   min-width: 0;
+}
+
+.sidebar-menu-scroll {
+  scrollbar-color: rgba(148, 163, 184, 0.42) transparent;
+  scrollbar-width: thin;
+}
+
+.sidebar-menu-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-menu-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-menu-scroll::-webkit-scrollbar-thumb {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+  background-color: rgba(148, 163, 184, 0.42);
+  transition: background-color 150ms ease-out;
+}
+
+.sidebar-menu-scroll:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(186, 230, 253, 0.68);
 }
 </style>

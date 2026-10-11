@@ -9,7 +9,7 @@ import java.time.Instant;
 /**
  * 安全策略实体（对应 security_policy 表）。
  *
- * <p>保存用户池（tenant_id 为空的记录为平台全局策略）的密码强度、有效期、
+ * <p>保存用户池（user_pool_id 为空的记录为平台全局策略）的密码强度、有效期、
  * 防重用、MFA 要求与登录锁定等配置，供登录与改密流程强制执行。</p>
  */
 @Entity

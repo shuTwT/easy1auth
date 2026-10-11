@@ -15,7 +15,7 @@
     "@easy1auth/types": "workspace:*",
     "@easy1auth/utils": "workspace:*",
     "@lucide/vue": "^1.16.0",
-    "antdv-next": "^1.4.5",
+    "antdv-next": "^1.6.0",
     "axios": "^1.13.6",
     "pinia": "^3.0.4",
     "tailwindcss": "^4.3.0",
@@ -23,7 +23,7 @@
     "vue-router": "^4.6.4"
   },
   "devDependencies": {
-    "@antdv-next/tailwind": "^1.1.1",
+    "@antdv-next/tailwind": "^1.1.2",
     "@tailwindcss/vite": "^4.3.0",
     "@types/node": "^24.10.1",
     "@vitejs/plugin-vue": "^6.0.2",

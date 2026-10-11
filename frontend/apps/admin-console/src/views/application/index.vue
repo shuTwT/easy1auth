@@ -288,8 +288,8 @@ onMounted(() => {
   <div class="p-6 min-h-[calc(100vh-64px)]">
     <div class="flex justify-between items-start mb-6">
       <div class="flex-1">
-        <h1 class="text-2xl font-bold text-foreground mb-2">应用管理</h1>
-        <p class="text-sm text-muted-foreground">管理接入应用，包括 OAuth 2.0 客户端配置</p>
+        <h1 class="text-2xl font-bold text-[#102A43] mb-2">应用管理</h1>
+        <p class="text-sm text-[#52677D]">管理接入应用，包括 OAuth 2.0 客户端配置</p>
       </div>
       <div class="flex gap-3">
         <a-button @click="handleAdd">
@@ -363,14 +363,14 @@ onMounted(() => {
                   >
                     {{ row.status === 'active' ? '禁用' : '启用' }}
                   </a-button>
-                  <a-button type="link" size="small" class="h-auto p-0 text-destructive" @click="handleDelete(row)">删除</a-button>
+                  <a-button type="link" size="small" class="h-auto p-0 text-[#B91C1C]" @click="handleDelete(row)">删除</a-button>
                 </div>
             </template>
           </template>
         </a-table>
 
         <div class="flex items-center justify-between mt-5">
-          <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
+          <span class="text-sm text-[#52677D]">共 {{ total }} 条</span>
           <a-pagination
             :current="queryForm.page"
             :page-size="queryForm.pageSize"
@@ -455,7 +455,7 @@ onMounted(() => {
                     :min="60"
                     :max="86400"
                   />
-                  <span class="text-sm text-muted-foreground">秒 ({{ formatLifetime(appForm.accessTokenLifetime) }})</span>
+                  <span class="text-sm text-[#52677D]">秒 ({{ formatLifetime(appForm.accessTokenLifetime) }})</span>
                 </div>
               </a-form-item>
               <a-form-item label="刷新令牌有效期" name="refreshTokenLifetime">
@@ -465,7 +465,7 @@ onMounted(() => {
                     :min="3600"
                     :max="31536000"
                   />
-                  <span class="text-sm text-muted-foreground">秒 ({{ formatLifetime(appForm.refreshTokenLifetime) }})</span>
+                  <span class="text-sm text-[#52677D]">秒 ({{ formatLifetime(appForm.refreshTokenLifetime) }})</span>
                 </div>
               </a-form-item>
             </template>
@@ -490,7 +490,7 @@ onMounted(() => {
           title="请妥善保管您的客户端密钥"
           description="密钥只会在创建应用或重新生成时显示一次，请立即复制并妥善保管。"
         />
-        <div class="bg-muted p-3 rounded-md font-mono text-sm break-all">
+        <div class="bg-[#F4F8FB] p-3 rounded-md font-mono text-sm break-all">
           {{ newClientSecret }}
         </div>
         <div>

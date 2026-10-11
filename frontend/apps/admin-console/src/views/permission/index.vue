@@ -219,8 +219,8 @@ onMounted(loadData)
 <template>
   <div class="min-h-[calc(100vh-64px)] p-6">
     <div class="mb-6 flex items-start justify-between">
-      <div><h1 class="mb-2 text-2xl font-bold text-foreground">数据资源权限</h1>
-        <p class="text-sm text-muted-foreground">按权限空间组织数据资源，并配置资源层级与可执行操作。</p></div>
+      <div><h1 class="mb-2 text-2xl font-bold text-[#102A43]">数据资源权限</h1>
+        <p class="text-sm text-[#52677D]">按权限空间组织数据资源，并配置资源层级与可执行操作。</p></div>
       <div class="flex gap-2">
         <a-button @click="loadData">
           <RefreshCw class="mr-2 size-4"/>
@@ -236,7 +236,7 @@ onMounted(loadData)
       <a-card class="h-fit">
         <div class="mb-4 flex items-center justify-between">
           <div class="flex items-center gap-2 font-semibold">
-            <FolderTree class="size-4 text-primary"/>
+            <FolderTree class="size-4 text-[#0369A1]"/>
             权限空间
           </div>
           <a-button type="link" size="small" class="p-0" @click="openSpaceDialog()">
@@ -246,17 +246,17 @@ onMounted(loadData)
         <a-spin :spinning="spacesLoading">
           <div class="space-y-2">
             <button
-                class="flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm hover:bg-muted"
-                :class="!selectedSpaceId ? 'bg-primary/10 text-primary' : ''" @click="selectedSpaceId = undefined">
+                class="flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm hover:bg-[#F4F8FB]"
+                :class="!selectedSpaceId ? 'bg-[#0369A1]/10 text-[#0369A1]' : ''" @click="selectedSpaceId = undefined">
               <span>全部资源</span>
               <a-tag>{{ resources.length }}</a-tag>
             </button>
             <div v-for="space in spaces" :key="space.id" class="group flex items-center gap-1">
-              <button class="min-w-0 flex-1 rounded-md px-3 py-2 text-left hover:bg-muted"
-                      :class="selectedSpaceId === space.id ? 'bg-primary/10 text-primary' : ''"
+              <button class="min-w-0 flex-1 rounded-md px-3 py-2 text-left hover:bg-[#F4F8FB]"
+                      :class="selectedSpaceId === space.id ? 'bg-[#0369A1]/10 text-[#0369A1]' : ''"
                       @click="selectedSpaceId = space.id">
                 <div class="truncate text-sm font-medium">{{ space.name }}</div>
-                <div class="truncate text-xs text-muted-foreground">{{ space.code }}</div>
+                <div class="truncate text-xs text-[#52677D]">{{ space.code }}</div>
               </button>
               <a-button type="link" size="small" class="hidden p-1 group-hover:inline-flex"
                         @click="openSpaceDialog(space)">
@@ -273,10 +273,10 @@ onMounted(loadData)
       </a-card>
       <a-card>
         <div class="mb-4 flex items-center gap-3">
-          <Database class="size-5 text-primary"/>
+          <Database class="size-5 text-[#0369A1]"/>
           <div>
             <div class="font-semibold">数据资源</div>
-            <div class="text-xs text-muted-foreground">资源名称、编码、权限空间及操作权限</div>
+            <div class="text-xs text-[#52677D]">资源名称、编码、权限空间及操作权限</div>
           </div>
         </div>
         <a-table :columns="resourceColumns" :data-source="visibleResources" :loading="loading" row-key="id"
@@ -284,19 +284,19 @@ onMounted(loadData)
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'name'">
               <div class="flex items-center gap-2">
-                <Database class="size-4 shrink-0 text-primary"/>
+                <Database class="size-4 shrink-0 text-[#0369A1]"/>
                 <span class="font-medium">{{ record.name }}</span></div>
             </template>
-            <template v-else-if="column.key === 'code'"><code class="text-xs text-muted-foreground">{{
+            <template v-else-if="column.key === 'code'"><code class="text-xs text-[#52677D]">{{
                 record.code
               }}</code></template>
             <template v-else-if="column.key === 'space'">
               <a-tag color="blue">{{ spaceName(record.spaceId) }}</a-tag>
             </template>
             <template v-else-if="column.key === 'description'"><span
-                class="text-sm text-muted-foreground">{{ record.description || '-' }}</span></template>
+                class="text-sm text-[#52677D]">{{ record.description || '-' }}</span></template>
             <template v-else-if="column.key === 'parent'"><span
-                class="text-sm text-muted-foreground">{{ record.parent?.name || '-' }}</span></template>
+                class="text-sm text-[#52677D]">{{ record.parent?.name || '-' }}</span></template>
             <template v-else-if="column.key === 'operations'">
               <div class="flex flex-wrap gap-1">
                 <a-tag v-for="operation in (record.operations || [record.action])" :key="operation" color="green">

@@ -198,8 +198,8 @@ onMounted(() => {
   <div class="p-6 min-h-[calc(100vh-64px)]">
     <div class="flex justify-between items-start mb-6">
       <div class="flex-1">
-        <h1 class="text-2xl font-bold text-foreground mb-2">审计日志</h1>
-        <p class="text-sm text-muted-foreground">查看系统操作记录和安全审计信息</p>
+        <h1 class="text-2xl font-bold text-[#102A43] mb-2">审计日志</h1>
+        <p class="text-sm text-[#52677D]">查看系统操作记录和安全审计信息</p>
       </div>
     </div>
     <a-card>
@@ -242,7 +242,7 @@ onMounted(() => {
             <label>时间范围</label>
             <div class="flex items-center gap-2">
               <a-input v-model:value="queryForm.startDate" type="date" class="w-[140px]" />
-              <span class="text-muted-foreground">至</span>
+              <span class="text-[#52677D]">至</span>
               <a-input v-model:value="queryForm.endDate" type="date" class="w-[140px]" />
             </div>
           </div>
@@ -279,7 +279,7 @@ onMounted(() => {
                   {{ getStatusText(item.status) }}
                 </a-tag>
             </template>
-            <template v-else-if="column.key === 'errorMessage'"><span class="text-muted-foreground">{{ item.errorMessage || '-' }}</span></template>
+            <template v-else-if="column.key === 'errorMessage'"><span class="text-[#52677D]">{{ item.errorMessage || '-' }}</span></template>
             <template v-else-if="column.key === 'actions'">
                 <a-button type="link" size="small" class="h-auto p-0" @click="handleViewDetail(item)">详情</a-button>
             </template>
@@ -287,7 +287,7 @@ onMounted(() => {
         </a-table>
 
         <div class="flex items-center justify-between mt-4 pt-4 border-t">
-          <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
+          <span class="text-sm text-[#52677D]">共 {{ total }} 条</span>
           <a-pagination
             :current="queryForm.page"
             :page-size="queryForm.pageSize"
@@ -307,23 +307,23 @@ onMounted(() => {
         </div>
         <div v-if="currentLog" class="grid grid-cols-2 gap-4 py-4">
           <div class="space-y-1">
-            <label class="text-muted-foreground">日志ID</label>
+            <label class="text-[#52677D]">日志ID</label>
             <div class="text-sm font-mono">{{ currentLog.id }}</div>
           </div>
           <div class="space-y-1">
-            <label class="text-muted-foreground">时间</label>
+            <label class="text-[#52677D]">时间</label>
             <div class="text-sm">{{ formatDate(currentLog.createdAt) }}</div>
           </div>
           <div class="space-y-1">
-            <label class="text-muted-foreground">用户ID</label>
+            <label class="text-[#52677D]">用户ID</label>
             <div class="text-sm">{{ currentLog.userId || '-' }}</div>
           </div>
           <div class="space-y-1">
-            <label class="text-muted-foreground">用户名</label>
+            <label class="text-[#52677D]">用户名</label>
             <div class="text-sm">{{ currentLog.username || '-' }}</div>
           </div>
           <div class="space-y-1">
-            <label class="text-muted-foreground">类型</label>
+            <label class="text-[#52677D]">类型</label>
             <div class="text-sm">
           <a-tag :color="getTypeVariant(currentLog.type)">
                 {{ getTypeText(currentLog.type) }}
@@ -331,35 +331,35 @@ onMounted(() => {
             </div>
           </div>
           <div class="space-y-1">
-            <label class="text-muted-foreground">操作</label>
+            <label class="text-[#52677D]">操作</label>
             <div class="text-sm">{{ getActionText(currentLog.action) }}</div>
           </div>
           <div class="space-y-1">
-            <label class="text-muted-foreground">资源</label>
+            <label class="text-[#52677D]">资源</label>
             <div class="text-sm">{{ currentLog.resource }}</div>
           </div>
           <div class="space-y-1">
-            <label class="text-muted-foreground">资源ID</label>
+            <label class="text-[#52677D]">资源ID</label>
             <div class="text-sm">{{ currentLog.resourceId || '-' }}</div>
           </div>
           <div class="space-y-1">
-            <label class="text-muted-foreground">请求方法</label>
+            <label class="text-[#52677D]">请求方法</label>
             <div class="text-sm">{{ currentLog.method || '-' }}</div>
           </div>
           <div class="space-y-1">
-            <label class="text-muted-foreground">IP地址</label>
+            <label class="text-[#52677D]">IP地址</label>
             <div class="text-sm">{{ currentLog.ip }}</div>
           </div>
           <div class="col-span-2 space-y-1">
-            <label class="text-muted-foreground">User Agent</label>
-            <div class="text-sm text-muted-foreground">{{ currentLog.userAgent || '-' }}</div>
+            <label class="text-[#52677D]">User Agent</label>
+            <div class="text-sm text-[#52677D]">{{ currentLog.userAgent || '-' }}</div>
           </div>
           <div class="space-y-1">
-            <label class="text-muted-foreground">位置</label>
+            <label class="text-[#52677D]">位置</label>
             <div class="text-sm">{{ currentLog.location || '-' }}</div>
           </div>
           <div class="space-y-1">
-            <label class="text-muted-foreground">状态</label>
+            <label class="text-[#52677D]">状态</label>
             <div class="text-sm">
           <a-tag :color="getStatusVariant(currentLog.status)">
                 {{ getStatusText(currentLog.status) }}
@@ -367,12 +367,12 @@ onMounted(() => {
             </div>
           </div>
           <div v-if="currentLog.errorMessage" class="col-span-2 space-y-1">
-            <label class="text-muted-foreground">错误信息</label>
-            <div class="text-sm text-destructive">{{ currentLog.errorMessage }}</div>
+            <label class="text-[#52677D]">错误信息</label>
+            <div class="text-sm text-[#B91C1C]">{{ currentLog.errorMessage }}</div>
           </div>
           <div v-if="currentLog.changes" class="col-span-2 space-y-1">
-            <label class="text-muted-foreground">变更内容</label>
-            <pre class="text-sm bg-muted p-3 rounded-md overflow-auto max-h-75">{{ JSON.stringify(currentLog.changes, null, 2) }}</pre>
+            <label class="text-[#52677D]">变更内容</label>
+            <pre class="text-sm bg-[#F4F8FB] p-3 rounded-md overflow-auto max-h-75">{{ JSON.stringify(currentLog.changes, null, 2) }}</pre>
           </div>
         </div>
         <div>

@@ -3,7 +3,7 @@ import { onMounted } from 'vue'
 import { message } from 'antdv-next'
 import { useUserStore } from '@/stores/user'
 import { userPoolApi } from '@/api/userPool'
-import { antdLocale, antdTheme } from '@/config/antd'
+import { antdLocale } from '@/config/antd'
 
 const userStore = useUserStore()
 
@@ -41,7 +41,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <a-config-provider :locale="antdLocale" :theme="antdTheme" component-size="middle">
+  <a-config-provider :locale="antdLocale" component-size="middle">
     <a-app>
       <router-view />
     </a-app>

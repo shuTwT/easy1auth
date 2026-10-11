@@ -94,8 +94,8 @@ onMounted(() => {
   <div class="p-6 min-h-[calc(100vh-64px)]">
     <div class="flex justify-between items-start mb-6">
       <div class="flex-1">
-        <h1 class="text-2xl font-bold text-foreground mb-2">单点登录配置</h1>
-        <p class="text-sm text-muted-foreground">管理 SSO 端点和应用集成配置</p>
+        <h1 class="text-2xl font-bold text-[#102A43] mb-2">单点登录配置</h1>
+        <p class="text-sm text-[#52677D]">管理 SSO 端点和应用集成配置</p>
       </div>
     </div>
 
@@ -103,48 +103,48 @@ onMounted(() => {
       <a-card>
         <div class="pt-6">
           <div class="text-center">
-            <div class="text-2xl font-bold text-foreground mb-1">{{ stats.totalApps }}</div>
-            <div class="text-sm text-muted-foreground">应用总数</div>
+            <div class="text-2xl font-bold text-[#102A43] mb-1">{{ stats.totalApps }}</div>
+            <div class="text-sm text-[#52677D]">应用总数</div>
           </div>
         </div>
       </a-card>
       <a-card>
         <div class="pt-6">
           <div class="text-center">
-            <div class="text-2xl font-bold text-foreground mb-1">{{ stats.activeApps }}</div>
-            <div class="text-sm text-muted-foreground">启用应用</div>
+            <div class="text-2xl font-bold text-[#102A43] mb-1">{{ stats.activeApps }}</div>
+            <div class="text-sm text-[#52677D]">启用应用</div>
           </div>
         </div>
       </a-card>
       <a-card>
         <div class="pt-6">
           <div class="text-center">
-            <div class="text-2xl font-bold text-foreground mb-1">{{ stats.webApps }}</div>
-            <div class="text-sm text-muted-foreground">Web应用</div>
+            <div class="text-2xl font-bold text-[#102A43] mb-1">{{ stats.webApps }}</div>
+            <div class="text-sm text-[#52677D]">Web应用</div>
           </div>
         </div>
       </a-card>
       <a-card>
         <div class="pt-6">
           <div class="text-center">
-            <div class="text-2xl font-bold text-foreground mb-1">{{ stats.spaApps }}</div>
-            <div class="text-sm text-muted-foreground">单页应用</div>
+            <div class="text-2xl font-bold text-[#102A43] mb-1">{{ stats.spaApps }}</div>
+            <div class="text-sm text-[#52677D]">单页应用</div>
           </div>
         </div>
       </a-card>
       <a-card>
         <div class="pt-6">
           <div class="text-center">
-            <div class="text-2xl font-bold text-foreground mb-1">{{ stats.nativeApps }}</div>
-            <div class="text-sm text-muted-foreground">原生应用</div>
+            <div class="text-2xl font-bold text-[#102A43] mb-1">{{ stats.nativeApps }}</div>
+            <div class="text-sm text-[#52677D]">原生应用</div>
           </div>
         </div>
       </a-card>
       <a-card>
         <div class="pt-6">
           <div class="text-center">
-            <div class="text-2xl font-bold text-foreground mb-1">{{ stats.machineApps }}</div>
-            <div class="text-sm text-muted-foreground">机器应用</div>
+            <div class="text-2xl font-bold text-[#102A43] mb-1">{{ stats.machineApps }}</div>
+            <div class="text-sm text-[#52677D]">机器应用</div>
           </div>
         </div>
       </a-card>
@@ -205,7 +205,7 @@ onMounted(() => {
                     {{ uri }}
                   </div>
                 </div>
-                <span v-else class="text-muted-foreground">-</span>
+                <span v-else class="text-[#52677D]">-</span>
             </template>
             <template v-else-if="column.key === 'accessTokenLifetime'">{{ item.accessTokenLifetime }} 秒</template>
             <template v-else-if="column.key === 'refreshTokenLifetime'">{{ item.refreshTokenLifetime }} 秒</template>
@@ -233,19 +233,19 @@ onMounted(() => {
           <div v-show="ssoTab === 'oauth2'">
             <div class="p-5">
               <h4 class="text-base font-semibold mb-2">1. 获取授权码</h4>
-              <p class="text-sm text-muted-foreground mb-2">将用户重定向到授权端点：</p>
-              <pre class="bg-muted p-3 rounded-md text-sm overflow-x-auto font-mono whitespace-pre-wrap break-all">{{ baseUrl }}/oauth2/authorize?client_id=YOUR_CLIENT_ID&redirect_uri=YOUR_REDIRECT_URI&response_type=code&scope=openid profile email&state=RANDOM_STATE</pre>
+              <p class="text-sm text-[#52677D] mb-2">将用户重定向到授权端点：</p>
+              <pre class="bg-[#F4F8FB] p-3 rounded-md text-sm overflow-x-auto font-mono whitespace-pre-wrap break-all">{{ baseUrl }}/oauth2/authorize?client_id=YOUR_CLIENT_ID&redirect_uri=YOUR_REDIRECT_URI&response_type=code&scope=openid profile email&state=RANDOM_STATE</pre>
 
               <h4 class="text-base font-semibold mt-5 mb-2">2. 使用授权码换取 Token</h4>
-              <p class="text-sm text-muted-foreground mb-2">向 Token 端点发送 POST 请求：</p>
-              <pre class="bg-muted p-3 rounded-md text-sm overflow-x-auto font-mono whitespace-pre-wrap break-all">POST {{ baseUrl }}/oauth2/token
+              <p class="text-sm text-[#52677D] mb-2">向 Token 端点发送 POST 请求：</p>
+              <pre class="bg-[#F4F8FB] p-3 rounded-md text-sm overflow-x-auto font-mono whitespace-pre-wrap break-all">POST {{ baseUrl }}/oauth2/token
 Content-Type: application/x-www-form-urlencoded
 
 grant_type=authorization_code&code=AUTHORIZATION_CODE&redirect_uri=YOUR_REDIRECT_URI&client_id=YOUR_CLIENT_ID&client_secret=YOUR_CLIENT_SECRET</pre>
 
               <h4 class="text-base font-semibold mt-5 mb-2">3. 获取用户信息</h4>
-              <p class="text-sm text-muted-foreground mb-2">使用 Access Token 获取用户信息：</p>
-              <pre class="bg-muted p-3 rounded-md text-sm overflow-x-auto font-mono whitespace-pre-wrap break-all">GET {{ baseUrl }}/oauth2/userinfo
+              <p class="text-sm text-[#52677D] mb-2">使用 Access Token 获取用户信息：</p>
+              <pre class="bg-[#F4F8FB] p-3 rounded-md text-sm overflow-x-auto font-mono whitespace-pre-wrap break-all">GET {{ baseUrl }}/oauth2/userinfo
 Authorization: Bearer ACCESS_TOKEN</pre>
             </div>
           </div>
@@ -253,14 +253,14 @@ Authorization: Bearer ACCESS_TOKEN</pre>
           <div v-show="ssoTab === 'pkce'">
             <div class="p-5">
               <h4 class="text-base font-semibold mb-2">1. 生成 Code Verifier 和 Code Challenge</h4>
-              <p class="text-sm text-muted-foreground">Code Verifier: 随机字符串（43-128字符）</p>
-              <p class="text-sm text-muted-foreground mb-2">Code Challenge: BASE64URL(SHA256(code_verifier))</p>
+              <p class="text-sm text-[#52677D]">Code Verifier: 随机字符串（43-128字符）</p>
+              <p class="text-sm text-[#52677D] mb-2">Code Challenge: BASE64URL(SHA256(code_verifier))</p>
 
               <h4 class="text-base font-semibold mt-5 mb-2">2. 授权请求</h4>
-              <pre class="bg-muted p-3 rounded-md text-sm overflow-x-auto font-mono whitespace-pre-wrap break-all">{{ baseUrl }}/oauth2/authorize?client_id=YOUR_CLIENT_ID&redirect_uri=YOUR_REDIRECT_URI&response_type=code&scope=openid profile email&state=RANDOM_STATE&code_challenge=CODE_CHALLENGE&code_challenge_method=S256</pre>
+              <pre class="bg-[#F4F8FB] p-3 rounded-md text-sm overflow-x-auto font-mono whitespace-pre-wrap break-all">{{ baseUrl }}/oauth2/authorize?client_id=YOUR_CLIENT_ID&redirect_uri=YOUR_REDIRECT_URI&response_type=code&scope=openid profile email&state=RANDOM_STATE&code_challenge=CODE_CHALLENGE&code_challenge_method=S256</pre>
 
               <h4 class="text-base font-semibold mt-5 mb-2">3. Token 请求</h4>
-              <pre class="bg-muted p-3 rounded-md text-sm overflow-x-auto font-mono whitespace-pre-wrap break-all">POST {{ baseUrl }}/oauth2/token
+              <pre class="bg-[#F4F8FB] p-3 rounded-md text-sm overflow-x-auto font-mono whitespace-pre-wrap break-all">POST {{ baseUrl }}/oauth2/token
 Content-Type: application/x-www-form-urlencoded
 
 grant_type=authorization_code&code=AUTHORIZATION_CODE&redirect_uri=YOUR_REDIRECT_URI&client_id=YOUR_CLIENT_ID&code_verifier=CODE_VERIFIER</pre>
@@ -270,7 +270,7 @@ grant_type=authorization_code&code=AUTHORIZATION_CODE&redirect_uri=YOUR_REDIRECT
           <div v-show="ssoTab === 'client'">
             <div class="p-5">
               <h4 class="text-base font-semibold mb-2">适用于机器对机器通信</h4>
-              <pre class="bg-muted p-3 rounded-md text-sm overflow-x-auto font-mono whitespace-pre-wrap break-all">POST {{ baseUrl }}/oauth2/token
+              <pre class="bg-[#F4F8FB] p-3 rounded-md text-sm overflow-x-auto font-mono whitespace-pre-wrap break-all">POST {{ baseUrl }}/oauth2/token
 Content-Type: application/x-www-form-urlencoded
 
 grant_type=client_credentials&client_id=YOUR_CLIENT_ID&client_secret=YOUR_CLIENT_SECRET&scope=read write</pre>

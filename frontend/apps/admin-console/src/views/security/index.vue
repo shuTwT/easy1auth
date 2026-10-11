@@ -163,8 +163,8 @@ onMounted(() => {
 <template>
   <div class="p-6 min-h-[calc(100vh-64px)]">
     <div class="mb-6">
-      <h1 class="text-2xl font-bold text-foreground mb-2">安全设置</h1>
-      <p class="text-sm text-muted-foreground">管理您的账户安全选项</p>
+      <h1 class="text-2xl font-bold text-[#102A43] mb-2">安全设置</h1>
+      <p class="text-sm text-[#52677D]">管理您的账户安全选项</p>
     </div>
 
     <div class="bg-white rounded-xl p-4">
@@ -180,39 +180,39 @@ onMounted(() => {
                 </a-tag>
               </div>
               <div>
-                <div v-if="passwordPolicy" class="bg-muted rounded-lg p-4 mb-6">
-                  <h4 class="text-sm font-semibold text-foreground mb-3">密码要求</h4>
+                <div v-if="passwordPolicy" class="bg-[#F4F8FB] rounded-lg p-4 mb-6">
+                  <h4 class="text-sm font-semibold text-[#102A43] mb-3">密码要求</h4>
                   <ul class="space-y-1">
                     <li
-                      class="text-sm text-muted-foreground"
+                      class="text-sm text-[#52677D]"
                       :class="{ 'text-emerald-500': passwordForm.newPassword.length >= passwordPolicy.minLength }"
                     >
                       {{ passwordForm.newPassword.length >= passwordPolicy.minLength ? '●' : '○' }} 至少 {{ passwordPolicy.minLength }} 个字符
                     </li>
                     <li
                       v-if="passwordPolicy.requireUppercase"
-                      class="text-sm text-muted-foreground"
+                      class="text-sm text-[#52677D]"
                       :class="{ 'text-emerald-500': /[A-Z]/.test(passwordForm.newPassword) }"
                     >
                       {{ /[A-Z]/.test(passwordForm.newPassword) ? '●' : '○' }} 包含大写字母
                     </li>
                     <li
                       v-if="passwordPolicy.requireLowercase"
-                      class="text-sm text-muted-foreground"
+                      class="text-sm text-[#52677D]"
                       :class="{ 'text-emerald-500': /[a-z]/.test(passwordForm.newPassword) }"
                     >
                       {{ /[a-z]/.test(passwordForm.newPassword) ? '●' : '○' }} 包含小写字母
                     </li>
                     <li
                       v-if="passwordPolicy.requireNumbers"
-                      class="text-sm text-muted-foreground"
+                      class="text-sm text-[#52677D]"
                       :class="{ 'text-emerald-500': /\d/.test(passwordForm.newPassword) }"
                     >
                       {{ /\d/.test(passwordForm.newPassword) ? '●' : '○' }} 包含数字
                     </li>
                     <li
                       v-if="passwordPolicy.requireSpecialChars"
-                      class="text-sm text-muted-foreground"
+                      class="text-sm text-[#52677D]"
                       :class="{ 'text-emerald-500': /[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(passwordForm.newPassword) }"
                     >
                       {{ /[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(passwordForm.newPassword) ? '●' : '○' }} 包含特殊字符
@@ -268,14 +268,14 @@ onMounted(() => {
               </div>
               <div>
                 <div v-if="!showMfaSetup && !mfaStatus.enabled" class="text-center py-10 px-5">
-                  <div class="mb-4 text-primary">
+                  <div class="mb-4 text-[#0369A1]">
                     <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mx-auto">
                       <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
                       <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                     </svg>
                   </div>
-                  <h3 class="text-lg font-semibold text-foreground mb-2">增强账户安全</h3>
-                  <p class="text-muted-foreground mb-6">启用多因素认证后，登录时需要输入验证码，大大提高账户安全性。</p>
+                  <h3 class="text-lg font-semibold text-[#102A43] mb-2">增强账户安全</h3>
+                  <p class="text-[#52677D] mb-6">启用多因素认证后，登录时需要输入验证码，大大提高账户安全性。</p>
                   <a-button @click="handleSetupMfa">
                     启用 MFA
                   </a-button>
@@ -283,24 +283,24 @@ onMounted(() => {
 
                 <div v-else-if="showMfaSetup" class="max-w-lg mx-auto">
                   <div class="mb-8">
-                    <h4 class="text-base font-semibold text-foreground mb-2">步骤 1：扫描二维码</h4>
-                    <p class="text-sm text-muted-foreground mb-3">使用 Google Authenticator 或其他 TOTP 应用扫描以下二维码：</p>
+                    <h4 class="text-base font-semibold text-[#102A43] mb-2">步骤 1：扫描二维码</h4>
+                    <p class="text-sm text-[#52677D] mb-3">使用 Google Authenticator 或其他 TOTP 应用扫描以下二维码：</p>
                     <div class="flex justify-center p-4 bg-white border rounded-lg mb-3">
                       <img :src="mfaSetupData.qrCodeUrl" alt="MFA QR Code" class="w-50 h-50" />
                     </div>
                     <p class="text-sm">
-                      或手动输入密钥：<code class="bg-muted px-2 py-1 rounded text-sm font-mono">{{ mfaSetupData.secret }}</code>
+                      或手动输入密钥：<code class="bg-[#F4F8FB] px-2 py-1 rounded text-sm font-mono">{{ mfaSetupData.secret }}</code>
                     </p>
                   </div>
 
                   <div class="mb-8">
-                    <h4 class="text-base font-semibold text-foreground mb-2">步骤 2：保存备用码</h4>
-                    <p class="text-sm text-muted-foreground mb-3">请保存以下备用码，当无法使用验证器时可用来登录：</p>
+                    <h4 class="text-base font-semibold text-[#102A43] mb-2">步骤 2：保存备用码</h4>
+                    <p class="text-sm text-[#52677D] mb-3">请保存以下备用码，当无法使用验证器时可用来登录：</p>
                     <div class="flex flex-wrap gap-2 mb-3">
                       <code
                         v-for="(code, index) in mfaSetupData.backupCodes"
                         :key="index"
-                        class="bg-muted px-3 py-2 rounded text-sm font-mono"
+                        class="bg-[#F4F8FB] px-3 py-2 rounded text-sm font-mono"
                       >
                         {{ code }}
                       </code>
@@ -309,8 +309,8 @@ onMounted(() => {
                   </div>
 
                   <div>
-                    <h4 class="text-base font-semibold text-foreground mb-2">步骤 3：验证设置</h4>
-                    <p class="text-sm text-muted-foreground mb-3">请输入验证器显示的 6 位数字验证码：</p>
+                    <h4 class="text-base font-semibold text-[#102A43] mb-2">步骤 3：验证设置</h4>
+                    <p class="text-sm text-[#52677D] mb-3">请输入验证器显示的 6 位数字验证码：</p>
                     <a-input v-model:value="mfaToken"
                       placeholder="请输入验证码"
                       :maxlength="6"
@@ -331,15 +331,15 @@ onMounted(() => {
                       <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
                       <polyline points="22 4 12 14.01 9 11.01"/>
                     </svg>
-                    <h3 class="text-lg font-semibold text-foreground mb-2">MFA 已启用</h3>
-                    <p class="text-muted-foreground">当前认证方式：{{ mfaStatus.type === 'totp' ? '验证器应用' : '邮箱验证码' }}</p>
+                    <h3 class="text-lg font-semibold text-[#102A43] mb-2">MFA 已启用</h3>
+                    <p class="text-[#52677D]">当前认证方式：{{ mfaStatus.type === 'totp' ? '验证器应用' : '邮箱验证码' }}</p>
                   </div>
 
                   <a-divider class="my-6" />
 
                   <div>
-                    <h4 class="text-sm font-semibold text-foreground mb-2">禁用 MFA</h4>
-                    <p class="text-sm text-muted-foreground mb-3">禁用后，登录时将不再需要验证码。</p>
+                    <h4 class="text-sm font-semibold text-[#102A43] mb-2">禁用 MFA</h4>
+                    <p class="text-sm text-[#52677D] mb-3">禁用后，登录时将不再需要验证码。</p>
                     <div class="flex items-center gap-3">
                       <a-input v-model:value="mfaToken"
                         placeholder="请输入验证码以禁用 MFA"

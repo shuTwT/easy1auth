@@ -66,14 +66,14 @@ function togglePassword() {
     <div v-if="mfaChallenge" class="grid gap-2">
       <label class="form-label">动态验证码</label>
       <a-input v-model:value="mfaCode" inputmode="numeric" autocomplete="one-time-code" :maxlength="6" placeholder="请输入6位验证码" class="login-input h-11" />
-      <p class="text-xs text-muted-foreground">密码已验证，完成 MFA 后才会签发登录令牌。</p>
+      <p class="text-xs text-[#52677D]">密码已验证，完成 MFA 后才会签发登录令牌。</p>
     </div>
     <template v-else>
     <div class="grid gap-2">
       <label class="form-label">用户名或邮箱</label>
       <div class="relative">
         <svg
-          class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+          class="absolute left-3 top-1/2 -translate-y-1/2 text-[#52677D] pointer-events-none"
           width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
         >
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
@@ -82,18 +82,18 @@ function togglePassword() {
         <a-input v-model:value="form.username"
           placeholder="请输入用户名或邮箱"
           class="login-input h-11 pl-10"
-          :class="{ 'border-destructive': errors.username }"
+          :class="{ 'border-[#B91C1C]': errors.username }"
           @input="errors.username = ''"
         />
       </div>
-      <p v-if="errors.username" class="text-destructive text-xs px-1">{{ errors.username }}</p>
+      <p v-if="errors.username" class="text-[#B91C1C] text-xs px-1">{{ errors.username }}</p>
     </div>
 
     <div class="grid gap-2 mt-4">
       <label class="form-label">密码</label>
       <div class="relative">
         <svg
-          class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+          class="absolute left-3 top-1/2 -translate-y-1/2 text-[#52677D] pointer-events-none"
           width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
         >
           <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
@@ -103,7 +103,7 @@ function togglePassword() {
           :type="showPassword ? 'text' : 'password'"
           placeholder="请输入密码"
           class="login-input h-11 pl-10 pr-10"
-          :class="{ 'border-destructive': errors.password }"
+          :class="{ 'border-[#B91C1C]': errors.password }"
           @input="errors.password = ''"
           @keyup.enter="handleSubmit"
         />
@@ -123,7 +123,7 @@ function togglePassword() {
           </svg>
         </button>
       </div>
-      <p v-if="errors.password" class="text-destructive text-xs px-1">{{ errors.password }}</p>
+      <p v-if="errors.password" class="text-[#B91C1C] text-xs px-1">{{ errors.password }}</p>
     </div>
 
     <div class="form-options">

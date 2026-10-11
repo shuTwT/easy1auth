@@ -186,7 +186,7 @@ onMounted(() => {
           </div>
           <div>
             <div class="chart-placeholder">
-              <TrendingUp class="w-12 h-12 text-muted-foreground" />
+              <TrendingUp class="w-12 h-12 text-[#52677D]" />
               <p>登录趋势图表</p>
               <p class="chart-hint">集成图表库后显示数据可视化</p>
             </div>
@@ -297,7 +297,7 @@ onMounted(() => {
 }
 
 .page-subtitle {
-  @apply text-sm text-muted-foreground;
+  @apply text-sm text-[#52677D];
 }
 
 .header-actions {
@@ -321,7 +321,7 @@ onMounted(() => {
 }
 
 .stat-icon.primary {
-  @apply bg-primary/10 text-primary;
+  @apply bg-[#0369A1]/10 text-[#0369A1];
 }
 
 .stat-icon.success {
@@ -345,11 +345,11 @@ onMounted(() => {
 }
 
 .loading-placeholder {
-  @apply text-muted-foreground;
+  @apply text-[#52677D];
 }
 
 .stat-title {
-  @apply text-sm text-muted-foreground;
+  @apply text-sm text-[#52677D];
 }
 
 .card-header {
@@ -365,11 +365,11 @@ onMounted(() => {
 }
 
 .chart-placeholder p {
-  @apply text-muted-foreground mt-2;
+  @apply text-[#52677D] mt-2;
 }
 
 .chart-hint {
-  @apply text-sm text-muted-foreground/60;
+  @apply text-sm text-[#52677D]/60;
 }
 
 .quick-actions {
@@ -381,7 +381,7 @@ onMounted(() => {
 }
 
 .quick-action-item.primary {
-  @apply border-primary/20 hover:bg-primary/5;
+  @apply border-[#0369A1]/20 hover:bg-[#0369A1]/5;
 }
 
 .quick-action-item.success {
@@ -397,7 +397,7 @@ onMounted(() => {
 }
 
 .action-icon {
-  @apply flex items-center justify-center w-10 h-10 rounded-full bg-muted;
+  @apply flex items-center justify-center w-10 h-10 rounded-full bg-[#F4F8FB];
 }
 
 .action-title {
@@ -405,7 +405,7 @@ onMounted(() => {
 }
 
 .empty-state {
-  @apply text-sm text-muted-foreground;
+  @apply text-sm text-[#52677D];
 }
 
 .error-banner {
@@ -421,7 +421,7 @@ onMounted(() => {
 }
 
 .announcement-dot {
-  @apply w-2 h-2 rounded-full bg-primary mt-1.5 shrink-0;
+  @apply w-2 h-2 rounded-full bg-[#0369A1] mt-1.5 shrink-0;
 }
 
 .announcement-content {
@@ -433,11 +433,11 @@ onMounted(() => {
 }
 
 .announcement-desc {
-  @apply text-xs text-muted-foreground mb-1;
+  @apply text-xs text-[#52677D] mb-1;
 }
 
 .announcement-time {
-  @apply text-xs text-muted-foreground/60;
+  @apply text-xs text-[#52677D]/60;
 }
 
 .system-info {
@@ -449,7 +449,7 @@ onMounted(() => {
 }
 
 .info-label {
-  @apply text-sm text-muted-foreground;
+  @apply text-sm text-[#52677D];
 }
 
 .info-value {

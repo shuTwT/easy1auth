@@ -238,8 +238,8 @@ onMounted(() => {
   <div class="p-6 min-h-[calc(100vh-64px)]">
     <div class="flex justify-between items-start mb-6">
       <div class="flex-1">
-        <h1 class="text-2xl font-bold text-foreground mb-2">{{ isEnterpriseSource ? '企业身份源' : '社会化身份源' }}</h1>
-        <p class="text-sm text-muted-foreground">{{ isEnterpriseSource ? '配置企业级登录授权，目前支持飞书网页授权。' : '管理微信、GitHub 等社会化登录提供商配置。' }}</p>
+        <h1 class="text-2xl font-bold text-[#102A43] mb-2">{{ isEnterpriseSource ? '企业身份源' : '社会化身份源' }}</h1>
+        <p class="text-sm text-[#52677D]">{{ isEnterpriseSource ? '配置企业级登录授权，目前支持飞书网页授权。' : '管理微信、GitHub 等社会化登录提供商配置。' }}</p>
       </div>
     </div>
 
@@ -251,8 +251,8 @@ onMounted(() => {
               <Link class="size-5" />
             </div>
             <div>
-              <div class="text-2xl font-bold text-foreground">{{ stats.totalSources }}</div>
-              <div class="text-sm text-muted-foreground">总身份源</div>
+              <div class="text-2xl font-bold text-[#102A43]">{{ stats.totalSources }}</div>
+              <div class="text-sm text-[#52677D]">总身份源</div>
             </div>
           </div>
         </div>
@@ -264,8 +264,8 @@ onMounted(() => {
               <CheckCircle class="size-5" />
             </div>
             <div>
-              <div class="text-2xl font-bold text-foreground">{{ stats.activeSources }}</div>
-              <div class="text-sm text-muted-foreground">已启用</div>
+              <div class="text-2xl font-bold text-[#102A43]">{{ stats.activeSources }}</div>
+              <div class="text-sm text-[#52677D]">已启用</div>
             </div>
           </div>
         </div>
@@ -277,8 +277,8 @@ onMounted(() => {
               <XCircle class="size-5" />
             </div>
             <div>
-              <div class="text-2xl font-bold text-foreground">{{ stats.inactiveSources }}</div>
-              <div class="text-sm text-muted-foreground">已禁用</div>
+              <div class="text-2xl font-bold text-[#102A43]">{{ stats.inactiveSources }}</div>
+              <div class="text-sm text-[#52677D]">已禁用</div>
             </div>
           </div>
         </div>
@@ -290,8 +290,8 @@ onMounted(() => {
               <Grid3X3 class="size-5" />
             </div>
             <div>
-              <div class="text-2xl font-bold text-foreground">{{ Object.keys(stats.byType).length }}</div>
-              <div class="text-sm text-muted-foreground">类型数量</div>
+              <div class="text-2xl font-bold text-[#102A43]">{{ Object.keys(stats.byType).length }}</div>
+              <div class="text-sm text-[#52677D]">类型数量</div>
             </div>
           </div>
         </div>
@@ -304,7 +304,7 @@ onMounted(() => {
           <div class="flex items-center gap-3">
             <a-input v-model:value="searchQuery" placeholder="搜索身份源名称" class="w-52">
               <template #prefix>
-                <Search class="size-4 text-muted-foreground" />
+                <Search class="size-4 text-[#52677D]" />
               </template>
             </a-input>
             <a-select v-model:value="filterType" class="w-42" placeholder="请选择类型" allow-clear :options="filterTypeOptions" @update:value="handleSearch" />
@@ -352,14 +352,14 @@ onMounted(() => {
                 <a-button type="link" size="small" class="h-auto p-0" @click="handleToggleStatus(row)">
                   {{ row.status === 'active' ? '禁用' : '启用' }}
                 </a-button>
-                <a-button type="link" size="small" class="h-auto p-0 text-destructive" @click="handleDelete(row)">删除</a-button>
+                <a-button type="link" size="small" class="h-auto p-0 text-[#B91C1C]" @click="handleDelete(row)">删除</a-button>
               </div>
             </template>
           </template>
         </a-table>
 
         <div class="flex items-center justify-between mt-4 pt-4 border-t">
-          <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
+          <span class="text-sm text-[#52677D]">共 {{ total }} 条</span>
           <a-pagination
             :current="page"
             :page-size="pageSize"

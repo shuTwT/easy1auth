@@ -35,7 +35,7 @@ public interface AuthenticationChallengeEntity {
 
     /** 所属用户池 ID（可为 null） */
     @Nullable
-    @Column(name = "tenant_id")
+    @Column(name = "user_pool_id")
     UUID userPoolId();
 
     /** 挑战用途标识（区分场景，消费时须一致） */

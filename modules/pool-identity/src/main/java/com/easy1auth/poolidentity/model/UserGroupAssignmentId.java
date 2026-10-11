@@ -13,7 +13,7 @@ import java.util.UUID;
 @Embeddable
 public interface UserGroupAssignmentId {
     /** 用户池 ID */
-    @Column(name = "tenant_id")
+    @Column(name = "user_pool_id")
     UUID userPoolId();
 
     /** 用户 ID（pool_user，组成员） */

@@ -126,8 +126,8 @@ onMounted(loadDomains)
 <template>
   <div class="p-6 min-h-[calc(100vh-64px)]">
     <div class="mb-6">
-      <h1 class="text-2xl font-bold text-foreground mb-2">自定义域名</h1>
-      <p class="text-sm text-muted-foreground">登记用户池使用的登录域名并查看其状态</p>
+      <h1 class="text-2xl font-bold text-[#102A43] mb-2">自定义域名</h1>
+      <p class="text-sm text-[#52677D]">登记用户池使用的登录域名并查看其状态</p>
     </div>
 
     <a-card>
@@ -166,14 +166,14 @@ onMounted(loadDomains)
                   <div class="flex justify-end gap-2">
                     <a-button v-if="domain.status !== 'verified'" type="link" size="small" class="h-auto p-0" disabled title="阶段 6 仅登记域名">验证未启用</a-button>
                     <a-button v-if="domain.status === 'verified'" type="link" size="small" class="h-auto p-0" disabled title="TLS 由外部网关管理">TLS由网关管理</a-button>
-                    <a-button type="link" size="small" class="h-auto p-0 text-destructive" @click="handleDeleteDomain(domain)">删除</a-button>
+                    <a-button type="link" size="small" class="h-auto p-0 text-[#B91C1C]" @click="handleDeleteDomain(domain)">删除</a-button>
                   </div>
               </template>
             </template>
           </a-table>
         </div>
 
-        <a-alert class="bg-muted border" type="info" show-icon title="阶段 6 域名管理说明">
+        <a-alert class="bg-[#F4F8FB] border" type="info" show-icon title="阶段 6 域名管理说明">
           <template #description>
             <div class="space-y-1">
               <div>当前仅登记域名和验证令牌，不执行自动所有权验证。</div>
@@ -194,7 +194,7 @@ onMounted(loadDomains)
             <div class="grid gap-2">
               <label class="text-sm font-medium">域名</label>
               <div class="flex">
-                <div class="flex items-center px-3 bg-muted border border-r-0 rounded-l-md text-sm text-muted-foreground">https://</div>
+                <div class="flex items-center px-3 bg-[#F4F8FB] border border-r-0 rounded-l-md text-sm text-[#52677D]">https://</div>
                 <a-input v-model:value="domainForm.domain" placeholder="例如：login.yourcompany.com" class="rounded-l-none" />
               </div>
             </div>
@@ -259,21 +259,21 @@ onMounted(loadDomains)
           <a-alert class="mb-5!" type="info" show-icon title="请按照以下步骤完成验证" />
           <div v-if="verifyingDomain?.verificationMethod === 'dns'" class="space-y-3">
             <h4 class="font-semibold">DNS记录验证</h4>
-            <p class="text-sm text-muted-foreground">在您的DNS服务商处添加以下TXT记录：</p>
-            <div class="bg-muted p-4 rounded-lg space-y-2">
+            <p class="text-sm text-[#52677D]">在您的DNS服务商处添加以下TXT记录：</p>
+            <div class="bg-[#F4F8FB] p-4 rounded-lg space-y-2">
               <p class="text-sm"><strong>记录类型：</strong>TXT</p>
               <p class="text-sm"><strong>主机记录：</strong>@ 或 留空</p>
               <p class="text-sm"><strong>记录值：</strong></p>
-              <pre class="bg-background p-3 rounded text-sm font-mono break-all">{{ verifyingDomain?.verificationToken }}</pre>
+              <pre class="bg-[#F4F8FB] p-3 rounded text-sm font-mono break-all">{{ verifyingDomain?.verificationToken }}</pre>
             </div>
           </div>
           <div v-else class="space-y-3">
             <h4 class="font-semibold">文件验证</h4>
-            <p class="text-sm text-muted-foreground">在您的网站根目录创建以下文件：</p>
-            <div class="bg-muted p-4 rounded-lg space-y-2">
+            <p class="text-sm text-[#52677D]">在您的网站根目录创建以下文件：</p>
+            <div class="bg-[#F4F8FB] p-4 rounded-lg space-y-2">
               <p class="text-sm"><strong>文件路径：</strong>/.well-known/easy1auth-verification.txt</p>
               <p class="text-sm"><strong>文件内容：</strong></p>
-              <pre class="bg-background p-3 rounded text-sm font-mono break-all">{{ verifyingDomain?.verificationToken?.split('=')[1] }}</pre>
+              <pre class="bg-[#F4F8FB] p-3 rounded text-sm font-mono break-all">{{ verifyingDomain?.verificationToken?.split('=')[1] }}</pre>
             </div>
           </div>
         </div>

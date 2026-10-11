@@ -26,7 +26,9 @@
 
 正式用户池管理 API 为 `/api/user-pools`，套餐 API 为 `/api/platform/user-pool-packages`；历史 `/api/tenants` 和 `/api/platform/tenant-packages` 路径保留为用户池接口别名。
 
-现有数据库表、外键、稳定权限码（`tenant:*`、`tenant-package:*`）、角色值（`tenant_admin`）、授权 issuer（`/t/{用户池ID}`）和旧 Token claim（`tenant_id`）保持兼容，语义均为用户池。新签发的授权 Token 同时增加 `user_pool_id`。Java 和前端模型使用 `UserPool`、`userPoolId`、`userPoolPackage`，管理端登录响应使用 `userPools` 和 `currentUserPoolId`。
+V27 将数据库用户池外键统一重命名为 `user_pool_id`，管理员最近选择字段为 `last_user_pool_id`，并更新 OAuth 触发器。原有数据、外键、唯一约束和索引保持有效；历史迁移文件保持不变。物理表名暂时保留。
+
+稳定权限码（`tenant:*`、`tenant-package:*`）、角色值（`tenant_admin`）、授权 issuer（`/t/{用户池ID}`）和旧 Token claim（`tenant_id`）保持兼容，语义均为用户池。Token 中的旧 claim 不对应当前数据库字段，新签发的授权 Token 同时提供 `user_pool_id`。Java 和前端模型使用 `UserPool`、`userPoolId`、`userPoolPackage`，管理端登录响应使用 `userPools` 和 `currentUserPoolId`。
 
 历史 Gradle 模块目录和 Java 包中的 `tenant` 暂时保留；其中 `UserPool*` 类表示用户池，新的 `TenantEntity` / `TenantService` 表示下属租户。
 

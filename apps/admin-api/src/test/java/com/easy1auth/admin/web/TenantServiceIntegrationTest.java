@@ -33,6 +33,8 @@ class TenantServiceIntegrationTest {
     private static final PostgreSQLContainer<?> DATABASE = new PostgreSQLContainer<>("postgres:17-alpine");
     private static final UUID POOL_A = UUID.randomUUID();
     private static final UUID POOL_B = UUID.randomUUID();
+    private static final UUID LEGACY_CLIENT = UUID.randomUUID();
+    private static final UUID LEGACY_ADMIN = UUID.randomUUID();
     private static JSqlClient sql;
     private static JdbcTemplate jdbc;
     private static TransactionTemplate transactions;
@@ -52,6 +54,11 @@ class TenantServiceIntegrationTest {
         }
         jdbc.update("insert into tenant_package(code, name, max_users, max_apps) values ('readonly-test', '只读测试套餐', 100, 10)");
         jdbc.update("insert into tenant_package_permission(package_id, permission_code) select package.id, permission.code from tenant_package package cross join management_permission permission where package.code='readonly-test' and permission.code in ('menu:user', 'user:list', 'user:read')");
+        Flyway.configure().dataSource(dataSource).target("26").load().migrate();
+        jdbc.update("insert into admin_account(id, username, email, last_tenant_id) values (?, 'legacy-admin', 'admin@example.test', ?)", LEGACY_ADMIN, POOL_A);
+        jdbc.update("insert into oauth_application(id, tenant_id, name, client_id) values (?, ?, 'legacy-client', 'legacy-client')", LEGACY_CLIENT, POOL_A);
+        jdbc.update("insert into oauth2_authorization(id, registered_client_id, principal_name, authorization_grant_type) values ('legacy-authorization', ?, 'existing', 'authorization_code')", LEGACY_CLIENT.toString());
+        jdbc.update("insert into oauth2_authorization_consent(registered_client_id, principal_name, authorities) values (?, 'existing', 'SCOPE_openid')", LEGACY_CLIENT.toString());
         Flyway.configure().dataSource(dataSource).load().migrate();
         sql = JSqlClient.newBuilder()
                 .setDialect(new PostgresDialect())
@@ -137,7 +144,7 @@ class TenantServiceIntegrationTest {
         assertEquals("existing", sql.createQuery(users).where(users.userPoolId().eq(POOL_A)).select(users.username()).fetchOne());
         transactions.executeWithoutResult(status -> tenants.delete(POOL_A, tenant.id()));
         assertEquals(POOL_A, UserPoolContextHolder.requireUserPoolId());
-        assertEquals(1, jdbc.queryForObject("select count(*) from pool_user where tenant_id=?", Integer.class, POOL_A));
+        assertEquals(1, jdbc.queryForObject("select count(*) from pool_user where user_pool_id=?", Integer.class, POOL_A));
     }
 
     @Test
@@ -148,5 +155,42 @@ class TenantServiceIntegrationTest {
         assertThrows(DomainException.class, () -> transactions.execute(status -> tenants.create(UUID.randomUUID(), new TenantInput("名称", "valid", null, "active"))));
         assertEquals(1, tenants.list(POOL_A, -1, 1000, null, null).page());
         assertEquals(100, tenants.list(POOL_A, -1, 1000, null, null).pageSize());
+    }
+
+    @Test
+    void renamedColumnsPreserveLegacyValuesAndCompositeForeignKeys() {
+        assertEquals(0, jdbc.queryForObject("select count(*) from information_schema.columns where table_schema=current_schema() and column_name in ('tenant_id', 'last_tenant_id')", Integer.class));
+        assertEquals(POOL_A, jdbc.queryForObject("select last_user_pool_id from admin_account where id=?", UUID.class, LEGACY_ADMIN));
+        assertEquals(POOL_A, jdbc.queryForObject("select user_pool_id from oauth2_authorization where id='legacy-authorization'", UUID.class));
+        assertEquals(POOL_A, jdbc.queryForObject("select user_pool_id from oauth2_authorization_consent where registered_client_id=?", UUID.class, LEGACY_CLIENT.toString()));
+        UUID user = jdbc.queryForObject("select id from pool_user where user_pool_id=?", UUID.class, POOL_A);
+        UUID ownGroup = UUID.randomUUID();
+        UUID otherGroup = UUID.randomUUID();
+        jdbc.update("insert into user_group(id, user_pool_id, name) values (?, ?, 'own-group'), (?, ?, 'other-group')", ownGroup, POOL_A, otherGroup, POOL_B);
+        jdbc.update("insert into pool_user_group(user_pool_id, user_id, group_id) values (?, ?, ?)", POOL_A, user, ownGroup);
+        assertThrows(org.springframework.dao.DataIntegrityViolationException.class, () ->
+                jdbc.update("insert into pool_user_group(user_pool_id, user_id, group_id) values (?, ?, ?)", POOL_A, user, otherGroup));
+        assertEquals(1, jdbc.queryForObject("select count(*) from pool_user_group where user_pool_id=? and user_id=?", Integer.class, POOL_A, user));
+    }
+
+    @Test
+    void oauthTriggersResolvePoolOnInsertAndClientChange() {
+        UUID clientA = UUID.randomUUID();
+        UUID clientB = UUID.randomUUID();
+        jdbc.update("insert into oauth_application(id, user_pool_id, name, client_id) values (?, ?, 'trigger-client-a', ?), (?, ?, 'trigger-client-b', ?)",
+                clientA, POOL_A, clientA.toString(), clientB, POOL_B, clientB.toString());
+        jdbc.update("insert into oauth2_authorization(id, registered_client_id, principal_name, authorization_grant_type) values ('trigger-test', ?, 'existing', 'authorization_code')", clientA.toString());
+        jdbc.update("insert into oauth2_authorization_consent(registered_client_id, principal_name, authorities) values (?, 'existing', 'SCOPE_openid')", clientA.toString());
+        assertEquals(POOL_A, jdbc.queryForObject("select user_pool_id from oauth2_authorization where id='trigger-test'", UUID.class));
+        assertEquals(POOL_A, jdbc.queryForObject("select user_pool_id from oauth2_authorization_consent where registered_client_id=?", UUID.class, clientA.toString()));
+        jdbc.update("update oauth2_authorization set registered_client_id=? where id='trigger-test'", clientB.toString());
+        jdbc.update("update oauth2_authorization_consent set registered_client_id=? where registered_client_id=?", clientB.toString(), clientA.toString());
+        assertEquals(POOL_B, jdbc.queryForObject("select user_pool_id from oauth2_authorization where id='trigger-test'", UUID.class));
+        assertEquals(POOL_B, jdbc.queryForObject("select user_pool_id from oauth2_authorization_consent where registered_client_id=?", UUID.class, clientB.toString()));
+        assertThrows(org.springframework.dao.DataAccessException.class, () ->
+                jdbc.update("insert into oauth2_authorization(id, registered_client_id, principal_name, authorization_grant_type) values ('invalid-client', 'missing', 'existing', 'authorization_code')"));
+        jdbc.update("delete from oauth_application where id=?", clientB);
+        assertEquals(0, jdbc.queryForObject("select count(*) from oauth2_authorization where id='trigger-test'", Integer.class));
+        assertEquals(0, jdbc.queryForObject("select count(*) from oauth2_authorization_consent where registered_client_id=?", Integer.class, clientB.toString()));
     }
 }

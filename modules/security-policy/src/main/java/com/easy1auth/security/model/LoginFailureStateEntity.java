@@ -29,7 +29,7 @@ public interface LoginFailureStateEntity {
 
     /** 所属用户池 ID（可为 null，如平台级主体） */
     @Nullable
-    @Column(name = "tenant_id")
+    @Column(name = "user_pool_id")
     UUID userPoolId();
 
     /** 当前连续失败次数 */

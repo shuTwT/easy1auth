@@ -266,7 +266,7 @@ public class LoginController {
      * 根据邮箱前缀生成唯一用户名。
      *
      * <p>取邮箱 @ 前缀作为基础用户名；若已被占用则追加随机后缀，确保满足
-     * {@code (tenant_id, username)} 唯一约束。</p>
+     * {@code (user_pool_id, username)} 唯一约束。</p>
      */
     private String generateUsername(UUID tenant, String email) {
         String base = email.substring(0, email.indexOf('@'));

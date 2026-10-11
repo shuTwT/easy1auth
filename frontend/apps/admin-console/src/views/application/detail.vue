@@ -61,6 +61,7 @@ const applicationTypeOptions = Object.entries(typeLabels).map(([value, label]) =
 const applicationStatusOptions = Object.entries(statusLabels).map(([value, label]) => ({ value, label }))
 
 const appTab = ref('config')
+const accessTab = ref('oauth2')
 const route = useRoute()
 const router = useRouter()
 const baseUrl = window.location.origin
@@ -407,7 +408,7 @@ onMounted(loadApplication)
               height="48"
               class="size-12 rounded-lg border object-cover"
             />
-            <div v-else class="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-lg font-semibold text-primary">
+            <div v-else class="flex size-12 shrink-0 items-center justify-center rounded-lg bg-[#0369A1]/10 text-lg font-semibold text-[#0369A1]">
               {{ application.name.slice(0, 1).toUpperCase() }}
             </div>
             <div class="min-w-0">
@@ -418,27 +419,22 @@ onMounted(loadApplication)
                 </a-tag>
                 <a-tag >{{ typeLabels[application.type] }}</a-tag>
               </div>
-              <p class="mt-1 truncate font-mono text-xs text-muted-foreground">{{ application.clientId }}</p>
+              <p class="mt-1 truncate font-mono text-xs text-[#52677D]">{{ application.clientId }}</p>
             </div>
           </div>
         </div>
       </header>
 
       <div class="w-full">
-        <div class="grid h-auto w-full max-w-xl grid-cols-3">
-          <a-button :type="appTab === 'config' ? 'primary' : 'default'" @click="appTab = 'config'">应用配置</a-button>
-          <a-button :type="appTab === 'login' ? 'primary' : 'default'" @click="appTab = 'login'">登录控制</a-button>
-          <a-button :type="appTab === 'access' ? 'primary' : 'default'" @click="appTab = 'access'">访问授权</a-button>
-        </div>
-
-        <div v-show="appTab === 'config'" class="mt-6">
+        <a-tabs v-model:active-key="appTab" class="application-tabs">
+          <a-tab-pane key="config" tab="应用配置">
           <a-card>
             <div>
               <h3>应用配置</h3>
               <p>管理应用的基本信息和客户端凭证。</p>
             </div>
             <div class="flex flex-col gap-6">
-              <div class="grid gap-4 rounded-lg border bg-muted/30 p-4 md:grid-cols-2">
+              <div class="grid gap-4 rounded-lg border bg-[#F4F8FB]/30 p-4 md:grid-cols-2">
                 <div class="grid gap-2">
                   <label for="application-client-id" class="text-sm font-medium">AppID / Client ID</label>
                   <div class="flex min-h-10 items-center gap-2">
@@ -464,7 +460,7 @@ onMounted(loadApplication)
                       <RefreshCw data-icon="inline-start" />
                     </a-button>
                   </div>
-                  <p class="min-h-4 text-xs text-muted-foreground">重新生成后，旧密钥会立即失效。</p>
+                  <p class="min-h-4 text-xs text-[#52677D]">重新生成后，旧密钥会立即失效。</p>
                 </div>
               </div>
 
@@ -500,9 +496,9 @@ onMounted(loadApplication)
               </form>
             </div>
           </a-card>
-        </div>
+          </a-tab-pane>
 
-        <div v-show="appTab === 'login'" class="mt-6">
+          <a-tab-pane key="login" tab="登录控制">
           <a-card>
             <div>
               <h3>登录控制</h3>
@@ -533,17 +529,17 @@ onMounted(loadApplication)
                       <Trash2 data-icon="inline-end" />
                     </a-tag>
                   </div>
-                  <p v-else class="text-sm text-muted-foreground">尚未配置回调地址，授权码流程将无法完成回调。</p>
+                  <p v-else class="text-sm text-[#52677D]">尚未配置回调地址，授权码流程将无法完成回调。</p>
                 </div>
 
                 <fieldset class="grid gap-3">
                   <legend class="text-sm font-medium">允许的授权类型</legend>
                   <div class="grid gap-3 md:grid-cols-3">
-                    <label v-for="grantType in grantTypeOptions" :key="grantType.value" class="flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50">
+                    <label v-for="grantType in grantTypeOptions" :key="grantType.value" class="flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-[#F4F8FB]/50">
                       <a-checkbox :checked="loginForm.allowedGrantTypes.includes(grantType.value)" @update:checked="toggleGrantType(grantType.value)" />
                       <span class="grid gap-1">
                         <span class="text-sm font-medium">{{ grantType.label }}</span>
-                        <span class="text-xs text-muted-foreground">{{ grantType.description }}</span>
+                        <span class="text-xs text-[#52677D]">{{ grantType.description }}</span>
                       </span>
                     </label>
                   </div>
@@ -554,17 +550,17 @@ onMounted(loadApplication)
                     <label class="text-sm font-medium">访问令牌有效期</label>
                     <div class="flex items-center gap-2">
                       <a-input-number v-model:value="loginForm.accessTokenLifetime" :min="60" :max="86400" />
-                      <span class="shrink-0 text-sm text-muted-foreground">秒</span>
+                      <span class="shrink-0 text-sm text-[#52677D]">秒</span>
                     </div>
-                    <p class="text-xs text-muted-foreground">最短 60 秒。</p>
+                    <p class="text-xs text-[#52677D]">最短 60 秒。</p>
                   </div>
                   <div class="grid gap-2">
                     <label class="text-sm font-medium">刷新令牌有效期</label>
                     <div class="flex items-center gap-2">
                       <a-input-number v-model:value="loginForm.refreshTokenLifetime" :min="3600" :max="31536000" />
-                      <span class="shrink-0 text-sm text-muted-foreground">秒</span>
+                      <span class="shrink-0 text-sm text-[#52677D]">秒</span>
                     </div>
-                    <p class="text-xs text-muted-foreground">最短 3600 秒。</p>
+                    <p class="text-xs text-[#52677D]">最短 3600 秒。</p>
                   </div>
                 </div>
 
@@ -577,9 +573,10 @@ onMounted(loadApplication)
               </form>
             </div>
           </a-card>
-        </div>
+          </a-tab-pane>
 
-        <div v-show="appTab === 'access'" class="mt-6 flex flex-col gap-6">
+          <a-tab-pane key="access" tab="访问授权">
+          <div class="flex flex-col gap-6 pt-6">
           <a-card>
             <div>
               <h3>OAuth2 / OIDC 端点</h3>
@@ -589,7 +586,7 @@ onMounted(loadApplication)
               <div v-for="endpoint in endpoints" :key="endpoint.value" class="flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between">
                 <div class="grid gap-1">
                   <span class="text-sm font-medium">{{ endpoint.label }}</span>
-                  <code class="break-all text-xs text-muted-foreground">{{ endpoint.value }}</code>
+                  <code class="break-all text-xs text-[#52677D]">{{ endpoint.value }}</code>
                 </div>
                 <a-button html-type="button" size="small" class="shrink-0" @click="copyToClipboard(endpoint.value)">
                   <Copy data-icon="inline-start" />
@@ -614,54 +611,58 @@ onMounted(loadApplication)
             </div>
             <div>
               <div>
-                <div class="grid h-auto w-full grid-cols-1 md:grid-cols-3">
-                  <a-button :type="appTab === 'oauth2' ? 'primary' : 'default'" @click="appTab = 'oauth2'">OAuth2 授权码流程</a-button>
-                  <a-button :type="appTab === 'pkce' ? 'primary' : 'default'" @click="appTab = 'pkce'">PKCE 安全增强</a-button>
-                  <a-button :type="appTab === 'client' ? 'primary' : 'default'" @click="appTab = 'client'">客户端凭证流程</a-button>
-                </div>
-
-                <div v-show="appTab === 'oauth2'" class="mt-6 grid gap-6">
+                <a-tabs v-model:active-key="accessTab" class="integration-tabs">
+                  <a-tab-pane key="oauth2" tab="OAuth2 授权码流程">
+                  <div class="grid gap-6 pt-6">
                   <div v-for="example in oauth2Examples" :key="example.title" class="grid gap-2">
                     <h3 class="text-base font-semibold">{{ example.title }}</h3>
-                    <p class="text-sm text-muted-foreground">{{ example.description }}</p>
+                    <p class="text-sm text-[#52677D]">{{ example.description }}</p>
                     <div class="relative">
-                      <pre class="max-h-80 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-muted p-4 pr-14 font-mono text-xs leading-6">{{ example.code }}</pre>
+                      <pre class="max-h-80 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-[#F4F8FB] p-4 pr-14 font-mono text-xs leading-6">{{ example.code }}</pre>
                 <a-button type="text" html-type="button" size="small" shape="circle" class="absolute right-2 top-2" :aria-label="`复制${example.title}`" @click="copyToClipboard(example.code)">
                         <Copy data-icon="inline-start" />
                       </a-button>
                     </div>
                   </div>
-                </div>
+                  </div>
+                  </a-tab-pane>
 
-                <div v-show="appTab === 'pkce'" class="mt-6 grid gap-6">
+                  <a-tab-pane key="pkce" tab="PKCE 安全增强">
+                  <div class="grid gap-6 pt-6">
                   <div v-for="example in pkceExamples" :key="example.title" class="grid gap-2">
                     <h3 class="text-base font-semibold">{{ example.title }}</h3>
-                    <p class="text-sm text-muted-foreground">{{ example.description }}</p>
+                    <p class="text-sm text-[#52677D]">{{ example.description }}</p>
                     <div class="relative">
-                      <pre class="max-h-80 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-muted p-4 pr-14 font-mono text-xs leading-6">{{ example.code }}</pre>
+                      <pre class="max-h-80 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-[#F4F8FB] p-4 pr-14 font-mono text-xs leading-6">{{ example.code }}</pre>
                 <a-button type="text" html-type="button" size="small" shape="circle" class="absolute right-2 top-2" :aria-label="`复制${example.title}`" @click="copyToClipboard(example.code)">
                         <Copy data-icon="inline-start" />
                       </a-button>
                     </div>
                   </div>
-                </div>
+                  </div>
+                  </a-tab-pane>
 
-                <div v-show="appTab === 'client'" class="mt-6 grid gap-6">
+                  <a-tab-pane key="client" tab="客户端凭证流程">
+                  <div class="grid gap-6 pt-6">
                   <div v-for="example in clientCredentialsExamples" :key="example.title" class="grid gap-2">
                     <h3 class="text-base font-semibold">{{ example.title }}</h3>
-                    <p class="text-sm text-muted-foreground">{{ example.description }}</p>
+                    <p class="text-sm text-[#52677D]">{{ example.description }}</p>
                     <div class="relative">
-                      <pre class="max-h-80 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-muted p-4 pr-14 font-mono text-xs leading-6">{{ example.code }}</pre>
+                      <pre class="max-h-80 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-[#F4F8FB] p-4 pr-14 font-mono text-xs leading-6">{{ example.code }}</pre>
                 <a-button type="text" html-type="button" size="small" shape="circle" class="absolute right-2 top-2" :aria-label="`复制${example.title}`" @click="copyToClipboard(example.code)">
                         <Copy data-icon="inline-start" />
                       </a-button>
                     </div>
                   </div>
-                </div>
+                  </div>
+                  </a-tab-pane>
+                </a-tabs>
               </div>
             </div>
           </a-card>
-        </div>
+          </div>
+          </a-tab-pane>
+        </a-tabs>
       </div>
     </div>
     <contextHolder />

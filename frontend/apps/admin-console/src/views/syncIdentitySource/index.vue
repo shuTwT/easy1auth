@@ -153,12 +153,12 @@ onMounted(load)
 
 <template>
   <div class="p-6 min-h-[calc(100vh-64px)] space-y-6">
-    <section class="rounded-xl border bg-card p-6 shadow-sm">
+    <section class="rounded-xl border bg-[#FFFFFF] p-6 shadow-sm">
       <div class="flex flex-wrap items-start justify-between gap-4">
         <div class="flex gap-3">
-          <Building2 class="mt-1 text-primary size-6"/>
-          <div><h1 class="text-2xl font-bold text-foreground">同步身份源</h1>
-            <p class="mt-1 text-sm text-muted-foreground">从飞书通讯录导入并同步用户和用户组。</p>
+          <Building2 class="mt-1 text-[#0369A1] size-6"/>
+          <div><h1 class="text-2xl font-bold text-[#102A43]">同步身份源</h1>
+            <p class="mt-1 text-sm text-[#52677D]">从飞书通讯录导入并同步用户和用户组。</p>
           </div>
         </div>
         <a-button type="primary" @click="openCreate">
@@ -169,12 +169,12 @@ onMounted(load)
       <div class="mt-5 grid gap-3 sm:grid-cols-3">
         <div
             v-for="item in [{ label: '全部身份源', value: stats.totalSources }, { label: '已启用', value: stats.activeSources }, { label: '已停用', value: stats.inactiveSources }]"
-            :key="item.label" class="rounded-lg bg-muted/50 px-4 py-3"><p class="text-sm text-muted-foreground">
+            :key="item.label" class="rounded-lg bg-[#F4F8FB]/50 px-4 py-3"><p class="text-sm text-[#52677D]">
           {{ item.label }}</p>
-          <p class="mt-1 text-2xl font-bold text-foreground">{{ item.value }}</p></div>
+          <p class="mt-1 text-2xl font-bold text-[#102A43]">{{ item.value }}</p></div>
       </div>
     </section>
-    <section class="rounded-xl border bg-card p-5 shadow-sm">
+    <section class="rounded-xl border bg-[#FFFFFF] p-5 shadow-sm">
       <div class="mb-4 flex flex-wrap gap-3">
         <div>
           <a-input v-model:value="search" placeholder="搜索身份源名称" @press-enter="load"/>
@@ -196,7 +196,7 @@ onMounted(load)
           <template v-else-if="column.key === 'lastSyncAt'">
             <div>{{ date(record.lastSyncAt) }}</div>
             <small v-if="record.lastSyncStatus"
-                   :class="record.lastSyncStatus === 'failed' ? 'text-destructive' : 'text-muted-foreground'">{{
+                   :class="record.lastSyncStatus === 'failed' ? 'text-[#B91C1C]' : 'text-[#52677D]'">{{
                 statusText(record.lastSyncStatus)
               }}{{ record.lastError ? `：${record.lastError}` : '' }}</small></template>
           <template v-else-if="column.key === 'actions'">
@@ -204,7 +204,7 @@ onMounted(load)
               <a-button type="link" size="small" class="h-auto p-0" @click="sync(record)">立即同步</a-button>
               <a-button type="link" size="small" class="h-auto p-0" @click="viewTasks(record)">记录</a-button>
               <a-button type="link" size="small" class="h-auto p-0" @click="openEdit(record)">编辑</a-button>
-              <a-button type="link" size="small" class="h-auto p-0 text-destructive" @click="remove(record)">
+              <a-button type="link" size="small" class="h-auto p-0 text-[#B91C1C]" @click="remove(record)">
                 <Trash2 class="size-3"/>
               </a-button>
             </div>
@@ -234,13 +234,13 @@ onMounted(load)
           <a-select v-model:value="form.status" :options="statusOptions"/>
         </a-form-item>
       </a-form>
-      <div class="rounded-lg border bg-muted/40 p-4 text-sm"><p class="font-medium">飞书事件配置</p>
-        <p class="mt-2 break-all text-muted-foreground">{{ callbackUrl }}</p>
+      <div class="rounded-lg border bg-[#F4F8FB]/40 p-4 text-sm"><p class="font-medium">飞书事件配置</p>
+        <p class="mt-2 break-all text-[#52677D]">{{ callbackUrl }}</p>
         <a-button class="mt-2" size="small" :disabled="!editing" @click="copyCallback">
           <Copy class="size-3"/>
           复制回调地址
         </a-button>
-        <p class="mt-3 text-muted-foreground">
+        <p class="mt-3 text-[#52677D]">
           在飞书自建应用中配置该地址，并订阅用户、部门的创建、更新、删除事件；应用需具备通讯录、邮箱、手机和部门信息读取权限。</p>
       </div>
       <template #footer>

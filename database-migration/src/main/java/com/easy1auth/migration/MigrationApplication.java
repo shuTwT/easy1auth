@@ -124,7 +124,7 @@ public class MigrationApplication {
                             "values (:id, :name, 'active', true, null, :now, :now)")
                     .param("id", tenantId).param("name", "系统租户")
                     .param("now", now, Types.TIMESTAMP_WITH_TIMEZONE).update();
-            db.sql("insert into tenant_membership (id, account_id, tenant_id, membership_role, status, created_at, updated_at) " +
+            db.sql("insert into tenant_membership (id, account_id, user_pool_id, membership_role, status, created_at, updated_at) " +
                             "values (:id, :accountId, :tenantId, 'super_admin', 'active', :now, :now)")
                     .param("id", UuidV7.randomUuid()).param("accountId", accountId).param("tenantId", tenantId)
                     .param("now", now, Types.TIMESTAMP_WITH_TIMEZONE).update();

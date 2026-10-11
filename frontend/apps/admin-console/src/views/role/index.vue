@@ -376,8 +376,8 @@ onMounted(() => {
   <div class="p-6 min-h-[calc(100vh-64px)]">
     <div class="flex justify-between items-start mb-6">
       <div class="flex-1">
-        <h1 class="text-2xl font-bold text-foreground mb-2">角色管理</h1>
-        <p class="text-sm text-muted-foreground">管理用户池角色，包括创建、编辑、删除和分配用户池用户</p>
+        <h1 class="text-2xl font-bold text-[#102A43] mb-2">角色管理</h1>
+        <p class="text-sm text-[#52677D]">管理用户池角色，包括创建、编辑、删除和分配用户池用户</p>
       </div>
       <div>
         <a-button @click="handleCreate">
@@ -394,7 +394,7 @@ onMounted(() => {
             <div
               class="size-11 rounded-lg flex items-center justify-center text-white shrink-0"
               :class="{
-                'bg-gradient-to-br from-primary to-primary/60': stat.class === 'primary',
+                'bg-gradient-to-br from-[#0369A1] to-[#0369A1]/60': stat.class === 'primary',
                 'bg-gradient-to-br from-red-500 to-red-400': stat.class === 'danger',
                 'bg-gradient-to-br from-emerald-500 to-emerald-400': stat.class === 'success',
                 'bg-gradient-to-br from-sky-500 to-sky-400': stat.class === 'info',
@@ -403,8 +403,8 @@ onMounted(() => {
               <component :is="stat.icon" class="size-5" />
             </div>
             <div>
-              <div class="text-2xl font-bold text-foreground leading-tight">{{ stat.value }}</div>
-              <div class="text-xs text-muted-foreground mt-0.5">{{ stat.label }}</div>
+              <div class="text-2xl font-bold text-[#102A43] leading-tight">{{ stat.value }}</div>
+              <div class="text-xs text-[#52677D] mt-0.5">{{ stat.label }}</div>
             </div>
           </div>
         </div>
@@ -416,7 +416,7 @@ onMounted(() => {
         <div class="flex justify-between items-center">
           <div class="flex items-center gap-3">
             <div class="relative">
-              <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+              <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-[#52677D]" />
               <a-input v-model:value="searchQuery"
                 placeholder="搜索角色名称、编码"
                 class="w-72 pl-8"
@@ -468,15 +468,15 @@ onMounted(() => {
                     <a-tag :color="getTypeVariant(row.type)" class="text-xs">
                       {{ row.type === 'system' ? '系统' : '自定义' }}
                     </a-tag>
-                    <span class="font-medium text-foreground">{{ row.name }}</span>
+                    <span class="font-medium text-[#102A43]">{{ row.name }}</span>
                   </div>
               </template>
               <template v-else-if="column.key === 'code'">
-                  <code class="bg-muted px-2 py-0.5 rounded text-xs text-muted-foreground font-mono">
+                  <code class="bg-[#F4F8FB] px-2 py-0.5 rounded text-xs text-[#52677D] font-mono">
                     {{ row.code }}
                   </code>
               </template>
-              <template v-else-if="column.key === 'description'"><span class="text-muted-foreground">{{ row.description || '-' }}</span></template>
+              <template v-else-if="column.key === 'description'"><span class="text-[#52677D]">{{ row.description || '-' }}</span></template>
               <template v-else-if="column.key === 'dataScope'">
                   <a-tag  class="text-xs">
                     {{ getDataScopeLabel(row.dataScope) }}
@@ -487,7 +487,7 @@ onMounted(() => {
                     {{ row.userCount || 0 }}
                   </a-button>
               </template>
-              <template v-else-if="column.key === 'createdAt'"><span class="text-muted-foreground">{{ formatDate(row.createdAt) }}</span></template>
+              <template v-else-if="column.key === 'createdAt'"><span class="text-[#52677D]">{{ formatDate(row.createdAt) }}</span></template>
               <template v-else-if="column.key === 'actions'">
                   <div class="flex gap-2">
                     <a-button type="link" size="small" class="p-0 h-auto" @click="handleViewUsers(row)">
@@ -505,7 +505,7 @@ onMounted(() => {
                     <a-button
                       type="link"
                       size="small"
-                      class="p-0 h-auto text-destructive"
+                      class="p-0 h-auto text-[#B91C1C]"
                       :disabled="row.type === 'system'"
                       @click="handleDelete(row)"
                     >
@@ -517,7 +517,7 @@ onMounted(() => {
           </a-table>
 
           <div class="flex items-center justify-between mt-4 pt-4 border-t">
-            <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
+            <span class="text-sm text-[#52677D]">共 {{ total }} 条</span>
             <a-pagination
               :current="page"
               :page-size="pageSize"
@@ -543,7 +543,7 @@ onMounted(() => {
                     {{ data.type === 'system' ? '系统' : '自定义' }}
                   </a-tag>
                   <span>{{ data.name }}</span>
-                  <span class="text-xs text-muted-foreground ml-1">({{ data.code }})</span>
+                  <span class="text-xs text-[#52677D] ml-1">({{ data.code }})</span>
                 </div>
                 <a-button type="link" size="small" class="p-0 h-auto" @click.stop="handleViewUsers(data as unknown as RoleTree)">
                   {{ data.userCount || 0 }} 用户
@@ -608,7 +608,7 @@ onMounted(() => {
                         type="checkbox"
                         :checked="checkedPermissionCodes.includes(data.code)"
                         @change="handlePermCheck(data as unknown as PermissionTree, { checkedKeys: checkedPermissionCodes.includes(data.code) ? checkedPermissionCodes.filter(c => c !== data.code) : [...checkedPermissionCodes, data.code] })"
-                        class="rounded border-input"
+                        class="rounded border-[#D7E2EC]"
                       />
                       <span>{{ data.name }}</span>
                     </div>
@@ -638,7 +638,7 @@ onMounted(() => {
         <div class="min-h-[400px]">
           <div class="flex justify-between mb-5">
             <div class="relative">
-              <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+              <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-[#52677D]" />
               <a-input v-model:value="userSearchQuery"
                 placeholder="搜索用户名、邮箱、姓名"
                 class="w-72 pl-8"
@@ -660,7 +660,7 @@ onMounted(() => {
               <template v-if="column.key === 'username'">
                   <div class="flex items-center gap-2">
                     <a-avatar class="size-7">
-                      <span class="bg-gradient-to-br from-primary to-primary/60 text-white text-xs font-semibold">
+                      <span class="bg-gradient-to-br from-[#0369A1] to-[#0369A1]/60 text-white text-xs font-semibold">
                         {{ row.name?.charAt(0) || row.username.charAt(0).toUpperCase() }}
                       </span>
                     </a-avatar>
@@ -673,7 +673,7 @@ onMounted(() => {
                   </a-tag>
               </template>
               <template v-else-if="column.key === 'actions'">
-                  <a-button type="link" size="small" class="p-0 h-auto text-destructive" @click="handleRemoveUser(row)">
+                  <a-button type="link" size="small" class="p-0 h-auto text-[#B91C1C]" @click="handleRemoveUser(row)">
                     移除
                   </a-button>
               </template>
@@ -699,9 +699,9 @@ onMounted(() => {
                       type="checkbox"
                       :disabled="user.disabled"
                       @change="selectedUserIds.push(user.id)"
-                      class="rounded border-input"
+                      class="rounded border-[#D7E2EC]"
                     />
-                    <span :class="{ 'text-muted-foreground': user.disabled }">{{ user.name }}</span>
+                    <span :class="{ 'text-[#52677D]': user.disabled }">{{ user.name }}</span>
                   </label>
                 </div>
               </div>
@@ -715,12 +715,12 @@ onMounted(() => {
                       type="checkbox"
                       checked
                       @change="selectedUserIds = selectedUserIds.filter(id => id !== userId)"
-                      class="rounded border-input"
+                      class="rounded border-[#D7E2EC]"
                     />
                     <span>{{ allUsers.find(u => u.id === userId)?.name }}</span>
                   </label>
                 </div>
-                <div v-if="selectedUserIds.length === 0" class="text-muted-foreground text-center py-4">
+                <div v-if="selectedUserIds.length === 0" class="text-[#52677D] text-center py-4">
                   暂无选择
                 </div>
               </div>

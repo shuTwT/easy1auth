@@ -8,7 +8,6 @@
 apps/ 和 modules/  Java 21 + Spring Boot 3.5 后端（根 Gradle 构建）
 database-migration/ Flyway 数据库迁移与初始化应用
 frontend/           Vue 3 + Vite + shadcn-vue + Tailwind CSS 4 + Reka UI
-design-system/      设计规范（easy1auth-admin/MASTER.md）
 docs/               文档
 ```
 
@@ -66,13 +65,6 @@ Vite 将 `/api` 代理到 `http://localhost:18848`，配置见 `frontend/vite.co
 
 - 不得将error等消息放在页面中，应当使用toast或message显示
 
-### 配色方案
-
-
-`frontend/apps/admin-console/src/styles/theme.css`：主色为蓝色 `#0369A1`，侧边栏使用深色渐变。
-   这是应用实际加载的主题，由 `main.ts` 引入。
-
-
 ### 路由
 
 前端路由配置位于 `frontend/apps/admin-console/src/router/index.ts`：
@@ -93,15 +85,6 @@ Vite 将 `/api` 代理到 `http://localhost:18848`，配置见 `frontend/vite.co
 - 前端没有代码检查：不存在 ESLint/Prettier 配置。
 - 没有 CI/CD
 
-## 设计系统文件
-
-构建或修改 UI 时，按以下顺序检查：
-
-1. `design-system/easy1auth-admin/MASTER.md`：全局设计规则、颜色、字体和组件规范。
-2. `design-system/easy1auth-admin/pages/`：页面级设计覆盖，优先级高于 `MASTER.md`。
-3. `frontend/apps/admin-console/src/styles/theme.css`：应用当前实际加载的 CSS 变量。
-4. `frontend/components.json`：shadcn-vue 配置。
-
 ## 文件命名约定
 
 - 前端 API 模块：`frontend/apps/admin-console/src/api/*.ts`，每个资源一个文件并导出对象字面量。
@@ -112,7 +95,7 @@ Vite 将 `/api` 代理到 `http://localhost:18848`，配置见 `frontend/vite.co
 
 - 用户池（`UserPool`）是原有“租户”的正式名称，继续作为后台切换、套餐、配额、资源隔离和授权登录的边界。
 - 租户（`Tenant`）属于一个用户池，一个用户池可拥有多个租户。目前只维护基础资料，使用方式待定；不得将业务租户接入后台切换、管理员成员关系、权限、配额、Token 或授权登录上下文。
-- 历史物理表 `tenant` / `tenant_membership` / `tenant_package` 及各表的 `tenant_id` 仍表示用户池；新租户存储在 `pool_tenant`，通过 `user_pool_id` 关联用户池。
+- 历史物理表 `tenant` / `tenant_membership` / `tenant_package` 仍表示用户池；V27 已将各表的用户池外键统一改为 `user_pool_id`，管理员最近选择字段为 `last_user_pool_id`。新租户存储在 `pool_tenant`，通过 `user_pool_id` 关联用户池。
 - 管理端请求头使用 `user-pool-id`，历史 `tenant-id` 作为用户池 ID 的兼容别名。授权 issuer `/t/{id}` 和旧 Token 的 `tenant_id` 同样表示用户池，不能解释为新租户 ID。
 
 - `pool_user`是用来给第三方介入的用户体系，给第三方授权登录。不应在系统后台登录，token也不得混用。

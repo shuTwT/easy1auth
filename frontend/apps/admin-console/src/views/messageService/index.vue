@@ -156,8 +156,8 @@ onMounted(() => loadTemplates())
 <template>
   <div class="p-6 min-h-[calc(100vh-64px)]">
     <div class="mb-6">
-      <h1 class="text-2xl font-bold text-foreground mb-2">消息服务</h1>
-      <p class="text-sm text-muted-foreground">统一管理邮箱和短信通知模板</p>
+      <h1 class="text-2xl font-bold text-[#102A43] mb-2">消息服务</h1>
+      <p class="text-sm text-[#52677D]">统一管理邮箱和短信通知模板</p>
     </div>
 
     <a-card>

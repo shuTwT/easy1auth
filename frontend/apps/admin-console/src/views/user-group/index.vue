@@ -194,8 +194,8 @@ onMounted(() => {
   <div class="p-6 min-h-[calc(100vh-64px)]">
     <div class="flex justify-between items-start mb-6">
       <div class="flex-1">
-        <h1 class="text-2xl font-bold text-foreground mb-2">用户组管理</h1>
-        <p class="text-sm text-muted-foreground">管理用户组，包括创建、编辑、删除和成员管理</p>
+        <h1 class="text-2xl font-bold text-[#102A43] mb-2">用户组管理</h1>
+        <p class="text-sm text-[#52677D]">管理用户组，包括创建、编辑、删除和成员管理</p>
       </div>
       <div class="flex items-center gap-3">
         <a-button @click="handleAdd">
@@ -215,8 +215,8 @@ onMounted(() => {
       ]" :key="key">
         <div class="pt-4">
           <div class="text-center">
-            <div class="text-2xl font-bold text-foreground mb-1">{{ stat.value }}</div>
-            <div class="text-sm text-muted-foreground">{{ stat.label }}</div>
+            <div class="text-2xl font-bold text-[#102A43] mb-1">{{ stat.value }}</div>
+            <div class="text-sm text-[#52677D]">{{ stat.label }}</div>
           </div>
         </div>
       </a-card>
@@ -255,14 +255,14 @@ onMounted(() => {
           ]" :data-source="groups" :loading="loading" row-key="id" :pagination="false" :scroll="{ x: 910 }">
             <template #bodyCell="{ column, record: row }">
               <template v-if="column.key === 'name'"><a-button type="link" class="h-auto p-0! font-medium" @click="openDetail(row.id)">{{ row.name }}</a-button></template>
-              <template v-else-if="column.key === 'description'"><span class="text-muted-foreground">{{ row.description || '-' }}</span></template>
+              <template v-else-if="column.key === 'description'"><span class="text-[#52677D]">{{ row.description || '-' }}</span></template>
               <template v-else-if="column.key === 'type'">
                   <a-tag :color="getTypeVariant(row.type)" class="text-xs">
                     {{ getTypeText(row.type) }}
                   </a-tag>
               </template>
               <template v-else-if="column.key === 'members'">{{ row._count?.members || 0 }}</template>
-              <template v-else-if="column.key === 'createdAt'"><span class="text-muted-foreground">{{ new Date(row.createdAt).toLocaleString() }}</span></template>
+              <template v-else-if="column.key === 'createdAt'"><span class="text-[#52677D]">{{ new Date(row.createdAt).toLocaleString() }}</span></template>
               <template v-else-if="column.key === 'actions'">
                   <div class="flex gap-1">
                     <a-button type="link" size="small" class="h-auto p-0" @click="handleEdit(row)">
@@ -271,7 +271,7 @@ onMounted(() => {
                     <a-button type="link" size="small" class="h-auto p-0" @click="openDetail(row.id)">
                       详情
                     </a-button>
-                    <a-button type="link" size="small" class="h-auto p-0 text-destructive" @click="handleDelete(row)">
+                    <a-button type="link" size="small" class="h-auto p-0 text-[#B91C1C]" @click="handleDelete(row)">
                       删除
                     </a-button>
                   </div>
@@ -280,7 +280,7 @@ onMounted(() => {
           </a-table>
 
           <div v-if="total > (queryForm.pageSize || 10)" class="flex items-center justify-between mt-4">
-            <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
+            <span class="text-sm text-[#52677D]">共 {{ total }} 条</span>
             <a-pagination
               :current="queryForm.page"
               :page-size="queryForm.pageSize"

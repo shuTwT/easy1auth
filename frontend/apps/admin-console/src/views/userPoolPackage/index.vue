@@ -306,8 +306,8 @@ onMounted(loadData)
   <div class="p-6 min-h-[calc(100vh-64px)] space-y-6">
     <div class="flex justify-between items-start mb-6">
       <div class="flex-1">
-        <h1 class="text-2xl font-bold text-foreground mb-2">用户池套餐</h1>
-        <p class="text-sm text-muted-foreground">配置用户池的资源配额和可用管理权限。</p>
+        <h1 class="text-2xl font-bold text-[#102A43] mb-2">用户池套餐</h1>
+        <p class="text-sm text-[#52677D]">配置用户池的资源配额和可用管理权限。</p>
       </div>
       <div class="flex gap-3">
         <a-button :disabled="loading" @click="loadData">
@@ -323,20 +323,20 @@ onMounted(loadData)
 
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <a-card>
-        <div class="pb-3"><p class="text-sm text-muted-foreground">套餐总数</p><h3 class="text-2xl font-bold text-foreground">{{ packages.length }}</h3></div>
-        <div class="flex items-center gap-2 text-xs text-muted-foreground"><Package class="size-3" /> 已配置的套餐</div>
+        <div class="pb-3"><p class="text-sm text-[#52677D]">套餐总数</p><h3 class="text-2xl font-bold text-[#102A43]">{{ packages.length }}</h3></div>
+        <div class="flex items-center gap-2 text-xs text-[#52677D]"><Package class="size-3" /> 已配置的套餐</div>
       </a-card>
       <a-card>
-        <div class="pb-3"><p class="text-sm text-muted-foreground">启用中</p><h3 class="text-2xl font-bold text-foreground">{{ activeCount }}</h3></div>
-        <div class="flex items-center gap-2 text-xs text-muted-foreground"><Check class="size-3" /> 可分配给新用户池</div>
+        <div class="pb-3"><p class="text-sm text-[#52677D]">启用中</p><h3 class="text-2xl font-bold text-[#102A43]">{{ activeCount }}</h3></div>
+        <div class="flex items-center gap-2 text-xs text-[#52677D]"><Check class="size-3" /> 可分配给新用户池</div>
       </a-card>
       <a-card>
-        <div class="pb-3"><p class="text-sm text-muted-foreground">默认套餐</p><h3 class="truncate text-2xl font-bold text-foreground">{{ defaultPackage?.name || '-' }}</h3></div>
-        <div class="flex items-center gap-2 text-xs text-muted-foreground"><Gauge class="size-3" /> 新用户池的默认方案</div>
+        <div class="pb-3"><p class="text-sm text-[#52677D]">默认套餐</p><h3 class="truncate text-2xl font-bold text-[#102A43]">{{ defaultPackage?.name || '-' }}</h3></div>
+        <div class="flex items-center gap-2 text-xs text-[#52677D]"><Gauge class="size-3" /> 新用户池的默认方案</div>
       </a-card>
       <a-card>
-        <div class="pb-3"><p class="text-sm text-muted-foreground">已使用权限</p><h3 class="text-2xl font-bold text-foreground">{{ totalPermissionCount }}</h3></div>
-        <div class="flex items-center gap-2 text-xs text-muted-foreground"><ShieldCheck class="size-3" /> 去重后的权限项</div>
+        <div class="pb-3"><p class="text-sm text-[#52677D]">已使用权限</p><h3 class="text-2xl font-bold text-[#102A43]">{{ totalPermissionCount }}</h3></div>
+        <div class="flex items-center gap-2 text-xs text-[#52677D]"><ShieldCheck class="size-3" /> 去重后的权限项</div>
       </a-card>
     </div>
 
@@ -355,7 +355,7 @@ onMounted(loadData)
           <p>套餐变更会影响已绑定该套餐的普通用户池。</p>
         </div>
         <div class="relative w-full md:w-72">
-          <Search class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Search class="absolute left-3 top-1/2 -translate-y-1/2 text-[#52677D]" />
           <a-input v-model:value="search" class="pl-9" placeholder="搜索套餐名称或编码" />
         </div>
       </div>
@@ -373,10 +373,10 @@ onMounted(loadData)
           <template #bodyCell="{ column, record: item }">
             <template v-if="column.key === 'package'">
                 <div class="flex items-center gap-3">
-                  <div class="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary"><Package /></div>
+                  <div class="flex size-9 items-center justify-center rounded-lg bg-[#0369A1]/10 text-[#0369A1]"><Package /></div>
                   <div>
                     <div class="flex items-center gap-2 font-medium">{{ item.name }}<a-tag v-if="item.defaultPackage" color="blue">默认</a-tag></div>
-                    <code class="text-xs text-muted-foreground">{{ item.code }}</code>
+                    <code class="text-xs text-[#52677D]">{{ item.code }}</code>
                   </div>
                 </div>
             </template>
@@ -384,23 +384,23 @@ onMounted(loadData)
               <a-tag :color="statusVariant(item.status)">{{ item.status === 'active' ? '启用中' : '已停用' }}</a-tag>
             </template>
             <template v-else-if="column.key === 'quota'">
-                <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-[#52677D]">
                   <span class="inline-flex items-center gap-1"><Users /> {{ formatLimit(item.maxUsers) }} 用户</span>
                   <span class="inline-flex items-center gap-1"><AppWindow /> {{ formatLimit(item.maxApps) }} 应用</span>
                 </div>
             </template>
             <template v-else-if="column.key === 'permissions'">
-              <button class="cursor-pointer text-left text-sm text-primary underline-offset-4 transition-colors hover:underline" @click="openPermissionDialog(item)">{{ item.permissionCodes.length }} 项权限</button>
+              <button class="cursor-pointer text-left text-sm text-[#0369A1] underline-offset-4 transition-colors hover:underline" @click="openPermissionDialog(item)">{{ item.permissionCodes.length }} 项权限</button>
             </template>
             <template v-else-if="column.key === 'updatedAt'">
-              <span class="text-sm text-muted-foreground">{{ formatDate(item.updatedAt) }}</span>
+              <span class="text-sm text-[#52677D]">{{ formatDate(item.updatedAt) }}</span>
             </template>
             <template v-else-if="column.key === 'actions'">
                 <div class="flex flex-wrap justify-end gap-1">
                   <a-button type="link" size="small" class="h-auto p-0" @click="openPermissionDialog(item)"><ShieldCheck class="size-3 mr-1" />权限</a-button>
                   <a-button type="link" size="small" class="h-auto p-0" @click="openEditDialog(item)"><Pencil class="size-3 mr-1" />编辑</a-button>
                   <a-button type="link" size="small" class="h-auto p-0" :disabled="item.defaultPackage" @click="toggleStatus(item)">{{ item.status === 'active' ? '停用' : '启用' }}</a-button>
-                  <a-button type="link" size="small" class="h-auto p-0 text-destructive" :disabled="item.defaultPackage" @click="openDeleteDialog(item)"><Trash2 class="size-3 mr-1" />删除</a-button>
+                  <a-button type="link" size="small" class="h-auto p-0 text-[#B91C1C]" :disabled="item.defaultPackage" @click="openDeleteDialog(item)"><Trash2 class="size-3 mr-1" />删除</a-button>
                 </div>
             </template>
           </template>
@@ -466,7 +466,7 @@ onMounted(loadData)
                 <a-checkbox v-if="data.code" :checked="selectedPermissions.includes(data.code)" @update:checked="toggleTreePermission(data as unknown as PermissionTreeNode)" />
                 <span :class="data.type === 'group' ? 'font-medium' : 'text-sm'">{{ data.label }}</span>
                 <a-tag v-if="data.type !== 'group'" :color="permissionTypeVariant(data.type)">{{ permissionTypeLabel(data.type) }}</a-tag>
-                <code v-if="data.code" class="ml-auto hidden truncate text-xs text-muted-foreground md:block">{{ data.code }}</code>
+                <code v-if="data.code" class="ml-auto hidden truncate text-xs text-[#52677D] md:block">{{ data.code }}</code>
               </div>
             </template>
           </a-tree>
@@ -474,7 +474,7 @@ onMounted(loadData)
       </div>
       <template #footer>
         <div class="flex items-center">
-          <span class="mr-auto text-sm text-muted-foreground">已选择 {{ selectedPermissions.length }} 项</span>
+          <span class="mr-auto text-sm text-[#52677D]">已选择 {{ selectedPermissions.length }} 项</span>
           <div class="flex gap-2">
             <a-button @click="closePermissionDialog">取消</a-button>
             <a-button type="primary" :disabled="permissionSubmitting" @click="submitPermissions">{{ permissionSubmitting ? '保存中...' : '保存权限' }}</a-button>

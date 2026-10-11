@@ -235,7 +235,7 @@ public class AuthorizationInteractionService {
 
     /** 查询启用中的 OAuth 客户端所属用户池，用于用户池边界校验。 */
     private UUID clientUserPool(String clientId) {
-        return db.sql("select tenant_id from oauth_application where client_id=:clientId and status='active'")
+        return db.sql("select user_pool_id from oauth_application where client_id=:clientId and status='active'")
                 .param("clientId", clientId).query(UUID.class).optional().orElse(null);
     }
 

@@ -192,7 +192,7 @@ async function handleSubmit() {
   background:
     radial-gradient(circle at 10% 5%, rgba(14, 165, 233, 0.12), transparent 30%),
     radial-gradient(circle at 95% 90%, rgba(3, 105, 161, 0.10), transparent 34%),
-    var(--color-background);
+    #F4F8FB;
 }
 
 .ambient {
@@ -223,10 +223,10 @@ async function handleSubmit() {
   grid-template-columns: minmax(300px, 0.86fr) minmax(420px, 1.14fr);
   width: min(100%, 960px);
   overflow: hidden;
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-lg);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-lg);
+  border: 1px solid #D7E2EC;
+  border-radius: 14px;
+  background: #FFFFFF;
+  box-shadow: 0 20px 48px rgba(16, 42, 67, 0.14);
 }
 
 .trust-panel {
@@ -238,7 +238,7 @@ async function handleSubmit() {
   color: #fff;
   background:
     linear-gradient(150deg, rgba(56, 189, 248, 0.10), transparent 42%),
-    linear-gradient(180deg, var(--color-sidebar), var(--color-sidebar-deep));
+    linear-gradient(180deg, #0F2742, #123B5D);
 }
 
 .brand-mark {
@@ -351,15 +351,15 @@ async function handleSubmit() {
   margin-bottom: 12px;
   padding: 4px 10px;
   border-radius: 999px;
-  color: var(--color-primary);
-  background: var(--color-primary-soft);
+  color: #0369A1;
+  background: #E0F2FE;
   font-size: 12px;
   font-weight: 600;
 }
 
 .form-heading h2 {
   margin: 0;
-  color: var(--color-text);
+  color: #102A43;
   font-size: 26px;
   font-weight: 700;
   letter-spacing: -0.025em;
@@ -367,7 +367,7 @@ async function handleSubmit() {
 
 .form-heading p {
   margin: 9px 0 0;
-  color: var(--color-text-muted);
+  color: #52677D;
   font-size: 14px;
   line-height: 1.65;
 }
@@ -377,7 +377,7 @@ async function handleSubmit() {
 }
 
 .initialize-form :deep(.ant-form-item-label > label) {
-  color: var(--color-text);
+  color: #102A43;
   font-weight: 600;
 }
 
@@ -387,12 +387,12 @@ async function handleSubmit() {
 
 .initialize-form :deep(.ant-input-prefix) {
   margin-right: 10px;
-  color: var(--color-text-subtle);
+  color: #7890A5;
 }
 
 .field-hint {
   margin: 7px 0 0;
-  color: var(--color-text-muted);
+  color: #52677D;
   font-size: 12px;
   line-height: 1.5;
 }
@@ -408,13 +408,13 @@ async function handleSubmit() {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: var(--color-text-subtle);
+  color: #7890A5;
   font-size: 12px;
-  transition: color var(--transition-fast);
+  transition: color 150ms ease-out;
 }
 
 .password-policy span.met {
-  color: var(--color-success);
+  color: #15803D;
 }
 
 .submit-button {
@@ -427,7 +427,7 @@ async function handleSubmit() {
 
 .form-footnote {
   margin: 22px 0 0;
-  color: var(--color-text-muted);
+  color: #52677D;
   font-size: 12px;
   line-height: 1.6;
   text-align: center;

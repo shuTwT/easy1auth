@@ -83,7 +83,7 @@ async function handleSubmit() {
       <label class="form-label">邮箱地址</label>
       <div class="relative">
         <svg
-          class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+          class="absolute left-3 top-1/2 -translate-y-1/2 text-[#52677D] pointer-events-none"
           width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
         >
           <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
@@ -102,7 +102,7 @@ async function handleSubmit() {
       <div class="code-input-wrapper">
         <div class="relative flex-1">
           <svg
-            class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+            class="absolute left-3 top-1/2 -translate-y-1/2 text-[#52677D] pointer-events-none"
             width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
           >
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>

@@ -59,7 +59,7 @@ async function handleSubmit() {
     <div class="grid gap-2">
       <label class="form-label">用户名 <span class="text-xs font-normal text-slate-400">（选填）</span></label>
       <div class="relative">
-        <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-[#52677D] pointer-events-none" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>
         <a-input v-model:value="form.username" autocomplete="username" placeholder="留空则使用邮箱前缀" :maxlength="100" class="login-input h-11 pl-10" />
       </div>
     </div>
@@ -68,7 +68,7 @@ async function handleSubmit() {
       <label class="form-label">邮箱地址</label>
       <div class="relative">
         <svg
-          class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+          class="absolute left-3 top-1/2 -translate-y-1/2 text-[#52677D] pointer-events-none"
           width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
         >
           <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
@@ -87,7 +87,7 @@ async function handleSubmit() {
       <div class="code-input-wrapper">
         <div class="relative flex-1">
           <svg
-            class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+            class="absolute left-3 top-1/2 -translate-y-1/2 text-[#52677D] pointer-events-none"
             width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
           >
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
@@ -117,7 +117,7 @@ async function handleSubmit() {
       <label class="form-label">密码</label>
       <div class="relative">
         <svg
-          class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+          class="absolute left-3 top-1/2 -translate-y-1/2 text-[#52677D] pointer-events-none"
           width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
         >
           <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>

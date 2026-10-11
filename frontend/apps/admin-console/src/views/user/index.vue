@@ -386,8 +386,8 @@ const toggleRole = (roleId: string) => {
   <div class="p-6 min-h-[calc(100vh-64px)]">
     <div class="flex justify-between items-start mb-6">
       <div class="flex-1">
-        <h1 class="text-2xl font-bold text-foreground mb-2">用户管理</h1>
-        <p class="text-sm text-muted-foreground">管理系统用户，包括添加、编辑、删除和分配角色</p>
+        <h1 class="text-2xl font-bold text-[#102A43] mb-2">用户管理</h1>
+        <p class="text-sm text-[#52677D]">管理系统用户，包括添加、编辑、删除和分配角色</p>
       </div>
       <div class="flex gap-3">
         <a-button  @click="handleImport">
@@ -452,7 +452,7 @@ const toggleRole = (roleId: string) => {
                   </a-avatar>
                   <div class="flex flex-col">
                     <span class="font-medium">{{ row.username }}</span>
-                    <span class="text-xs text-muted-foreground">{{ row.name }}</span>
+                    <span class="text-xs text-[#52677D]">{{ row.name }}</span>
                   </div>
                 </div>
             </template>
@@ -478,14 +478,14 @@ const toggleRole = (roleId: string) => {
                   >
                     {{ row.status === 'active' ? '禁用' : '启用' }}
                   </a-button>
-                  <a-button type="link" size="small" class="h-auto p-0 text-destructive" @click="handleDelete(row)">删除</a-button>
+                  <a-button type="link" size="small" class="h-auto p-0 text-[#B91C1C]" @click="handleDelete(row)">删除</a-button>
                 </div>
             </template>
           </template>
         </a-table>
 
         <div class="flex items-center justify-between mt-4 pt-4 border-t">
-          <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
+          <span class="text-sm text-[#52677D]">共 {{ total }} 条</span>
           <a-pagination
             :current="queryForm.page"
             :page-size="queryForm.pageSize"
@@ -551,7 +551,7 @@ const toggleRole = (roleId: string) => {
                   </button>
                 </a-upload>
                 <div class="pt-1">
-                  <p class="text-xs text-muted-foreground">支持 JPG、PNG、WebP，最大 2 MB</p>
+                  <p class="text-xs text-[#52677D]">支持 JPG、PNG、WebP，最大 2 MB</p>
                   <a-button v-if="userForm.avatar" type="link" size="small" :disabled="avatarLoading" @click="userForm.avatar = ''">移除头像</a-button>
                 </div>
               </div>
@@ -605,7 +605,7 @@ const toggleRole = (roleId: string) => {
                   {{ role.name }}
                 </a-tag>
               </div>
-              <div v-else class="text-muted-foreground text-sm">暂未分配角色</div>
+              <div v-else class="text-[#52677D] text-sm">暂未分配角色</div>
             </div>
             <div class="grid gap-2">
               <label class="text-sm font-medium">选择角色</label>
@@ -626,7 +626,7 @@ const toggleRole = (roleId: string) => {
                     {{ role.type === 'system' ? '系统' : '自定义' }}
                   </a-tag>
                   <span class="font-medium">{{ role.name }}</span>
-                  <span class="text-xs text-muted-foreground">({{ role.code }})</span>
+                  <span class="text-xs text-[#52677D]">({{ role.code }})</span>
                 </div>
               </div>
             </div>
@@ -673,8 +673,8 @@ const toggleRole = (roleId: string) => {
             @change="handleFileChange"
           >
             <template #default>
-              <p class="text-sm font-medium">将文件拖到此处，或<em class="text-primary not-italic">点击上传</em></p>
-              <p class="text-xs text-muted-foreground mt-1">仅支持 xlsx/xls 文件</p>
+              <p class="text-sm font-medium">将文件拖到此处，或<em class="text-[#0369A1] not-italic">点击上传</em></p>
+              <p class="text-xs text-[#52677D] mt-1">仅支持 xlsx/xls 文件</p>
             </template>
           </a-upload>
 
@@ -683,16 +683,16 @@ const toggleRole = (roleId: string) => {
             <h4 class="font-semibold mb-4">导入结果</h4>
             <div class="grid grid-cols-3 gap-4 mb-4">
               <div class="border rounded-lg p-3">
-                <div class="text-sm text-muted-foreground">总数</div>
+                <div class="text-sm text-[#52677D]">总数</div>
                 <div class="text-xl font-bold">{{ importResult.total }}</div>
               </div>
               <div class="border rounded-lg p-3">
-                <div class="text-sm text-muted-foreground">成功</div>
+                <div class="text-sm text-[#52677D]">成功</div>
                 <div class="text-xl font-bold text-emerald-600">{{ importResult.success }}</div>
               </div>
               <div class="border rounded-lg p-3">
-                <div class="text-sm text-muted-foreground">失败</div>
-                <div class="text-xl font-bold text-destructive">{{ importResult.failed }}</div>
+                <div class="text-sm text-[#52677D]">失败</div>
+                <div class="text-xl font-bold text-[#B91C1C]">{{ importResult.failed }}</div>
               </div>
             </div>
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { message, type TableProps } from 'antdv-next'
-import { Plus, RefreshCw, Search } from '@lucide/vue'
+import { Building2, CircleCheck, CirclePause, Pencil, Plus, RefreshCw, Search, Trash2 } from '@lucide/vue'
 import { tenantApi } from '@/api/tenant'
 import { useUserStore } from '@/stores/user'
 import type { Tenant, TenantInput, TenantQuery } from '@/types/tenant'
@@ -148,34 +148,82 @@ watch(() => userStore.currentUserPool?.id, () => {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="tenant-page min-h-[calc(100vh-56px)] space-y-6 p-4 sm:p-6">
     <div class="flex flex-wrap items-start justify-between gap-4">
-      <div>
-        <h1 class="text-2xl font-semibold text-[var(--color-text)]">租户管理</h1>
-        <p class="mt-2 text-sm text-[var(--color-text-muted)]">
+      <div class="min-w-0">
+        <div class="flex items-center gap-3">
+          <div class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[#E0F2FE] text-[#0369A1]">
+            <Building2 :size="20" />
+          </div>
+          <div>
+            <h1 class="text-2xl font-semibold leading-tight text-[#102A43]">租户管理</h1>
+            <p class="mt-1 text-sm text-[#52677D]">
+              当前用户池：{{ userStore.currentUserPool?.name || '未选择' }}
+            </p>
+          </div>
+        </div>
+        <p class="mt-3 max-w-2xl text-sm leading-6 text-[#52677D]">
           管理用户池「{{ userStore.currentUserPool?.name || '未选择' }}」下的租户资料。租户用途待定，当前仅维护基础资料。
         </p>
       </div>
-      <a-button type="primary" :disabled="!userStore.currentUserPool" @click="openEditor()">
+      <a-button type="primary" class="shrink-0" :disabled="!userStore.currentUserPool" @click="openEditor()">
         <template #icon><Plus :size="16" /></template>新建租户
       </a-button>
     </div>
 
-    <a-card :bordered="false">
-      <div class="mb-6 flex flex-wrap gap-3">
-        <a-input v-model:value="query.name" class="!w-56" placeholder="搜索租户名称" aria-label="租户名称" allow-clear @press-enter="search" />
-        <a-select v-model:value="query.status" class="!w-36" placeholder="全部状态" aria-label="租户状态" :options="statusOptions" allow-clear />
-        <a-button @click="search"><template #icon><Search :size="16" /></template>查询</a-button>
-        <a-button @click="reset"><template #icon><RefreshCw :size="16" /></template>重置</a-button>
+    <a-card :bordered="false" class="tenant-card">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[#D7E2EC] pb-4">
+        <div>
+          <h2 class="text-base font-semibold text-[#102A43]">租户列表</h2>
+          <p class="mt-1 text-sm text-[#52677D]">维护当前用户池下的租户基础资料</p>
+        </div>
+        <span class="text-sm text-[#52677D]">共 {{ total }} 个租户</span>
       </div>
-      <a-table row-key="id" :columns="columns" :data-source="rows" :loading="loading" :pagination="pagination" :scroll="{ x: 900 }" @change="changePage">
+
+      <a-form
+        class="tenant-filters mt-5"
+        layout="inline"
+        :model="query"
+        @finish="search"
+      >
+        <a-form-item name="name">
+          <a-input v-model:value="query.name" placeholder="搜索租户名称" aria-label="租户名称" allow-clear>
+            <template #prefix><Search :size="16" class="text-[#7890A5]" /></template>
+          </a-input>
+        </a-form-item>
+        <a-form-item name="status">
+          <a-select v-model:value="query.status" placeholder="全部状态" aria-label="租户状态" :options="statusOptions" allow-clear />
+        </a-form-item>
+        <a-form-item>
+          <div class="flex gap-2">
+            <a-button type="primary" html-type="submit"><template #icon><Search :size="16" /></template>查询</a-button>
+            <a-button html-type="button" @click="reset"><template #icon><RefreshCw :size="16" /></template>重置</a-button>
+          </div>
+        </a-form-item>
+      </a-form>
+
+      <a-table class="tenant-table mt-5" row-key="id" :columns="columns" :data-source="rows" :loading="loading" :pagination="pagination" :scroll="{ x: 900 }" @change="changePage">
         <template #bodyCell="{ column, record }">
-          <a-tag v-if="column.key === 'status'" :color="record.status === 'active' ? 'green' : 'default'">{{ record.status === 'active' ? '启用' : '停用' }}</a-tag>
+          <div v-if="column.key === 'name'" class="flex min-w-0 items-center gap-3">
+            <div class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#E0F2FE] text-[#0369A1]">
+              <Building2 :size="17" />
+            </div>
+            <div class="min-w-0">
+              <div class="truncate font-medium text-[#102A43]">{{ record.name }}</div>
+              <code class="mt-0.5 block truncate text-xs text-[#7890A5]">{{ record.id }}</code>
+            </div>
+          </div>
+          <div v-else-if="column.key === 'code'" class="font-mono text-sm text-[#52677D]">{{ record.code }}</div>
+          <div v-else-if="column.key === 'status'" class="flex items-center gap-1.5">
+            <CircleCheck v-if="record.status === 'active'" :size="15" class="text-[#15803D]" />
+            <CirclePause v-else :size="15" class="text-[#7890A5]" />
+            <a-tag :color="record.status === 'active' ? 'green' : 'default'">{{ record.status === 'active' ? '启用' : '停用' }}</a-tag>
+          </div>
           <span v-else-if="column.key === 'createdAt'">{{ new Date(record.createdAt).toLocaleString('zh-CN', { hour12: false }) }}</span>
           <span v-else-if="column.key === 'description'">{{ record.description || '—' }}</span>
           <a-space v-else-if="column.key === 'actions'">
-            <a-button type="link" size="small" @click="openEditor(record)">编辑</a-button>
-            <a-button type="link" size="small" danger @click="deleteTarget = record">删除</a-button>
+            <a-button type="link" size="small" @click="openEditor(record)"><Pencil :size="14" />编辑</a-button>
+            <a-button type="link" size="small" danger @click="deleteTarget = record"><Trash2 :size="14" />删除</a-button>
           </a-space>
         </template>
         <template #emptyText><a-empty description="当前用户池暂无租户" /></template>
@@ -195,3 +243,49 @@ watch(() => userStore.currentUserPool?.id, () => {
     </a-modal>
   </div>
 </template>
+
+<style scoped>
+.tenant-card {
+  border: 1px solid #D7E2EC;
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(16, 42, 67, 0.06);
+}
+
+.tenant-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.tenant-filters :deep(.ant-form-item) {
+  margin-bottom: 0;
+  margin-inline-end: 0;
+}
+
+.tenant-filters :deep(.ant-form-item:first-child) {
+  min-width: 220px;
+  flex: 1 1 280px;
+}
+
+.tenant-filters :deep(.ant-form-item:nth-child(2)) {
+  flex: 0 1 144px;
+}
+
+.tenant-filters :deep(.ant-form-item:first-child .ant-input-affix-wrapper),
+.tenant-filters :deep(.ant-form-item:nth-child(2) .ant-select) {
+  width: 100%;
+}
+
+.tenant-table :deep(.ant-table-thead > tr > th) {
+  background: #F4F8FB;
+  color: #52677D;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tenant-table :deep(.ant-table-tbody > tr:hover > td) {
+  background: color-mix(in srgb, #E0F2FE 55%, white);
+}
+
+</style>

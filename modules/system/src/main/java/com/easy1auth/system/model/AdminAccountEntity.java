@@ -32,7 +32,7 @@ public interface AdminAccountEntity {
     String status();
 
     /** 最近一次切换使用的用户池 ID */
-    @Column(name = "last_tenant_id")
+    @Column(name = "last_user_pool_id")
     @Nullable UUID lastUserPoolId();
 
     /** 安全版本号：密码/邮箱/MFA/状态等敏感信息变更时递增，用于使旧会话失效 */

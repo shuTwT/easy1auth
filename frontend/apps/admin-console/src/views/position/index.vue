@@ -198,8 +198,8 @@ onMounted(() => {
   <div class="p-6 min-h-[calc(100vh-64px)]">
     <div class="flex justify-between items-start mb-6">
       <div class="flex-1">
-        <h1 class="text-2xl font-bold text-foreground mb-2">岗位管理</h1>
-        <p class="text-sm text-muted-foreground">管理系统岗位，包括添加、编辑和删除</p>
+        <h1 class="text-2xl font-bold text-[#102A43] mb-2">岗位管理</h1>
+        <p class="text-sm text-[#52677D]">管理系统岗位，包括添加、编辑和删除</p>
       </div>
       <div class="flex gap-3">
         <a-button @click="handleAdd">
@@ -213,32 +213,32 @@ onMounted(() => {
       <a-card>
         <div class="pt-6">
           <div class="text-center">
-            <div class="text-2xl font-bold text-foreground">{{ stats?.totalPositions || 0 }}</div>
-            <div class="text-sm text-muted-foreground">岗位总数</div>
+            <div class="text-2xl font-bold text-[#102A43]">{{ stats?.totalPositions || 0 }}</div>
+            <div class="text-sm text-[#52677D]">岗位总数</div>
           </div>
         </div>
       </a-card>
       <a-card>
         <div class="pt-6">
           <div class="text-center">
-            <div class="text-2xl font-bold text-foreground">{{ stats?.filledPositions || 0 }}</div>
-            <div class="text-sm text-muted-foreground">已分配岗位</div>
+            <div class="text-2xl font-bold text-[#102A43]">{{ stats?.filledPositions || 0 }}</div>
+            <div class="text-sm text-[#52677D]">已分配岗位</div>
           </div>
         </div>
       </a-card>
       <a-card>
         <div class="pt-6">
           <div class="text-center">
-            <div class="text-2xl font-bold text-foreground">{{ stats?.vacantPositions || 0 }}</div>
-            <div class="text-sm text-muted-foreground">空缺岗位</div>
+            <div class="text-2xl font-bold text-[#102A43]">{{ stats?.vacantPositions || 0 }}</div>
+            <div class="text-sm text-[#52677D]">空缺岗位</div>
           </div>
         </div>
       </a-card>
       <a-card>
         <div class="pt-6">
           <div class="text-center">
-            <div class="text-2xl font-bold text-foreground">{{ stats?.averageLevel || 0 }}</div>
-            <div class="text-sm text-muted-foreground">平均级别</div>
+            <div class="text-2xl font-bold text-[#102A43]">{{ stats?.averageLevel || 0 }}</div>
+            <div class="text-sm text-[#52677D]">平均级别</div>
           </div>
         </div>
       </a-card>
@@ -289,14 +289,14 @@ onMounted(() => {
             <template v-else-if="column.key === 'actions'">
                 <div class="flex justify-end gap-1">
                   <a-button type="link" size="small" class="h-auto p-0" @click="handleEdit(position)">编辑</a-button>
-                  <a-button type="link" size="small" class="h-auto p-0 text-destructive" @click="handleDelete(position)">删除</a-button>
+                  <a-button type="link" size="small" class="h-auto p-0 text-[#B91C1C]" @click="handleDelete(position)">删除</a-button>
                 </div>
             </template>
           </template>
         </a-table>
 
         <div class="flex items-center justify-between mt-4 pt-4 border-t">
-          <span class="text-sm text-muted-foreground">共 {{ total }} 条</span>
+          <span class="text-sm text-[#52677D]">共 {{ total }} 条</span>
           <a-pagination
             :current="queryForm.page"
             :page-size="queryForm.pageSize"

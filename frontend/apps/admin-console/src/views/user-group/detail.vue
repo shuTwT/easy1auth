@@ -242,8 +242,8 @@ watch([groupId, () => userStore.currentUserPool?.id], () => {
     <div class="mb-6 flex flex-wrap items-start gap-4">
       <a-button @click="router.push('/user-group')"><ArrowLeft class="mr-2 size-4" />返回列表</a-button>
       <div class="min-w-0 flex-1">
-        <h1 class="mb-1 break-words text-2xl font-bold text-foreground">{{ group?.name || '用户组详情' }}</h1>
-        <p class="text-sm text-muted-foreground">编辑用户组基本信息，添加或移除组成员</p>
+        <h1 class="mb-1 break-words text-2xl font-bold text-[#102A43]">{{ group?.name || '用户组详情' }}</h1>
+        <p class="text-sm text-[#52677D]">编辑用户组基本信息，添加或移除组成员</p>
       </div>
     </div>
 
@@ -257,7 +257,7 @@ watch([groupId, () => userStore.currentUserPool?.id], () => {
             <a-form-item label="描述" name="description" class="md:col-span-2"><a-textarea v-model:value="form.description" :rows="3" placeholder="请输入用户组描述" /></a-form-item>
           </div>
           <div class="flex flex-wrap items-center justify-between gap-4">
-            <span class="text-sm text-muted-foreground">创建时间：{{ new Date(group.createdAt).toLocaleString() }}</span>
+            <span class="text-sm text-[#52677D]">创建时间：{{ new Date(group.createdAt).toLocaleString() }}</span>
             <div class="flex gap-2">
               <a-button :disabled="saving" @click="resetForm">重置</a-button>
               <a-button type="primary" html-type="submit" :loading="saving">保存基本信息</a-button>
@@ -281,7 +281,7 @@ watch([groupId, () => userStore.currentUserPool?.id], () => {
           <template #emptyText><span>{{ membersReady ? (memberKeyword ? '没有匹配的成员' : '暂无成员，可点击“添加成员”') : '请点击“刷新成员”加载列表' }}</span></template>
         </a-table>
         <div v-if="filteredMembers.length" class="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <span class="text-sm text-muted-foreground">共 {{ filteredMembers.length }} 位成员</span>
+          <span class="text-sm text-[#52677D]">共 {{ filteredMembers.length }} 位成员</span>
           <a-pagination v-model:current="memberPage" :page-size="memberPageSize" :total="filteredMembers.length" :show-size-changer="false" size="small" />
         </div>
       </a-card>
@@ -298,7 +298,7 @@ watch([groupId, () => userStore.currentUserPool?.id], () => {
         <template #bodyCell="{ column, record: user }"><a-tag v-if="column.key === 'membership' && memberIds.has(user.id)">已加入</a-tag></template>
       </a-table>
       <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
-        <span class="text-sm text-muted-foreground">已选择 {{ selectedIds.length }} 位用户</span>
+        <span class="text-sm text-[#52677D]">已选择 {{ selectedIds.length }} 位用户</span>
         <a-pagination :current="candidateQuery.page" :page-size="candidateQuery.pageSize" :total="candidatesTotal" :show-size-changer="false" :disabled="adding" size="small" @change="candidatePageChange" />
       </div>
       <div class="mt-6 flex justify-end gap-2">

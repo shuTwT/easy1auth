@@ -703,8 +703,8 @@ onMounted(() => {
 <template>
   <div class="p-6 min-h-[calc(100vh-64px)]">
     <div class="mb-6">
-      <h1 class="text-2xl font-bold text-foreground mb-2">管理员管理</h1>
-      <p class="text-sm text-muted-foreground">管理员账号为全局账号；管理员角色归属于当前选中的用户池</p>
+      <h1 class="text-2xl font-bold text-[#102A43] mb-2">管理员管理</h1>
+      <p class="text-sm text-[#52677D]">管理员账号为全局账号；管理员角色归属于当前选中的用户池</p>
     </div>
 
     <a-tabs v-model:active-key="activeTab" :items="adminTabs">
@@ -718,7 +718,7 @@ onMounted(() => {
                   <div
                     class="size-11 rounded-lg flex items-center justify-center text-white shrink-0"
                     :class="{
-                      'bg-gradient-to-br from-primary to-primary/60': stat.tone === 'primary',
+                      'bg-gradient-to-br from-[#0369A1] to-[#0369A1]/60': stat.tone === 'primary',
                       'bg-gradient-to-br from-emerald-500 to-emerald-400': stat.tone === 'success',
                       'bg-gradient-to-br from-red-500 to-red-400': stat.tone === 'danger',
                       'bg-gradient-to-br from-sky-500 to-sky-400': stat.tone === 'info',
@@ -728,8 +728,8 @@ onMounted(() => {
                     <component :is="stat.icon" class="size-5" />
                   </div>
                   <div>
-                    <div class="text-2xl font-bold text-foreground leading-tight">{{ stat.value }}</div>
-                    <div class="text-xs text-muted-foreground mt-0.5">{{ stat.label }}</div>
+                    <div class="text-2xl font-bold text-[#102A43] leading-tight">{{ stat.value }}</div>
+                    <div class="text-xs text-[#52677D] mt-0.5">{{ stat.label }}</div>
                   </div>
                 </div>
               </div>
@@ -788,14 +788,14 @@ onMounted(() => {
                 <template #bodyCell="{ column, record: row }">
                   <template v-if="column.key === 'username'">
                       <div class="flex items-center gap-2">
-                        <a-avatar class="size-8 bg-gradient-to-br from-primary to-primary/60">
+                        <a-avatar class="size-8 bg-gradient-to-br from-[#0369A1] to-[#0369A1]/60">
                           <span class="bg-transparent text-white text-xs font-semibold">
                             {{ row.username.charAt(0).toUpperCase() }}
                           </span>
                         </a-avatar>
                         <div class="flex flex-col">
                           <span class="font-medium">{{ row.username }}</span>
-                          <span v-if="isSelf(row)" class="text-xs text-primary">（我）</span>
+                          <span v-if="isSelf(row)" class="text-xs text-[#0369A1]">（我）</span>
                         </div>
                       </div>
                   </template>
@@ -805,7 +805,7 @@ onMounted(() => {
                       <a-tag v-if="currentUserPoolRole(row)" :color="tenantRoleVariant(currentUserPoolRole(row))" class="text-xs">
                         {{ tenantRoleText(currentUserPoolRole(row)) }}
                       </a-tag>
-                      <span v-else class="text-muted-foreground">-</span>
+                      <span v-else class="text-[#52677D]">-</span>
                   </template>
                   <template v-else-if="column.key === 'status'">
                       <a-tag :color="adminStatusVariant(row.status)" class="text-xs">
@@ -817,8 +817,8 @@ onMounted(() => {
                         {{ row.mfaEnabled ? '已启用' : '未启用' }}
                       </a-tag>
                   </template>
-                  <span v-else-if="column.key === 'lastLoginAt'" class="text-muted-foreground">{{ formatDate(row.lastLoginAt) }}</span>
-                  <span v-else-if="column.key === 'createdAt'" class="text-muted-foreground">{{ formatDate(row.createdAt) }}</span>
+                  <span v-else-if="column.key === 'lastLoginAt'" class="text-[#52677D]">{{ formatDate(row.lastLoginAt) }}</span>
+                  <span v-else-if="column.key === 'createdAt'" class="text-[#52677D]">{{ formatDate(row.createdAt) }}</span>
                   <template v-else-if="column.key === 'actions'">
                       <div class="flex gap-1 flex-wrap">
                         <a-button
@@ -869,7 +869,7 @@ onMounted(() => {
                         <a-button
                           type="link"
                           size="small"
-                          class="h-auto p-0 text-destructive disabled:text-muted-foreground"
+                          class="h-auto p-0 text-[#B91C1C] disabled:text-[#52677D]"
                           :disabled="isSelf(row) || !currentMembership(row) || isCurrentMembershipOwner(row)"
                           @click="openRemoveDialog(row)"
                         >
@@ -881,7 +881,7 @@ onMounted(() => {
               </a-table>
 
               <div class="flex items-center justify-between mt-4 pt-4 border-t">
-                <span class="text-sm text-muted-foreground">共 {{ adminTotal }} 条</span>
+                <span class="text-sm text-[#52677D]">共 {{ adminTotal }} 条</span>
                 <a-pagination
                   :current="adminQuery.page"
                   :page-size="adminQuery.pageSize"
@@ -905,7 +905,7 @@ onMounted(() => {
                   <div
                     class="size-11 rounded-lg flex items-center justify-center text-white shrink-0"
                     :class="{
-                      'bg-gradient-to-br from-primary to-primary/60': stat.tone === 'primary',
+                      'bg-gradient-to-br from-[#0369A1] to-[#0369A1]/60': stat.tone === 'primary',
                       'bg-gradient-to-br from-red-500 to-red-400': stat.tone === 'danger',
                       'bg-gradient-to-br from-emerald-500 to-emerald-400': stat.tone === 'success',
                     }"
@@ -913,8 +913,8 @@ onMounted(() => {
                     <component :is="stat.icon" class="size-5" />
                   </div>
                   <div>
-                    <div class="text-2xl font-bold text-foreground leading-tight">{{ stat.value }}</div>
-                    <div class="text-xs text-muted-foreground mt-0.5">{{ stat.label }}</div>
+                    <div class="text-2xl font-bold text-[#102A43] leading-tight">{{ stat.value }}</div>
+                    <div class="text-xs text-[#52677D] mt-0.5">{{ stat.label }}</div>
                   </div>
                 </div>
               </div>
@@ -927,7 +927,7 @@ onMounted(() => {
               <div class="flex justify-between items-center mb-4">
                 <div class="flex items-center gap-2">
                   <div class="relative">
-                    <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                    <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-[#52677D]" />
                     <a-input v-model:value="roleSearch"
                       placeholder="搜索角色名称"
                       class="w-64 pl-8"
@@ -966,8 +966,8 @@ onMounted(() => {
                         <span class="font-medium">{{ row.name }}</span>
                       </div>
                   </template>
-                  <code v-else-if="column.key === 'code'" class="font-mono text-sm text-muted-foreground">{{ row.code }}</code>
-                  <span v-else-if="column.key === 'description'" class="text-muted-foreground">{{ row.description || '-' }}</span>
+                  <code v-else-if="column.key === 'code'" class="font-mono text-sm text-[#52677D]">{{ row.code }}</code>
+                  <span v-else-if="column.key === 'description'" class="text-[#52677D]">{{ row.description || '-' }}</span>
                   <template v-else-if="column.key === 'permissions'">
                       <a-tag  class="text-xs">{{ permissionsSummary(row.permissions) }}</a-tag>
                   </template>
@@ -977,7 +977,7 @@ onMounted(() => {
                         {{ row.isSystem ? '系统' : '自定义' }}
                       </a-tag>
                   </template>
-                  <span v-else-if="column.key === 'createdAt'" class="text-muted-foreground">{{ formatDate(row.createdAt) }}</span>
+                  <span v-else-if="column.key === 'createdAt'" class="text-[#52677D]">{{ formatDate(row.createdAt) }}</span>
                   <template v-else-if="column.key === 'actions'">
                       <div class="flex gap-2">
                         <a-button
@@ -1001,7 +1001,7 @@ onMounted(() => {
                         <a-button
                           type="link"
                           size="small"
-                          class="h-auto p-0 text-destructive"
+                          class="h-auto p-0 text-[#B91C1C]"
                           :disabled="row.isSystem"
                           @click="openDeleteRoleDialog(row)"
                         >
@@ -1013,7 +1013,7 @@ onMounted(() => {
               </a-table>
 
               <div class="flex items-center justify-between mt-4 pt-4 border-t">
-                <span class="text-sm text-muted-foreground">共 {{ roleTotal }} 条</span>
+                <span class="text-sm text-[#52677D]">共 {{ roleTotal }} 条</span>
                 <a-pagination
                   :current="rolePage"
                   :page-size="rolePageSize"
@@ -1119,13 +1119,13 @@ onMounted(() => {
                 {{ role.name }}
               </a-tag>
             </div>
-            <div v-else class="text-muted-foreground text-sm">暂未分配角色</div>
+            <div v-else class="text-[#52677D] text-sm">暂未分配角色</div>
           </div>
           <a-divider class="my-2" />
           <div class="grid gap-2">
             <label>选择角色</label>
             <div class="border rounded-lg p-3 max-h-72 overflow-y-auto">
-              <div v-if="adminRolesForFilter.length === 0" class="text-muted-foreground text-sm text-center py-4">
+              <div v-if="adminRolesForFilter.length === 0" class="text-[#52677D] text-sm text-center py-4">
                 暂无可分配角色
               </div>
               <div
@@ -1141,7 +1141,7 @@ onMounted(() => {
                   {{ role.isSystem ? '系统' : '自定义' }}
                 </a-tag>
                 <span class="font-medium text-sm">{{ role.name }}</span>
-                <span class="text-xs text-muted-foreground">{{ permissionsSummary(role.permissions) }}</span>
+                <span class="text-xs text-[#52677D]">{{ permissionsSummary(role.permissions) }}</span>
               </div>
             </div>
           </div>
@@ -1220,7 +1220,7 @@ onMounted(() => {
       width="640"
     >
       <div class="max-w-xl">
-        <p class="mb-4 text-sm text-muted-foreground">
+        <p class="mb-4 text-sm text-[#52677D]">
           为角色“{{ rolePermissionTarget?.name }}”配置可使用的管理端权限。
         </p>
         <div class="border rounded-lg p-3 max-h-96 overflow-y-auto">
@@ -1241,7 +1241,7 @@ onMounted(() => {
                   @update:checked="toggleRolePermission(item.code)"
                 />
                 <span class="text-sm">{{ item.name }}</span>
-                <code class="text-xs text-muted-foreground font-mono">{{ item.code }}</code>
+                <code class="text-xs text-[#52677D] font-mono">{{ item.code }}</code>
               </label>
             </div>
           </div>

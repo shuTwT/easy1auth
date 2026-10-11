@@ -21,7 +21,6 @@ easy1auth/
 ├── database-migration/         # Flyway 迁移和管理员初始化应用
 ├── build-logic/                # Gradle 约定插件
 ├── frontend/                   # Vue 管理前端，端口 18849
-├── design-system/              # 设计规范
 ├── deploy/                     # 生产部署与运维配置
 ├── docker-compose.java-dev.yml # 本地 PostgreSQL
 └── README.java.md              # 后端运行和部署说明

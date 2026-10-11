@@ -12,7 +12,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: var(--color-background, #F4F8FB);
+  background: #F4F8FB;
 }
 
 #app {

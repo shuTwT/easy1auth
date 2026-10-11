@@ -7,7 +7,6 @@ import { configureStaticFeedback } from './config/antd'
 
 import './styles/tailwind.css'
 import './style.css'
-import './styles/theme.css'
 
 const app = createApp(App)
 

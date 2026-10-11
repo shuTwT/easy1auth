@@ -105,8 +105,8 @@ onMounted(loadCatalog)
   <div class="p-6 min-h-[calc(100vh-64px)] space-y-6">
     <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
       <div>
-        <div class="flex items-center gap-2"><FolderTree class="size-5 text-primary" /><h1 class="text-2xl font-bold">菜单管理</h1></div>
-        <p class="mt-1 text-sm text-muted-foreground">查看管理端菜单权限、层级和关联操作；菜单的可见范围由用户池套餐授权决定。</p>
+        <div class="flex items-center gap-2"><FolderTree class="size-5 text-[#0369A1]" /><h1 class="text-2xl font-bold">菜单管理</h1></div>
+        <p class="mt-1 text-sm text-[#52677D]">查看管理端菜单权限、层级和关联操作；菜单的可见范围由用户池套餐授权决定。</p>
       </div>
       <div class="flex gap-2">
         <a-button  :disabled="loading" @click="loadCatalog"><RefreshCw class="size-4 mr-2" :class="loading ? 'animate-spin' : ''" />刷新</a-button>
@@ -136,9 +136,9 @@ onMounted(loadCatalog)
           <template #bodyCell="{ column, record: item }">
             <template v-if="column.key === 'label'">
               <div class="flex min-w-0 items-center gap-2">
-                <FolderTree v-if="item.type === 'directory'" class="size-4 shrink-0 text-primary" />
-                <AppWindow v-else-if="item.type === 'menu'" class="size-4 shrink-0 text-primary" />
-                <LockKeyhole v-else class="size-4 shrink-0 text-muted-foreground" />
+                <FolderTree v-if="item.type === 'directory'" class="size-4 shrink-0 text-[#0369A1]" />
+                <AppWindow v-else-if="item.type === 'menu'" class="size-4 shrink-0 text-[#0369A1]" />
+                <LockKeyhole v-else class="size-4 shrink-0 text-[#52677D]" />
                 <span class="truncate font-medium">{{ item.label }}</span>
               </div>
             </template>
@@ -147,13 +147,13 @@ onMounted(loadCatalog)
             </template>
             <template v-else-if="column.key === 'scope'">
               <a-tag v-if="item.type !== 'action'">{{ scopeLabel(item.scope) }}</a-tag>
-              <span v-else class="text-muted-foreground">-</span>
+              <span v-else class="text-[#52677D]">-</span>
             </template>
             <template v-else-if="column.key === 'code'">
-              <code class="text-xs text-muted-foreground">{{ item.code }}</code>
+              <code class="text-xs text-[#52677D]">{{ item.code }}</code>
             </template>
             <template v-else-if="column.key === 'resource'">
-              <span class="text-sm text-muted-foreground">{{ item.resource || '-' }}</span>
+              <span class="text-sm text-[#52677D]">{{ item.resource || '-' }}</span>
             </template>
           </template>
         </a-table>

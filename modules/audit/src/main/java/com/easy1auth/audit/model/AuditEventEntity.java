@@ -22,7 +22,7 @@ public interface AuditEventEntity {
 
     /** 所属用户池 ID（可为 null） */
     @Nullable
-    @Column(name = "tenant_id")
+    @Column(name = "user_pool_id")
     UUID userPoolId();
 
     /** 操作者类型：admin / user / system 等 */

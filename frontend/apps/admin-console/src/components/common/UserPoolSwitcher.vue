@@ -89,7 +89,7 @@ async function loadPackages() {
         <button class="tenant-selector">
           <Building2 class="size-4" />
           <span class="tenant-name">{{ currentUserPool?.name || '选择用户池' }}</span>
-          <ChevronDown class="size-3 text-muted-foreground" />
+          <ChevronDown class="size-3 text-[#52677D]" />
         </button>
     </a-dropdown>
 
@@ -114,7 +114,7 @@ async function loadPackages() {
   gap: 8px;
   padding: 8px 16px;
   background: rgba(255, 255, 255, 0.8);
-  border: 1px solid var(--border-color);
+  border: 1px solid #D7E2EC;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
@@ -125,13 +125,13 @@ async function loadPackages() {
 
 .tenant-selector:hover {
   background: white;
-  border-color: var(--primary-color);
+  border-color: #0369A1;
 }
 
 .tenant-name {
   font-size: 14px;
   font-weight: 500;
-  color: var(--text-primary);
+  color: #102A43;
   max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
