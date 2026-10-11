@@ -95,23 +95,27 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '角色管理', requiresAuth: true }
       },
       {
-        path: 'social-identity-source',
+        path: 'identity-source-management/social-identity-source',
         name: 'SocialIdentitySource',
-        component: () => import('@/views/socialIdentitySource/index.vue'),
+        component: () => import('@/views/identity-source-management/social-identity-source/index.vue'),
         meta: { title: '社会化身份源', requiresAuth: true }
       },
       {
-        path: 'enterprise-identity-source',
+        path: 'identity-source-management/enterprise-identity-source',
         name: 'EnterpriseIdentitySource',
-        component: () => import('@/views/enterpriseIdentitySource/index.vue'),
+        component: () => import('@/views/identity-source-management/enterprise-identity-source/index.vue'),
         meta: { title: '企业身份源', requiresAuth: true }
       },
       {
-        path: 'sync-identity-source',
+        path: 'identity-source-management/sync-identity-source',
         name: 'SyncIdentitySource',
-        component: () => import('@/views/syncIdentitySource/index.vue'),
+        component: () => import('@/views/identity-source-management/sync-identity-source/index.vue'),
         meta: { title: '同步身份源', requiresAuth: true }
       },
+      // Keep the retired flat identity source URLs working.
+      { path: 'social-identity-source', redirect: '/identity-source-management/social-identity-source' },
+      { path: 'enterprise-identity-source', redirect: '/identity-source-management/enterprise-identity-source' },
+      { path: 'sync-identity-source', redirect: '/identity-source-management/sync-identity-source' },
       {
         path: 'brand-login-style',
         name: 'BrandLoginStyle',

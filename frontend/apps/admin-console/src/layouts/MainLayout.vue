@@ -70,10 +70,10 @@ const menuIcons: Record<string, Component> = {
   'permission-management/permission-data-resource': Database,
   'admin-user': UserCog,
   application: Monitor,
-  'social-identity-source': Link2,
-  'enterprise-identity-source': Building2,
-  'sync-identity-source': Building2,
   'identity-source-management': KeyRound,
+  'identity-source-management/social-identity-source': Link2,
+  'identity-source-management/enterprise-identity-source': Building2,
+  'identity-source-management/sync-identity-source': Building2,
   'user-pool': Users,
   'user-pool-package': Package,
   'pool-tenants': Building2,
@@ -93,6 +93,9 @@ const menuResourceRoutes: Record<string, string> = {
   'pool-tenant': 'pool-tenants',
   'permission-space': 'permission-management/permission-space',
   'permission-data-resource': 'permission-management/permission-data-resource',
+  'social-identity-source': 'identity-source-management/social-identity-source',
+  'enterprise-identity-source': 'identity-source-management/enterprise-identity-source',
+  'sync-identity-source': 'identity-source-management/sync-identity-source',
 }
 
 const menuTree = computed(() => {
